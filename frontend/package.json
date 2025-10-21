@@ -1,9 +1,5 @@
 {
-<<<<<<< HEAD
   "name": "mahjong-record-app-frontend",
-=======
-  "name": "mahjong-record-app",
->>>>>>> ea86055 (first commit)
   "version": "0.1.0",
   "private": true,
   "scripts": {
