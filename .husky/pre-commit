@@ -1,0 +1,20 @@
+#!/usr/bin/env sh
+set -e
+
+echo "--- Pre-commit hook started ---"
+
+export PATH="$(pwd)/node_modules/.bin:$PATH"
+
+FILES=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '\.(js|jsx|ts|tsx|css|md|json|html)$' || true)
+
+if [ -n "$FILES" ]; then
+  echo "Running Prettier on staged files..."
+  echo "$FILES" | xargs npx prettier --write
+
+  echo "Adding formatted files to the commit..."
+  echo "$FILES" | xargs git add
+else
+  echo "No files to format."
+fi
+
+echo "--- Pre-commit hook finished successfully ---"
