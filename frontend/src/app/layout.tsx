@@ -36,3 +36,5 @@ export const RootLayout: React.FC<RootLayoutProps> = ({ children }) => {
 type RootLayoutProps = Readonly<{
   children: React.ReactNode;
 }>;
+
+export default RootLayout;
