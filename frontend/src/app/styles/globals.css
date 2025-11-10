@@ -1,17 +1,10 @@
 @import "tailwindcss";
 
+/* ベースのライト/ダーク用の任意の変数（必要なら残す） */
 :root {
   --background: #ffffff;
   --foreground: #171717;
 }
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
@@ -19,8 +12,37 @@
   }
 }
 
+/* ===== @theme にデザイントークンを宣言 ===== */
+@theme inline {
+  /* 既存の background/foreground を Tailwind 色トークンにマップ */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  /* あなたのプロダクトのカラーパレット（以前のHexを移植） */
+  --color-brand-50:  #FFFAF8;
+  --color-brand-200: #F4B8B8;
+  --color-brand-300: #F4D4D4;
+  --color-brand-400: #E8A0A0;
+  --color-brand-500: #F08080;
+  --color-brand-600: #E8736B;
+
+  /* セマンティックなテキスト色 */
+  --color-text-dark:  #2D2D2D;
+  --color-text-muted: #6B6B6B;
+
+  /* エラーパレット */
+  --color-error-bg:     #FFE5E5;
+  --color-error-border: #F08080; /* brand-500 と同値 */
+  --color-error-text:   #C9424A;
+
+  /* フォント（必要に応じて Google Fonts を<link>で読み込み） */
+  --font-jp:   "Noto Sans JP", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, sans-serif;
+}
+
+/* ベーススタイル（任意） */
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-jp); /* 日本語主体ならこちら */
 }
