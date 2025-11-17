@@ -11,6 +11,9 @@ if [ -n "$FILES" ]; then
   echo "Running Prettier on staged files..."
   echo "$FILES" | xargs npx prettier --write
 
+  echo "Running ESLint on staged files..."
+  echo "$FILES" | xargs npx eslint -c eslint.config.mjs --fix
+
   echo "Adding formatted files to the commit..."
   echo "$FILES" | xargs git add
 else
