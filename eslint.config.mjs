@@ -35,6 +35,7 @@ export default [
       reportUnusedDisableDirectives: true,
     },
     rules: {
+      "no-undef": "off",
       // --- React ---
       "react/react-in-jsx-scope": "off",
       "react/prop-types": "off",
