@@ -1,5 +1,6 @@
 import * as React from "react";
 
+import Header from "@/components/common/container/header";
 import CreateLeagueCard from "@/components/pages/home/create-league-card/index";
 import EmptyLeagueState from "@/components/pages/home/empty-league-state";
 import LeagueCard from "@/components/pages/home/league-card/index";
@@ -11,6 +12,7 @@ export const Home: React.FC = () => {
 
   return (
     <div className="flex-1 bg-white min-h-full font-jp">
+      <Header />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
