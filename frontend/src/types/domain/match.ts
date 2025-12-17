@@ -1,4 +1,4 @@
-import { User } from "../domain";
+import { User } from "./user";
 
 export type Match = {
   id: string;

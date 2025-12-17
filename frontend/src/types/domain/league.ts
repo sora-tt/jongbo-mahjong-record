@@ -17,7 +17,6 @@ export type LeagueMember = {
   player: User;
   joinedAt: Date;
   role: Role;
-  createdAt: Date;
 
   // 集計系
   totalPoints: number;
