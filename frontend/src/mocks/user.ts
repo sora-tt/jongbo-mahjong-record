@@ -4,6 +4,8 @@ import { User as TempUser } from "@/types/domain";
 
 export const mockUser: TempUser = {
   name: "テストユーザー",
+  email: "test@test.com",
+  createdAt: new Date(2020, 1, 1),
 };
 
 export const userData1: User = {
