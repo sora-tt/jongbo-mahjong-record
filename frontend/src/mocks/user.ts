@@ -9,33 +9,33 @@ export const mockUser: TempUser = {
 };
 
 export const userData1: User = {
-  id: "aaaaaa",
-  name: "野口",
-  email: "tatsuya.noguchi@gmail.com",
-  createdAt: new Date(2025, 0, 1),
+  id: "0001",
+  name: "岩田",
+  email: "iwata@mail",
+  createdAt: new Date(2000, 9, 3)
   color: "red",
 };
 
 export const userData2: User = {
-  id: "bbbbbb",
-  name: "岩田",
-  email: "kinya.iwata@gmail.com",
-  createdAt: new Date(2025, 0, 1),
+  id: "0002",
+  name: "富田",
+  email: "tomita@mail",
+  createdAt: new Date(2000, 8, 30),
   color: "blue",
 };
 
 export const userData3: User = {
-  id: "cccccc",
-  name: "富田",
-  email: "sora.tomita@gmail.com",
-  createdAt: new Date(2025, 0, 1),
+  id: "0003",
+  name: "野口",
+  email: "noguchi@mail",
+  createdAt: new Date(2000, 6, 28),
   color: "orange",
 };
 
 export const userData4: User = {
-  id: "dddddd",
+  id: "0004",
   name: "梶",
-  email: "shoma.kaji@gmail.com",
-  createdAt: new Date(2025, 0, 1),
+  email: "kaji@mail",
+  createdAt: new Date(2000, 9, 4),
   color: "pink",
 };

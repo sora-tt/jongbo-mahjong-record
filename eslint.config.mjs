@@ -37,6 +37,7 @@ export default [
     rules: {
       "no-undef": "off",
       // --- React ---
+      "no-unused-vars": "off",
       "react/react-in-jsx-scope": "off",
       "react/prop-types": "off",
       "react/function-component-definition": [

@@ -1,9 +1,9 @@
-import { mockLeagues } from "@/mocks/league";
-import { mockUser } from "@/mocks/user";
+import { leaguesData } from "@/mocks/league";
+import { userData1 } from "@/mocks/user";
 
 export const useHome = () => {
-  const user = mockUser;
-  const leagues = mockLeagues;
+  const user = userData1;
+  const leagues = leaguesData;
 
   const hasLeagues = leagues.length > 0;
 
