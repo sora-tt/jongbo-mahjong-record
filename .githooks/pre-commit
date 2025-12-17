@@ -5,7 +5,7 @@ echo "--- Pre-commit hook started ---"
 
 export PATH="$(pwd)/node_modules/.bin:$PATH"
 
-FILES=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '\.(js|jsx|ts|tsx|css|md|json|html)$' || true)
+FILES=$(git diff --cached --name-only --diff-filter=ACMR "*.js" "*.jsx" "*.ts" "*.tsx" "*.css" "*.less" "*.md" | sed 's| |\\ |g')
 
 if [ -n "$FILES" ]; then
   echo "Running Prettier on staged files..."
