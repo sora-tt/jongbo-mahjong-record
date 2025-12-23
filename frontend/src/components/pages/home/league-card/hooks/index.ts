@@ -1,13 +1,16 @@
-import { mockLeagues } from "@/mocks/league";
+import { leagueData1 } from "@/mocks/league";
 
-export const useLeagueCard = (userId: string, leagueId: string) => {
-  const league = mockLeagues.find((l) => l.id === leagueId);
-  const me = league?.members.find((m) => m.player.id === userId);
+export const useLeagueCard = () => {
+  const userId = "0001";
+  const league = leagueData1;
+  const myRank = league.members.find(
+    (member) => member.player.id === userId
+  )?.rank;
 
   return {
     leagueName: league?.name ?? "",
-    memberCount: league?.members?.length ?? 0,
-    gameCount: me?.gamesPlayed,
-    myRank: me?.rank,
+    memberCount: league?.members.length,
+    gameCount: league?.totalGames,
+    myRank,
   };
 };

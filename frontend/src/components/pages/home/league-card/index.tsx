@@ -9,11 +9,9 @@ type Props = {
   leagueId: string;
 };
 
-const LeagueCard: React.FC<Props> = ({ userId, leagueId }) => {
-  const { leagueName, memberCount, gameCount, myRank } = useLeagueCard(
-    userId,
-    leagueId
-  );
+// TODO: userIdとleagueIdをpropsで受け取るように修正
+const LeagueCard: React.FC<Props> = () => {
+  const { leagueName, memberCount, gameCount, myRank } = useLeagueCard();
 
   return (
     <div className="bg-white rounded-lg border-2 border-brand-200 hover:shadow-lg transition-shadow duration-200 overflow-hidden min-h-[260px]">
