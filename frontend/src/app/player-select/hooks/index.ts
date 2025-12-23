@@ -2,7 +2,7 @@ import { useState } from "react";
 
 import { Props as DropdownProps } from "@/components/ui/dropdown";
 
-import { LeagueMembersData } from "@/mocks/league-member";
+import { leagueMembersData } from "@/mocks/league-member";
 
 export const usePlayerSelect = () => {
   const [players, setPlayers] = useState({
@@ -11,7 +11,8 @@ export const usePlayerSelect = () => {
     west: "",
     north: "",
   });
-  const options = LeagueMembersData.map((member) => ({
+  const leagueMembers = leagueMembersData;
+  const options = leagueMembers.map((member) => ({
     label: member.player.name,
     value: member.player.name,
   }));

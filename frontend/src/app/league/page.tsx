@@ -3,11 +3,26 @@
 
 import * as React from "react";
 
+import clsx from "clsx";
 import { Calendar, BookOpen, Crown } from "lucide-react";
 
 import LeagueSectionCard from "@/components/league-section-card/index";
 
 import { useLeague } from "./hooks";
+
+import { ColorState } from "@/types/domain/color";
+
+const COLOR_MAP: Record<ColorState, string> = {
+  red: "bg-red-500",
+  blue: "bg-blue-500",
+  green: "bg-green-500",
+  yellow: "bg-yellow-500",
+  purple: "bg-purple-500",
+  pink: "bg-pink-500",
+  orange: "bg-orange-500",
+  sky: "bg-sky-500",
+  emerald: "bg-emerald-500",
+};
 
 export const LeaguePage: React.FC = () => {
   const { league, error } = useLeague();
@@ -30,7 +45,6 @@ export const LeaguePage: React.FC = () => {
     lastRecordedAt,
     ruleName,
     totalGames,
-    standings,
     members,
     titles,
   } = league;
@@ -111,27 +125,39 @@ export const LeaguePage: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {standings.map((row) => (
+                {members.map((member) => (
                   <tr
-                    key={row.rank}
+                    key={member.rank}
                     className="border-t border-pink-200 text-text-muted"
                   >
-                    <td className="px-2 py-2 text-center">{row.rank}</td>
-                    <td className="px-2 py-2 text-center">{row.playerName}</td>
+                    <td className="px-2 py-2 text-center">{member.rank}</td>
+                    <td className="px-2 py-2 text-center">
+                      {member.player.name}
+                    </td>
                     <td
                       className={`px-2 py-2 text-center font-semibold ${
-                        row.totalPt >= 0 ? "text-blue-400" : "text-red-400"
+                        member.totalPoints >= 0
+                          ? "text-blue-400"
+                          : "text-red-400"
                       }`}
                     >
-                      {row.totalPt.toFixed(1)}
+                      {member.totalPoints.toFixed(1)}
                     </td>
-                    <td className="px-2 py-2 text-center">{row.first}</td>
-                    <td className="px-2 py-2 text-center">{row.second}</td>
-                    <td className="px-2 py-2 text-center">{row.third}</td>
-                    <td className="px-2 py-2 text-center">{row.fourth}</td>
+                    <td className="px-2 py-2 text-center">
+                      {member.numberOfEachOrder.first}
+                    </td>
+                    <td className="px-2 py-2 text-center">
+                      {member.numberOfEachOrder.second}
+                    </td>
+                    <td className="px-2 py-2 text-center">
+                      {member.numberOfEachOrder.third}
+                    </td>
+                    <td className="px-2 py-2 text-center">
+                      {member.numberOfEachOrder.fourth}
+                    </td>
                   </tr>
                 ))}
-                {standings.length === 0 && (
+                {members.length === 0 && (
                   <tr className="border-t border-pink-200">
                     <td
                       className="px-3 py-4 text-center text-gray-400"
@@ -154,7 +180,11 @@ export const LeaguePage: React.FC = () => {
               {members.map((member, index) => (
                 <div key={index} className="flex items-center gap-1">
                   <span
-                    className={`inline-block w-2 h-2 rounded-full bg-${member.player.color}-500`}
+                    className={clsx([
+                      "inline-block w-2 h-2 rounded-full",
+                      COLOR_MAP[member.player.color] ?? "bg-gray-500",
+                    ])}
+                    // className={`inline-block w-2 h-2 rounded-full bg-${member.player.color}-500`}
                   />
                   <span className="text-text-muted">{member.player.name}</span>
                 </div>

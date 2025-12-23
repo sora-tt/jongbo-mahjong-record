@@ -9,8 +9,7 @@ export type League = {
   lastRecordedAt: Date;
   ruleName: string;
   totalGames: number;
-  standings: LeagueStanding[];
-  titles: LeagueDetailTitle[];
+  titles: LeagueTitle[];
 };
 
 export type LeagueMember = {
@@ -22,6 +21,14 @@ export type LeagueMember = {
   totalPoints: number;
   gamesPlayed: number;
   rank: number;
+  numberOfEachOrder: NumberOfEachOrder;
+};
+
+export type NumberOfEachOrder = {
+  first: number;
+  second: number;
+  third: number;
+  fourth: number;
 };
 
 export type Role = "owner" | "member";
@@ -36,7 +43,7 @@ export type LeagueStanding = {
   fourth: number;
 };
 
-export type LeagueDetailTitle = {
+export type LeagueTitle = {
   label: string;
   playerName: string;
   value: string;

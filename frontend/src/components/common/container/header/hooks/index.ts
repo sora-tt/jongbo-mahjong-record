@@ -1,9 +1,9 @@
 import { useState } from "react";
 
-import { mockUser } from "@/mocks/user";
+import { userData1 } from "@/mocks/user";
 
 export const useHeader = () => {
-  const userName = mockUser.name;
+  const { name } = userData1;
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -13,5 +13,5 @@ export const useHeader = () => {
     setIsMenuOpen(false);
   };
 
-  return { userName, isMenuOpen, setIsMenuOpen, handleClose, handleLogout };
+  return { name, isMenuOpen, setIsMenuOpen, handleClose, handleLogout };
 };

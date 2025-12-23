@@ -1,0 +1,15 @@
+#!/usr/bin/env sh
+set -e
+
+echo "--- Pre-push hook started ---"
+
+export PATH="$(pwd)/node_modules/.bin:$PATH"
+
+FILES=$(git diff --cached --name-only --diff-filter=ACMR "*.js" "*.jsx" "*.ts" "*.tsx" "*.css" "*.less" "*.md" | sed 's| |\\ |g')
+
+if [ -n "$FILES" ]; then
+  echo "Running Typecheck"
+  npm run typecheck
+fi
+
+echo "--- Pre-push hook finished successfully ---"

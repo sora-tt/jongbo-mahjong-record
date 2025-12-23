@@ -8,7 +8,7 @@ import { NAV_ITEMS } from "./constants";
 import { useHeader } from "./hooks/index";
 
 export const Header: React.FC = () => {
-  const { userName, isMenuOpen, setIsMenuOpen, handleClose, handleLogout } =
+  const { name, isMenuOpen, setIsMenuOpen, handleClose, handleLogout } =
     useHeader();
 
   return (
@@ -81,7 +81,7 @@ export const Header: React.FC = () => {
                   ログイン中のユーザー
                 </span>
                 <span className="text-sm font-medium text-[#4A3636]">
-                  {userName ? `${userName} さん` : "ゲスト"}
+                  {name ? `${name} さん` : "ゲスト"}
                 </span>
               </div>
             </div>
