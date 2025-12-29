@@ -11,10 +11,15 @@ import {
 } from "./user";
 
 import { LeagueMember } from "@/types/domain/league";
+import { AppDate } from "@/types/utils/app-date";
 
 export const leagueMemberData1: LeagueMember = {
   player: userData1,
-  joinedAt: new Date(2025, 9, 1),
+  joinedAt: AppDate.fromYMD({
+    year: 2025,
+    month: 9,
+    day: 1,
+  }),
   role: "owner",
 
   totalPoints: 100,
@@ -30,7 +35,11 @@ export const leagueMemberData1: LeagueMember = {
 
 export const leagueMemberData2: LeagueMember = {
   player: userData2,
-  joinedAt: new Date(2025, 9, 1),
+  joinedAt: AppDate.fromYMD({
+    year: 2025,
+    month: 9,
+    day: 1,
+  }),
   role: "member",
 
   totalPoints: 10,
@@ -46,7 +55,11 @@ export const leagueMemberData2: LeagueMember = {
 
 export const leagueMemberData3: LeagueMember = {
   player: userData3,
-  joinedAt: new Date(2025, 9, 1),
+  joinedAt: AppDate.fromYMD({
+    year: 2025,
+    month: 9,
+    day: 1,
+  }),
   role: "member",
 
   totalPoints: -10,
@@ -62,7 +75,11 @@ export const leagueMemberData3: LeagueMember = {
 
 export const leagueMemberData4: LeagueMember = {
   player: userData4,
-  joinedAt: new Date(2025, 9, 1),
+  joinedAt: AppDate.fromYMD({
+    year: 2025,
+    month: 9,
+    day: 1,
+  }),
   role: "member",
 
   totalPoints: -100,
@@ -78,7 +95,11 @@ export const leagueMemberData4: LeagueMember = {
 
 export const leagueMemberData5: LeagueMember = {
   player: userData5,
-  joinedAt: new Date(2025, 9, 1),
+  joinedAt: AppDate.fromYMD({
+    year: 2025,
+    month: 9,
+    day: 1,
+  }),
   role: "member",
 
   totalPoints: -100,
@@ -94,7 +115,11 @@ export const leagueMemberData5: LeagueMember = {
 
 export const leagueMemberData6: LeagueMember = {
   player: userData6,
-  joinedAt: new Date(2025, 9, 1),
+  joinedAt: AppDate.fromYMD({
+    year: 2025,
+    month: 9,
+    day: 1,
+  }),
   role: "member",
 
   totalPoints: -100,
@@ -110,7 +135,11 @@ export const leagueMemberData6: LeagueMember = {
 
 export const leagueMemberData7: LeagueMember = {
   player: userData7,
-  joinedAt: new Date(2025, 9, 1),
+  joinedAt: AppDate.fromYMD({
+    year: 2025,
+    month: 9,
+    day: 1,
+  }),
   role: "member",
 
   totalPoints: -100,
@@ -126,7 +155,11 @@ export const leagueMemberData7: LeagueMember = {
 
 export const leagueMemberData8: LeagueMember = {
   player: userData8,
-  joinedAt: new Date(2025, 9, 1),
+  joinedAt: AppDate.fromYMD({
+    year: 2025,
+    month: 9,
+    day: 1,
+  }),
   role: "member",
 
   totalPoints: -100,
@@ -142,7 +175,11 @@ export const leagueMemberData8: LeagueMember = {
 
 export const leagueMemberData9: LeagueMember = {
   player: userData9,
-  joinedAt: new Date(2025, 9, 1),
+  joinedAt: AppDate.fromYMD({
+    year: 2025,
+    month: 9,
+    day: 1,
+  }),
   role: "member",
 
   totalPoints: -100,

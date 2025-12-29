@@ -1,12 +1,13 @@
 import { User } from "./user";
+import { AppDate } from "../utils/app-date";
 
 export type League = {
   id: string;
   name: string;
-  createdAt: Date;
+  createdAt: AppDate;
   members: LeagueMember[];
   //仮で追加
-  lastRecordedAt: Date;
+  lastRecordedAt: AppDate;
   ruleName: string;
   totalGames: number;
   titles: LeagueTitle[];
@@ -14,7 +15,7 @@ export type League = {
 
 export type LeagueMember = {
   player: User;
-  joinedAt: Date;
+  joinedAt: AppDate;
   role: Role;
 
   // 集計系
