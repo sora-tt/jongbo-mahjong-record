@@ -22,6 +22,19 @@ const COLOR_MAP: Record<ColorState, string> = {
   orange: "bg-orange-500",
   sky: "bg-sky-500",
   emerald: "bg-emerald-500",
+  amber: "bg-amber-500",
+  lime: "bg-lime-500",
+  teal: "bg-teal-500",
+  cyan: "bg-cyan-500",
+  indigo: "bg-indigo-500",
+  violet: "bg-violet-500",
+  fuchsia: "bg-fuchsia-500",
+  rose: "bg-rose-500",
+  magenta: "bg-magenta-500",
+  brown: "bg-yellow-800",
+  stone: "bg-stone-500",
+  gray: "bg-gray-500",
+  black: "bg-black",
 };
 
 export const LeaguePage: React.FC = () => {
@@ -60,8 +73,8 @@ export const LeaguePage: React.FC = () => {
               <span className="inline-flex items-center gap-1">
                 <Calendar size={14} className="text-white" />
                 <span>
-                  {createdAt.toLocaleDateString()} 〜{" "}
-                  {lastRecordedAt.toLocaleDateString()}
+                  {createdAt.format("yyyy/MM/dd")} 〜{" "}
+                  {lastRecordedAt.format("yyyy/MM/dd")}
                 </span>
               </span>
               <span className="inline-flex items-center gap-1">

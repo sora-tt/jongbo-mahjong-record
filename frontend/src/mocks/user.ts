@@ -1,10 +1,16 @@
 import type { User } from "@/types/domain/user";
 
+import { AppDate } from "@/types/utils/app-date";
+
 export const userData1: User = {
   id: "0001",
   name: "岩田",
   email: "iwata@mail",
-  createdAt: new Date(2000, 9, 3),
+  createdAt: AppDate.fromYMD({
+    year: 2000,
+    month: 10,
+    day: 3,
+  }),
   color: "emerald",
 };
 
@@ -12,7 +18,11 @@ export const userData2: User = {
   id: "0002",
   name: "富田",
   email: "tomita@mail",
-  createdAt: new Date(2000, 8, 30),
+  createdAt: AppDate.fromYMD({
+    year: 2000,
+    month: 9,
+    day: 30,
+  }),
   color: "emerald",
 };
 
@@ -20,7 +30,11 @@ export const userData3: User = {
   id: "0003",
   name: "野口",
   email: "noguchi@mail",
-  createdAt: new Date(2000, 6, 28),
+  createdAt: AppDate.fromYMD({
+    year: 2000,
+    month: 7,
+    day: 28,
+  }),
   color: "emerald",
 };
 
@@ -28,8 +42,11 @@ export const userData4: User = {
   id: "0004",
   name: "梶",
   email: "kaji@mail",
-  // TODO: 梶に誕生日を聞く
-  createdAt: new Date(2000, 9, 4),
+  createdAt: AppDate.fromYMD({
+    year: 2000,
+    month: 10,
+    day: 4,
+  }),
   color: "emerald",
 };
 
@@ -37,7 +54,11 @@ export const userData5: User = {
   id: "0005",
   name: "川上",
   email: "kawakami@mail",
-  createdAt: new Date(1999, 5, 15),
+  createdAt: AppDate.fromYMD({
+    year: 1999,
+    month: 4,
+    day: 13,
+  }),
   color: "green",
 };
 
@@ -45,7 +66,11 @@ export const userData6: User = {
   id: "0006",
   name: "水島",
   email: "mizushima@mail",
-  createdAt: new Date(2001, 8, 11),
+  createdAt: AppDate.fromYMD({
+    year: 2001,
+    month: 9,
+    day: 11,
+  }),
   color: "yellow",
 };
 
@@ -53,7 +78,11 @@ export const userData7: User = {
   id: "0007",
   name: "佐伯",
   email: "saeki@mail",
-  createdAt: new Date(2002, 3, 10),
+  createdAt: AppDate.fromYMD({
+    year: 2000,
+    month: 2,
+    day: 17,
+  }),
   color: "red",
 };
 
@@ -61,7 +90,11 @@ export const userData8: User = {
   id: "0008",
   name: "吉見",
   email: "yoshimi@mail",
-  createdAt: new Date(2002, 8, 27),
+  createdAt: AppDate.fromYMD({
+    year: 2002,
+    month: 9,
+    day: 27,
+  }),
   color: "blue",
 };
 
@@ -69,6 +102,10 @@ export const userData9: User = {
   id: "0009",
   name: "梶本",
   email: "kajimoto@mail",
-  createdAt: new Date(2000, 9, 4),
+  createdAt: AppDate.fromYMD({
+    year: 2000,
+    month: 10,
+    day: 4,
+  }),
   color: "emerald",
 };

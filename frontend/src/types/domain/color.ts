@@ -7,4 +7,17 @@ export type ColorState =
   | "purple"
   | "green"
   | "sky"
-  | "emerald";
+  | "emerald"
+  | "amber"
+  | "lime"
+  | "teal"
+  | "cyan"
+  | "indigo"
+  | "violet"
+  | "fuchsia"
+  | "rose"
+  | "magenta"
+  | "brown"
+  | "stone"
+  | "gray"
+  | "black";

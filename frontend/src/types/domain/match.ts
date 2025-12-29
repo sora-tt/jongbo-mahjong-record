@@ -1,10 +1,11 @@
 import { User } from "./user";
+import { AppDate } from "../utils/app-date";
 
 export type Match = {
   id: string;
   leagueId: string;
-  playedAt: Date;
-  createdAt: Date;
+  playedAt: AppDate;
+  createdAt: AppDate;
   results: MatchResult;
 };
 
@@ -20,5 +21,5 @@ export type MatchResultInput = Record<Wind, IndividualMatchResult>;
 
 export type MatchResult = {
   matchResultInput: MatchResultInput;
-  createdAt: Date;
+  createdAt: AppDate;
 };

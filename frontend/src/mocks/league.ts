@@ -1,13 +1,22 @@
 import { leagueMembersData } from "./league-member";
 
 import { League } from "@/types/domain/league";
+import { AppDate } from "@/types/utils/app-date";
 
 export const leagueData1: League = {
   id: "000000",
   name: "雀望リーグ",
-  createdAt: new Date(2000, 9, 3),
+  createdAt: AppDate.fromYMD({
+    year: 2000,
+    month: 9,
+    day: 4,
+  }),
   members: leagueMembersData,
-  lastRecordedAt: new Date(2025, 10, 9),
+  lastRecordedAt: AppDate.fromYMD({
+    year: 2025,
+    month: 11,
+    day: 9,
+  }),
   ruleName: "Mリーグルール",
   totalGames: 242,
   titles: [
@@ -20,9 +29,17 @@ export const leagueData1: League = {
 export const leagueData2: League = {
   id: "000001",
   name: "土田リーグ",
-  createdAt: new Date(2000, 9, 4),
+  createdAt: AppDate.fromYMD({
+    year: 2000,
+    month: 9,
+    day: 4,
+  }),
   members: leagueMembersData,
-  lastRecordedAt: new Date(2025, 10, 9),
+  lastRecordedAt: AppDate.fromYMD({
+    year: 2025,
+    month: 11,
+    day: 9,
+  }),
   ruleName: "Mリーグルール",
   totalGames: 242,
   titles: [
