@@ -3,7 +3,7 @@ import type { User } from "@/types/domain/user";
 import { AppDate } from "@/types/utils/app-date";
 
 export const userData1: User = {
-  id: "0001",
+  userId: "0001",
   name: "岩田",
   email: "iwata@mail",
   createdAt: AppDate.fromYMD({
@@ -15,7 +15,7 @@ export const userData1: User = {
 };
 
 export const userData2: User = {
-  id: "0002",
+  userId: "0002",
   name: "富田",
   email: "tomita@mail",
   createdAt: AppDate.fromYMD({
@@ -27,7 +27,7 @@ export const userData2: User = {
 };
 
 export const userData3: User = {
-  id: "0003",
+  userId: "0003",
   name: "野口",
   email: "noguchi@mail",
   createdAt: AppDate.fromYMD({
@@ -39,7 +39,7 @@ export const userData3: User = {
 };
 
 export const userData4: User = {
-  id: "0004",
+  userId: "0004",
   name: "梶",
   email: "kaji@mail",
   createdAt: AppDate.fromYMD({
@@ -51,7 +51,7 @@ export const userData4: User = {
 };
 
 export const userData5: User = {
-  id: "0005",
+  userId: "0005",
   name: "川上",
   email: "kawakami@mail",
   createdAt: AppDate.fromYMD({
@@ -63,7 +63,7 @@ export const userData5: User = {
 };
 
 export const userData6: User = {
-  id: "0006",
+  userId: "0006",
   name: "水島",
   email: "mizushima@mail",
   createdAt: AppDate.fromYMD({
@@ -75,7 +75,7 @@ export const userData6: User = {
 };
 
 export const userData7: User = {
-  id: "0007",
+  userId: "0007",
   name: "佐伯",
   email: "saeki@mail",
   createdAt: AppDate.fromYMD({
@@ -87,7 +87,7 @@ export const userData7: User = {
 };
 
 export const userData8: User = {
-  id: "0008",
+  userId: "0008",
   name: "吉見",
   email: "yoshimi@mail",
   createdAt: AppDate.fromYMD({
@@ -99,7 +99,7 @@ export const userData8: User = {
 };
 
 export const userData9: User = {
-  id: "0009",
+  userId: "0009",
   name: "梶本",
   email: "kajimoto@mail",
   createdAt: AppDate.fromYMD({

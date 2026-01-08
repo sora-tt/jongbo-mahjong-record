@@ -2,9 +2,11 @@ import { ColorState } from "./color";
 import { AppDate } from "../utils/app-date";
 
 export type User = {
-  id: string;
+  userId: UserIdType;
   name: string;
   email: string;
   createdAt: AppDate;
   color: ColorState;
 };
+
+export type UserIdType = string;

@@ -27,8 +27,12 @@ export const Home: React.FC = () => {
         {/* Leagues Grid */}
         {hasLeagues ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {leagues.map((league, index) => (
-              <LeagueCard key={index} userId={userId} leagueId={league.id} />
+            {Object.values(leagues).map((league, index) => (
+              <LeagueCard
+                key={index}
+                userId={userId}
+                leagueId={league.leagueId}
+              />
             ))}
             <CreateLeagueCard />
           </div>

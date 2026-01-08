@@ -6,7 +6,7 @@ import * as React from "react";
 import clsx from "clsx";
 import { Calendar, BookOpen, Crown } from "lucide-react";
 
-import LeagueSectionCard from "@/components/league-section-card/index";
+import { LeagueSectionCard } from "@/components/pages/league/league-section-card/index";
 
 import { useLeague } from "./hooks";
 
@@ -37,7 +37,7 @@ const COLOR_MAP: Record<ColorState, string> = {
   black: "bg-black",
 };
 
-export const LeaguePage: React.FC = () => {
+const LeaguePage: React.FC = () => {
   const { league, error } = useLeague();
 
   if (error) {
@@ -138,7 +138,7 @@ export const LeaguePage: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {members.map((member) => (
+                {Object.values(members).map((member) => (
                   <tr
                     key={member.rank}
                     className="border-t border-pink-200 text-text-muted"
@@ -170,7 +170,7 @@ export const LeaguePage: React.FC = () => {
                     </td>
                   </tr>
                 ))}
-                {members.length === 0 && (
+                {Object.keys(members).length === 0 && (
                   <tr className="border-t border-pink-200">
                     <td
                       className="px-3 py-4 text-center text-gray-400"
@@ -190,7 +190,7 @@ export const LeaguePage: React.FC = () => {
           <LeagueSectionCard title="総合pt推移" bodyClassName="p-4">
             <div className="w-full h-48 bg-gray-50 rounded-md mb-3" />
             <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
-              {members.map((member, index) => (
+              {Object.values(members).map((member, index) => (
                 <div key={index} className="flex items-center gap-1">
                   <span
                     className={clsx([
@@ -213,26 +213,30 @@ export const LeaguePage: React.FC = () => {
         <section className="mb-8">
           <LeagueSectionCard title="タイトル" bodyClassName="p-4">
             <div>
-              {titles.map((t) => (
-                <div
-                  key={t.label}
-                  className="grid grid-cols-3 gap-x-4 px-4 py-2 text-sm border-b border-pink-200 last:border-b-0 items-center text-text-muted"
-                >
-                  {/* 左：タイトル名（左寄せ） */}
-                  <div className="text-left">{t.label}</div>
+              {titles ? (
+                titles.map((t) => (
+                  <div
+                    key={t.label}
+                    className="grid grid-cols-3 gap-x-4 px-4 py-2 text-sm border-b border-pink-200 last:border-b-0 items-center text-text-muted"
+                  >
+                    {/* 左：タイトル名（左寄せ） */}
+                    <div className="text-left">{t.label}</div>
 
-                  {/* 中央：冠アイコン＋プレイヤー名（中央寄せ） */}
-                  <div className="flex items-center justify-center gap-1">
-                    <Crown size={16} className="text-yellow-400" />
-                    <span className="font-semibold">{t.playerName}</span>
-                  </div>
+                    {/* 中央：冠アイコン＋プレイヤー名（中央寄せ） */}
+                    <div className="flex items-center justify-center gap-1">
+                      <Crown size={16} className="text-yellow-400" />
+                      <span className="font-semibold">{t.playerName}</span>
+                    </div>
 
-                  {/* 右：値（右寄せ） */}
-                  <div className="text-right">
-                    <span className="font-semibold">{t.value}</span>
+                    {/* 右：値（右寄せ） */}
+                    <div className="text-right">
+                      <span className="font-semibold">{t.value}</span>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))
+              ) : (
+                <div>No title</div>
+              )}
             </div>
           </LeagueSectionCard>
         </section>
