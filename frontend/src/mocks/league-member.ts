@@ -11,6 +11,7 @@ import {
 } from "./user";
 
 import { LeagueMember } from "@/types/domain/league";
+import { UserIdType } from "@/types/domain/user";
 import { AppDate } from "@/types/utils/app-date";
 
 export const leagueMemberData1: LeagueMember = {
@@ -193,14 +194,14 @@ export const leagueMemberData9: LeagueMember = {
   },
 };
 
-export const leagueMembersData: LeagueMember[] = [
-  leagueMemberData1,
-  leagueMemberData2,
-  leagueMemberData3,
-  leagueMemberData4,
-  leagueMemberData5,
-  leagueMemberData6,
-  leagueMemberData7,
-  leagueMemberData8,
-  leagueMemberData9,
-];
+export const leagueMembersData: Record<UserIdType, LeagueMember> = {
+  [userData1.userId]: leagueMemberData1,
+  [userData2.userId]: leagueMemberData2,
+  [userData3.userId]: leagueMemberData3,
+  [userData4.userId]: leagueMemberData4,
+  [userData5.userId]: leagueMemberData5,
+  [userData6.userId]: leagueMemberData6,
+  [userData7.userId]: leagueMemberData7,
+  [userData8.userId]: leagueMemberData8,
+  [userData9.userId]: leagueMemberData9,
+};

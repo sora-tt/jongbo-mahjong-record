@@ -12,7 +12,7 @@ export const usePlayerSelect = () => {
     north: "",
   });
   const leagueMembers = leagueMembersData;
-  const options = leagueMembers.map((member) => ({
+  const options = Object.values(leagueMembers).map((member) => ({
     label: member.player.name,
     value: member.player.name,
   }));

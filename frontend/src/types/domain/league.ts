@@ -1,16 +1,17 @@
-import { User } from "./user";
+import { User, UserIdType } from "./user";
 import { AppDate } from "../utils/app-date";
 
+export type LeagueIdType = string;
+
 export type League = {
-  id: string;
+  leagueId: LeagueIdType;
   name: string;
   createdAt: AppDate;
-  members: LeagueMember[];
-  //仮で追加
+  members: Record<UserIdType, LeagueMember>;
   lastRecordedAt: AppDate;
   ruleName: string;
   totalGames: number;
-  titles: LeagueTitle[];
+  titles?: LeagueTitle[];
 };
 
 export type LeagueMember = {
@@ -33,16 +34,6 @@ export type NumberOfEachOrder = {
 };
 
 export type Role = "owner" | "member";
-
-export type LeagueStanding = {
-  rank: number;
-  playerName: string;
-  totalPt: number;
-  first: number;
-  second: number;
-  third: number;
-  fourth: number;
-};
 
 export type LeagueTitle = {
   label: string;

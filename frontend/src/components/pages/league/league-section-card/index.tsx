@@ -7,7 +7,7 @@ export type LeagueSectionCardProps = {
   bodyClassName?: string;
 };
 
-const LeagueSectionCard: React.FC<LeagueSectionCardProps> = ({
+export const LeagueSectionCard: React.FC<LeagueSectionCardProps> = ({
   title,
   rightText,
   children,
@@ -23,5 +23,3 @@ const LeagueSectionCard: React.FC<LeagueSectionCardProps> = ({
     </div>
   );
 };
-
-export default LeagueSectionCard;
