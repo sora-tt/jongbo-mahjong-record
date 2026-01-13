@@ -1,13 +1,13 @@
 import * as React from "react";
 
-export type LeagueSectionCardProps = {
+export type SectionCardProps = {
   title: string;
   rightText?: string;
   children: React.ReactNode;
   bodyClassName?: string;
 };
 
-const LeagueSectionCard: React.FC<LeagueSectionCardProps> = ({
+export const SectionCard: React.FC<SectionCardProps> = ({
   title,
   rightText,
   children,
@@ -23,5 +23,3 @@ const LeagueSectionCard: React.FC<LeagueSectionCardProps> = ({
     </div>
   );
 };
-
-export default LeagueSectionCard;
