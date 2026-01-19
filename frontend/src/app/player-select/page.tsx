@@ -2,7 +2,7 @@
 
 import * as React from "react";
 
-import Button from "@/components/ui/button/index";
+import { Button } from "@/components/ui/button/index";
 import Dropdown from "@/components/ui/dropdown/index";
 
 import { usePlayerSelect } from "./hooks";
