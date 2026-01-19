@@ -1,40 +1,49 @@
 import * as React from "react";
 
-type MetaItem = {
-  icon?: React.ReactNode;
-  label: string;
+import clsx from "clsx";
+
+type Align = "left" | "center";
+
+const TITLE_ALIGN_CLASS: Record<Align, string> = {
+  left: "text-left",
+  center: "text-center",
+};
+
+const META_JUSTIFY_CLASS: Record<Align, string> = {
+  left: "justify-start",
+  center: "justify-center",
 };
 
 type Props = {
   title: string;
-  metaItems?: MetaItem[];
-  align?: "left" | "center";
+  align?: Align;
+  children?: React.ReactNode;
 };
 
 export const HeaderCard: React.FC<Props> = ({
   title,
-  metaItems = [],
   align = "left",
+  children,
 }) => {
-  const titleAlignClass = align === "center" ? "text-center" : "text-left";
-  const metaJustifyClass =
-    align === "center" ? "justify-center" : "justify-start";
-
   return (
     <div className="rounded-lg border border-brand-500 bg-gradient-to-r from-brand-500 to-brand-400 shadow-sm px-4 py-4">
-      <h1 className={`text-2xl font-bold text-white mb-2 ${titleAlignClass}`}>
+      <h1
+        className={clsx(
+          "text-2xl font-bold text-white mb-2",
+          TITLE_ALIGN_CLASS[align]
+        )}
+      >
         {title}
       </h1>
-      {metaItems.length > 0 && (
+
+      {children && (
         <div
-          className={`flex flex-wrap ${metaJustifyClass} items-center gap-x-4 gap-y-1 text-xs text-white`}
+          className={clsx(
+            "flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-white",
+            META_JUSTIFY_CLASS[align]
+          )}
         >
-          {metaItems.map((item, idx) => (
-            <span key={idx} className="inline-flex items-center gap-1">
-              {item.icon}
-              <span>{item.label}</span>
-            </span>
-          ))}
+          {children}
         </div>
       )}
     </div>

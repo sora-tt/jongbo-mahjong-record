@@ -5,7 +5,7 @@ import * as React from "react";
 import clsx from "clsx";
 import { Calendar, BookOpen, Crown } from "lucide-react";
 
-import Button from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { HeaderCard } from "@/components/ui/header-card";
 import { SectionCard } from "@/components/ui/section-card";
 import {
@@ -75,22 +75,19 @@ export const LeaguePage: React.FC = () => {
     <div className="flex-1 bg-white min-h-full font-jp">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <section className="mb-6">
-          <HeaderCard
-            title={name}
-            align="center"
-            metaItems={[
-              {
-                icon: <Calendar size={14} className="text-white" />,
-                label: `${createdAt.format("yyyy/MM/dd")} 〜 ${lastRecordedAt.format(
-                  "yyyy/MM/dd"
-                )}`,
-              },
-              {
-                icon: <BookOpen size={14} className="text-white" />,
-                label: ruleName,
-              },
-            ]}
-          />
+          <HeaderCard title={name} align="center">
+            <span className="inline-flex items-center gap-1">
+              <Calendar size={14} className="text-white" />
+              <span>
+                {createdAt.format("yyyy/MM/dd")} 〜{" "}
+                {lastRecordedAt.format("yyyy/MM/dd")}
+              </span>
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <BookOpen size={14} className="text-white" />
+              <span>{ruleName}</span>
+            </span>
+          </HeaderCard>
         </section>
 
         <section className="mb-6">
