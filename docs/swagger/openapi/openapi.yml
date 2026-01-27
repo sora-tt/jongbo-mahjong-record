@@ -223,29 +223,29 @@ paths:
           $ref: '#/components/responses/NotFound'
 
   /leagues/{leagueId}/members:
-      get:
-        tags: [Leagues]
-        summary: リーグメンバー一覧取得
-        description: 指定したリーグに所属しているメンバーの一覧を取得する。
-        operationId: listLeagueMembers
-        parameters:
-          - name: leagueId
-            in: path
-            required: true
-            description: 対象リーグの ID
-            schema:
-              type: string
-        responses:
-          '200':
-            description: リーグメンバー一覧
-            content:
-              application/json:
-                schema:
-                  type: array
-                  items:
-                    $ref: '#/components/schemas/LeagueMember'
-          '404':
-            $ref: '#/components/responses/NotFound'
+    get:
+      tags: [Leagues]
+      summary: リーグメンバー一覧取得
+      description: 指定したリーグに所属しているメンバーの一覧を取得する。
+      operationId: listLeagueMembers
+      parameters:
+        - name: leagueId
+          in: path
+          required: true
+          description: 対象リーグの ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: リーグメンバー一覧
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LeagueMember'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   ################################
   # Seasons
@@ -408,35 +408,35 @@ paths:
           $ref: '#/components/responses/NotFound'
 
   /leagues/{leagueId}/seasons/{seasonId}/members:
-      get:
-        tags: [Seasons]
-        summary: シーズンメンバー一覧取得
-        description: 指定したシーズンに所属しているメンバーの一覧を取得する。
-        operationId: listSeasonMembers
-        parameters:
-          - name: leagueId
-            in: path
-            required: true
-            description: 対象リーグの ID
-            schema:
-              type: string
-          - name: seasonId
-            in: path
-            required: true
-            description: 対象シーズンの ID
-            schema:
-              type: string
-        responses:
-          '200':
-            description: シーズンメンバー一覧
-            content:
-              application/json:
-                schema:
-                  type: array
-                  items:
-                    $ref: '#/components/schemas/SeasonMember'
-          '404':
-            $ref: '#/components/responses/NotFound'
+    get:
+      tags: [Seasons]
+      summary: シーズンメンバー一覧取得
+      description: 指定したシーズンに所属しているメンバーの一覧を取得する。
+      operationId: listSeasonMembers
+      parameters:
+        - name: leagueId
+          in: path
+          required: true
+          description: 対象リーグの ID
+          schema:
+            type: string
+        - name: seasonId
+          in: path
+          required: true
+          description: 対象シーズンの ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: シーズンメンバー一覧
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SeasonMember'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   ################################
   # Matches
@@ -628,7 +628,6 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-
 components:
   securitySchemes:
     bearerAuth:
@@ -636,8 +635,101 @@ components:
       scheme: bearer
       bearerFormat: JWT
 
-  schemas:
-    $ref: './components/schemas.yaml#/components/schemas'
-
   responses:
-    $ref: './components/responses.yaml#/components/responses'
+    BadRequest:
+      $ref: './components/responses.yml#/components/responses/BadRequest'
+    Unauthorized:
+      $ref: './components/responses.yml#/components/responses/Unauthorized'
+    NotFound:
+      $ref: './components/responses.yml#/components/responses/NotFound'
+    NoContent:
+      $ref: './components/responses.yml#/components/responses/NoContent'
+
+  schemas:
+    # Common
+    PageMeta:
+      $ref: './components/schemas.yml#/components/schemas/PageMeta'
+    Error:
+      $ref: './components/schemas.yml#/components/schemas/Error'
+    
+    # User
+    User:
+      $ref: './components/schemas.yml#/components/schemas/User'
+    UserPublic:
+      $ref: './components/schemas.yml#/components/schemas/UserPublic'
+    UpdateUserRequest:
+      $ref: './components/schemas.yml#/components/schemas/UpdateUserRequest'
+    
+    # League
+    League:
+      $ref: './components/schemas.yml#/components/schemas/League'
+    LeagueMember:
+      $ref: './components/schemas.yml#/components/schemas/LeagueMember'
+    LeagueDetail:
+      $ref: './components/schemas.yml#/components/schemas/LeagueDetail'
+    CreateLeagueRequest:
+      $ref: './components/schemas.yml#/components/schemas/CreateLeagueRequest'
+    UpdateLeagueRequest:
+      $ref: './components/schemas.yml#/components/schemas/UpdateLeagueRequest'
+    PaginatedLeagues:
+      $ref: './components/schemas.yml#/components/schemas/PaginatedLeagues'
+    
+    # Season
+    Season:
+      $ref: './components/schemas.yml#/components/schemas/Season'
+    SeasonMember:
+      $ref: './components/schemas.yml#/components/schemas/SeasonMember'
+    SeasonDetail:
+      $ref: './components/schemas.yml#/components/schemas/SeasonDetail'
+    CreateSeasonRequest:
+      $ref: './components/schemas.yml#/components/schemas/CreateSeasonRequest'
+    UpdateSeasonRequest:
+      $ref: './components/schemas.yml#/components/schemas/UpdateSeasonRequest'
+    PaginatedSeasons:
+      $ref: './components/schemas.yml#/components/schemas/PaginatedSeasons'
+    
+    # Match
+    Match:
+      $ref: './components/schemas.yml#/components/schemas/Match'
+    MatchResult:
+      $ref: './components/schemas.yml#/components/schemas/MatchResult'
+    MatchDetail:
+      $ref: './components/schemas.yml#/components/schemas/MatchDetail'
+    CreateMatchRequest:
+      $ref: './components/schemas.yml#/components/schemas/CreateMatchRequest'
+    UpdateMatchRequest:
+      $ref: './components/schemas.yml#/components/schemas/UpdateMatchRequest'
+    MatchResultInput:
+      $ref: './components/schemas.yml#/components/schemas/MatchResultInput'
+    PaginatedMatches:
+      $ref: './components/schemas.yml#/components/schemas/PaginatedMatches'
+    
+    # Stats
+    MemberStats:
+      $ref: './components/schemas.yml#/components/schemas/MemberStats'
+    RankCounts:
+      $ref: './components/schemas.yml#/components/schemas/RankCounts'
+    PersonalStatsSummary:
+      $ref: './components/schemas.yml#/components/schemas/PersonalStatsSummary'
+    ScoreTrend:
+      $ref: './components/schemas.yml#/components/schemas/ScoreTrend'
+    ScorePoint:
+      $ref: './components/schemas.yml#/components/schemas/ScorePoint'
+    Awards:
+      $ref: './components/schemas.yml#/components/schemas/Awards'
+    AwardHighestScore:
+      $ref: './components/schemas.yml#/components/schemas/AwardHighestScore'
+    AwardTop2Rate:
+      $ref: './components/schemas.yml#/components/schemas/AwardTop2Rate'
+    AwardAvoid4thRate:
+      $ref: './components/schemas.yml#/components/schemas/AwardAvoid4thRate'
+    MyStats:
+      $ref: './components/schemas.yml#/components/schemas/MyStats'
+    
+    # Rule
+    Rule:
+      $ref: './components/schemas.yml#/components/schemas/Rule'
+    Uma:
+      $ref: './components/schemas.yml#/components/schemas/Uma'
+    Oka:
+      $ref: './components/schemas.yml#/components/schemas/Oka'

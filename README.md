@@ -2,6 +2,10 @@
 
 麻雀のスコア管理アプリケーションです。仲のいいグループごとにリーグを作成することもできます。
 
+## API Documentation
+
+📚 [API仕様書（Swagger UI）](https://tatsuyano9.github.io/mahjong-record-app/swagger/)
+
 ## Prerequisites
 
 - Node.jsの使用バージョン統一。nvmのインストールを推奨。
