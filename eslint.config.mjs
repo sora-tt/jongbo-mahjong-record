@@ -1,13 +1,16 @@
 import js from "@eslint/js";
-import reactPlugin from "eslint-plugin-react";
-import reactHooksPlugin from "eslint-plugin-react-hooks";
 import tsPlugin from "@typescript-eslint/eslint-plugin";
 import tsParser from "@typescript-eslint/parser";
-import prettierPlugin from "eslint-plugin-prettier";
 import importPlugin from "eslint-plugin-import";
+import prettierPlugin from "eslint-plugin-prettier";
+import reactPlugin from "eslint-plugin-react";
+import reactHooksPlugin from "eslint-plugin-react-hooks";
 
 export default [
   js.configs.recommended,
+  {
+    ignores: ["swagger/**"],
+  },
   {
     files: ["**/*.{js,jsx,ts,tsx}"],
     languageOptions: {
