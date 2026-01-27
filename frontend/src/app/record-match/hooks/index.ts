@@ -6,10 +6,10 @@ import { leagueMembersData } from "@/mocks/league-member";
 
 export const usePlayerSelect = () => {
   const [players, setPlayers] = useState({
-    first: "",
-    second: "",
-    third: "",
-    fourth: "",
+    east: "",
+    south: "",
+    west: "",
+    north: "",
   });
   const leagueMembers = leagueMembersData;
   const options = Object.values(leagueMembers).map((member) => ({
@@ -17,40 +17,38 @@ export const usePlayerSelect = () => {
     value: member.player.name,
   }));
 
-  //TODO: ここは修正する必要があります
-
-  const onFirstPlayerChange: DropdownProps["onChange"] = (_, value) => {
+  const onEastPlayerChange: DropdownProps["onChange"] = (_, value) => {
     setPlayers((prev) => {
       return {
         ...prev,
-        first: value,
+        east: value,
       };
     });
   };
 
-  const onSecondPlayerChange: DropdownProps["onChange"] = (_, value) => {
+  const onSouthPlayerChange: DropdownProps["onChange"] = (_, value) => {
     setPlayers((prev) => {
       return {
         ...prev,
-        second: value,
+        south: value,
       };
     });
   };
 
-  const onThirdPlayerChange: DropdownProps["onChange"] = (_, value) => {
+  const onWestPlayerChange: DropdownProps["onChange"] = (_, value) => {
     setPlayers((prev) => {
       return {
         ...prev,
-        third: value,
+        west: value,
       };
     });
   };
 
-  const onFourthPlayerChange: DropdownProps["onChange"] = (_, value) => {
+  const onNorthPlayerChange: DropdownProps["onChange"] = (_, value) => {
     setPlayers((prev) => {
       return {
         ...prev,
-        fourth: value,
+        north: value,
       };
     });
   };
@@ -60,7 +58,7 @@ export const usePlayerSelect = () => {
     console.log("選択されたプレイヤー:", players);
 
     // ここで players を使用して処理を実行
-    if (players.first && players.second && players.third && players.fourth) {
+    if (players.east && players.south && players.west && players.north) {
       console.log("全員選択されました");
       // API呼び出しやナビゲーションなど
     } else {
@@ -77,9 +75,9 @@ export const usePlayerSelect = () => {
     handleSubmit,
     handleBack,
     options,
-    onFirstPlayerChange,
-    onSecondPlayerChange,
-    onThirdPlayerChange,
-    onFourthPlayerChange,
+    onEastPlayerChange,
+    onSouthPlayerChange,
+    onWestPlayerChange,
+    onNorthPlayerChange,
   };
 };
