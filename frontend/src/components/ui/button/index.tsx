@@ -19,7 +19,7 @@ const buttonStyles = {
     "flex-1 px-4 py-2 border-2 border-brand-500 text-brand-600 font-medium rounded-lg hover:bg-brand-50 transition-colors duration-150",
 } as const;
 
-const Button: React.FC<Props> = ({
+export const Button: React.FC<Props> = ({
   children,
   variant = "brand-primary", // デフォルトのスタイル
   className = "",
@@ -31,5 +31,3 @@ const Button: React.FC<Props> = ({
     </button>
   );
 };
-
-export default Button;
