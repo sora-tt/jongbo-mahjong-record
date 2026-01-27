@@ -9,7 +9,7 @@ import reactHooksPlugin from "eslint-plugin-react-hooks";
 export default [
   js.configs.recommended,
   {
-    ignores: ["swagger/**"],
+    ignores: ["docs/**"],
   },
   {
     files: ["**/*.{js,jsx,ts,tsx}"],

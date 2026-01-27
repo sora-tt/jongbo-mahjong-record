@@ -3765,16 +3765,14 @@
             { title: E, expanded: a <= n, collapsedContent: "[...]" },
             "[",
             m.size
-              ? m
-                  .entrySeq()
-                  .map(([e, t]) =>
-                    O().createElement(f, {
-                      key: `${e}-${t}`,
-                      propKey: e,
-                      propVal: t,
-                      propClass: "property",
-                    }),
-                  )
+              ? m.entrySeq().map(([e, t]) =>
+                  O().createElement(f, {
+                    key: `${e}-${t}`,
+                    propKey: e,
+                    propVal: t,
+                    propClass: "property",
+                  }),
+                )
               : null,
             c
               ? O().createElement(h, { source: c })
@@ -3883,16 +3881,14 @@
                   ")",
                 ),
               g.size
-                ? g
-                    .entrySeq()
-                    .map(([e, t]) =>
-                      O().createElement(_, {
-                        key: `${e}-${t}`,
-                        propKey: e,
-                        propVal: t,
-                        propClass: ft,
-                      }),
-                    )
+                ? g.entrySeq().map(([e, t]) =>
+                    O().createElement(_, {
+                      key: `${e}-${t}`,
+                      propKey: e,
+                      propVal: t,
+                      propClass: ft,
+                    }),
+                  )
                 : null,
               l && h.size > 0
                 ? O().createElement(b, {
@@ -6611,20 +6607,18 @@
                 O().createElement(
                   "div",
                   { className: "modal-ux-content" },
-                  o
-                    .valueSeq()
-                    .map((o, c) =>
-                      O().createElement(l, {
-                        key: c,
-                        AST: s,
-                        definitions: o,
-                        getComponent: r,
-                        errSelectors: a,
-                        authSelectors: e,
-                        authActions: t,
-                        specSelectors: n,
-                      }),
-                    ),
+                  o.valueSeq().map((o, c) =>
+                    O().createElement(l, {
+                      key: c,
+                      AST: s,
+                      definitions: o,
+                      getComponent: r,
+                      errSelectors: a,
+                      authSelectors: e,
+                      authActions: t,
+                      specSelectors: n,
+                    }),
+                  ),
                 ),
               ),
             ),
@@ -8923,15 +8917,13 @@
               O().createElement(
                 "tbody",
                 null,
-                e
-                  .entrySeq()
-                  .map(([e, t]) =>
-                    O().createElement(r, {
-                      key: `${e}-${t}`,
-                      xKey: e,
-                      xVal: t,
-                    }),
-                  ),
+                e.entrySeq().map(([e, t]) =>
+                  O().createElement(r, {
+                    key: `${e}-${t}`,
+                    xKey: e,
+                    xVal: t,
+                  }),
+                ),
               ),
             ),
           ),
@@ -9260,15 +9252,13 @@
               O().createElement(C, { source: a.get("description") }),
             ),
             y && f.size
-              ? f
-                  .entrySeq()
-                  .map(([e, t]) =>
-                    O().createElement(_, {
-                      key: `${e}-${t}`,
-                      xKey: e,
-                      xVal: t,
-                    }),
-                  )
+              ? f.entrySeq().map(([e, t]) =>
+                  O().createElement(_, {
+                    key: `${e}-${t}`,
+                    xKey: e,
+                    xVal: t,
+                  }),
+                )
               : null,
             g && a.get("content")
               ? O().createElement(
@@ -10284,15 +10274,13 @@
                 })
               : null,
             d && z.size
-              ? z
-                  .entrySeq()
-                  .map(([e, t]) =>
-                    O().createElement(_, {
-                      key: `${e}-${t}`,
-                      xKey: e,
-                      xVal: t,
-                    }),
-                  )
+              ? z.entrySeq().map(([e, t]) =>
+                  O().createElement(_, {
+                    key: `${e}-${t}`,
+                    xKey: e,
+                    xVal: t,
+                  }),
+                )
               : null,
             u && B.size
               ? B.entrySeq().map(([e, t]) =>
@@ -12595,19 +12583,17 @@
                           ? O().createElement(
                               "select",
                               { "data-variable": e, onChange: i },
-                              r
-                                .get("enum")
-                                .map((r) =>
-                                  O().createElement(
-                                    "option",
-                                    {
-                                      selected: r === n(t, e),
-                                      key: r,
-                                      value: r,
-                                    },
-                                    r,
-                                  ),
+                              r.get("enum").map((r) =>
+                                O().createElement(
+                                  "option",
+                                  {
+                                    selected: r === n(t, e),
+                                    key: r,
+                                    value: r,
+                                  },
+                                  r,
                                 ),
+                              ),
                             )
                           : O().createElement("input", {
                               type: "text",

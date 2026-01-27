@@ -39971,16 +39971,14 @@
             Re.createElement("span", { className: "brace-close" }, "}"),
           ),
           de.size
-            ? de
-                .entrySeq()
-                .map(([s, o]) =>
-                  Re.createElement(Pe, {
-                    key: `${s}-${o}`,
-                    propKey: s,
-                    propVal: o,
-                    propClass: "property",
-                  }),
-                )
+            ? de.entrySeq().map(([s, o]) =>
+                Re.createElement(Pe, {
+                  key: `${s}-${o}`,
+                  propKey: s,
+                  propVal: o,
+                  propClass: "property",
+                }),
+              )
             : null,
         );
       }
@@ -40145,16 +40143,14 @@
                   ")",
                 ),
               z.size
-                ? z
-                    .entrySeq()
-                    .map(([s, o]) =>
-                      Re.createElement(ae, {
-                        key: `${s}-${o}`,
-                        propKey: s,
-                        propVal: o,
-                        propClass: ts,
-                      }),
-                    )
+                ? z.entrySeq().map(([s, o]) =>
+                    Re.createElement(ae, {
+                      key: `${s}-${o}`,
+                      propKey: s,
+                      propVal: o,
+                      propClass: ts,
+                    }),
+                  )
                 : null,
               x && V.size > 0
                 ? Re.createElement(pe, {
@@ -65032,20 +65028,18 @@
                 Re.createElement(
                   "div",
                   { className: "modal-ux-content" },
-                  w
-                    .valueSeq()
-                    .map((w, C) =>
-                      Re.createElement(x, {
-                        key: C,
-                        AST: _,
-                        definitions: w,
-                        getComponent: i,
-                        errSelectors: a,
-                        authSelectors: s,
-                        authActions: o,
-                        specSelectors: u,
-                      }),
-                    ),
+                  w.valueSeq().map((w, C) =>
+                    Re.createElement(x, {
+                      key: C,
+                      AST: _,
+                      definitions: w,
+                      getComponent: i,
+                      errSelectors: a,
+                      authSelectors: s,
+                      authActions: o,
+                      specSelectors: u,
+                    }),
+                  ),
                 ),
               ),
             ),
@@ -68707,26 +68701,22 @@
                 })
               : null,
             U && et.size
-              ? et
-                  .entrySeq()
-                  .map(([s, o]) =>
-                    Re.createElement(ae, {
-                      key: `${s}-${o}`,
-                      xKey: s,
-                      xVal: o,
-                    }),
-                  )
+              ? et.entrySeq().map(([s, o]) =>
+                  Re.createElement(ae, {
+                    key: `${s}-${o}`,
+                    xKey: s,
+                    xVal: o,
+                  }),
+                )
               : null,
             $ && tt.size
-              ? tt
-                  .entrySeq()
-                  .map(([s, o]) =>
-                    Re.createElement(ae, {
-                      key: `${s}-${o}`,
-                      xKey: s,
-                      xVal: o,
-                    }),
-                  )
+              ? tt.entrySeq().map(([s, o]) =>
+                  Re.createElement(ae, {
+                    key: `${s}-${o}`,
+                    xKey: s,
+                    xVal: o,
+                  }),
+                )
               : null,
           ),
         );
@@ -77346,15 +77336,13 @@
                                 ")",
                               ),
                             de && ie.size
-                              ? ie
-                                  .entrySeq()
-                                  .map(([s, i]) =>
-                                    Re.createElement(o, {
-                                      key: `${s}-${i}`,
-                                      xKey: s,
-                                      xVal: i,
-                                    }),
-                                  )
+                              ? ie.entrySeq().map(([s, i]) =>
+                                  Re.createElement(o, {
+                                    key: `${s}-${i}`,
+                                    xKey: s,
+                                    xVal: i,
+                                  }),
+                                )
                               : null,
                           ),
                           Re.createElement(
@@ -77584,19 +77572,17 @@
                           ? Re.createElement(
                               "select",
                               { "data-variable": s, onChange: j },
-                              i
-                                .get("enum")
-                                .map((i) =>
-                                  Re.createElement(
-                                    "option",
-                                    {
-                                      selected: i === u(o, s),
-                                      key: i,
-                                      value: i,
-                                    },
-                                    i,
-                                  ),
+                              i.get("enum").map((i) =>
+                                Re.createElement(
+                                  "option",
+                                  {
+                                    selected: i === u(o, s),
+                                    key: i,
+                                    value: i,
+                                  },
+                                  i,
                                 ),
+                              ),
                             )
                           : Re.createElement("input", {
                               type: "text",

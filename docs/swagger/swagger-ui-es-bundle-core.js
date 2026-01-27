@@ -9711,16 +9711,14 @@ class ObjectModel extends Ge.Component {
         Ge.default.createElement("span", { className: "brace-close" }, "}"),
       ),
       x.size
-        ? x
-            .entrySeq()
-            .map(([e, t]) =>
-              Ge.default.createElement(T, {
-                key: `${e}-${t}`,
-                propKey: e,
-                propVal: t,
-                propClass: "property",
-              }),
-            )
+        ? x.entrySeq().map(([e, t]) =>
+            Ge.default.createElement(T, {
+              key: `${e}-${t}`,
+              propKey: e,
+              propVal: t,
+              propClass: "property",
+            }),
+          )
         : null,
     );
   }
@@ -9771,16 +9769,14 @@ class ArrayModel extends Ge.Component {
         { title: _, expanded: n <= a, collapsedContent: "[...]" },
         "[",
         d.size
-          ? d
-              .entrySeq()
-              .map(([e, t]) =>
-                Ge.default.createElement(y, {
-                  key: `${e}-${t}`,
-                  propKey: e,
-                  propVal: t,
-                  propClass: "property",
-                }),
-              )
+          ? d.entrySeq().map(([e, t]) =>
+              Ge.default.createElement(y, {
+                key: `${e}-${t}`,
+                propKey: e,
+                propVal: t,
+                propClass: "property",
+              }),
+            )
           : null,
         i
           ? Ge.default.createElement(f, { source: i })
@@ -9893,16 +9889,14 @@ class Primitive extends Ge.Component {
               ")",
             ),
           h.size
-            ? h
-                .entrySeq()
-                .map(([e, t]) =>
-                  Ge.default.createElement(v, {
-                    key: `${e}-${t}`,
-                    propKey: e,
-                    propVal: t,
-                    propClass: br,
-                  }),
-                )
+            ? h.entrySeq().map(([e, t]) =>
+                Ge.default.createElement(v, {
+                  key: `${e}-${t}`,
+                  propKey: e,
+                  propVal: t,
+                  propClass: br,
+                }),
+              )
             : null,
           l && f.size > 0
             ? Ge.default.createElement(C, {
@@ -12799,20 +12793,18 @@ class AuthorizationPopup extends Ge.default.Component {
             Ge.default.createElement(
               "div",
               { className: "modal-ux-content" },
-              s
-                .valueSeq()
-                .map((s, i) =>
-                  Ge.default.createElement(l, {
-                    key: i,
-                    AST: o,
-                    definitions: s,
-                    getComponent: r,
-                    errSelectors: n,
-                    authSelectors: e,
-                    authActions: t,
-                    specSelectors: a,
-                  }),
-                ),
+              s.valueSeq().map((s, i) =>
+                Ge.default.createElement(l, {
+                  key: i,
+                  AST: o,
+                  definitions: s,
+                  getComponent: r,
+                  errSelectors: n,
+                  authSelectors: e,
+                  authActions: t,
+                  specSelectors: a,
+                }),
+              ),
             ),
           ),
         ),
@@ -15105,15 +15097,13 @@ var operation_extensions = ({ extensions: e, getComponent: t }) => {
         Ge.default.createElement(
           "tbody",
           null,
-          e
-            .entrySeq()
-            .map(([e, t]) =>
-              Ge.default.createElement(r, {
-                key: `${e}-${t}`,
-                xKey: e,
-                xVal: t,
-              }),
-            ),
+          e.entrySeq().map(([e, t]) =>
+            Ge.default.createElement(r, {
+              key: `${e}-${t}`,
+              xKey: e,
+              xVal: t,
+            }),
+          ),
         ),
       ),
     ),
@@ -15439,15 +15429,13 @@ class Response extends Ge.default.Component {
           Ge.default.createElement(x, { source: n.get("description") }),
         ),
         g && y.size
-          ? y
-              .entrySeq()
-              .map(([e, t]) =>
-                Ge.default.createElement(v, {
-                  key: `${e}-${t}`,
-                  xKey: e,
-                  xVal: t,
-                }),
-              )
+          ? y.entrySeq().map(([e, t]) =>
+              Ge.default.createElement(v, {
+                key: `${e}-${t}`,
+                xKey: e,
+                xVal: t,
+              }),
+            )
           : null,
         h && n.get("content")
           ? Ge.default.createElement(
