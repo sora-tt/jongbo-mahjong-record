@@ -4,7 +4,7 @@
 import * as React from "react";
 
 import clsx from "clsx";
-import { Calendar, BookOpen, Crown } from "lucide-react";
+import { BookOpen, Calendar, Crown } from "lucide-react";
 
 import { LeagueSectionCard } from "@/components/pages/league/league-section-card/index";
 
@@ -52,15 +52,8 @@ const LeaguePage: React.FC = () => {
 
   if (!league) return null;
 
-  const {
-    name,
-    createdAt,
-    lastRecordedAt,
-    ruleName,
-    totalGames,
-    members,
-    titles,
-  } = league;
+  const { name, createdAt, lastRecordedAt, rule, totalGames, members, titles } =
+    league;
 
   return (
     <div className="flex-1 bg-white min-h-full font-jp">
@@ -79,7 +72,7 @@ const LeaguePage: React.FC = () => {
               </span>
               <span className="inline-flex items-center gap-1">
                 <BookOpen size={14} className="text-white" />
-                <span>{ruleName}</span>
+                <span>{rule.name}</span>
               </span>
             </div>
           </div>

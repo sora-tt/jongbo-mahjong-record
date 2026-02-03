@@ -1,15 +1,21 @@
+import { Rule } from "./rule";
 import { User, UserIdType } from "./user";
-import { AppDate } from "../utils/app-date";
+
+import { AppDate } from "@/types/utils/app-date";
 
 export type LeagueIdType = string;
+
+export type LeagueSeasonIdType = string;
 
 export type League = {
   leagueId: LeagueIdType;
   name: string;
   createdAt: AppDate;
+  rule: Rule;
   members: Record<UserIdType, LeagueMember>;
+  seasons: Record<LeagueSeasonIdType, LeagueSeason>;
+  //仮で追加
   lastRecordedAt: AppDate;
-  ruleName: string;
   totalGames: number;
   titles?: LeagueTitle[];
 };
@@ -24,6 +30,16 @@ export type LeagueMember = {
   gamesPlayed: number;
   rank: number;
   numberOfEachOrder: NumberOfEachOrder;
+};
+
+export type LeagueSeason = {
+  leagueSeasonId: LeagueSeasonIdType;
+  name: string;
+  members: Record<UserIdType, LeagueSeasonMember>;
+};
+
+export type LeagueSeasonMember = {
+  player: User;
 };
 
 export type NumberOfEachOrder = {
