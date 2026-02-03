@@ -1,4 +1,6 @@
 import { leagueMembersData } from "./league-member";
+import { leagueSeasonsData } from "./league-season";
+import { ruleData1 } from "./rule";
 
 import { League, LeagueIdType } from "@/types/domain/league";
 import { AppDate } from "@/types/utils/app-date";
@@ -11,13 +13,14 @@ export const leagueData1: League = {
     month: 9,
     day: 4,
   }),
+  rule: ruleData1,
   members: leagueMembersData,
+  seasons: leagueSeasonsData,
   lastRecordedAt: AppDate.fromYMD({
     year: 2025,
     month: 11,
     day: 9,
   }),
-  ruleName: "Mリーグルール",
   totalGames: 242,
   titles: [
     { label: "最高得点", playerName: "水島", value: "87800点" },
@@ -34,13 +37,14 @@ export const leagueData2: League = {
     month: 9,
     day: 4,
   }),
+  rule: ruleData1,
   members: leagueMembersData,
+  seasons: leagueSeasonsData,
   lastRecordedAt: AppDate.fromYMD({
     year: 2025,
     month: 11,
     day: 9,
   }),
-  ruleName: "Mリーグルール",
   totalGames: 242,
   titles: [
     { label: "最高得点", playerName: "水島", value: "87800点" },
