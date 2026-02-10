@@ -40,6 +40,13 @@ export type LeagueSeason = {
 
 export type LeagueSeasonMember = {
   player: User;
+  // 集計系
+  totalPoints: number;
+  gamesPlayed: number;
+  rank: number;
+  numberOfEachOrder: NumberOfEachOrder;
+  averageRank: number;
+  top2Rate: number;
 };
 
 export type NumberOfEachOrder = {
