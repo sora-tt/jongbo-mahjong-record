@@ -1,238 +1,113 @@
-// app/league/page.tsx
 "use client";
 
 import * as React from "react";
 
-import clsx from "clsx";
-import { BookOpen, Calendar, Crown } from "lucide-react";
-
-import { LeagueSectionCard } from "@/components/pages/league/league-section-card/index";
+import Header from "@/components/common/container/header";
 
 import { useLeague } from "./hooks";
 
-import { ColorState } from "@/types/domain/color";
-
-const COLOR_MAP: Record<ColorState, string> = {
-  red: "bg-red-500",
-  blue: "bg-blue-500",
-  green: "bg-green-500",
-  yellow: "bg-yellow-500",
-  purple: "bg-purple-500",
-  pink: "bg-pink-500",
-  orange: "bg-orange-500",
-  sky: "bg-sky-500",
-  emerald: "bg-emerald-500",
-  amber: "bg-amber-500",
-  lime: "bg-lime-500",
-  teal: "bg-teal-500",
-  cyan: "bg-cyan-500",
-  indigo: "bg-indigo-500",
-  violet: "bg-violet-500",
-  fuchsia: "bg-fuchsia-500",
-  rose: "bg-rose-500",
-  magenta: "bg-magenta-500",
-  brown: "bg-yellow-800",
-  stone: "bg-stone-500",
-  gray: "bg-gray-500",
-  black: "bg-black",
-};
-
 const LeaguePage: React.FC = () => {
-  const { league, error } = useLeague();
-
-  if (error) {
-    return (
-      <div className="flex-1 bg-white min-h-full font-jp">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <p className="text-red-500">{error}</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!league) return null;
-
-  const { name, createdAt, lastRecordedAt, rule, totalGames, members, titles } =
-    league;
+  const { winStreak, loseStreak, highestScore, lowestScore, seasons } =
+    useLeague();
 
   return (
-    <div className="flex-1 bg-white min-h-full font-jp">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* ヘッダー */}
-        <section className="mb-6">
-          <div className="rounded-lg border border-brand-500 bg-gradient-to-r from-brand-500 to-brand-400 shadow-sm px-4 py-4 text-center">
-            <h1 className="text-2xl font-bold text-white mb-2">{name}</h1>
-            <div className="flex flex-wrap justify-center items-center gap-x-4 gap-y-1 text-xs text-white">
-              <span className="inline-flex items-center gap-1">
-                <Calendar size={14} className="text-white" />
-                <span>
-                  {createdAt.format("yyyy/MM/dd")} 〜{" "}
-                  {lastRecordedAt.format("yyyy/MM/dd")}
-                </span>
-              </span>
-              <span className="inline-flex items-center gap-1">
-                <BookOpen size={14} className="text-white" />
-                <span>{rule.name}</span>
-              </span>
+    <div className="flex-1 bg-white min-h-screen font-jp">
+      <Header />
+      <div className="flex flex-col max-w-7xl gap-4 mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* 画面上部：リーグ全シーズンの記録 */}
+        <div className="flex flex-col gap-4">
+          <div className="text-2xl font-bold text-text-dark">リーグ記録</div>
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+            {/* 連勝記録 */}
+            <div className="bg-white rounded-lg border-2 border-brand-200 p-4">
+              <div className="text-sm font-bold text-text-muted mb-2">
+                連勝記録
+              </div>
+              <div className="text-xs text-text-muted mb-2">
+                {winStreak.player}
+              </div>
+              <div className="text-3xl font-bold text-brand-600">
+                {winStreak.text}
+              </div>
+            </div>
+            {/* 連敗記録 */}
+            <div className="bg-white rounded-lg border-2 border-brand-200 p-4">
+              <div className="text-sm font-bold text-text-muted mb-2">
+                連敗記録
+              </div>
+              <div className="text-xs text-text-muted mb-2">
+                {loseStreak.player}
+              </div>
+              <div className="text-3xl font-bold text-brand-600">
+                {loseStreak.text}
+              </div>
+            </div>
+            {/* 最高スコア */}
+            <div className="bg-white rounded-lg border-2 border-brand-200 p-4">
+              <div className="text-sm font-bold text-text-muted mb-2">
+                最高スコア
+              </div>
+              <div className="text-xs text-text-muted mb-2">
+                {highestScore.player}
+              </div>
+              <div className="text-3xl font-bold text-brand-600">
+                {highestScore.text}
+              </div>
+            </div>
+            {/* 最低スコア */}
+            <div className="bg-white rounded-lg border-2 border-brand-200 p-4">
+              <div className="text-sm font-bold text-text-muted mb-2">
+                最低スコア
+              </div>
+              <div className="text-xs text-text-muted mb-2">
+                {lowestScore.player}
+              </div>
+              <div className="text-3xl font-bold text-brand-600">
+                {lowestScore.text}
+              </div>
             </div>
           </div>
-        </section>
+        </div>
 
-        {/* 記録ボタン */}
-        <section className="mb-6">
-          <div className="flex gap-3">
-            <button
-              className="flex-1 px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white font-medium rounded-lg transition-colors duration-150"
-              // TODO: onClickを設定
-            >
-              更新する
-            </button>
-            <button
-              className="flex-1 px-4 py-2 border-2 border-brand-500 text-brand-600 font-medium rounded-lg hover:bg-brand-50 transition-colors duration-150"
-              // TODO: onClickを設定
-            >
-              記録する
-            </button>
-          </div>
-        </section>
-
-        {/* 順位表 */}
-        <section className="mb-8">
-          <LeagueSectionCard
-            title="順位表"
-            rightText={`総対局数：${totalGames}`}
-            bodyClassName="p-4 overflow-x-auto"
-          >
-            {/* TODO:tableのコンポーネント化 */}
-            <table className="min-w-full text-xs">
-              <thead className="bg-brand-50">
-                <tr>
-                  <th className="px-2 py-2 text-center font-semibold text-text-muted whitespace-nowrap">
-                    順位
-                  </th>
-                  <th className="px-2 py-2 text-center font-semibold text-text-muted whitespace-nowrap">
-                    プレイヤー
-                  </th>
-                  <th className="px-2 py-2 text-center font-semibold text-text-muted whitespace-nowrap">
-                    総合pt
-                  </th>
-                  <th className="px-2 py-2 text-center font-semibold text-text-muted whitespace-nowrap">
-                    1位
-                  </th>
-                  <th className="px-2 py-2 text-center font-semibold text-text-muted whitespace-nowrap">
-                    2位
-                  </th>
-                  <th className="px-2 py-2 text-center font-semibold text-text-muted whitespace-nowrap">
-                    3位
-                  </th>
-                  <th className="px-2 py-2 text-center font-semibold text-text-muted whitespace-nowrap">
-                    4位
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {Object.values(members).map((member) => (
-                  <tr
-                    key={member.rank}
-                    className="border-t border-pink-200 text-text-muted"
-                  >
-                    <td className="px-2 py-2 text-center">{member.rank}</td>
-                    <td className="px-2 py-2 text-center">
-                      {member.player.name}
-                    </td>
-                    <td
-                      className={`px-2 py-2 text-center font-semibold ${
-                        member.totalPoints >= 0
-                          ? "text-blue-400"
-                          : "text-red-400"
-                      }`}
-                    >
-                      {member.totalPoints.toFixed(1)}
-                    </td>
-                    <td className="px-2 py-2 text-center">
-                      {member.numberOfEachOrder.first}
-                    </td>
-                    <td className="px-2 py-2 text-center">
-                      {member.numberOfEachOrder.second}
-                    </td>
-                    <td className="px-2 py-2 text-center">
-                      {member.numberOfEachOrder.third}
-                    </td>
-                    <td className="px-2 py-2 text-center">
-                      {member.numberOfEachOrder.fourth}
-                    </td>
-                  </tr>
-                ))}
-                {Object.keys(members).length === 0 && (
-                  <tr className="border-t border-pink-200">
-                    <td
-                      className="px-3 py-4 text-center text-gray-400"
-                      colSpan={7}
-                    >
-                      まだ対局結果が登録されていません
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </LeagueSectionCard>
-        </section>
-
-        {/* 総合pt推移 */}
-        <section className="mb-8">
-          <LeagueSectionCard title="総合pt推移" bodyClassName="p-4">
-            <div className="w-full h-48 bg-gray-50 rounded-md mb-3" />
-            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
-              {Object.values(members).map((member, index) => (
-                <div key={index} className="flex items-center gap-1">
-                  <span
-                    className={clsx([
-                      "inline-block w-2 h-2 rounded-full",
-                      COLOR_MAP[member.player.color] ?? "bg-gray-500",
-                    ])}
-                    // className={`inline-block w-2 h-2 rounded-full bg-${member.player.color}-500`}
-                  />
-                  <span className="text-text-muted">{member.player.name}</span>
-                </div>
-              ))}
-            </div>
-            <p className="mt-2 text-[10px] text-text-muted">
-              ※プレイヤー名をタップするとデータを非表示にできます
-            </p>
-          </LeagueSectionCard>
-        </section>
-
-        {/* タイトル */}
-        <section className="mb-8">
-          <LeagueSectionCard title="タイトル" bodyClassName="p-4">
-            <div>
-              {titles ? (
-                titles.map((t) => (
-                  <div
-                    key={t.label}
-                    className="grid grid-cols-3 gap-x-4 px-4 py-2 text-sm border-b border-pink-200 last:border-b-0 items-center text-text-muted"
-                  >
-                    {/* 左：タイトル名（左寄せ） */}
-                    <div className="text-left">{t.label}</div>
-
-                    {/* 中央：冠アイコン＋プレイヤー名（中央寄せ） */}
-                    <div className="flex items-center justify-center gap-1">
-                      <Crown size={16} className="text-yellow-400" />
-                      <span className="font-semibold">{t.playerName}</span>
+        {/* 画面下部：シーズン一覧 */}
+        <div className="flex flex-col gap-4 mt-8">
+          <div className="text-2xl font-bold text-text-dark">シーズン一覧</div>
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            {seasons.map((season) => (
+              <div
+                key={season.leagueSeasonId}
+                className={`bg-white rounded-lg p-4 hover:shadow-lg transition-shadow relative ${
+                  season.isOngoing
+                    ? "border-2 border-brand-600"
+                    : "border-2 border-gray-300"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <div className="text-lg font-bold text-text-dark mb-2">
+                      {season.name}
                     </div>
-
-                    {/* 右：値（右寄せ） */}
-                    <div className="text-right">
-                      <span className="font-semibold">{t.value}</span>
+                    <div className="text-sm text-text-muted">
+                      参加者：{season.memberCount}人
+                    </div>
+                    <div className="text-sm text-text-muted">
+                      対局数：{season.gameCount}局
                     </div>
                   </div>
-                ))
-              ) : (
-                <div>No title</div>
-              )}
-            </div>
-          </LeagueSectionCard>
-        </section>
+                  <div
+                    className={`flex items-center justify-center w-16 h-12 rounded-lg font-bold text-base ${
+                      season.isOngoing
+                        ? "bg-brand-600 text-white"
+                        : "bg-gray-200 text-gray-600"
+                    }`}
+                  >
+                    {season.isOngoing ? "進行中" : "終了"}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );

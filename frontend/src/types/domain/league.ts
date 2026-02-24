@@ -18,6 +18,7 @@ export type League = {
   lastRecordedAt: AppDate;
   totalGames: number;
   titles?: LeagueTitle[];
+  records?: LeagueRecord;
 };
 
 export type LeagueMember = {
@@ -62,4 +63,19 @@ export type LeagueTitle = {
   label: string;
   playerName: string;
   value: string;
+};
+
+export type LeagueRecord = {
+  winStreak: { text: string; player: string };
+  loseStreak: { text: string; player: string };
+  highestScore: { text: string; player: string };
+  lowestScore: { text: string; player: string };
+};
+
+export type LeagueSeasonOverview = {
+  leagueSeasonId: LeagueSeasonIdType;
+  name: string;
+  memberCount: number;
+  gameCount: number;
+  isOngoing: boolean;
 };
