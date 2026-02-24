@@ -38,7 +38,7 @@ export const DailyRecordTable: React.FC = () => {
         <TableRow>
           <TableHeadCell className="w-12" />
           {players.map((p) => (
-            <TableHeadCell key={p.id}>{p.name}</TableHeadCell>
+            <TableHeadCell key={p.userId}>{p.name}</TableHeadCell>
           ))}
           <TableHeadCell />
         </TableRow>
@@ -50,17 +50,17 @@ export const DailyRecordTable: React.FC = () => {
           const resultArray = WIND_ORDER.map((w) => resultInput[w]);
 
           return (
-            <TableRow key={match.id} className="text-text-muted">
+            <TableRow key={match.matchId} className="text-text-muted">
               <TableCell className="font-semibold">{rowIndex + 1}</TableCell>
 
               {players.map((player) => {
                 const resultForPlayer = resultArray.find(
-                  (r) => r.player.id === player.id
+                  (r) => r.player.userId === player.userId
                 );
                 const score = resultForPlayer?.score ?? null;
 
                 return (
-                  <TableCell key={player.id} className={scoreClass(score)}>
+                  <TableCell key={player.userId} className={scoreClass(score)}>
                     {formatScore(score)}
                   </TableCell>
                 );
@@ -92,7 +92,7 @@ export const DailyRecordTable: React.FC = () => {
           <TableCell className="font-semibold">計</TableCell>
           {totals.map((total, idx) => (
             <TableCell
-              key={players[idx]?.id ?? idx}
+              key={players[idx]?.userId ?? idx}
               className={`font-semibold ${scoreClass(total)}`}
             >
               {formatScore(total)}

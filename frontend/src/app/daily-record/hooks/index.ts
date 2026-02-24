@@ -6,10 +6,12 @@ import { leaguesData } from "@/mocks/league";
 export const useDailyRecord = () => {
   const record = dailyRecordData1;
 
-  const league = leaguesData.find((l) => l.id === record.leagueId)!;
+  const league = Object.values(leaguesData).find(
+    (l) => l.leagueId === record.leagueId
+  )!;
 
   const date = record.date.format("yyyy/MM/dd");
-  const rule = league.ruleName;
+  const rule = league.rule.name;
 
   const matches: Match[] = Object.values(record.matches);
 

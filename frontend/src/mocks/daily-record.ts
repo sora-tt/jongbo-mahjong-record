@@ -6,7 +6,7 @@ import type { DailyRecord } from "@/types/domain/daily-record";
 
 export const dailyRecordData1: DailyRecord = {
   dailyRecordId: "daily-record-000001",
-  leagueId: leagueData1.id,
+  leagueId: leagueData1.leagueId,
   date: leagueData1.lastRecordedAt,
   matches: {
     1: matchesData[0],

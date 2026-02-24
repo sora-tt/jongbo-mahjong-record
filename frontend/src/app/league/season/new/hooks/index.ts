@@ -4,6 +4,7 @@ import type { LeagueMember, LeagueSeasonMember } from "@/types/domain/league";
 import type { UserIdType } from "@/types/domain/user";
 
 import { leagueData1 } from "@/mocks/league";
+import { convertLeagueMemberToLeagueSeasonMember } from "@/types/domain/league-converter";
 
 export const useSeasonNew = () => {
   const leagueMembers: Record<UserIdType, LeagueMember> = leagueData1.members;
@@ -14,7 +15,8 @@ export const useSeasonNew = () => {
   >(() => {
     const initial: Record<UserIdType, LeagueSeasonMember> = {};
     for (const [userId, member] of Object.entries(leagueMembers)) {
-      initial[userId as UserIdType] = member as LeagueSeasonMember;
+      initial[userId as UserIdType] =
+        convertLeagueMemberToLeagueSeasonMember(member);
     }
     return initial;
   });
@@ -42,13 +44,8 @@ export const useSeasonNew = () => {
           return prev;
         }
 
-        // LeagueMember → LeagueSeasonMember への変換が必要ならここで付け足す
-        const seasonMember: LeagueSeasonMember = {
-          ...(base as LeagueSeasonMember),
-          // 例:
-          // seasonPoints: 0,
-          // seasonRank: 0,
-        };
+        // LeagueMember → LeagueSeasonMember への変換
+        const seasonMember = convertLeagueMemberToLeagueSeasonMember(base);
 
         next[memberId] = seasonMember;
         return next;

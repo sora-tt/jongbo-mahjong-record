@@ -11,7 +11,7 @@ export type TotalPointsState = number[];
 
 export type DailyRecord = {
   dailyRecordId: DailyRecordIdType;
-  leagueId: League["id"];
+  leagueId: League["leagueId"];
   date: AppDate;
   matches: DailyMatchRecord;
   players: User[];

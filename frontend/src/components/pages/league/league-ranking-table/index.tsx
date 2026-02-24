@@ -31,7 +31,7 @@ export const LeagueRankingTable: React.FC = () => {
       </TableHead>
 
       <TableBody>
-        {members.map((member) => (
+        {Object.values(members).map((member) => (
           <TableRow key={member.rank} className="text-text-muted">
             <TableCell>{member.rank}</TableCell>
             <TableCell>{member.player.name}</TableCell>
@@ -50,7 +50,7 @@ export const LeagueRankingTable: React.FC = () => {
           </TableRow>
         ))}
 
-        {members.length === 0 && (
+        {Object.values(members).length === 0 && (
           <TableRow>
             <TableCell
               colSpan={7}

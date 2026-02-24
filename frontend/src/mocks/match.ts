@@ -11,8 +11,8 @@ export const matchResultInputData1: MatchResultInput = {
 };
 
 export const matchData1: Match = {
-  id: "match-000001",
-  leagueId: leagueData1.id,
+  matchId: "match-000001",
+  leagueId: leagueData1.leagueId,
   playedAt: leagueData1.lastRecordedAt,
   createdAt: leagueData1.lastRecordedAt,
   results: {
@@ -29,8 +29,8 @@ export const matchResultInputData2: MatchResultInput = {
 };
 
 export const matchData2: Match = {
-  id: "match-000002",
-  leagueId: leagueData1.id,
+  matchId: "match-000002",
+  leagueId: leagueData1.leagueId,
   playedAt: leagueData1.lastRecordedAt,
   createdAt: leagueData1.lastRecordedAt,
   results: {
@@ -47,8 +47,8 @@ export const matchResultInputData3: MatchResultInput = {
 };
 
 export const matchData3: Match = {
-  id: "match-000003",
-  leagueId: leagueData1.id,
+  matchId: "match-000003",
+  leagueId: leagueData1.leagueId,
   playedAt: leagueData1.lastRecordedAt,
   createdAt: leagueData1.lastRecordedAt,
   results: {
