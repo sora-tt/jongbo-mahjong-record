@@ -5,17 +5,10 @@ import * as React from "react";
 import clsx from "clsx";
 import { Calendar, BookOpen, Crown } from "lucide-react";
 
+import { LeagueRankingTable } from "@/components/pages/league/league-ranking-table";
 import { Button } from "@/components/ui/button";
 import { HeaderCard } from "@/components/ui/header-card";
 import { SectionCard } from "@/components/ui/section-card";
-import {
-  Table,
-  TableHead,
-  TableBody,
-  TableRow,
-  TableHeadCell,
-  TableCell,
-} from "@/components/ui/table";
 
 import { useLeague } from "./hooks";
 
@@ -103,54 +96,7 @@ export const LeaguePage: React.FC = () => {
             rightText={`総対局数：${totalGames}`}
             bodyClassName="p-4 overflow-x-auto"
           >
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableHeadCell>順位</TableHeadCell>
-                  <TableHeadCell>プレイヤー</TableHeadCell>
-                  <TableHeadCell>総合pt</TableHeadCell>
-                  <TableHeadCell>1位</TableHeadCell>
-                  <TableHeadCell>2位</TableHeadCell>
-                  <TableHeadCell>3位</TableHeadCell>
-                  <TableHeadCell>4位</TableHeadCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {members.map((member) => (
-                  <TableRow
-                    key={member.rank}
-                    className="border-t border-pink-200 text-text-muted"
-                  >
-                    <TableCell>{member.rank}</TableCell>
-                    <TableCell>{member.player.name}</TableCell>
-                    <TableCell
-                      className={clsx(
-                        "font-semibold",
-                        member.totalPoints >= 0
-                          ? "text-blue-400"
-                          : "text-red-400"
-                      )}
-                    >
-                      {member.totalPoints.toFixed(1)}
-                    </TableCell>
-                    <TableCell>{member.numberOfEachOrder.first}</TableCell>
-                    <TableCell>{member.numberOfEachOrder.second}</TableCell>
-                    <TableCell>{member.numberOfEachOrder.third}</TableCell>
-                    <TableCell>{member.numberOfEachOrder.fourth}</TableCell>
-                  </TableRow>
-                ))}
-                {members.length === 0 && (
-                  <TableRow className="border-t border-pink-200">
-                    <TableCell
-                      colSpan={7}
-                      className="px-3 py-4 text-center text-gray-400"
-                    >
-                      まだ対局結果が登録されていません
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+            <LeagueRankingTable />
           </SectionCard>
         </section>
 
@@ -158,8 +104,8 @@ export const LeaguePage: React.FC = () => {
           <SectionCard title="総合pt推移" bodyClassName="p-4">
             <div className="w-full h-48 bg-gray-50 rounded-md mb-3" />
             <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
-              {members.map((member, index) => (
-                <div key={index} className="flex items-center gap-1">
+              {members.map((member) => (
+                <div key={member.player.id} className="flex items-center gap-1">
                   <span
                     className={clsx(
                       "inline-block w-2 h-2 rounded-full",

@@ -1,5 +1,6 @@
-// components/pages/league/league-ranking-table/index.tsx
 import * as React from "react";
+
+import clsx from "clsx";
 
 import {
   Table,
@@ -10,13 +11,11 @@ import {
   TableCell,
 } from "@/components/ui/table";
 
-import type { LeagueMember } from "@/types/domain/league";
+import { useLeagueRankingTable } from "./hooks";
 
-type Props = {
-  members: LeagueMember[];
-};
+export const LeagueRankingTable: React.FC = () => {
+  const { members } = useLeagueRankingTable();
 
-export const LeagueRankingTable: React.FC<Props> = ({ members }) => {
   return (
     <Table>
       <TableHead>
@@ -30,15 +29,17 @@ export const LeagueRankingTable: React.FC<Props> = ({ members }) => {
           <TableHeadCell>4位</TableHeadCell>
         </TableRow>
       </TableHead>
+
       <TableBody>
         {members.map((member) => (
           <TableRow key={member.rank} className="text-text-muted">
             <TableCell>{member.rank}</TableCell>
             <TableCell>{member.player.name}</TableCell>
             <TableCell
-              className={
+              className={clsx(
+                "font-semibold",
                 member.totalPoints >= 0 ? "text-blue-400" : "text-red-400"
-              }
+              )}
             >
               {member.totalPoints.toFixed(1)}
             </TableCell>
@@ -48,11 +49,12 @@ export const LeagueRankingTable: React.FC<Props> = ({ members }) => {
             <TableCell>{member.numberOfEachOrder.fourth}</TableCell>
           </TableRow>
         ))}
+
         {members.length === 0 && (
           <TableRow>
             <TableCell
-              className="px-3 py-4 text-center text-gray-400"
               colSpan={7}
+              className="px-3 py-4 text-center text-gray-400"
             >
               まだ対局結果が登録されていません
             </TableCell>

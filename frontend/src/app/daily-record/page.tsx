@@ -12,8 +12,7 @@ import { SectionCard } from "@/components/ui/section-card";
 import { useDailyRecord } from "./hooks";
 
 export const DailyRecordPage: React.FC = () => {
-  const { dateLabel, ruleLabel, players, sortedMatches, totals } =
-    useDailyRecord();
+  const { date, rule } = useDailyRecord();
 
   return (
     <div className="flex-1 bg-white min-h-full font-jp">
@@ -21,27 +20,28 @@ export const DailyRecordPage: React.FC = () => {
         {/* ヘッダー */}
         <section className="mb-6">
           <HeaderCard title="本日の成績">
-            <span className="inline-flex items-center gap-1">
-              <Calendar size={14} className="text-white" />
-              <span>{dateLabel}</span>
-            </span>
-            {ruleLabel && (
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-white">
+              {/* 日付 */}
               <span className="inline-flex items-center gap-1">
-                <BookOpen size={14} className="text-white" />
-                <span>{ruleLabel}</span>
+                <Calendar size={14} className="text-white" />
+                <span>{date}</span>
               </span>
-            )}
+
+              {/* ルール名（あれば） */}
+              {rule && (
+                <span className="inline-flex items-center gap-1">
+                  <BookOpen size={14} className="text-white" />
+                  <span>{rule}</span>
+                </span>
+              )}
+            </div>
           </HeaderCard>
         </section>
 
         {/* 成績表 */}
         <section className="mb-10">
           <SectionCard title="成績表" bodyClassName="p-0 overflow-x-auto">
-            <DailyRecordTable
-              players={players}
-              matches={sortedMatches}
-              totals={totals}
-            />
+            <DailyRecordTable />
           </SectionCard>
         </section>
 

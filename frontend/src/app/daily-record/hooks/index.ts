@@ -1,55 +1,26 @@
-// src/app/daily-record/hooks/index.ts
+import type { Match } from "@/types/domain/match";
+
 import { dailyRecordData1 } from "@/mocks/daily-record";
 import { leaguesData } from "@/mocks/league";
-
-const WIND_ORDER = ["EAST", "SOUTH", "WEST", "NORTH"] as const;
 
 export const useDailyRecord = () => {
   const record = dailyRecordData1;
 
-  const { matches, leagueId, date } = record;
+  const league = leaguesData.find((l) => l.id === record.leagueId)!;
 
-  const league = leaguesData.find((l) => l.id === leagueId) ?? null;
-  const dateLabel = date.format("yyyy/MM/dd");
-  const ruleLabel = league?.ruleName ?? "";
+  const date = record.date.format("yyyy/MM/dd");
+  const rule = league.ruleName;
 
-  const sortedMatchIndexes = Object.keys(matches)
-    .map((k) => Number(k))
-    .sort((a, b) => a - b);
+  const matches: Match[] = Object.values(record.matches);
 
-  const sortedMatches = sortedMatchIndexes.map((idx) => ({
-    index: idx,
-    match: matches[idx],
-  }));
-
-  const firstMatch = sortedMatches[0]?.match;
-
-  const players =
-    firstMatch != null
-      ? WIND_ORDER.map(
-          (windKey) => firstMatch.results.matchResultInput[windKey].player
-        )
-      : [];
-
-  const totals = players.map((player) =>
-    sortedMatches.reduce((sum, { match }) => {
-      const input = match.results.matchResultInput;
-      const resultArray = WIND_ORDER.map((w) => input[w]);
-      const resultForPlayer = resultArray.find(
-        (r) => r.player.id === player.id
-      );
-      const pt = resultForPlayer?.score ?? 0;
-      return sum + pt;
-    }, 0)
-  );
+  const players = record.players;
+  const totals = record.totalPoints;
 
   return {
-    record,
-    league,
-    dateLabel,
-    ruleLabel,
+    date,
+    rule,
     players,
-    sortedMatches,
+    matches,
     totals,
   };
 };
