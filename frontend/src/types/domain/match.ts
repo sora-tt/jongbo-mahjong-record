@@ -1,9 +1,12 @@
+import { LeagueIdType } from "./league";
 import { User } from "./user";
 import { AppDate } from "../utils/app-date";
 
+export type MatchIdType = string;
+
 export type Match = {
-  id: string;
-  leagueId: string;
+  matchId: MatchIdType;
+  leagueId: LeagueIdType;
   playedAt: AppDate;
   createdAt: AppDate;
   results: MatchResult;

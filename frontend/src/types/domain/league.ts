@@ -1,16 +1,23 @@
-import { User } from "./user";
-import { AppDate } from "../utils/app-date";
+import { Rule } from "./rule";
+import { User, UserIdType } from "./user";
+
+import { AppDate } from "@/types/utils/app-date";
+
+export type LeagueIdType = string;
+
+export type LeagueSeasonIdType = string;
 
 export type League = {
-  id: string;
+  leagueId: LeagueIdType;
   name: string;
   createdAt: AppDate;
-  members: LeagueMember[];
+  rule: Rule;
+  members: Record<UserIdType, LeagueMember>;
+  seasons: Record<LeagueSeasonIdType, LeagueSeason>;
   //仮で追加
   lastRecordedAt: AppDate;
-  ruleName: string;
   totalGames: number;
-  titles: LeagueTitle[];
+  titles?: LeagueTitle[];
 };
 
 export type LeagueMember = {
@@ -25,6 +32,23 @@ export type LeagueMember = {
   numberOfEachOrder: NumberOfEachOrder;
 };
 
+export type LeagueSeason = {
+  leagueSeasonId: LeagueSeasonIdType;
+  name: string;
+  members: Record<UserIdType, LeagueSeasonMember>;
+};
+
+export type LeagueSeasonMember = {
+  player: User;
+  // 集計系
+  totalPoints: number;
+  gamesPlayed: number;
+  rank: number;
+  numberOfEachOrder: NumberOfEachOrder;
+  averageRank: number;
+  top2Rate: number;
+};
+
 export type NumberOfEachOrder = {
   first: number;
   second: number;
@@ -33,16 +57,6 @@ export type NumberOfEachOrder = {
 };
 
 export type Role = "owner" | "member";
-
-export type LeagueStanding = {
-  rank: number;
-  playerName: string;
-  totalPt: number;
-  first: number;
-  second: number;
-  third: number;
-  fourth: number;
-};
 
 export type LeagueTitle = {
   label: string;

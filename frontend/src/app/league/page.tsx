@@ -3,7 +3,7 @@
 import * as React from "react";
 
 import clsx from "clsx";
-import { Calendar, BookOpen, Crown } from "lucide-react";
+import { BookOpen, Calendar, Crown } from "lucide-react";
 
 import { LeagueRankingTable } from "@/components/pages/league/league-ranking-table";
 import { Button } from "@/components/ui/button";
@@ -39,7 +39,7 @@ const COLOR_MAP: Record<ColorState, string> = {
   black: "bg-black",
 };
 
-export const LeaguePage: React.FC = () => {
+const LeaguePage: React.FC = () => {
   const { league, error } = useLeague();
 
   if (error) {
@@ -54,15 +54,8 @@ export const LeaguePage: React.FC = () => {
 
   if (!league) return null;
 
-  const {
-    name,
-    createdAt,
-    lastRecordedAt,
-    ruleName,
-    totalGames,
-    members,
-    titles,
-  } = league;
+  const { name, createdAt, lastRecordedAt, rule, totalGames, members, titles } =
+    league;
 
   return (
     <div className="flex-1 bg-white min-h-full font-jp">
@@ -78,7 +71,7 @@ export const LeaguePage: React.FC = () => {
             </span>
             <span className="inline-flex items-center gap-1">
               <BookOpen size={14} className="text-white" />
-              <span>{ruleName}</span>
+              <span>{rule.name}</span>
             </span>
           </HeaderCard>
         </section>
@@ -104,8 +97,11 @@ export const LeaguePage: React.FC = () => {
           <SectionCard title="総合pt推移" bodyClassName="p-4">
             <div className="w-full h-48 bg-gray-50 rounded-md mb-3" />
             <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
-              {members.map((member) => (
-                <div key={member.player.id} className="flex items-center gap-1">
+              {Object.values(members).map((member) => (
+                <div
+                  key={member.player.userId}
+                  className="flex items-center gap-1"
+                >
                   <span
                     className={clsx(
                       "inline-block w-2 h-2 rounded-full",
@@ -125,21 +121,25 @@ export const LeaguePage: React.FC = () => {
         <section className="mb-8">
           <SectionCard title="タイトル" bodyClassName="p-4">
             <div>
-              {titles.map((t) => (
-                <div
-                  key={t.label}
-                  className="grid grid-cols-3 gap-x-4 px-4 py-2 text-sm border-b border-pink-200 last:border-b-0 items-center text-text-muted"
-                >
-                  <div className="text-left">{t.label}</div>
-                  <div className="flex items-center justify-center gap-1">
-                    <Crown size={16} className="text-yellow-400" />
-                    <span className="font-semibold">{t.playerName}</span>
+              {titles ? (
+                titles.map((t) => (
+                  <div
+                    key={t.label}
+                    className="grid grid-cols-3 gap-x-4 px-4 py-2 text-sm border-b border-pink-200 last:border-b-0 items-center text-text-muted"
+                  >
+                    <div className="text-left">{t.label}</div>
+                    <div className="flex items-center justify-center gap-1">
+                      <Crown size={16} className="text-yellow-400" />
+                      <span className="font-semibold">{t.playerName}</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-semibold">{t.value}</span>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <span className="font-semibold">{t.value}</span>
-                  </div>
-                </div>
-              ))}
+                ))
+              ) : (
+                <div>No title</div>
+              )}
             </div>
           </SectionCard>
         </section>

@@ -3,13 +3,11 @@ import { leagueData1 } from "@/mocks/league";
 export const useLeagueCard = () => {
   const userId = "0001";
   const league = leagueData1;
-  const myRank = league.members.find(
-    (member) => member.player.id === userId
-  )?.rank;
+  const myRank = league.members[userId]?.rank;
 
   return {
     leagueName: league?.name ?? "",
-    memberCount: league?.members.length,
+    memberCount: league?.members ? Object.keys(league.members).length : 0,
     gameCount: league?.totalGames,
     myRank,
   };

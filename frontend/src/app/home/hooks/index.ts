@@ -5,15 +5,15 @@ export const useHome = () => {
   const user = userData1;
   const leagues = leaguesData;
 
-  const hasLeagues = leagues.length > 0;
+  const hasLeagues = Object.keys(leagues).length > 0;
 
   const error: string | null = null;
 
   return {
-    userId: user.id,
+    userId: user.userId,
     userName: user.name,
-    leagues: leagues,
-    hasLeagues: hasLeagues,
-    error: error,
+    leagues,
+    hasLeagues,
+    error,
   };
 };
