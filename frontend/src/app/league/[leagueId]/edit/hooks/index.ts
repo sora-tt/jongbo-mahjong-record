@@ -2,37 +2,14 @@ import { useState, useEffect } from "react";
 
 import { useParams } from "next/navigation";
 
-import type { UserBase, UserIdType } from "@/types/domain/user"; // UserBase をインポート
+import type { Option } from "@/components/ui/dropdown/types"; // Option をインポート
 
+import type { League } from "@/types/domain/league"; // League インターフェースをインポート
+import type { Rule } from "@/types/domain/rule"; // Rule インターフェースをインポート
+import type { UserBase, UserIdType } from "@/types/domain/user";
+
+import { rulesData } from "@/mocks/rule"; // rulesData をインポート
 import { userBaseListData } from "@/mocks/user-base";
-
-// 仮のデータ構造。実際にはAPIから取得する
-interface League {
-  id: string;
-  name: string;
-  members: { id: string; name: string }[];
-  rules: {
-    id: string;
-    name: string;
-    mode: string;
-    description: string;
-    oka: { startPoints: number; returnPoints: number };
-    uma: { [key: string]: number };
-    scoreCalc: string;
-  }[];
-}
-
-// User インターフェースを削除し、UserBase を直接使用
-
-interface Rule {
-  id: string;
-  name: string;
-  mode: string;
-  description: string;
-  oka: { startPoints: number; returnPoints: number };
-  uma: { [key: string]: number };
-  scoreCalc: string;
-}
 
 export const useLeagueEdit = () => {
   const params = useParams();
@@ -42,12 +19,12 @@ export const useLeagueEdit = () => {
   const [memberQuery, setMemberQuery] = useState<string>("");
   const [addedMembers, setAddedMembers] = useState<
     Record<UserIdType, UserBase>
-  >({}); // User を UserBase に変更
-  const [selectedRule, setSelectedRule] = useState<string | null>(null);
-  const [addedRules, setAddedRules] = useState<{ [key: string]: Rule }>({});
-  const [ruleOptions, setRuleOptions] = useState<
-    { value: string; label: string }[]
-  >([]);
+  >({});
+  const [selectedRule, setSelectedRule] = useState<string>("");
+  const [addedRules, setAddedRules] = useState<Record<string, Rule>>({}); // RuleIdType は string なので、Record<string, Rule> に変更
+  const [ruleOptions, setRuleOptions] = useState<Option[]>([]); // Option[] に変更
+
+  const allRules = rulesData; // 全ルールデータ
 
   useEffect(() => {
     if (leagueId) {
@@ -56,14 +33,14 @@ export const useLeagueEdit = () => {
         // 仮のデータ
         const dummyLeague: League = {
           id: leagueId,
-          name: "ダミーリーグ名",
+          name: "ダミーリーグ",
           members: [
-            { id: "0001", name: "岩田" },
-            { id: "0002", name: "富田" },
+            { userId: "0001", name: "岩田" },
+            { userId: "0002", name: "富田" },
           ],
           rules: [
             {
-              id: "rule001",
+              ruleId: "rule001",
               name: "Mリーグルール",
               mode: "yonma",
               description: "Mリーグの一般的なルール",
@@ -79,30 +56,31 @@ export const useLeagueEdit = () => {
           dummyLeague.members.reduce(
             (acc, member) => ({
               ...acc,
-              [member.id]: {
-                userId: member.id,
+              [member.userId]: {
+                userId: member.userId,
                 name: member.name,
               },
             }),
             {}
-          ) as Record<UserIdType, UserBase> // 型アサーションを追加
+          ) as Record<UserIdType, UserBase>
         );
         setAddedRules(
           dummyLeague.rules.reduce(
-            (acc, rule) => ({ ...acc, [rule.id]: rule }),
+            (acc, rule) => ({ ...acc, [rule.ruleId]: rule }),
             {}
-          )
+          ) as Record<string, Rule>
         );
 
-        // 仮のルールオプション
-        setRuleOptions([
-          { value: "rule001", label: "Mリーグルール" },
-          { value: "rule002", label: "天鳳三人打ち" },
-        ]);
+        setRuleOptions(
+          Object.entries(allRules).map(([id, rule]) => ({
+            label: rule.name,
+            value: id,
+          }))
+        );
       };
       fetchLeague();
     }
-  }, [leagueId]);
+  }, [leagueId, allRules]);
 
   const handleLeagueNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setLeagueName(e.target.value);
@@ -144,31 +122,36 @@ export const useLeagueEdit = () => {
     });
   };
 
-  const handleRuleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setSelectedRule(e.target.value);
+  const handleRuleSelectChange = (
+    _e: React.ChangeEvent<HTMLSelectElement>,
+    value: string
+  ) => {
+    setSelectedRule(value);
   };
 
   const handleAddRule = () => {
-    if (selectedRule) {
-      // 実際には選択されたルールの詳細を取得する
-      const ruleDetail: Rule = {
-        id: selectedRule,
-        name: `${selectedRule}のルール`,
-        mode: "yonma",
-        description: "選択されたルールの説明",
-        oka: { startPoints: 25000, returnPoints: 30000 },
-        uma: { "1": 20, "2": 10, "3": -10, "4": -20 },
-        scoreCalc: "decimal",
+    if (!selectedRule) return;
+
+    const rule = allRules[selectedRule as keyof typeof allRules]; // allRules を参照
+    if (!rule) return;
+
+    setAddedRules((prev) => {
+      if (prev[rule.ruleId]) {
+        return prev;
+      }
+      return {
+        ...prev,
+        [rule.ruleId]: rule,
       };
-      setAddedRules((prev) => ({ ...prev, [ruleDetail.id]: ruleDetail }));
-      setSelectedRule(null);
-    }
+    });
+
+    setSelectedRule("");
   };
 
-  const handleRemoveRule = (id: string) => {
+  const handleRemoveRule = (ruleId: string) => {
     setAddedRules((prev) => {
       const newRules = { ...prev };
-      delete newRules[id];
+      delete newRules[ruleId];
       return newRules;
     });
   };
@@ -180,7 +163,7 @@ export const useLeagueEdit = () => {
       rules: Object.values(addedRules),
     });
     // 実際にはAPIを呼び出してリーグ情報を更新する
-    alert("リーグ情報を更新しました！（ダミー）");
+    alert("リーグ情報を更新しました");
   };
 
   return {
