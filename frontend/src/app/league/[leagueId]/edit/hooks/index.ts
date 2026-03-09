@@ -1,75 +1,78 @@
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { useParams } from "next/navigation";
 
-import type { Option } from "@/components/ui/dropdown/types"; // Option をインポート
+import type { Option } from "@/components/ui/dropdown/types";
 
-import type { League } from "@/types/domain/league"; // League インターフェースをインポート
-import type { Rule } from "@/types/domain/rule"; // Rule インターフェースをインポート
-import type { UserBase, UserIdType } from "@/types/domain/user";
+import type { League, LeagueIdType, LeagueMember } from "@/types/domain/league";
+import type { Rule, RuleIdType } from "@/types/domain/rule";
+import type { User, UserBase, UserIdType } from "@/types/domain/user";
 
-import { rulesData } from "@/mocks/rule"; // rulesData をインポート
+import { rulesData } from "@/mocks/rule";
 import { userBaseListData } from "@/mocks/user-base";
 
 export const useLeagueEdit = () => {
   const params = useParams();
-  const leagueId = params.leagueId as string;
+  const leagueId = params.leagueId as LeagueIdType;
 
   const [leagueName, setLeagueName] = useState<string>("");
   const [memberQuery, setMemberQuery] = useState<string>("");
   const [addedMembers, setAddedMembers] = useState<
     Record<UserIdType, UserBase>
   >({});
-  const [selectedRule, setSelectedRule] = useState<string>("");
-  const [addedRules, setAddedRules] = useState<Record<string, Rule>>({}); // RuleIdType は string なので、Record<string, Rule> に変更
-  const [ruleOptions, setRuleOptions] = useState<Option[]>([]); // Option[] に変更
+  const [selectedRule, setSelectedRule] = useState<RuleIdType | null>(null);
+  const [addedRules, setAddedRules] = useState<Record<RuleIdType, Rule>>({});
+  const [ruleOptions, setRuleOptions] = useState<Option[]>([]);
 
-  const allRules = rulesData; // 全ルールデータ
+  const allRules = rulesData;
 
   useEffect(() => {
     if (leagueId) {
-      // 実際にはAPIからリーグ情報を取得する
       const fetchLeague = async () => {
-        // 仮のデータ
+        // dummyLeague の構造を `@/types/domain/league` の League に合わせる
         const dummyLeague: League = {
-          id: leagueId,
+          leagueId: leagueId,
           name: "ダミーリーグ",
-          members: [
-            { userId: "0001", name: "岩田" },
-            { userId: "0002", name: "富田" },
-          ],
-          rules: [
-            {
-              ruleId: "rule001",
-              name: "Mリーグルール",
-              mode: "yonma",
-              description: "Mリーグの一般的なルール",
-              oka: { startPoints: 25000, returnPoints: 30000 },
-              uma: { "1": 20, "2": 10, "3": -10, "4": -20 },
-              scoreCalc: "decimal",
+          createdAt: new Date().toISOString() as any,
+          rule: allRules["rule001"] as Rule,
+          members: {
+            "0001": {
+              player: userBaseListData["0001"] as User,
+              joinedAt: new Date().toISOString() as any,
+              role: "member",
+              totalPoints: 0,
+              gamesPlayed: 0,
+              rank: 0,
+              numberOfEachOrder: { first: 0, second: 0, third: 0, fourth: 0 },
             },
-          ],
+            "0002": {
+              player: userBaseListData["0002"] as User,
+              joinedAt: new Date().toISOString() as any,
+              role: "member",
+              totalPoints: 0,
+              gamesPlayed: 0,
+              rank: 0,
+              numberOfEachOrder: { first: 0, second: 0, third: 0, fourth: 0 },
+            },
+          },
+          seasons: {} as any,
+          lastRecordedAt: new Date().toISOString() as any,
+          totalGames: 0,
         };
 
         setLeagueName(dummyLeague.name);
         setAddedMembers(
-          dummyLeague.members.reduce(
-            (acc, member) => ({
+          Object.values(dummyLeague.members).reduce(
+            (acc, leagueMember) => ({
               ...acc,
-              [member.userId]: {
-                userId: member.userId,
-                name: member.name,
-              },
+              [leagueMember.player.userId]: leagueMember.player,
             }),
-            {}
-          ) as Record<UserIdType, UserBase>
+            {} as Record<UserIdType, UserBase>
+          )
         );
-        setAddedRules(
-          dummyLeague.rules.reduce(
-            (acc, rule) => ({ ...acc, [rule.ruleId]: rule }),
-            {}
-          ) as Record<string, Rule>
-        );
+        setAddedRules({
+          [dummyLeague.rule.ruleId]: dummyLeague.rule,
+        });
 
         setRuleOptions(
           Object.entries(allRules).map(([id, rule]) => ({
@@ -82,15 +85,21 @@ export const useLeagueEdit = () => {
     }
   }, [leagueId, allRules]);
 
-  const handleLeagueNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setLeagueName(e.target.value);
-  };
+  const handleLeagueNameChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setLeagueName(e.target.value);
+    },
+    []
+  );
 
-  const handleMemberQueryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setMemberQuery(e.target.value);
-  };
+  const handleMemberQueryChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setMemberQuery(e.target.value);
+    },
+    []
+  );
 
-  const handleAddMember = () => {
+  const handleAddMember = useCallback(() => {
     const trimmed = memberQuery.trim();
     if (!trimmed) return;
 
@@ -112,27 +121,27 @@ export const useLeagueEdit = () => {
     });
 
     setMemberQuery("");
-  };
+  }, [memberQuery, userBaseListData]);
 
-  const handleRemoveMember = (id: string) => {
+  const handleRemoveMember = useCallback((id: UserIdType) => {
     setAddedMembers((prev) => {
       const newMembers = { ...prev };
       delete newMembers[id];
       return newMembers;
     });
-  };
+  }, []);
 
-  const handleRuleSelectChange = (
-    _e: React.ChangeEvent<HTMLSelectElement>,
-    value: string
-  ) => {
-    setSelectedRule(value);
-  };
+  const handleRuleSelectChange = useCallback(
+    (_e: React.ChangeEvent<HTMLSelectElement>, value: string) => {
+      setSelectedRule(value as RuleIdType);
+    },
+    []
+  );
 
-  const handleAddRule = () => {
+  const handleAddRule = useCallback(() => {
     if (!selectedRule) return;
 
-    const rule = allRules[selectedRule as keyof typeof allRules]; // allRules を参照
+    const rule = allRules[selectedRule];
     if (!rule) return;
 
     setAddedRules((prev) => {
@@ -145,26 +154,25 @@ export const useLeagueEdit = () => {
       };
     });
 
-    setSelectedRule("");
-  };
+    setSelectedRule(null);
+  }, [selectedRule, allRules]);
 
-  const handleRemoveRule = (ruleId: string) => {
+  const handleRemoveRule = useCallback((ruleId: RuleIdType) => {
     setAddedRules((prev) => {
       const newRules = { ...prev };
       delete newRules[ruleId];
       return newRules;
     });
-  };
+  }, []);
 
-  const handleSubmit = () => {
+  const handleSubmit = useCallback(() => {
     console.log("Updated League:", {
       leagueName,
       members: Object.values(addedMembers),
       rules: Object.values(addedRules),
     });
-    // 実際にはAPIを呼び出してリーグ情報を更新する
     alert("リーグ情報を更新しました");
-  };
+  }, [leagueName, addedMembers, addedRules]);
 
   return {
     leagueName,
