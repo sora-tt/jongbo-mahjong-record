@@ -1,6 +1,6 @@
 import type { LeagueMember } from "@/types/domain/league";
 
-import { useLeague } from "@/app/league/hooks";
+import { useLeague } from "@/app/league/season/hooks";
 import { UserIdType } from "@/types/domain/user";
 
 export const useLeagueRankingTable = () => {
