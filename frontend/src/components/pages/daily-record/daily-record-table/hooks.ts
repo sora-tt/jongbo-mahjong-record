@@ -1,7 +1,17 @@
-import { useDailyRecord } from "@/app/daily-record/hooks";
+import type { Match } from "@/types/domain/match";
+
+import { dailyRecordData1 } from "@/mocks/daily-record";
 
 export const useDailyRecordTable = () => {
-  const { players, matches, totals } = useDailyRecord();
+  const dailyRecord = dailyRecordData1;
 
-  return { players, matches, totals };
+  const players = dailyRecord.players;
+  const matches: Match[] = Object.values(dailyRecord.matches);
+  const totals = dailyRecord.totalPoints;
+
+  return {
+    players,
+    matches,
+    totals,
+  };
 };

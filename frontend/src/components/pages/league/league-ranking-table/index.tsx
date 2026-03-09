@@ -32,7 +32,7 @@ export const LeagueRankingTable: React.FC = () => {
 
       <TableBody>
         {Object.values(members).map((member) => (
-          <TableRow key={member.rank} className="text-text-muted">
+          <TableRow key={member.player.userId} className="text-text-muted">
             <TableCell>{member.rank}</TableCell>
             <TableCell>{member.player.name}</TableCell>
             <TableCell

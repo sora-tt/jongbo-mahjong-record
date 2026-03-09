@@ -36,11 +36,15 @@ export const DailyRecordTable: React.FC = () => {
     <Table>
       <TableHead>
         <TableRow>
-          <TableHeadCell className="w-12" />
+          <TableHeadCell className="w-12">
+            <span className="sr-only">#</span>
+          </TableHeadCell>
           {players.map((p) => (
             <TableHeadCell key={p.userId}>{p.name}</TableHeadCell>
           ))}
-          <TableHeadCell />
+          <TableHeadCell>
+            <span className="sr-only">操作</span>
+          </TableHeadCell>
         </TableRow>
       </TableHead>
 
@@ -90,14 +94,17 @@ export const DailyRecordTable: React.FC = () => {
 
         <TableRow className="border-t-2 border-brand-500 text-text-muted">
           <TableCell className="font-semibold">計</TableCell>
-          {totals.map((total, idx) => (
-            <TableCell
-              key={players[idx]?.userId ?? idx}
-              className={`font-semibold ${scoreClass(total)}`}
-            >
-              {formatScore(total)}
-            </TableCell>
-          ))}
+          {players.map((player, idx) => {
+            const total = totals[idx] ?? null;
+            return (
+              <TableCell
+                key={player.userId}
+                className={`font-semibold ${scoreClass(total)}`}
+              >
+                {formatScore(total)}
+              </TableCell>
+            );
+          })}
           <TableCell />
         </TableRow>
       </TableBody>
