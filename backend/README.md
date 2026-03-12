@@ -1,28 +1,31 @@
-Prerequisites:
-
-- [Vercel CLI](https://vercel.com/docs/cli) installed globally
-
-To develop locally:
+To develop locally (no Vercel account required):
 
 ```
 npm install
-vc dev
+npm run dev
 ```
 
 ```
 open http://localhost:3000
 ```
 
-To build locally:
+To use a custom port:
+
+```
+PORT=8080 npm run dev
+```
+
+Type check:
+
+```
+npm run typecheck
+```
+
+If you want to use Vercel CLI workflows:
 
 ```
 npm install
+vc dev
 vc build
-```
-
-To deploy:
-
-```
-npm install
 vc deploy
 ```
