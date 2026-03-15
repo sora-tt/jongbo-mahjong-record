@@ -32,7 +32,7 @@ const LeaguePage: React.FC = () => {
                 {longestWinStreak?.playerName || "データなし"}
               </div>
               <div className="text-3xl font-bold text-brand-600">
-                {longestWinStreak?.count || "データなし"}
+                {longestWinStreak?.count ?? "データなし"}
               </div>
             </div>
             {/* 連敗記録 */}
@@ -44,7 +44,7 @@ const LeaguePage: React.FC = () => {
                 {longestLoseStreak?.playerName || "データなし"}
               </div>
               <div className="text-3xl font-bold text-brand-600">
-                {longestLoseStreak?.count || "データなし"}
+                {longestLoseStreak?.count ?? "データなし"}
               </div>
             </div>
             {/* 最高スコア */}
@@ -56,7 +56,7 @@ const LeaguePage: React.FC = () => {
                 {currentHighestScore?.playerName || "データなし"}
               </div>
               <div className="text-3xl font-bold text-brand-600">
-                {currentHighestScore?.score || "データなし"}
+                {currentHighestScore?.score ?? "データなし"}
               </div>
             </div>
             {/* 最低スコア */}
@@ -68,7 +68,7 @@ const LeaguePage: React.FC = () => {
                 {currentLowestScore?.playerName || "データなし"}
               </div>
               <div className="text-3xl font-bold text-brand-600">
-                {currentLowestScore?.score || "データなし"}
+                {currentLowestScore?.score ?? "データなし"}
               </div>
             </div>
           </div>
