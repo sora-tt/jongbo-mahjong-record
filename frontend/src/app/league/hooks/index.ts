@@ -17,17 +17,20 @@ import {
   setLoading,
   setError,
 } from "@/store/slices/league-slice";
-import { League } from "@/types/domain/league";
 
 /**
  * mock-dataディレクトリから動的にmockデータを読み込む
  * @param mockKey - mockファイル名（例: "league-default", "league-1"）
  * @returns mockLeagueデータまたはnull
  */
-const loadMockData = async (mockKey: string): Promise<League | null> => {
+const loadMockData = async ({
+  mockKey,
+}: {
+  mockKey: string;
+}): Promise<any | null> => {
   try {
     const mockModule = await import(`../mock-data/${mockKey}.ts`);
-    return mockModule.mockLeague || null;
+    return mockModule || null;
   } catch (error) {
     console.error(`Failed to load mock data: ${mockKey}`, error);
     return null;
@@ -53,13 +56,14 @@ export const useLeague = () => {
   useEffect(() => {
     const fetchLeague = async () => {
       const mockKey = searchParams.get("_mock");
+      // TODO: console.logは削除する;
       console.log(`Search params: ${searchParams.toString()}`);
 
-      // クエリパラメータに _mock が指定されている場合はmockデータを動的に読み込む
       if (mockKey) {
+        // TODO: console.logは削除する
         console.log(`Loading mock data for key: ${mockKey}`);
         dispatch(setLoading(true));
-        const mockLeague = await loadMockData(mockKey);
+        const { mockLeague } = await loadMockData({ mockKey });
         if (mockLeague) {
           dispatch(setLeagues([mockLeague]));
           dispatch(setSelectedLeagueId(mockLeague.leagueId));

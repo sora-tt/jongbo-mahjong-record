@@ -33,7 +33,7 @@ export const store = configureStore({
         ],
         ignoredPaths: [
           "league.leagues",
-          "league.selectedLeague",
+          "league.selectedLeagueId",
           "user.users",
           "user.currentUser",
           "match.matches",
