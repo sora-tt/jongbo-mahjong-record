@@ -9,15 +9,23 @@ src/store/
 ├── index.ts                    # ストアの設定
 ├── hooks.ts                    # 型付きフック
 ├── slices/                     # Redux スライス
-│   ├── leagueSlice.ts
-│   ├── userSlice.ts
-│   ├── matchSlice.ts
-│   └── ruleSlice.ts
+│   ├── league-slice
+│   │   └── index.ts
+│   ├── user-slice.ts
+│   │   └── index.ts
+│   ├── match-slice.ts
+│   │   └── index.ts
+│   └── rule-slice.ts
+│       └── index.ts
 └── selectors/                  # セレクター
-    ├── leagueSelectors.ts
-    ├── userSelectors.ts
-    ├── matchSelectors.ts
-    └── ruleSelectors.ts
+    ├── league-selectors
+    │   └── index.ts
+    ├── user-selectors
+    │   └── index.ts
+    ├── match-selectors
+    │   └── index.ts
+    └── rule-selectors
+        └── index.ts
 ```
 
 ## 使い方
@@ -28,8 +36,8 @@ src/store/
 
 ```tsx
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { selectAllLeagues } from "@/store/selectors/leagueSelectors";
-import { addLeague } from "@/store/slices/leagueSlice";
+import { selectAllLeagues } from "@/store/selectors/league-selectors";
+import { addLeague } from "@/store/slices/league-slice";
 
 function MyComponent() {
   const dispatch = useAppDispatch();
@@ -65,7 +73,7 @@ import {
   selectAllLeagues,
   selectLeagueById,
   selectSelectedLeague,
-} from "@/store/selectors/leagueSelectors";
+} from "@/store/selectors/league-selectors";
 
 const leagues = useAppSelector(selectAllLeagues);
 const league = useAppSelector((state) => selectLeagueById(state, "league-id"));
@@ -75,7 +83,7 @@ const selectedLeague = useAppSelector(selectSelectedLeague);
 import {
   selectAllUsers,
   selectCurrentUser,
-} from "@/store/selectors/userSelectors";
+} from "@/store/selectors/user-selectors";
 
 const users = useAppSelector(selectAllUsers);
 const currentUser = useAppSelector(selectCurrentUser);
@@ -84,7 +92,7 @@ const currentUser = useAppSelector(selectCurrentUser);
 import {
   selectAllMatches,
   selectMatchesByLeagueId,
-} from "@/store/selectors/matchSelectors";
+} from "@/store/selectors/match-selectors";
 
 const matches = useAppSelector(selectAllMatches);
 const leagueMatches = useAppSelector((state) =>
@@ -95,7 +103,7 @@ const leagueMatches = useAppSelector((state) =>
 import {
   selectAllRules,
   selectRulesByMode,
-} from "@/store/selectors/ruleSelectors";
+} from "@/store/selectors/rule-selectors";
 
 const rules = useAppSelector(selectAllRules);
 const yonmaRules = useAppSelector((state) => selectRulesByMode(state, "yonma"));
@@ -114,7 +122,7 @@ import {
   setSelectedLeagueId,
   addLeagueMember,
   addLeagueSeason,
-} from "@/store/slices/leagueSlice";
+} from "@/store/slices/league-slice";
 
 function LeagueManager() {
   const dispatch = useAppDispatch();
@@ -164,8 +172,8 @@ import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
   selectLeagueLoading,
   selectLeagueError,
-} from "@/store/selectors/leagueSelectors";
-import { setLoading, setError } from "@/store/slices/leagueSlice";
+} from "@/store/selectors/league-selectors";
+import { setLoading, setError } from "@/store/slices/league-slice";
 
 function LeagueList() {
   const dispatch = useAppDispatch();
