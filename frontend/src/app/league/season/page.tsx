@@ -43,7 +43,9 @@ const SeasonPage: React.FC = () => {
                 <Calendar size={14} className="text-white" />
                 <span>
                   {createdAt.format("yyyy/MM/dd")} 〜{" "}
-                  {lastRecordedAt?.format("yyyy/MM/dd")}
+                  {lastRecordedAt
+                    ? lastRecordedAt.format("yyyy/MM/dd")
+                    : "未記録"}
                 </span>
               </span>
               <span className="inline-flex items-center gap-1">

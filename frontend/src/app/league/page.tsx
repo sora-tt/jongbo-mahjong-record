@@ -5,6 +5,7 @@ import * as React from "react";
 import Header from "@/components/common/container/header";
 
 import { useLeague } from "./hooks";
+import { formatScore, formatStreak } from "./utils";
 
 const LeaguePage: React.FC = () => {
   const {
@@ -32,7 +33,12 @@ const LeaguePage: React.FC = () => {
                 {longestWinStreak?.playerName || "データなし"}
               </div>
               <div className="text-3xl font-bold text-brand-600">
-                {longestWinStreak?.count ?? "データなし"}
+                {longestWinStreak
+                  ? formatStreak({
+                      count: longestWinStreak.count,
+                      unit: "連勝",
+                    })
+                  : "データなし"}
               </div>
             </div>
             {/* 連敗記録 */}
@@ -44,7 +50,12 @@ const LeaguePage: React.FC = () => {
                 {longestLoseStreak?.playerName || "データなし"}
               </div>
               <div className="text-3xl font-bold text-brand-600">
-                {longestLoseStreak?.count ?? "データなし"}
+                {longestLoseStreak
+                  ? formatStreak({
+                      count: longestLoseStreak.count,
+                      unit: "連敗",
+                    })
+                  : "データなし"}
               </div>
             </div>
             {/* 最高スコア */}
@@ -56,7 +67,9 @@ const LeaguePage: React.FC = () => {
                 {currentHighestScore?.playerName || "データなし"}
               </div>
               <div className="text-3xl font-bold text-brand-600">
-                {currentHighestScore?.score ?? "データなし"}
+                {currentHighestScore
+                  ? formatScore({ score: currentHighestScore.score })
+                  : "データなし"}
               </div>
             </div>
             {/* 最低スコア */}
@@ -68,7 +81,9 @@ const LeaguePage: React.FC = () => {
                 {currentLowestScore?.playerName || "データなし"}
               </div>
               <div className="text-3xl font-bold text-brand-600">
-                {currentLowestScore?.score ?? "データなし"}
+                {currentLowestScore
+                  ? formatScore({ score: currentLowestScore.score })
+                  : "データなし"}
               </div>
             </div>
           </div>

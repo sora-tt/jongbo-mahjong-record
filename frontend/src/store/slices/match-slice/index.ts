@@ -1,10 +1,10 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
-import { Match } from "@/types/domain/match";
+import { Match, MatchIdType } from "@/types/domain/match";
 
 interface MatchState {
-  matches: Record<string, Match>;
-  selectedMatchId: string | null;
+  matches: Record<MatchIdType, Match>;
+  selectedMatchId: MatchIdType | null;
   loading: boolean;
   error: string | null;
 }
@@ -26,7 +26,7 @@ const matchSlice = createSlice({
           acc[match.matchId] = match;
           return acc;
         },
-        {} as Record<string, Match>
+        {} as Record<MatchIdType, Match>
       );
       state.loading = false;
       state.error = null;
@@ -40,13 +40,13 @@ const matchSlice = createSlice({
         state.matches[matchId] = action.payload;
       }
     },
-    deleteMatch: (state, action: PayloadAction<string>) => {
+    deleteMatch: (state, action: PayloadAction<MatchIdType>) => {
       delete state.matches[action.payload];
       if (state.selectedMatchId === action.payload) {
         state.selectedMatchId = null;
       }
     },
-    setSelectedMatchId: (state, action: PayloadAction<string | null>) => {
+    setSelectedMatchId: (state, action: PayloadAction<MatchIdType | null>) => {
       state.selectedMatchId = action.payload;
     },
     setLoading: (state, action: PayloadAction<boolean>) => {

@@ -2,7 +2,7 @@ import { createSelector } from "@reduxjs/toolkit";
 
 import { RootState } from "../../index";
 
-import { LeagueIdType, LeagueRecord } from "@/types/domain/league";
+import { LeagueIdType } from "@/types/domain/league";
 
 // Basic selectors
 export const selectLeagues = (state: RootState) => state.league.leagues;
@@ -38,8 +38,12 @@ export const selectLeagueMembers = createSelector(
 );
 
 export const selectLeagueSeasons = createSelector(
-  [selectLeagues, (_state: RootState, leagueId: LeagueIdType) => leagueId],
+  [
+    selectLeagues,
+    (_state: RootState, leagueId: LeagueIdType | null) => leagueId,
+  ],
   (leagues, leagueId) => {
+    if (!leagueId) return [];
     const league = leagues[leagueId];
     return league?.seasons ? Object.values(league.seasons) : [];
   }
@@ -52,5 +56,5 @@ export const selectLeaguesCount = createSelector(
 
 export const selectLeagueRecord = createSelector(
   [selectSelectedLeague],
-  (league) => league?.leagueRecord || ({} as LeagueRecord)
+  (league) => league?.leagueRecord ?? {}
 );
