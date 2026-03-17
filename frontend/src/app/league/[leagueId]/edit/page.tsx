@@ -71,8 +71,7 @@ const EditLeaguePage: React.FC = () => {
             label="リーグ名"
             icon={<Type className="h-4 w-4" />}
             placeholder="例: Mリーグ"
-            labelClassName="font-semibold text-
-            gray-700"
+            labelClassName="font-semibold text-gray-700"
             value={leagueName}
             onChange={handleLeagueNameChange}
           />
