@@ -17,6 +17,7 @@ import {
   setLoading,
   setError,
 } from "@/store/slices/league-slice";
+import { League } from "@/types/domain/league";
 
 /**
  * mock-dataディレクトリから動的にmockデータを読み込む
@@ -27,7 +28,7 @@ const loadMockData = async ({
   mockKey,
 }: {
   mockKey: string;
-}): Promise<any | null> => {
+}): Promise<{ mockLeague: League } | null> => {
   try {
     const mockModule = await import(`../mock-data/${mockKey}.ts`);
     return mockModule || null;
@@ -63,14 +64,14 @@ export const useLeague = () => {
         // TODO: console.logは削除する
         console.log(`Loading mock data for key: ${mockKey}`);
         dispatch(setLoading(true));
-        const { mockLeague } = await loadMockData({ mockKey });
-        if (mockLeague) {
-          dispatch(setLeagues([mockLeague]));
-          dispatch(setSelectedLeagueId(mockLeague.leagueId));
-          dispatch(setLoading(false));
+        const mockData = await loadMockData({ mockKey });
+        if (mockData) {
+          dispatch(setLeagues([mockData.mockLeague]));
+          dispatch(setSelectedLeagueId(mockData.mockLeague.leagueId));
         } else {
           dispatch(setError(`Mock data not found: ${mockKey}`));
         }
+        dispatch(setLoading(false));
         return;
       }
 
