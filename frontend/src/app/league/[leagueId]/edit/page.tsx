@@ -319,7 +319,7 @@ const EditLeaguePage: React.FC = () => {
 
             <Spacer className="text-center">
               <Link
-                href="/leagues"
+                href="/home"
                 className="inline-flex items-center gap-2 text-sm font-medium text-gray-400 transition-colors hover:text-gray-600"
               >
                 <ArrowLeft className="h-4 w-4" />
