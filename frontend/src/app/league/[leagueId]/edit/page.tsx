@@ -14,6 +14,9 @@ import { InputArea } from "@/components/ui/input-area";
 
 import { useLeagueEdit } from "./hooks";
 
+import type { RuleIdType } from "@/types/domain/rule";
+import type { UserIdType } from "@/types/domain/user";
+
 const RULE_SELECT_DEFAULT_TEXT = "プリセットから選択…";
 
 const EditLeaguePage: React.FC = () => {
@@ -134,7 +137,7 @@ const EditLeaguePage: React.FC = () => {
                     <span className="text-[10px] text-gray-500">({id})</span>
                     <button
                       type="button"
-                      onClick={() => handleRemoveMember(id)}
+                      onClick={() => handleRemoveMember(id as UserIdType)}
                       className="text-[10px] font-semibold text-brand-500 hover:text-brand-700"
                     >
                       ×
@@ -224,7 +227,7 @@ const EditLeaguePage: React.FC = () => {
                       {/* 削除ボタン（brand 色ベース） */}
                       <button
                         type="button"
-                        onClick={() => handleRemoveRule(id)}
+                        onClick={() => handleRemoveRule(id as RuleIdType)}
                         className="
               inline-flex items-center justify-center
               h-7 w-7 rounded-full
