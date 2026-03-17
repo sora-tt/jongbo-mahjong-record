@@ -1,15 +1,17 @@
 import { useCallback, useEffect, useState } from "react";
+import type { ChangeEvent } from "react";
 
 import { useParams } from "next/navigation";
 
 import type { Option } from "@/components/ui/dropdown/types";
 
-import type { League, LeagueIdType, LeagueMember } from "@/types/domain/league";
+import type { League, LeagueIdType } from "@/types/domain/league";
 import type { Rule, RuleIdType } from "@/types/domain/rule";
 import type { User, UserBase, UserIdType } from "@/types/domain/user";
 
 import { rulesData } from "@/mocks/rule";
 import { userBaseListData } from "@/mocks/user-base";
+import { AppDate } from "@/types/utils/app-date";
 
 export const useLeagueEdit = () => {
   const params = useParams();
@@ -29,16 +31,16 @@ export const useLeagueEdit = () => {
   useEffect(() => {
     if (leagueId) {
       const fetchLeague = async () => {
-        // dummyLeague の構造を `@/types/domain/league` の League に合わせる
+        // dummyLeague の構造を '@/types/domain/league' の League に合わせる
         const dummyLeague: League = {
-          leagueId: leagueId,
+          leagueId: leagueId, // id を leagueId に変更
           name: "ダミーリーグ",
-          createdAt: new Date().toISOString() as any,
-          rule: allRules["rule001"] as Rule,
+          createdAt: AppDate.fromDate(new Date()), // 仮のデータ
+          rule: allRules["0001"] as Rule, // 単一のルールオブジェクトを設定
           members: {
             "0001": {
               player: userBaseListData["0001"] as User,
-              joinedAt: new Date().toISOString() as any,
+              joinedAt: AppDate.fromDate(new Date()),
               role: "member",
               totalPoints: 0,
               gamesPlayed: 0,
@@ -47,7 +49,7 @@ export const useLeagueEdit = () => {
             },
             "0002": {
               player: userBaseListData["0002"] as User,
-              joinedAt: new Date().toISOString() as any,
+              joinedAt: AppDate.fromDate(new Date()),
               role: "member",
               totalPoints: 0,
               gamesPlayed: 0,
@@ -55,8 +57,8 @@ export const useLeagueEdit = () => {
               numberOfEachOrder: { first: 0, second: 0, third: 0, fourth: 0 },
             },
           },
-          seasons: {} as any,
-          lastRecordedAt: new Date().toISOString() as any,
+          seasons: {} as any, // 仮のデータ
+          lastRecordedAt: AppDate.fromDate(new Date()), // 仮のデータ
           totalGames: 0,
         };
 
@@ -86,14 +88,14 @@ export const useLeagueEdit = () => {
   }, [leagueId, allRules]);
 
   const handleLeagueNameChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
+    (e: ChangeEvent<HTMLInputElement>) => {
       setLeagueName(e.target.value);
     },
     []
   );
 
   const handleMemberQueryChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
+    (e: ChangeEvent<HTMLInputElement>) => {
       setMemberQuery(e.target.value);
     },
     []
@@ -132,7 +134,7 @@ export const useLeagueEdit = () => {
   }, []);
 
   const handleRuleSelectChange = useCallback(
-    (_e: React.ChangeEvent<HTMLSelectElement>, value: string) => {
+    (_e: ChangeEvent<HTMLSelectElement>, value: string) => {
       setSelectedRule(value as RuleIdType);
     },
     []
