@@ -2,6 +2,9 @@ import { createSelector } from "@reduxjs/toolkit";
 
 import { RootState } from "../../index";
 
+import { LeagueIdType } from "@/types/domain/league";
+import { MatchIdType } from "@/types/domain/match";
+
 // Basic selectors
 export const selectMatches = (state: RootState) => state.match.matches;
 export const selectSelectedMatchId = (state: RootState) =>
@@ -15,7 +18,7 @@ export const selectAllMatches = createSelector([selectMatches], (matches) =>
 );
 
 export const selectMatchById = createSelector(
-  [selectMatches, (_state: RootState, matchId: string) => matchId],
+  [selectMatches, (_state: RootState, matchId: MatchIdType) => matchId],
   (matches, matchId) => matches[matchId]
 );
 
@@ -28,7 +31,7 @@ export const selectSelectedMatch = createSelector(
 );
 
 export const selectMatchesByLeagueId = createSelector(
-  [selectAllMatches, (_state: RootState, leagueId: string) => leagueId],
+  [selectAllMatches, (_state: RootState, leagueId: LeagueIdType) => leagueId],
   (matches, leagueId) => matches.filter((match) => match.leagueId === leagueId)
 );
 

@@ -11,14 +11,14 @@ import { UserIdType } from "@/types/domain/user";
 
 interface LeagueState {
   leagues: Record<LeagueIdType, League>;
-  selectedLeagueId: LeagueIdType;
+  selectedLeagueId: LeagueIdType | null;
   loading: boolean;
   error: string | null;
 }
 
 const initialState: LeagueState = {
   leagues: {},
-  selectedLeagueId: "" as LeagueIdType,
+  selectedLeagueId: null,
   loading: false,
   error: null,
 };
@@ -50,14 +50,14 @@ const leagueSlice = createSlice({
     deleteLeague: (state, action: PayloadAction<LeagueIdType>) => {
       delete state.leagues[action.payload];
       if (state.selectedLeagueId === action.payload) {
-        state.selectedLeagueId = "" as LeagueIdType;
+        state.selectedLeagueId = null;
       }
     },
     setSelectedLeagueId: (
       state,
       action: PayloadAction<LeagueIdType | null>
     ) => {
-      state.selectedLeagueId = action.payload || ("" as LeagueIdType);
+      state.selectedLeagueId = action.payload;
     },
     addLeagueMember: (
       state,
