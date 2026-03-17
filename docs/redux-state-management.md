@@ -11,11 +11,11 @@ src/store/
 ├── slices/                     # Redux スライス
 │   ├── league-slice
 │   │   └── index.ts
-│   ├── user-slice.ts
+│   ├── user-slice
 │   │   └── index.ts
-│   ├── match-slice.ts
+│   ├── match-slice
 │   │   └── index.ts
-│   └── rule-slice.ts
+│   └── rule-slice
 │       └── index.ts
 └── selectors/                  # セレクター
     ├── league-selectors
