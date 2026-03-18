@@ -1,0 +1,795 @@
+components:
+  schemas:
+    ################################
+    # Common（共通型）
+    ################################
+    
+    # ページング関連
+    PageMeta:
+      type: object
+      description: ページング情報
+      required: [offset, limit, total, hasNext, hasPrev]
+      properties:
+        offset:
+          type: integer
+          minimum: 0
+          description: 取得開始位置（0-based）
+        limit:
+          type: integer
+          minimum: 1
+          description: 取得件数の上限
+        total:
+          type: integer
+          minimum: 0
+          description: 全件数
+        hasNext:
+          type: boolean
+          description: 次のページが存在するか
+        hasPrev:
+          type: boolean
+          description: 前のページが存在するか
+
+    # エラー関連
+    Error:
+      type: object
+      description: 共通エラー応答のフォーマット
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          description: エラーコード
+          example: BAD_REQUEST
+        message:
+          type: string
+          description: エラーの説明メッセージ
+          example: リクエスト内容が不正です。
+
+    ################################
+    # User（ユーザー関連）
+    ################################
+    
+    # 基本型
+    User:
+      type: object
+      description: ログイン中ユーザーの詳細情報
+      required: [id, username, name, email]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: ユーザー ID
+        username:
+          type: string
+          description: ユーザーネーム
+        name:
+          type: string
+          description: 表示名
+        email:
+          type: string
+          format: email
+          description: メールアドレス
+
+    UserPublic:
+      type: object
+      description: 公開可能なユーザー情報（他人から見える情報）
+      required: [id, username, name]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: ユーザー ID
+        username:
+          type: string
+          description: ユーザーネーム
+        name:
+          type: string
+          description: 表示名
+
+    # リクエスト型
+    UpdateUserRequest:
+      type: object
+      description: ユーザー情報更新リクエスト
+      properties:
+        username:
+          type: string
+          description: ユーザーネーム
+        name:
+          type: string
+          description: 表示名
+
+    ################################
+    # League（リーグ関連）
+    ################################
+    
+    # 基本型
+    League:
+      type: object
+      description: リーグの基本情報
+      required: [id, name, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: リーグ ID
+        name:
+          type: string
+          description: リーグ名
+        membersCount:
+          type: integer
+          description: リーグに所属しているメンバー数
+        activeSeason:
+          type: object
+          nullable: true
+          description: アクティブなシーズン情報
+          properties:
+            id:
+              type: string
+              format: uuid
+              description: シーズン ID
+            name:
+              type: string
+              description: シーズン名
+        createdAt:
+          type: string
+          format: date-time
+          description: リーグ作成日時
+        updatedAt:
+          type: string
+          format: date-time
+          description: リーグ更新日時
+
+    LeagueMember:
+      allOf:
+        - $ref: '#/components/schemas/UserPublic'
+        - $ref: '#/components/schemas/MemberStats'
+        - type: object
+          description: リーグメンバー情報
+          required: [role]
+          properties:
+            role:
+              type: string
+              description: 権限ロール
+              enum: [admin, member]
+
+    # 詳細型
+    LeagueDetail:
+      allOf:
+        - $ref: '#/components/schemas/League'
+        - type: object
+          description: リーグ詳細情報
+          properties:
+            description:
+              type: string
+              description: リーグ説明
+            rule:
+              $ref: '#/components/schemas/Rule'
+            members:
+              type: array
+              description: リーグに所属するメンバー一覧
+              items:
+                $ref: '#/components/schemas/LeagueMember'
+            membersCount:
+              type: integer
+              description: members に含まれるメンバー数
+            seasons:
+              type: array
+              description: リーグに紐づくシーズン一覧
+              items:
+                $ref: '#/components/schemas/Season'
+            seasonsCount:
+              type: integer
+              description: seasons に含まれるシーズン数
+
+    # リクエスト型
+    CreateLeagueRequest:
+      type: object
+      description: リーグ作成リクエスト
+      required: [name]
+      properties:
+        name:
+          type: string
+          description: リーグ名
+        description:
+          type: string
+          description: リーグ説明
+        rule:
+          $ref: '#/components/schemas/Rule'
+        members:
+          type: array
+          description: メンバー一覧
+          items:
+            $ref: '#/components/schemas/UserPublic'
+
+    UpdateLeagueRequest:
+      type: object
+      description: リーグ情報更新リクエスト
+      properties:
+        name:
+          type: string
+          description: リーグ名
+        description:
+          type: string
+          description: リーグ説明
+        rule:
+          $ref: '#/components/schemas/Rule'
+        members:
+          type: array
+          description: メンバー一覧
+          items:
+            $ref: '#/components/schemas/UserPublic'
+        activeSeasonId:
+          type: string
+          format: uuid
+          nullable: true
+          description: アクティブなシーズンの ID
+
+    # レスポンス型
+    PaginatedLeagues:
+      type: object
+      description: リーグ一覧のページングレスポンス
+      required: [items, meta]
+      properties:
+        items:
+          type: array
+          description: リーグの配列
+          items:
+            $ref: '#/components/schemas/League'
+        meta: 
+          $ref: '#/components/schemas/PageMeta'
+
+    ################################
+    # Season（シーズン関連）
+    ################################
+    
+    # 基本型
+    Season:
+      type: object
+      description: シーズンの基本情報
+      required: [id, leagueId, name, isActive, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: シーズン ID
+        leagueId:
+          type: string
+          format: uuid
+          description: 所属しているリーグの ID
+        name:
+          type: string
+          description: シーズン名
+        startDate:
+          type: string
+          format: date
+          nullable: true
+          description: シーズンの開始日
+        endDate:
+          type: string
+          format: date
+          nullable: true
+          description: シーズンの終了日
+        isActive:
+          type: boolean
+          description: 現在アクティブなシーズンかどうか
+        createdAt:
+          type: string
+          format: date-time
+          description: シーズン作成日時
+        updatedAt:
+          type: string
+          format: date-time
+          description: シーズン更新日時
+
+    SeasonMember:
+      allOf:
+        - $ref: '#/components/schemas/UserPublic'
+        - $ref: '#/components/schemas/MemberStats'
+        - type: object
+          description: シーズンメンバー情報
+
+    # 詳細型
+    SeasonDetail:
+      allOf:
+        - $ref: '#/components/schemas/Season'
+        - type: object
+          description: シーズン詳細情報
+          properties:
+            members:
+              type: array
+              description: シーズンに所属するメンバー一覧
+              items:
+                $ref: '#/components/schemas/SeasonMember'
+            membersCount:
+              type: integer
+              description: members に含まれるメンバー数
+            scoreTrends:
+              type: array
+              description: メンバーごとの得点推移データ
+              items:
+                $ref: '#/components/schemas/ScoreTrend'
+            awards:
+              $ref: '#/components/schemas/Awards'
+
+    # リクエスト型
+    CreateSeasonRequest:
+      type: object
+      description: シーズン作成リクエスト
+      required: [name]
+      properties:
+        name:
+          type: string
+          description: シーズン名
+        startDate:
+          type: string
+          format: date
+          description: シーズン開始日
+        endDate:
+          type: string
+          format: date
+          description: シーズン終了日
+        members:
+          type: array
+          description: シーズンに参加させるメンバー一覧
+          items:
+            $ref: '#/components/schemas/UserPublic'
+
+    UpdateSeasonRequest:
+      type: object
+      description: シーズン更新リクエスト
+      properties:
+        name:
+          type: string
+          description: 新しいシーズン名
+        startDate:
+          type: string
+          format: date
+          description: 新しい開始日
+        endDate:
+          type: string
+          format: date
+          description: 新しい終了日
+        isActive:
+          type: boolean
+          description: シーズンをアクティブにするかどうか
+        members:
+          type: array
+          description: シーズンに参加させるメンバー一覧
+          items:
+            $ref: '#/components/schemas/UserPublic'
+
+    # レスポンス型
+    PaginatedSeasons:
+      type: object
+      description: シーズン一覧のページングレスポンス
+      required: [items, meta]
+      properties:
+        items:
+          type: array
+          description: シーズンの配列
+          items:
+            $ref: '#/components/schemas/Season'
+        meta: 
+          $ref: '#/components/schemas/PageMeta'
+
+    ################################
+    # Match（対局関連）
+    ################################
+    
+    # 基本型
+    Match:
+      type: object
+      description: 対局の基本情報
+      required: [id, leagueId, seasonId, tableId, playedAt, results, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: 対局 ID
+        leagueId:
+          type: string
+          format: uuid
+          description: 対象リーグの ID
+        seasonId:
+          type: string
+          format: uuid
+          description: 対象シーズンの ID
+        tableId:
+          type: string
+          format: uuid
+          description: 卓 ID
+        playedAt:
+          type: string
+          format: date-time
+          description: 対局日時
+        results:
+          type: array
+          description: 各プレイヤーの結果
+          minItems: 3
+          maxItems: 4
+          items:
+            $ref: '#/components/schemas/MatchResult'
+        createdAt:
+          type: string
+          format: date-time
+          description: 試合レコード作成日時
+        updatedAt:
+          type: string
+          format: date-time
+          description: 試合レコード更新日時
+
+    MatchResult:
+      type: object
+      description: 1 人の対局結果
+      required: [userId, finalScore, rank]
+      properties:
+        userId:
+          type: string
+          format: uuid
+          description: プレイヤーのユーザー ID
+        user:
+          $ref: '#/components/schemas/UserPublic'
+        seatWind:
+          type: string
+          description: 麻雀の風（東/南/西/北）
+          enum: [east, south, west, north]
+          nullable: true
+        rawScore:
+          type: integer
+          description: 素点（例：32000）
+        finalScore:
+          type: number
+          format: float
+          description: ウマ・オカ反映後の最終ポイント（例：+25.0）
+        rank:
+          type: integer
+          minimum: 1
+          maximum: 4
+          description: 着順（1〜4 位）
+
+    # 詳細型
+    MatchDetail:
+      allOf:
+        - $ref: '#/components/schemas/Match'
+        - type: object
+          description: 試合詳細情報（リーグ・シーズン情報を含む）
+          properties:
+            league:
+              $ref: '#/components/schemas/League'
+            season:
+              $ref: '#/components/schemas/Season'
+
+    # リクエスト型
+    CreateMatchRequest:
+      type: object
+      description: 試合作成リクエスト
+      required: [playedAt, results]
+      properties:
+        playedAt:
+          type: string
+          format: date-time
+          description: 対局日時
+        tableName:
+          type: string
+          description: 卓名や部屋名など任意の識別子
+        note:
+          type: string
+          description: 備考
+        results:
+          type: array
+          description: 対局参加者とスコア情報
+          minItems: 3
+          maxItems: 4
+          items:
+            $ref: '#/components/schemas/MatchResultInput'
+
+    UpdateMatchRequest:
+      type: object
+      description: 試合更新リクエスト
+      properties:
+        playedAt:
+          type: string
+          format: date-time
+          description: 更新後の対局日時
+        tableName:
+          type: string
+          description: 更新後の卓名
+        note:
+          type: string
+          description: 更新後の備考
+        results:
+          type: array
+          description: 更新後の対局結果
+          items:
+            $ref: '#/components/schemas/MatchResultInput'
+
+    MatchResultInput:
+      type: object
+      description: 対局結果の入力データ
+      required: [userId, finalScore, rank]
+      properties:
+        userId:
+          type: string
+          format: uuid
+          description: プレイヤーのユーザー ID
+        seatWind:
+          type: string
+          enum: [east, south, west, north]
+          description: 麻雀の風
+        rawScore:
+          type: integer
+          description: 素点
+        finalScore:
+          type: number
+          format: float
+          description: ウマ・オカ反映後のポイント
+        rank:
+          type: integer
+          minimum: 1
+          maximum: 4
+          description: 着順
+
+    # レスポンス型
+    PaginatedMatches:
+      type: object
+      description: 試合一覧のページングレスポンス
+      required: [items, meta]
+      properties:
+        items:
+          type: array
+          description: 試合の配列
+          items:
+            $ref: '#/components/schemas/Match'
+        meta:
+          $ref: '#/components/schemas/PageMeta'
+
+    ################################
+    # Stats（成績関連）
+    ################################
+    
+    # 基本型
+    MemberStats:
+      type: object
+      description: メンバーの成績情報（共通）
+      required: [totalPoints, matchesCount, rankCounts]
+      properties:
+        totalPoints:
+          type: number
+          format: float
+          description: 総合ポイント
+        matchesCount:
+          type: integer
+          minimum: 0
+          description: 対局数
+        rankCounts:
+          $ref: '#/components/schemas/RankCounts'
+        rank:
+          type: integer
+          minimum: 1
+          nullable: true
+          description: 順位
+
+    RankCounts:
+      type: object
+      description: 各順位の回数
+      required: [rank1, rank2, rank3]
+      properties:
+        rank1:
+          type: integer
+          minimum: 0
+          description: 1位回数
+        rank2:
+          type: integer
+          minimum: 0
+          description: 2位回数
+        rank3:
+          type: integer
+          minimum: 0
+          description: 3位回数
+        rank4:
+          type: integer
+          minimum: 0
+          description: 4位回数
+          nullable: true
+
+    PersonalStatsSummary:
+      type: object
+      description: 個人成績のサマリ
+      required: [totalPoints, matchesCount, topRate, avoidLastRate, maxConsecutiveTop]
+      properties:
+        totalPoints:
+          type: number
+          format: float
+          description: 総合ポイント
+        matchesCount:
+          type: integer
+          minimum: 0
+          description: 対局数
+        rank:
+          type: integer
+          minimum: 1
+          nullable: true
+          description: 順位（リーグ/シーズン内順位。全体集計など順位が定義できない場合は null）
+        avgPoints:
+          type: number
+          format: float
+          description: 平均得点（総合ポイント / 対局数）
+          nullable: true
+        topRate:
+          type: number
+          format: float
+          description: トップ率（0〜1）
+          example: 0.35
+        avoidLastRate:
+          type: number
+          format: float
+          description: ラス回避率（0〜1）
+          example: 0.80
+        avgRank:
+          type: number
+          format: float
+          description: 平均順位（1.0〜4.0）
+          nullable: true
+        bestScore:
+          type: number
+          format: float
+          description: 最高得点（1試合での最終ポイント最大）
+          nullable: true
+        maxConsecutiveTop:
+          type: integer
+          minimum: 0
+          description: 連続トップ（最大連続1位回数）
+
+    ScoreTrend:
+      type: object
+      description: 得点推移データ
+      required: [user, points]
+      properties:
+        user:
+          $ref: '#/components/schemas/UserPublic'
+        points:
+          type: array
+          description: 時系列ポイント（累積）
+          items:
+            $ref: '#/components/schemas/ScorePoint'
+
+    ScorePoint:
+      type: object
+      description: 得点推移の1ポイント
+      required: [matchNumber, totalPoints]
+      properties:
+        matchNumber:
+          type: integer
+          minimum: 1
+          description: シーズン内の何試合目か
+        totalPoints:
+          type: number
+          format: float
+          description: この時点での累積ポイント
+
+    Awards:
+      type: object
+      description: 表彰
+      properties:
+        highestScore:
+          $ref: '#/components/schemas/AwardHighestScore'
+        top2Rate:
+          $ref: '#/components/schemas/AwardTop2Rate'
+        avoid4thRate:
+          $ref: '#/components/schemas/AwardAvoid4thRate'
+
+    AwardHighestScore:
+      type: object
+      description: 最高得点賞
+      required: [player, score]
+      properties:
+        player:
+          $ref: '#/components/schemas/UserPublic'
+        score:
+          type: number
+          format: float
+          description: 得点
+
+    AwardTop2Rate:
+      type: object
+      description: 連対率賞
+      required: [player, rate]
+      properties:
+        player:
+          $ref: '#/components/schemas/UserPublic'
+        rate:
+          type: number
+          format: float
+          description: 連対率 (%)
+
+    AwardAvoid4thRate:
+      type: object
+      description: 4位回避率賞
+      required: [player, rate]
+      properties:
+        player:
+          $ref: '#/components/schemas/UserPublic'
+        rate:
+          type: number
+          format: float
+          description: 4位回避率 (%)
+
+    # レスポンス型
+    MyStats:
+      type: object
+      description: 個人成績のサマリ
+      properties:
+        statsSummary:
+          $ref: '#/components/schemas/PersonalStatsSummary'
+        scoreTrends:
+          type: array
+          description: 得点推移データ
+          items:
+            $ref: '#/components/schemas/ScoreTrend'
+
+    ################################
+    # Rule（ルール関連）
+    ################################
+    
+    Rule:
+      type: object
+      description: ルール設定
+      required: [gameType, uma, oka, scoreCalculation]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: ルール ID
+        name:
+          type: string
+          description: ルール名
+        description:
+          type: string
+          nullable: true
+          description: ルール説明
+        gameType:
+          type: string
+          description: 対局形式（三麻/四麻）
+          enum: [sanma, yonma]
+          example: yonma
+        uma:
+          $ref: '#/components/schemas/Uma'
+        oka:
+          $ref: '#/components/schemas/Oka'
+        scoreCalculation:
+          type: string
+          description: 点数計算方法
+          enum: [decimal, fiveDropSixUp, round, floor, ceil]
+          example: decimal
+
+    Uma:
+      type: object
+      description: ウマ（順位ウマ）
+      required: [rank1, rank2, rank3]
+      properties:
+        rank1:
+          type: integer
+          description: 1位の順位ウマ
+        rank2:
+          type: integer
+          description: 2位の順位ウマ
+        rank3:
+          type: integer
+          description: 3位の順位ウマ
+        rank4:
+          type: integer
+          description: 4位の順位ウマ
+          nullable: true
+
+    Oka:
+      type: object
+      description: オカ
+      required: [startPoints, returnPoints]
+      properties:
+        startPoints:
+          type: integer
+          description: 持ち点
+          example: 25000
+        returnPoints:
+          type: integer
+          description: 返し点
+          example: 30000
