@@ -1,0 +1,356 @@
+users:
+  collections:
+  fields:
+    id: string
+    username: string
+    email: string
+    name: string
+    created_at: timestamp
+    updated_at: timestamp
+
+leagues:
+  collections:
+    members:
+      collections:
+      fields:
+        id: string
+        user_id: string
+        user_name: string
+
+    seasons:
+      collections:
+        sessions:
+          collections:
+            matches:
+              collections:
+              fields:
+                # 1試合の正本
+                id: string
+
+                # session内で何試合目か
+                match_index: number
+
+                played_at: timestamp
+
+                results:
+                  type: array
+                  items:
+                    type: object
+                    fields:
+                      user_id: string
+                      user_name: string
+                      wind:
+                        type: string
+                        enum: [east, south, west, north]
+                      rank: number
+                      raw_score: number
+                      point: number
+
+                created_at: timestamp
+                updated_at: timestamp
+
+          fields:
+            # 1回の記録単位
+            id: string
+
+            # その卓 / セッションの日時
+            started_at: timestamp
+
+            # 必要なら終了時刻
+            ended_at:
+              type: timestamp
+              nullable: true
+
+            # そのセッション参加者
+            members:
+              type: array
+              items:
+                type: object
+                fields:
+                  user_id: string
+                  user_name: string
+
+            member_count: number
+
+            # session内の試合数
+            total_match_count: number
+
+            # 任意の識別表示
+            table_label:
+              type: string
+              nullable: true
+
+            created_by: string
+            created_at: timestamp
+            updated_at: timestamp
+
+      fields:
+        id: string
+        name: string
+
+        # active: 現在進行中のシーズン
+        # archived: 終了済みシーズン
+        status:
+          type: string
+          enum: [active, archived]
+
+        # そのシーズンの参加メンバーのスナップショット
+        members:
+          type: array
+          items:
+            type: object
+            fields:
+              user_id: string
+              user_name: string
+
+        # season.members の件数キャッシュ
+        member_count: number
+
+        # season 配下 matches の件数キャッシュ
+        total_match_count: number
+
+        # シーズン詳細画面で使う順位表
+        # match 全件を毎回集計しないために season に持つ
+        standings:
+          type: array
+          items:
+            type: object
+            fields:
+              rank: number
+              user_id: string
+              user_name: string
+              total_points: number
+              match_count: number
+              first_count: number
+              second_count: number
+              third_count: number
+              fourth_count:
+                type: number
+                nullable: true
+
+        # ポイント推移グラフ用データ
+        # points は試合ごとの累積ポイント配列を想定
+        point_progressions:
+          type: array
+          items:
+            type: object
+            fields:
+              user_id: string
+              user_name: string
+              points:
+                type: array
+                items:
+                  type: object
+                  fields:
+                    match_index: number
+                    total_points: number
+
+        # シーズンのタイトル
+        season_records:
+          type: object
+          nullable: true
+          fields:
+            highest_score:
+              type: object
+              nullable: true
+              fields:
+                value: number
+                user_id: string
+                user_name: string
+
+            avoid_last_rate:
+              type: object
+              nullable: true
+              fields:
+                value: number
+                user_id: string
+                user_name: string
+
+            top2_rate:
+              type: object
+              nullable: true
+              fields:
+                value: number
+                user_id: string
+                user_name: string
+
+        created_at: timestamp
+        updated_at: timestamp
+
+  fields:
+    id: string
+    name: string
+
+    # 表示用に rule の要約を持つ
+    rule_id: string
+    rule_name: string
+
+    # league.members の件数キャッシュ
+    member_count: number
+
+    # league 配下の全 season の試合数合計キャッシュ
+    total_match_count: number
+
+    # リーグ一覧画面で使う active season の要約
+    active_season_id:
+      type: string
+      nullable: true
+    active_season_name:
+      type: string
+      nullable: true
+
+    # リーグ全体の歴代記録
+    league_records:
+      type: object
+      nullable: true
+      fields:
+        win_streak:
+          type: object
+          nullable: true
+          fields:
+            value: number
+            user_id: string
+            user_name: string
+
+        lose_streak:
+          type: object
+          nullable: true
+          fields:
+            value: number
+            user_id: string
+            user_name: string
+
+        highest_score:
+          type: object
+          nullable: true
+          fields:
+            value: number
+            user_id: string
+            user_name: string
+
+        lowest_score:
+          type: object
+          nullable: true
+          fields:
+            value: number
+            user_id: string
+            user_name: string
+
+    created_at: timestamp
+    updated_at: timestamp
+
+rules:
+  collections:
+  fields:
+    id: string
+    name: string
+    description: string
+
+    # sanma / yonma を区別
+    game_type:
+      type: string
+      enum: [sanma, yonma]
+
+    # ウマ
+    uma:
+      type: object
+      fields:
+        first: number
+        second: number
+        third: number
+        fourth:
+          type: number
+          nullable: true
+
+    # オカ
+    oka:
+      type: object
+      fields:
+        starting_points: number
+        return_points: number
+
+    # ポイント計算方法
+    score_calculation:
+      type: string
+      enum: ["decimal", "fiveDropSixUp", "round", "floor", "ceil"]
+
+    created_at: timestamp
+    updated_at: timestamp
+
+user_stats:
+  collections:
+  fields:
+    id: string
+    user_id: string
+    user_name: string
+
+    # どの単位の統計か
+    scope_type:
+      type: string
+      enum: [overall, league, season]
+
+    # scope_type が league のときだけ入る
+    league_id:
+      type: string
+      nullable: true
+
+    # scope_type が season のときだけ入る
+    season_id:
+      type: string
+      nullable: true
+
+    # 表示用キャッシュ
+    league_name:
+      type: string
+      nullable: true
+    season_name:
+      type: string
+      nullable: true
+
+    # 基本統計
+    total_points: number
+    total_match_count: number
+    average_rank: number
+
+    # 現在順位
+    current_rank:
+      type: number
+      nullable: true
+
+    # 着順回数
+    first_count: number
+    second_count: number
+    third_count: number
+    fourth_count:
+      type: number
+      nullable: true
+
+    # 着順率
+    first_rate: number
+    second_rate: number
+    third_rate: number
+    fourth_rate:
+      type: number
+      nullable: true
+
+    # スコア系
+    highest_score:
+      type: number
+      nullable: true
+    lowest_score:
+      type: number
+      nullable: true
+    average_score:
+      type: number
+      nullable: true
+
+    # 連勝・連敗
+    win_streak:
+      type: number
+      nullable: true
+    lose_streak:
+      type: number
+      nullable: true
+
+    created_at: timestamp
+    updated_at: timestamp
