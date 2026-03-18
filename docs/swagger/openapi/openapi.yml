@@ -1,0 +1,735 @@
+openapi: 3.0.3
+info:
+  title: Jongbo API
+  version: 1.0.0
+  description: >
+    麻雀対局記録アプリJongboのAPIです。
+
+servers:
+  - url: https://api.jongbo.com
+    description: 本番環境
+  - url: http://localhost:3000
+    description: ローカル開発環境
+
+tags:
+  - name: Users
+    description: ユーザー情報やプロフィールに関する操作
+  - name: Leagues
+    description: リーグ作成・更新・メンバー管理に関する操作
+  - name: Seasons
+    description: 各リーグ内のシーズン管理に関する操作
+  - name: Matches
+    description: 試合（対局）を記録・閲覧するための操作
+  - name: Stats
+    description: 個人成績や統計情報に関する操作
+
+security:
+  - bearerAuth: []
+
+paths:
+  ################################
+  # Users
+  ################################
+  /users/me:
+    get:
+      tags: [Users]
+      summary: ログイン中のユーザー情報取得
+      description: アクセストークンに紐づく現在のユーザー情報を取得する。
+      operationId: getCurrentUser
+      responses:
+        '200':
+          description: ログイン中のユーザー情報
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    patch:
+      tags: [Users]
+      summary: ログイン中のユーザー情報更新
+      description: ログイン中のユーザーの名前やアバター URL などのプロフィールを更新する。
+      operationId: updateCurrentUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+      responses:
+        '200':
+          description: 更新後のユーザー情報
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /users/{userId}:
+    get:
+      security: []
+      tags: [Users]
+      summary: ユーザー情報取得（公開情報）
+      description: 指定したユーザー ID の公開プロフィール情報を取得する。
+      operationId: getUserById
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: 取得対象ユーザーの ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 公開ユーザー情報
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserPublic'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  ################################
+  # Leagues
+  ################################
+  /leagues:
+    get:
+      tags: [Leagues]
+      summary: リーグ一覧取得
+      description: ログイン中のユーザーが所属しているリーグの一覧を取得する。
+      operationId: listLeagues
+      parameters:
+        - name: offset
+          in: query
+          description: 取得開始位置
+          schema:
+            type: integer
+            minimum: 0
+            default: 5
+        - name: limit
+          in: query
+          description: 取得件数の上限
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 5
+      responses:
+        '200':
+          description: リーグのページング一覧
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedLeagues'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags: [Leagues]
+      summary: リーグ作成
+      description: 新しいリーグを作成する。
+      operationId: createLeague
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateLeagueRequest'
+      responses:
+        '201':
+          description: 作成されたリーグ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/League'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /leagues/{leagueId}:
+    get:
+      tags: [Leagues]
+      summary: リーグ詳細取得
+      description: 指定したリーグの詳細情報を取得する。
+      operationId: getLeague
+      parameters:
+        - name: leagueId
+          in: path
+          required: true
+          description: 対象リーグの ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: リーグ詳細情報
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LeagueDetail'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags: [Leagues]
+      summary: リーグ情報更新
+      description: 指定したリーグの情報を更新する。
+      operationId: updateLeague
+      parameters:
+        - name: leagueId
+          in: path
+          required: true
+          description: 対象リーグの ID
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateLeagueRequest'
+      responses:
+        '200':
+          description: 更新後のリーグ情報
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/League'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Leagues]
+      summary: リーグ削除
+      description: 指定したリーグを削除する。
+      operationId: deleteLeague
+      parameters:
+        - name: leagueId
+          in: path
+          required: true
+          description: 削除対象リーグの ID
+          schema:
+            type: string
+      responses:
+        '204':
+          $ref: '#/components/responses/NoContent'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /leagues/{leagueId}/members:
+    get:
+      tags: [Leagues]
+      summary: リーグメンバー一覧取得
+      description: 指定したリーグに所属しているメンバーの一覧を取得する。
+      operationId: listLeagueMembers
+      parameters:
+        - name: leagueId
+          in: path
+          required: true
+          description: 対象リーグの ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: リーグメンバー一覧
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LeagueMember'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  ################################
+  # Seasons
+  ################################
+  /leagues/{leagueId}/seasons:
+    get:
+      tags: [Seasons]
+      summary: シーズン一覧取得
+      description: 指定したリーグ内のシーズン一覧を取得する。
+      operationId: listSeasons
+      parameters:
+        - name: leagueId
+          in: path
+          required: true
+          description: 対象リーグの ID
+          schema:
+            type: string
+        - name: offset
+          in: query
+          description: 取得開始位置
+          schema:
+            type: integer
+            minimum: 0
+            default: 5
+        - name: limit
+          in: query
+          description: 取得件数の上限
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 5
+      responses:
+        '200':
+          description: シーズンのページング一覧
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedSeasons'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      tags: [Seasons]
+      summary: シーズン作成
+      description: 指定したリーグ内に新しいシーズンを作成する。
+      operationId: createSeason
+      parameters:
+        - name: leagueId
+          in: path
+          required: true
+          description: 対象リーグの ID
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSeasonRequest'
+      responses:
+        '201':
+          description: 作成されたシーズン
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Season'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /leagues/{leagueId}/seasons/{seasonId}:
+    get:
+      tags: [Seasons]
+      summary: シーズン詳細取得
+      description: 指定したリーグ内の特定シーズン詳細を取得する。
+      operationId: getSeason
+      parameters:
+        - name: leagueId
+          in: path
+          required: true
+          description: 対象リーグの ID
+          schema:
+            type: string
+        - name: seasonId
+          in: path
+          required: true
+          description: 対象シーズンの ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: シーズン詳細
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SeasonDetail'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags: [Seasons]
+      summary: シーズン更新
+      description: 指定したシーズンの情報を更新する。
+      operationId: updateSeason
+      parameters:
+        - name: leagueId
+          in: path
+          required: true
+          description: 対象リーグの ID
+          schema:
+            type: string
+        - name: seasonId
+          in: path
+          required: true
+          description: 対象シーズンの ID
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSeasonRequest'
+      responses:
+        '200':
+          description: 更新後のシーズン情報
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Season'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Seasons]
+      summary: シーズン削除
+      description: 指定したシーズンを削除する。
+      operationId: deleteSeason
+      parameters:
+        - name: leagueId
+          in: path
+          required: true
+          description: 対象リーグの ID
+          schema:
+            type: string
+        - name: seasonId
+          in: path
+          required: true
+          description: 削除対象シーズンの ID
+          schema:
+            type: string
+      responses:
+        '204':
+          $ref: '#/components/responses/NoContent'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /leagues/{leagueId}/seasons/{seasonId}/members:
+    get:
+      tags: [Seasons]
+      summary: シーズンメンバー一覧取得
+      description: 指定したシーズンに所属しているメンバーの一覧を取得する。
+      operationId: listSeasonMembers
+      parameters:
+        - name: leagueId
+          in: path
+          required: true
+          description: 対象リーグの ID
+          schema:
+            type: string
+        - name: seasonId
+          in: path
+          required: true
+          description: 対象シーズンの ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: シーズンメンバー一覧
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SeasonMember'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  ################################
+  # Matches
+  ################################
+  /leagues/{leagueId}/seasons/{seasonId}/matches:
+    get:
+      tags: [Matches]
+      summary: シーズン内試合一覧取得
+      description: 指定したリーグ・シーズンに紐づく試合の一覧をページングして取得する。
+      operationId: listMatches
+      parameters:
+        - name: leagueId
+          in: path
+          required: true
+          description: 対象リーグの ID
+          schema:
+            type: string
+        - name: seasonId
+          in: path
+          required: true
+          description: 対象シーズンの ID
+          schema:
+            type: string
+        - name: offset
+          in: query
+          description: 取得開始位置
+          schema:
+            type: integer
+            minimum: 0
+            default: 5
+        - name: limit
+          in: query
+          description: 取得件数の上限
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 5
+      responses:
+        '200':
+          description: 試合一覧（ページング）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedMatches'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      tags: [Matches]
+      summary: 試合記録作成
+      description: 指定したリーグ・シーズンに新しい試合（対局）を記録する。
+      operationId: createMatch
+      parameters:
+        - name: leagueId
+          in: path
+          required: true
+          description: 対象リーグの ID
+          schema:
+            type: string
+        - name: seasonId
+          in: path
+          required: true
+          description: 対象シーズンの ID
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMatchRequest'
+      responses:
+        '201':
+          description: 作成された試合情報
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Match'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /matches/{matchId}:
+    get:
+      tags: [Matches]
+      summary: 試合詳細取得
+      description: 試合 ID を指定して詳細情報を取得する。
+      operationId: getMatch
+      parameters:
+        - name: matchId
+          in: path
+          required: true
+          description: 対象試合の ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 試合詳細情報
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MatchDetail'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags: [Matches]
+      summary: 試合情報更新
+      description: 記録済みの試合情報を修正する。
+      operationId: updateMatch
+      parameters:
+        - name: matchId
+          in: path
+          required: true
+          description: 対象試合の ID
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateMatchRequest'
+      responses:
+        '200':
+          description: 更新後の試合情報
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Match'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Matches]
+      summary: 試合削除
+      description: 指定した試合を削除する。
+      operationId: deleteMatch
+      parameters:
+        - name: matchId
+          in: path
+          required: true
+          description: 削除対象試合の ID
+          schema:
+            type: string
+      responses:
+        '204':
+          $ref: '#/components/responses/NoContent'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  ################################
+  # Stats
+  ################################
+  /stats/me:
+    get:
+      tags: [Stats]
+      summary: 個人成績取得
+      description: ログインユーザーの個人成績を取得する。
+      operationId: getMyStats
+      parameters:
+        - name: leagueId
+          in: query
+          required: true
+          description: 絞り込み対象リーグID
+          schema:
+            type: string
+            format: uuid
+        - name: seasonId
+          in: query
+          required: true
+          description: 絞り込み対象シーズンID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 個人成績
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MyStats'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  responses:
+    BadRequest:
+      $ref: './components/responses.yml#/components/responses/BadRequest'
+    Unauthorized:
+      $ref: './components/responses.yml#/components/responses/Unauthorized'
+    NotFound:
+      $ref: './components/responses.yml#/components/responses/NotFound'
+    NoContent:
+      $ref: './components/responses.yml#/components/responses/NoContent'
+
+  schemas:
+    # Common
+    PageMeta:
+      $ref: './components/schemas.yml#/components/schemas/PageMeta'
+    Error:
+      $ref: './components/schemas.yml#/components/schemas/Error'
+    
+    # User
+    User:
+      $ref: './components/schemas.yml#/components/schemas/User'
+    UserPublic:
+      $ref: './components/schemas.yml#/components/schemas/UserPublic'
+    UpdateUserRequest:
+      $ref: './components/schemas.yml#/components/schemas/UpdateUserRequest'
+    
+    # League
+    League:
+      $ref: './components/schemas.yml#/components/schemas/League'
+    LeagueMember:
+      $ref: './components/schemas.yml#/components/schemas/LeagueMember'
+    LeagueDetail:
+      $ref: './components/schemas.yml#/components/schemas/LeagueDetail'
+    CreateLeagueRequest:
+      $ref: './components/schemas.yml#/components/schemas/CreateLeagueRequest'
+    UpdateLeagueRequest:
+      $ref: './components/schemas.yml#/components/schemas/UpdateLeagueRequest'
+    PaginatedLeagues:
+      $ref: './components/schemas.yml#/components/schemas/PaginatedLeagues'
+    
+    # Season
+    Season:
+      $ref: './components/schemas.yml#/components/schemas/Season'
+    SeasonMember:
+      $ref: './components/schemas.yml#/components/schemas/SeasonMember'
+    SeasonDetail:
+      $ref: './components/schemas.yml#/components/schemas/SeasonDetail'
+    CreateSeasonRequest:
+      $ref: './components/schemas.yml#/components/schemas/CreateSeasonRequest'
+    UpdateSeasonRequest:
+      $ref: './components/schemas.yml#/components/schemas/UpdateSeasonRequest'
+    PaginatedSeasons:
+      $ref: './components/schemas.yml#/components/schemas/PaginatedSeasons'
+    
+    # Match
+    Match:
+      $ref: './components/schemas.yml#/components/schemas/Match'
+    MatchResult:
+      $ref: './components/schemas.yml#/components/schemas/MatchResult'
+    MatchDetail:
+      $ref: './components/schemas.yml#/components/schemas/MatchDetail'
+    CreateMatchRequest:
+      $ref: './components/schemas.yml#/components/schemas/CreateMatchRequest'
+    UpdateMatchRequest:
+      $ref: './components/schemas.yml#/components/schemas/UpdateMatchRequest'
+    MatchResultInput:
+      $ref: './components/schemas.yml#/components/schemas/MatchResultInput'
+    PaginatedMatches:
+      $ref: './components/schemas.yml#/components/schemas/PaginatedMatches'
+    
+    # Stats
+    MemberStats:
+      $ref: './components/schemas.yml#/components/schemas/MemberStats'
+    RankCounts:
+      $ref: './components/schemas.yml#/components/schemas/RankCounts'
+    PersonalStatsSummary:
+      $ref: './components/schemas.yml#/components/schemas/PersonalStatsSummary'
+    ScoreTrend:
+      $ref: './components/schemas.yml#/components/schemas/ScoreTrend'
+    ScorePoint:
+      $ref: './components/schemas.yml#/components/schemas/ScorePoint'
+    Awards:
+      $ref: './components/schemas.yml#/components/schemas/Awards'
+    AwardHighestScore:
+      $ref: './components/schemas.yml#/components/schemas/AwardHighestScore'
+    AwardTop2Rate:
+      $ref: './components/schemas.yml#/components/schemas/AwardTop2Rate'
+    AwardAvoid4thRate:
+      $ref: './components/schemas.yml#/components/schemas/AwardAvoid4thRate'
+    MyStats:
+      $ref: './components/schemas.yml#/components/schemas/MyStats'
+    
+    # Rule
+    Rule:
+      $ref: './components/schemas.yml#/components/schemas/Rule'
+    Uma:
+      $ref: './components/schemas.yml#/components/schemas/Uma'
+    Oka:
+      $ref: './components/schemas.yml#/components/schemas/Oka'
