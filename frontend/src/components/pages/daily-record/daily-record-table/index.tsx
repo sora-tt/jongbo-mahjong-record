@@ -15,14 +15,14 @@ import { useDailyRecordTable } from "./hooks";
 
 const WIND_ORDER = ["EAST", "SOUTH", "WEST", "NORTH"] as const;
 
-const formatScore = (score: number | null | undefined) => {
+const formatScore = ({ score }: { score: number | null | undefined }) => {
   if (score === null || score === undefined) return "";
   if (score === 0) return "0.0pt";
   const sign = score > 0 ? "+" : "";
   return `${sign}${score.toFixed(1)}pt`;
 };
 
-const scoreClass = (score: number | null | undefined) => {
+const scoreClass = ({ score }: { score: number | null | undefined }) => {
   if (score === null || score === undefined || score === 0) {
     return "text-text-muted";
   }
@@ -64,8 +64,11 @@ export const DailyRecordTable: React.FC = () => {
                 const score = resultForPlayer?.score ?? null;
 
                 return (
-                  <TableCell key={player.userId} className={scoreClass(score)}>
-                    {formatScore(score)}
+                  <TableCell
+                    key={player.userId}
+                    className={scoreClass({ score })}
+                  >
+                    {formatScore({ score })}
                   </TableCell>
                 );
               })}
@@ -96,12 +99,13 @@ export const DailyRecordTable: React.FC = () => {
           <TableCell className="font-semibold">計</TableCell>
           {players.map((player, idx) => {
             const total = totals[idx] ?? null;
+
             return (
               <TableCell
                 key={player.userId}
-                className={`font-semibold ${scoreClass(total)}`}
+                className={`font-semibold ${scoreClass({ score: total })}`}
               >
-                {formatScore(total)}
+                {formatScore({ score: total })}
               </TableCell>
             );
           })}

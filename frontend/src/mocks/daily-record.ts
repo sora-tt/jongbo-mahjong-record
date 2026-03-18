@@ -8,13 +8,14 @@ export const dailyRecordData1: DailyRecord = {
   dailyRecordId: "daily-record-000001",
   leagueId: leagueData1.leagueId,
   date: leagueData1.lastRecordedAt,
-  matches: {
-    1: matchesData[0],
-    2: matchesData[1],
-    3: matchesData[2],
-  },
+  matches: matchesData,
   players: [userData1, userData3, userData2, userData4],
-  totalPoints: [-30, 100, -30, -40],
+  totalPoints: {
+    [userData1.userId]: -30,
+    [userData3.userId]: 100,
+    [userData2.userId]: -30,
+    [userData4.userId]: -40,
+  },
 };
 
 export const mockDailyRecord = dailyRecordData1;

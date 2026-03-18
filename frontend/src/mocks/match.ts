@@ -1,7 +1,11 @@
 import { leagueData1 } from "./league";
 import { userData1, userData2, userData3, userData4 } from "./user";
 
-import type { Match, MatchResultInput } from "@/types/domain/match";
+import type {
+  Match,
+  MatchIdType,
+  MatchResultInput,
+} from "@/types/domain/match";
 
 export const matchResultInputData1: MatchResultInput = {
   EAST: { player: userData1, score: -80, rank: 4 },
@@ -57,4 +61,8 @@ export const matchData3: Match = {
   },
 };
 
-export const matchesData: Match[] = [matchData1, matchData2, matchData3];
+export const matchesData: Record<MatchIdType, Match> = {
+  [matchData1.matchId]: matchData1,
+  [matchData2.matchId]: matchData2,
+  [matchData3.matchId]: matchData3,
+};

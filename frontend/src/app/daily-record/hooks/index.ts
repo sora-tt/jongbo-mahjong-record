@@ -6,9 +6,17 @@ export const useDailyRecord = () => {
 
   const league = Object.values(leaguesData).find(
     (l) => l.leagueId === record.leagueId
-  )!;
+  );
 
   const date = record.date.format("yyyy/MM/dd");
+
+  if (!league) {
+    return {
+      date,
+      rule: "",
+    };
+  }
+
   const rule = league.rule.name;
 
   return {

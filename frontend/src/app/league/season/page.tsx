@@ -5,6 +5,7 @@ import * as React from "react";
 import clsx from "clsx";
 import { BookOpen, Calendar, Crown } from "lucide-react";
 
+import Header from "@/components/common/container/header";
 import { LeagueRankingTable } from "@/components/pages/league/league-ranking-table";
 import { Button } from "@/components/ui/button";
 import { HeaderCard } from "@/components/ui/header-card";
@@ -20,6 +21,7 @@ const SeasonPage: React.FC = () => {
   if (error) {
     return (
       <div className="flex-1 bg-white min-h-full font-jp">
+        <Header />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <p className="text-red-500">{error}</p>
         </div>
@@ -34,6 +36,8 @@ const SeasonPage: React.FC = () => {
 
   return (
     <div className="flex-1 bg-white min-h-full font-jp">
+      <Header />
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <section className="mb-6">
           <HeaderCard title={name} align="center">
