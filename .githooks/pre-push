@@ -1,0 +1,25 @@
+#!/usr/bin/env sh
+set -e
+
+echo "--- Pre-push hook started ---"
+
+export PATH="$(pwd)/node_modules/.bin:$PATH"
+
+echo "Running Typecheck..."
+echo ""
+TMPFILE=$(mktemp)
+
+if npm run typecheck >"$TMPFILE" 2>&1; then
+  # Overwrite the current line with a green success message
+  echo "\r\033[32mTypes look good\033[0m\n"
+  rm -f "$TMPFILE"
+else
+  # Overwrite the current line with a red failure message and print details
+  echo "\r\033[31mTypecheck failed"
+  echo "Please run 'npm run typecheck' locally to fix the issues.\033[0m\n"
+  echo "$TMPFILE"
+  rm -f "$TMPFILE"
+  exit 1
+fi
+
+echo "--- Pre-push hook finished successfully ---"
