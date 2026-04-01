@@ -65,7 +65,7 @@ npm run typecheck    # TypeScript 型チェック
 ## Git ワークフロー
 
 - メインブランチ: `develop`（**直接変更禁止**）
-- 作業ブランチ: `ISSUE-XX-description` または `feature/ISSUE-XX-description`
+- 作業ブランチ: `ISSUE-XX-description`（Issue 番号を必ず含める）
 - 開発フロー: Issue 作成 → ブランチ作成 → 開発 → PR 作成 → レビュー → マージ
 - コミットメッセージは英語で簡潔に
 - コードレビューは **日本語** で行う
