@@ -97,8 +97,8 @@ export const DailyRecordTable: React.FC = () => {
 
         <TableRow className="border-t-2 border-brand-500 text-text-muted">
           <TableCell className="font-semibold">計</TableCell>
-          {players.map((player, idx) => {
-            const total = totals[idx] ?? null;
+          {players.map((player) => {
+            const total = totals[player.userId] ?? null;
 
             return (
               <TableCell

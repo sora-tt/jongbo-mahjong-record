@@ -7,10 +7,8 @@ export const useDailyRecordTable = () => {
 
   const players = dailyRecord.players;
 
-  const matches: Match[] = Object.values(dailyRecord.matches).sort((a, b) =>
-    a.playedAt
-      .format("yyyyMMddHHmmss")
-      .localeCompare(b.playedAt.format("yyyyMMddHHmmss"))
+  const matches: Match[] = Object.values(dailyRecord.matches).sort(
+    (a, b) => a.playedAt.toDate().getTime() - b.playedAt.toDate().getTime()
   );
 
   const totals = dailyRecord.totalPoints;
