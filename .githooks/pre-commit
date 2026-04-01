@@ -1,0 +1,43 @@
+#!/usr/bin/env sh
+set -e
+
+echo "--- Pre-commit hook started ---"
+
+run_checks_for_dir() {
+  TARGET_DIR="$1"
+
+  echo "Processing ${TARGET_DIR}..."
+
+  FILES=$(git diff --cached --name-only --diff-filter=ACMR -- "$TARGET_DIR" \
+    | grep -E '\.(js|jsx|ts|tsx)$' \
+    | sed "s|^${TARGET_DIR}/||" \
+    | sed 's| |\\ |g' || true)
+
+  if [ -z "$FILES" ]; then
+    echo "No files to format in ${TARGET_DIR}."
+    return 0
+  fi
+
+  (
+    cd "$TARGET_DIR"
+    export PATH="$(pwd)/node_modules/.bin:$PATH"
+
+    echo "Running Prettier on staged files in ${TARGET_DIR}..."
+    echo "$FILES" | xargs npx prettier --write
+
+    echo "Running ESLint on staged files in ${TARGET_DIR}..."
+    if [ -f "eslint.config.mjs" ]; then
+      echo "$FILES" | xargs npx eslint -c eslint.config.mjs --fix
+    else
+      echo "$FILES" | xargs npx eslint --fix
+    fi
+
+    echo "Adding formatted files to the commit in ${TARGET_DIR}..."
+    echo "$FILES" | xargs git add
+  )
+}
+
+run_checks_for_dir "frontend"
+run_checks_for_dir "backend"
+
+echo "--- Pre-commit hook finished successfully ---"
