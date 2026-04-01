@@ -3,6 +3,9 @@ set -e
 
 echo "--- Pre-commit hook started ---"
 
+ROOT_DIR=$(git rev-parse --show-toplevel)
+cd "$ROOT_DIR"
+
 run_checks_for_dir() {
   TARGET_DIR="$1"
 

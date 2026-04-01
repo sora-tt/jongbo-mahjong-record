@@ -1,0 +1,36 @@
+#!/usr/bin/env sh
+set -e
+
+echo "--- Pre-push hook started ---"
+
+ROOT_DIR=$(git rev-parse --show-toplevel)
+cd "$ROOT_DIR"
+
+run_typecheck_for_dir() {
+  TARGET_DIR="$1"
+
+  echo "Running typecheck in ${TARGET_DIR}..."
+
+  (
+    cd "$TARGET_DIR"
+    export PATH="$(pwd)/node_modules/.bin:$PATH"
+
+    TMPFILE=$(mktemp)
+
+    if npm run typecheck >"$TMPFILE" 2>&1; then
+      echo "\r\033[32mType looks good in ${TARGET_DIR}\033[0m\n"
+      rm -f "$TMPFILE"
+    else
+      echo "\r\033[31mTypecheck failed in ${TARGET_DIR}"
+      echo "Please run 'npm run typecheck' locally in ${TARGET_DIR} to fix the issues.\033[0m\n"
+      cat "$TMPFILE"
+      rm -f "$TMPFILE"
+      exit 1
+    fi
+  )
+}
+
+run_typecheck_for_dir "frontend"
+run_typecheck_for_dir "backend"
+
+echo "--- Pre-push hook finished successfully ---"
