@@ -3,7 +3,7 @@ import importPlugin from "eslint-plugin-import";
 import prettierPlugin from "eslint-plugin-prettier";
 import tsParser from "@typescript-eslint/parser";
 
-const compat = new FlatCompat();
+const compat = new FlatCompat({ baseDirectory: import.meta.dirname });
 
 const eslintConfig = [
   {

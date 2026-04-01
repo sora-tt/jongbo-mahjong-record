@@ -16,6 +16,11 @@
 
 - Node.js を利用します（ローカル開発は LTS 推奨）。
 - npm を利用します。
+- 以下を順番に実行してください。
+```bash
+cd /path/to/jongbo-mahjong-record
+git config core.hooksPath .githooks
+```
 
 ---
 
@@ -27,7 +32,7 @@ Next.js (App Router) で実装された Web フロントエンドです。
 
 ```bash
 cd frontend
-npm install
+npm ci
 npm run dev
 ```
 
@@ -59,7 +64,7 @@ Hono + Firestore で実装された API サーバです。ローカルでは Fir
 
 ```bash
 cd backend
-npm install
+npm ci
 ```
 
 ### ローカル開発（Emulator 利用）
@@ -96,6 +101,8 @@ npm run dev:emulator
 - `npm run emulator`: Firebase Emulator 起動
 - `npm run seed`: Emulator 向け seed 投入
 - `npm run dev:emulator`: Emulator 接続で API 起動
+- `npm run lint`: ESLint ルールが正しく適用されているかチェック
+- `npm run lint:fix` ESLint ルールに沿ってコードを修正
 
 ### API ドキュメント
 
