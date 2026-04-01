@@ -6,7 +6,7 @@ import { NotFoundError, ValidationError } from "@/errors.js";
 export class UserService {
   constructor(
     private readonly userRepository: UserRepository,
-    private readonly userStatsRepository: UserStatsRepository
+    private readonly userStatsRepository: UserStatsRepository,
   ) {}
 
   getUser(userId: string) {
@@ -28,15 +28,25 @@ export class UserService {
     seasonId?: string;
   }) {
     if (params.scopeType === "league" && !params.leagueId) {
-      throw new ValidationError("leagueId is required when scopeType is league");
+      throw new ValidationError(
+        "leagueId is required when scopeType is league",
+      );
     }
-    if (params.scopeType === "season" && (!params.leagueId || !params.seasonId)) {
-      throw new ValidationError("leagueId and seasonId are required when scopeType is season");
+    if (
+      params.scopeType === "season" &&
+      (!params.leagueId || !params.seasonId)
+    ) {
+      throw new ValidationError(
+        "leagueId and seasonId are required when scopeType is season",
+      );
     }
 
     const stats = await this.userStatsRepository.get(params);
     if (!stats) {
-      throw new NotFoundError("user stats not found for given scope", params as Record<string, unknown>);
+      throw new NotFoundError(
+        "user stats not found for given scope",
+        params as Record<string, unknown>,
+      );
     }
 
     return stats;

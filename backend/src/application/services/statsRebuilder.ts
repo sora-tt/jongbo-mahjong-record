@@ -1,4 +1,10 @@
-import { buildLeagueRecords, buildPointProgressions, buildSeasonRecords, buildStandings, buildUserStats } from "@/domain/aggregation.js";
+import {
+  buildLeagueRecords,
+  buildPointProgressions,
+  buildSeasonRecords,
+  buildStandings,
+  buildUserStats,
+} from "@/domain/aggregation.js";
 import type { MatchResult, ScopeType, SeasonMember } from "@/domain/models.js";
 import type { LeagueRepository } from "@/domain/repositories/leagueRepository.js";
 import type { MatchRepository } from "@/domain/repositories/matchRepository.js";
@@ -12,15 +18,21 @@ export class StatsRebuilder {
     private readonly seasonRepository: SeasonRepository,
     private readonly sessionRepository: SessionRepository,
     private readonly matchRepository: MatchRepository,
-    private readonly userStatsRepository: UserStatsRepository
+    private readonly userStatsRepository: UserStatsRepository,
   ) {}
 
   async rebuildSeason(leagueId: string, seasonId: string) {
     const season = await this.seasonRepository.get(leagueId, seasonId);
     const sessions = await this.sessionRepository.list(leagueId, seasonId);
-    const seasonMatches = await this.matchRepository.listBySeason(leagueId, seasonId);
+    const seasonMatches = await this.matchRepository.listBySeason(
+      leagueId,
+      seasonId,
+    );
     const standings = buildStandings(season.members, seasonMatches);
-    const pointProgressions = buildPointProgressions(season.members, seasonMatches);
+    const pointProgressions = buildPointProgressions(
+      season.members,
+      seasonMatches,
+    );
     const seasonRecords = buildSeasonRecords(season.members, seasonMatches);
 
     await this.seasonRepository.updateStatistics({
@@ -34,9 +46,18 @@ export class StatsRebuilder {
 
     await Promise.all(
       sessions.map(async (session) => {
-        const sessionMatches = await this.matchRepository.list(leagueId, seasonId, session.id);
-        await this.sessionRepository.setTotalMatchCount(leagueId, seasonId, session.id, sessionMatches.length);
-      })
+        const sessionMatches = await this.matchRepository.list(
+          leagueId,
+          seasonId,
+          session.id,
+        );
+        await this.sessionRepository.setTotalMatchCount(
+          leagueId,
+          seasonId,
+          session.id,
+          sessionMatches.length,
+        );
+      }),
     );
 
     await this.rebuildUserStats("season", {
@@ -56,8 +77,13 @@ export class StatsRebuilder {
   async rebuildLeague(leagueId: string) {
     const league = await this.leagueRepository.get(leagueId);
     const seasons = await this.seasonRepository.list(leagueId);
-    const activeSeason = seasons.find((season) => season.status === "active") ?? null;
-    await this.leagueRepository.setActiveSeason(leagueId, activeSeason?.id ?? null, activeSeason?.name ?? null);
+    const activeSeason =
+      seasons.find((season) => season.status === "active") ?? null;
+    await this.leagueRepository.setActiveSeason(
+      leagueId,
+      activeSeason?.id ?? null,
+      activeSeason?.name ?? null,
+    );
 
     const leagueMatches = await this.matchRepository.listByLeague(leagueId);
     await this.leagueRepository.updateLeagueStatistics({
@@ -67,13 +93,18 @@ export class StatsRebuilder {
     });
 
     const leagueResultsByUser = collectUserResults(leagueMatches);
-    const standings = activeSeason ? (await this.seasonRepository.get(leagueId, activeSeason.id)).standings : [];
+    const standings = activeSeason
+      ? (await this.seasonRepository.get(leagueId, activeSeason.id)).standings
+      : [];
     await this.rebuildUserStats("league", {
       leagueId,
       seasonId: null,
       leagueName: league.name,
       seasonName: null,
-      members: league.members.map((member) => ({ userId: member.userId, userName: member.userName })),
+      members: league.members.map((member) => ({
+        userId: member.userId,
+        userName: member.userName,
+      })),
       standings,
       resultsByUser: leagueResultsByUser,
       playerCount: league.members.length,
@@ -104,10 +135,15 @@ export class StatsRebuilder {
         });
 
         await this.userStatsRepository.upsert(
-          { userId: member.userId, scopeType: "overall", leagueId: null, seasonId: null },
-          stats
+          {
+            userId: member.userId,
+            scopeType: "overall",
+            leagueId: null,
+            seasonId: null,
+          },
+          stats,
         );
-      })
+      }),
     );
   }
 
@@ -122,9 +158,11 @@ export class StatsRebuilder {
       standings: Array<{ rank: number; userId: string }>;
       resultsByUser: Map<string, MatchResult[]>;
       playerCount: number;
-    }
+    },
   ) {
-    const rankMap = new Map(params.standings.map((standing) => [standing.userId, standing.rank]));
+    const rankMap = new Map(
+      params.standings.map((standing) => [standing.userId, standing.rank]),
+    );
 
     await Promise.all(
       params.members.map(async (member) => {
@@ -150,16 +188,16 @@ export class StatsRebuilder {
             leagueId: params.leagueId,
             seasonId: params.seasonId,
           },
-          stats
+          stats,
         );
-      })
+      }),
     );
 
     if (scopeType === "season" && params.seasonId) {
       await this.userStatsRepository.deleteMissingSeasonStats(
         params.leagueId,
         params.seasonId,
-        params.members.map((member) => member.userId)
+        params.members.map((member) => member.userId),
       );
     }
   }

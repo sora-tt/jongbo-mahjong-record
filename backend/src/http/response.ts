@@ -7,5 +7,5 @@ export const okWithMeta = <T>(
   c: Context,
   data: T,
   meta: Record<string, unknown>,
-  status: 200 | 201 = 200
+  status: 200 | 201 = 200,
 ) => c.json({ data, meta }, status);

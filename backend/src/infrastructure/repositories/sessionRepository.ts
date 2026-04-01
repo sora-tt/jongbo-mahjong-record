@@ -1,5 +1,9 @@
 import { Timestamp, type Firestore } from "firebase-admin/firestore";
-import type { CreateSessionInput, Session, UpdateSessionInput } from "@/domain/models.js";
+import type {
+  CreateSessionInput,
+  Session,
+  UpdateSessionInput,
+} from "@/domain/models.js";
 import type { SessionRepository } from "@/domain/repositories/sessionRepository.js";
 import { toIsoString, toTimestamp } from "@/infrastructure/firestore/utils.js";
 import { NotFoundError } from "@/errors.js";
@@ -8,20 +12,39 @@ export class FirestoreSessionRepository implements SessionRepository {
   constructor(private readonly db: Firestore) {}
 
   async list(leagueId: string, seasonId: string): Promise<Session[]> {
-    const snapshot = await this.collection(leagueId, seasonId).orderBy("started_at", "desc").get();
-    return snapshot.docs.map((doc) => this.map(leagueId, seasonId, doc.id, doc.data()));
+    const snapshot = await this.collection(leagueId, seasonId)
+      .orderBy("started_at", "desc")
+      .get();
+    return snapshot.docs.map((doc) =>
+      this.map(leagueId, seasonId, doc.id, doc.data()),
+    );
   }
 
-  async get(leagueId: string, seasonId: string, sessionId: string): Promise<Session> {
-    const snapshot = await this.collection(leagueId, seasonId).doc(sessionId).get();
+  async get(
+    leagueId: string,
+    seasonId: string,
+    sessionId: string,
+  ): Promise<Session> {
+    const snapshot = await this.collection(leagueId, seasonId)
+      .doc(sessionId)
+      .get();
     if (!snapshot.exists) {
-      throw new NotFoundError("session not found", { leagueId, seasonId, sessionId });
+      throw new NotFoundError("session not found", {
+        leagueId,
+        seasonId,
+        sessionId,
+      });
     }
 
     return this.map(leagueId, seasonId, snapshot.id, snapshot.data() ?? {});
   }
 
-  async create(leagueId: string, seasonId: string, input: CreateSessionInput, members: Session["members"]): Promise<Session> {
+  async create(
+    leagueId: string,
+    seasonId: string,
+    input: CreateSessionInput,
+    members: Session["members"],
+  ): Promise<Session> {
     const ref = this.collection(leagueId, seasonId).doc();
     const now = Timestamp.now();
     await ref.set({
@@ -43,11 +66,20 @@ export class FirestoreSessionRepository implements SessionRepository {
     return this.get(leagueId, seasonId, ref.id);
   }
 
-  async update(leagueId: string, seasonId: string, sessionId: string, input: UpdateSessionInput): Promise<Session> {
+  async update(
+    leagueId: string,
+    seasonId: string,
+    sessionId: string,
+    input: UpdateSessionInput,
+  ): Promise<Session> {
     const ref = this.collection(leagueId, seasonId).doc(sessionId);
     const snapshot = await ref.get();
     if (!snapshot.exists) {
-      throw new NotFoundError("session not found", { leagueId, seasonId, sessionId });
+      throw new NotFoundError("session not found", {
+        leagueId,
+        seasonId,
+        sessionId,
+      });
     }
 
     const patch: Record<string, unknown> = { updated_at: Timestamp.now() };
@@ -62,17 +94,30 @@ export class FirestoreSessionRepository implements SessionRepository {
     return this.get(leagueId, seasonId, sessionId);
   }
 
-  async delete(leagueId: string, seasonId: string, sessionId: string): Promise<void> {
+  async delete(
+    leagueId: string,
+    seasonId: string,
+    sessionId: string,
+  ): Promise<void> {
     const ref = this.collection(leagueId, seasonId).doc(sessionId);
     const snapshot = await ref.get();
     if (!snapshot.exists) {
-      throw new NotFoundError("session not found", { leagueId, seasonId, sessionId });
+      throw new NotFoundError("session not found", {
+        leagueId,
+        seasonId,
+        sessionId,
+      });
     }
 
     await this.db.recursiveDelete(ref);
   }
 
-  async setTotalMatchCount(leagueId: string, seasonId: string, sessionId: string, totalMatchCount: number): Promise<void> {
+  async setTotalMatchCount(
+    leagueId: string,
+    seasonId: string,
+    sessionId: string,
+    totalMatchCount: number,
+  ): Promise<void> {
     await this.collection(leagueId, seasonId).doc(sessionId).update({
       total_match_count: totalMatchCount,
       updated_at: Timestamp.now(),
@@ -80,10 +125,20 @@ export class FirestoreSessionRepository implements SessionRepository {
   }
 
   private collection(leagueId: string, seasonId: string) {
-    return this.db.collection("leagues").doc(leagueId).collection("seasons").doc(seasonId).collection("sessions");
+    return this.db
+      .collection("leagues")
+      .doc(leagueId)
+      .collection("seasons")
+      .doc(seasonId)
+      .collection("sessions");
   }
 
-  private map(leagueId: string, seasonId: string, sessionId: string, data: FirebaseFirestore.DocumentData): Session {
+  private map(
+    leagueId: string,
+    seasonId: string,
+    sessionId: string,
+    data: FirebaseFirestore.DocumentData,
+  ): Session {
     return {
       id: sessionId,
       leagueId,

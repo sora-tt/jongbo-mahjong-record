@@ -16,7 +16,12 @@ export class RuleService {
     name: string;
     description?: string;
     gameType: "sanma" | "yonma";
-    uma: { first: number; second: number; third: number; fourth: number | null };
+    uma: {
+      first: number;
+      second: number;
+      third: number;
+      fourth: number | null;
+    };
     oka: { startingPoints: number; returnPoints: number };
     scoreCalculation: "decimal" | "fiveDropSixUp" | "round" | "floor" | "ceil";
   }) {
@@ -36,10 +41,20 @@ export class RuleService {
       name: string;
       description: string;
       gameType: "sanma" | "yonma";
-      uma: { first: number; second: number; third: number; fourth: number | null };
+      uma: {
+        first: number;
+        second: number;
+        third: number;
+        fourth: number | null;
+      };
       oka: { startingPoints: number; returnPoints: number };
-      scoreCalculation: "decimal" | "fiveDropSixUp" | "round" | "floor" | "ceil";
-    }>
+      scoreCalculation:
+        | "decimal"
+        | "fiveDropSixUp"
+        | "round"
+        | "floor"
+        | "ceil";
+    }>,
   ) {
     return this.ruleRepository.update(ruleId, input);
   }

@@ -8,7 +8,7 @@ export class SeasonService {
   constructor(
     private readonly leagueRepository: LeagueRepository,
     private readonly seasonRepository: SeasonRepository,
-    private readonly matchRepository: MatchRepository
+    private readonly matchRepository: MatchRepository,
   ) {}
 
   async listSeasons(userId: string, leagueId: string) {
@@ -26,9 +26,11 @@ export class SeasonService {
     const latestPlayedAt =
       matches.length === 0
         ? null
-        : [...matches]
-            .sort((left, right) => new Date(right.playedAt).getTime() - new Date(left.playedAt).getTime())[0]
-            .playedAt;
+        : [...matches].sort(
+            (left, right) =>
+              new Date(right.playedAt).getTime() -
+              new Date(left.playedAt).getTime(),
+          )[0].playedAt;
 
     return {
       ...season,
@@ -41,18 +43,26 @@ export class SeasonService {
     return this.seasonRepository.listMembers(leagueId, seasonId);
   }
 
-  async createSeason(userId: string, leagueId: string, input: CreateSeasonInput) {
+  async createSeason(
+    userId: string,
+    leagueId: string,
+    input: CreateSeasonInput,
+  ) {
     await this.assertLeagueMembership(userId, leagueId);
     if (input.memberUserIds.length === 0) {
       throw new ValidationError("memberUserIds must not be empty");
     }
 
     const leagueMembers = await this.leagueRepository.listMembers(leagueId);
-    const leagueMemberMap = new Map(leagueMembers.map((member) => [member.userId, member]));
+    const leagueMemberMap = new Map(
+      leagueMembers.map((member) => [member.userId, member]),
+    );
     const members = input.memberUserIds.map((userIdValue) => {
       const member = leagueMemberMap.get(userIdValue);
       if (!member) {
-        throw new ValidationError("memberUserIds must be league members", { userId: userIdValue });
+        throw new ValidationError("memberUserIds must be league members", {
+          userId: userIdValue,
+        });
       }
       return {
         userId: member.userId,
@@ -61,21 +71,32 @@ export class SeasonService {
     });
 
     if ((input.status ?? "active") === "active") {
-      const activeSeason = await this.seasonRepository.findActiveSeason(leagueId);
+      const activeSeason =
+        await this.seasonRepository.findActiveSeason(leagueId);
       if (activeSeason) {
-        throw new ConflictError("active season already exists", { activeSeasonId: activeSeason.id });
+        throw new ConflictError("active season already exists", {
+          activeSeasonId: activeSeason.id,
+        });
       }
     }
 
     return this.seasonRepository.create(leagueId, input, members);
   }
 
-  async updateSeason(userId: string, leagueId: string, seasonId: string, input: UpdateSeasonInput) {
+  async updateSeason(
+    userId: string,
+    leagueId: string,
+    seasonId: string,
+    input: UpdateSeasonInput,
+  ) {
     await this.assertSeasonMembership(userId, leagueId, seasonId);
     if (input.status === "active") {
-      const activeSeason = await this.seasonRepository.findActiveSeason(leagueId);
+      const activeSeason =
+        await this.seasonRepository.findActiveSeason(leagueId);
       if (activeSeason && activeSeason.id !== seasonId) {
-        throw new ConflictError("active season already exists", { activeSeasonId: activeSeason.id });
+        throw new ConflictError("active season already exists", {
+          activeSeasonId: activeSeason.id,
+        });
       }
     }
 
@@ -94,7 +115,11 @@ export class SeasonService {
     }
   }
 
-  private async assertSeasonMembership(userId: string, leagueId: string, seasonId: string) {
+  private async assertSeasonMembership(
+    userId: string,
+    leagueId: string,
+    seasonId: string,
+  ) {
     await this.assertLeagueMembership(userId, leagueId);
     const members = await this.seasonRepository.listMembers(leagueId, seasonId);
     if (!members.some((member) => member.userId === userId)) {

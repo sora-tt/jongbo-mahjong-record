@@ -23,8 +23,10 @@ export const toIsoString = (value: unknown): string => {
 export const toTimestamp = (value: string | null | undefined) =>
   value ? Timestamp.fromDate(new Date(value)) : null;
 
-export const mapDocs = <T>(docs: QueryDocumentSnapshot<DocumentData>[], mapper: (doc: QueryDocumentSnapshot<DocumentData>) => T) =>
-  docs.map(mapper);
+export const mapDocs = <T>(
+  docs: QueryDocumentSnapshot<DocumentData>[],
+  mapper: (doc: QueryDocumentSnapshot<DocumentData>) => T,
+) => docs.map(mapper);
 
 export const awaitWrites = async (writes: Promise<WriteResult>[]) => {
   await Promise.all(writes);
@@ -33,7 +35,7 @@ export const awaitWrites = async (writes: Promise<WriteResult>[]) => {
 export const addDoc = async <T extends DocumentData>(
   collection: CollectionReference<T>,
   data: T,
-  id?: string
+  id?: string,
 ) => {
   const ref = id ? collection.doc(id) : collection.doc();
   await ref.set(data);
