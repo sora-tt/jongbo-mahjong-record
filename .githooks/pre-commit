@@ -1,0 +1,57 @@
+#!/usr/bin/env sh
+set -e
+
+echo "--- Pre-commit hook started ---"
+
+ROOT_DIR=$(git rev-parse --show-toplevel)
+cd "$ROOT_DIR"
+
+run_checks_for_dir() {
+  TARGET_DIR="$1"
+
+  echo "Processing ${TARGET_DIR}..."
+
+  FILES_NUL=$(git diff --cached --name-only -z --diff-filter=ACMR -- "$TARGET_DIR" \
+    | tr '\0' '\n' \
+    | grep -E '\.(js|jsx|ts|tsx)$' \
+    | sed "s|^${TARGET_DIR}/||" \
+    | tr '\n' '\0' || true)  # grep exits 1 when no files match, which is expected
+
+  if [ -z "$FILES_NUL" ]; then
+    echo "No files to format in ${TARGET_DIR}."
+    return 0
+  fi
+
+  (
+    cd "$TARGET_DIR"
+    export PATH="$(pwd)/node_modules/.bin:$PATH"
+
+    if ! command -v prettier >/dev/null 2>&1; then
+      echo "Error: prettier is not installed in ${TARGET_DIR}. Please run 'npm install --save-dev prettier'."
+      exit 1
+    fi
+
+    echo "Running Prettier on staged files in ${TARGET_DIR}..."
+    printf '%s' "$FILES_NUL" | xargs -0 prettier --write
+
+    if ! command -v eslint >/dev/null 2>&1; then
+      echo "Error: eslint is not installed in ${TARGET_DIR}. Please run 'npm install --save-dev eslint'."
+      exit 1
+    fi
+
+    echo "Running ESLint on staged files in ${TARGET_DIR}..."
+    if [ -f "eslint.config.mjs" ]; then
+      printf '%s' "$FILES_NUL" | xargs -0 eslint -c eslint.config.mjs --fix
+    else
+      printf '%s' "$FILES_NUL" | xargs -0 eslint --fix
+    fi
+
+    echo "Adding formatted files to the commit in ${TARGET_DIR}..."
+    printf '%s' "$FILES_NUL" | xargs -0 git add
+  )
+}
+
+run_checks_for_dir "frontend"
+run_checks_for_dir "backend"
+
+echo "--- Pre-commit hook finished successfully ---"
