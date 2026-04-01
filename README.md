@@ -14,12 +14,16 @@
 
 ## 前提
 
-- Node.js を利用します（ローカル開発は LTS 推奨）。
+- Node.js を利用します（nvm を用いてバージョン管理）。
 - npm を利用します。
 - 以下を順番に実行してください。
 ```bash
 cd /path/to/jongbo-mahjong-record
 git config core.hooksPath .githooks
+cd frontend
+nvm use
+cd ../backend
+nvm use
 ```
 
 ---
@@ -102,7 +106,7 @@ npm run dev:emulator
 - `npm run seed`: Emulator 向け seed 投入
 - `npm run dev:emulator`: Emulator 接続で API 起動
 - `npm run lint`: ESLint ルールが正しく適用されているかチェック
-- `npm run lint:fix` ESLint ルールに沿ってコードを修正
+- `npm run lint:fix`: ESLint ルールに沿ってコードを修正
 
 ### API ドキュメント
 

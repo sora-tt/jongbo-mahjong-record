@@ -6,8 +6,8 @@
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
     "start": "next start",
-    "lint": "eslint '**/*.{js,jsx,ts,tsx}'",
-    "lint:fix": "eslint '**/*.{js,jsx,ts,tsx}' --fix",
+    "lint": "eslint src --ext .ts,.tsx,.js,.mjs,.cjs",
+    "lint:fix": "eslint src --ext .ts,.tsx,.js,.mjs,.cjs --fix",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -23,6 +23,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@typescript-eslint/parser": "^8.58.0",
     "eslint": "^9",
     "eslint-config-next": "15.5.4",
     "eslint-config-prettier": "^10.1.8",
