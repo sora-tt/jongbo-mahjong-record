@@ -14,10 +14,12 @@ run_checks_for_dir() {
 
   git diff --cached --name-only -z --diff-filter=ACMR -- "$TARGET_DIR" \
     | TARGET_DIR_ENV="$TARGET_DIR" perl -0ne '
-        s/\0\z//;
         my $target = $ENV{TARGET_DIR_ENV};
-        s#^\Q$target/\E##;
-        print "$_\0" if /\.(?:js|jsx|ts|tsx)\z/;
+        for my $path (split(/\0/, $_)) {
+          next unless length $path;
+          $path =~ s#^\Q$target/\E##;
+          print "$path\0" if $path =~ /\.(?:js|jsx|ts|tsx)\z/;
+        }
       ' > "$FILES_NUL_PATH"
 
   if [ ! -s "$FILES_NUL_PATH" ]; then
