@@ -1,12 +1,12 @@
 {
-  "name": "hono",
+  "name": "mahjong-record-app-backend",
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/app/server.ts",
     "start": "tsx src/app/server.ts",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src --ext .ts,.tsx,.js,.mjs,.cjs",
-    "lint:fix": "eslint src --ext .ts,.tsx,.js,.mjs,.cjs --fix",
+    "lint": "eslint '**/*.{js,jsx,ts,tsx,mjs,cjs}'",
+    "lint:fix": "eslint '**/*.{js,jsx,ts,tsx,mjs,cjs}' --fix",
     "emulator": "NODE_NO_WARNINGS=1 firebase emulators:start --project jongbo-local",
     "dev:emulator": "USE_FIRESTORE_EMULATOR=true FIRESTORE_EMULATOR_HOST=127.0.0.1:8081 FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099 GOOGLE_CLOUD_PROJECT=jongbo-local tsx watch src/app/server.ts",
     "seed": "USE_FIRESTORE_EMULATOR=true FIRESTORE_EMULATOR_HOST=127.0.0.1:8081 FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099 GOOGLE_CLOUD_PROJECT=jongbo-local tsx src/scripts/seedFirestore.ts"
@@ -26,7 +26,7 @@
     "firebase-tools": "^14.22.0",
     "prettier": "^3.3.3",
     "tsx": "^4.7.1",
-    "typescript-eslint": "^8.46.1",
+    "@typescript-eslint/eslint-plugin": "^8.46.1",
     "typescript": "^5.8.3"
   }
 }

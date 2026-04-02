@@ -1,13 +1,13 @@
 {
-  "name": "mahjong-record-app",
+  "name": "mahjong-record-app-frontend",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
     "start": "next start",
-    "lint": "eslint src --ext .ts,.tsx,.js,.mjs,.cjs",
-    "lint:fix": "eslint src --ext .ts,.tsx,.js,.mjs,.cjs --fix",
+    "lint": "eslint '**/*.{js,jsx,ts,tsx,mjs,cjs}'",
+    "lint:fix": "eslint '**/*.{js,jsx,ts,tsx,mjs,cjs}' --fix",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

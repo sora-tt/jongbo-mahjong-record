@@ -1,23 +1,17 @@
 import { FlatCompat } from "@eslint/eslintrc";
+import tsParser from "@typescript-eslint/parser";
 import importPlugin from "eslint-plugin-import";
 import prettierPlugin from "eslint-plugin-prettier";
-import tsParser from "@typescript-eslint/parser";
 
 const compat = new FlatCompat({ baseDirectory: import.meta.dirname });
 
 const eslintConfig = [
   {
-    ignores: [
-      ".next/**",
-      "out/**",
-      "build/**",
-      "next-env.d.ts",
-      "docs/**",
-    ],
+    ignores: [".next/**", "out/**", "build/**", "next-env.d.ts", "docs/**"],
   },
   ...compat.extends("next/core-web-vitals", "next/typescript"),
   {
-    files: ["**/*.{js,jsx,ts,tsx}"],
+    files: ["**/*.{js,jsx,ts,tsx,mjs,cjs}"],
     languageOptions: {
       parser: tsParser,
       parserOptions: {
@@ -54,7 +48,10 @@ const eslintConfig = [
       ],
 
       // --- TypeScript ---
-      "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_" }],
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        { argsIgnorePattern: "^_" },
+      ],
       "@typescript-eslint/no-explicit-any": "off",
 
       // --- import order ---
@@ -74,31 +71,31 @@ const eslintConfig = [
             {
               pattern: "react",
               group: "external",
-              position: "before"
+              position: "before",
             },
             {
               pattern: "next/**",
               group: "external",
-              position: "after"
+              position: "after",
             },
             {
               pattern: "@/components/**",
               group: "internal",
-              position: "after"
+              position: "after",
             },
             {
               pattern: "@/utils/**",
               group: "internal",
-              position: "after"
+              position: "after",
             },
             {
               pattern: "**/*.css",
               group: "index",
-              position: "after"
-            }
+              position: "after",
+            },
           ],
-          pathGroupsExcludedImportTypes: ["react"]
-        }
+          pathGroupsExcludedImportTypes: ["react"],
+        },
       ],
 
       "import/newline-after-import": ["error", { count: 1 }],

@@ -13,14 +13,22 @@ run_checks_for_dir() {
   echo "Processing ${TARGET_DIR}..."
 
   git diff --cached --name-only -z --diff-filter=ACMR -- "$TARGET_DIR" \
-    | TARGET_DIR_ENV="$TARGET_DIR" perl -0ne '
-        my $target = $ENV{TARGET_DIR_ENV};
-        for my $path (split(/\0/, $_)) {
-          next unless length $path;
-          $path =~ s#^\Q$target/\E##;
-          print "$path\0" if $path =~ /\.(?:js|jsx|ts|tsx)\z/;
-        }
-      ' > "$FILES_NUL_PATH"
+    | while IFS= read -r -d '' path; do
+        [ -z "$path" ] && continue
+        case "$path" in
+          "$TARGET_DIR"/*)
+            rel_path=${path#"$TARGET_DIR"/}
+            ;;
+          *)
+            rel_path=$path
+            ;;
+        esac
+        case "$rel_path" in
+          *.js|*.jsx|*.ts|*.tsx|*.mjs|*.cjs)
+            printf '%s\0' "$rel_path"
+            ;;
+        esac
+      done > "$FILES_NUL_PATH"
 
   if [ ! -s "$FILES_NUL_PATH" ]; then
     echo "No files to format in ${TARGET_DIR}."
@@ -38,7 +46,7 @@ run_checks_for_dir() {
     fi
 
     echo "Running Prettier on staged files in ${TARGET_DIR}..."
-    xargs -0 prettier --write < "$FILES_NUL_PATH"
+    xargs -0 prettier --write -- < "$FILES_NUL_PATH"
 
     if ! command -v eslint >/dev/null 2>&1; then
       echo "Error: eslint is not installed in ${TARGET_DIR}. Please run 'npm ci'."
@@ -47,9 +55,9 @@ run_checks_for_dir() {
 
     echo "Running ESLint on staged files in ${TARGET_DIR}..."
     if [ -f "eslint.config.mjs" ]; then
-      xargs -0 eslint -c eslint.config.mjs --fix < "$FILES_NUL_PATH"
+      xargs -0 eslint -c eslint.config.mjs --fix -- < "$FILES_NUL_PATH"
     else
-      xargs -0 eslint --fix < "$FILES_NUL_PATH"
+      xargs -0 eslint --fix -- < "$FILES_NUL_PATH"
     fi
 
     echo "Adding formatted files to the commit in ${TARGET_DIR}..."
