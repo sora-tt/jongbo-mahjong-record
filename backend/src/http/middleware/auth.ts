@@ -1,20 +1,17 @@
 import type { MiddlewareHandler } from "hono";
+import { getCookie } from "hono/cookie";
 import { AppError } from "@/errors.js";
 import { getAdminAuth } from "@/infrastructure/firebase/auth.js";
 import type { AppBindings } from "@/http/bindings.js";
+import { SESSION_COOKIE_NAME } from "@/http/session.js";
 
 export const requireAuth: MiddlewareHandler<AppBindings> = async (c, next) => {
-  const authorization = c.req.header("Authorization");
-  if (!authorization) {
-    throw new AppError("authorization header is required", 401, "unauthorized");
+  const sessionCookie = getCookie(c, SESSION_COOKIE_NAME);
+  if (!sessionCookie) {
+    throw new AppError("session cookie is required", 401, "unauthorized");
   }
 
-  const [scheme, token] = authorization.split(" ");
-  if (scheme !== "Bearer" || !token) {
-    throw new AppError("authorization header must be Bearer token", 401, "unauthorized");
-  }
-
-  const decodedToken = await getAdminAuth().verifyIdToken(token);
+  const decodedToken = await getAdminAuth().verifySessionCookie(sessionCookie, false);
   c.set("authUser", {
     uid: decodedToken.uid,
     email: typeof decodedToken.email === "string" ? decodedToken.email : null,

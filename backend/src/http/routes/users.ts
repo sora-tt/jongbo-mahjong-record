@@ -4,7 +4,7 @@ import type { AppBindings } from "@/http/bindings.js";
 import { ok } from "@/http/response.js";
 import type { ScopeType } from "@/domain/models.js";
 import { AppError, ValidationError } from "@/errors.js";
-import { ensureObject, ensureOptionalString } from "@/http/validation.js";
+import { ensureObject, ensureOptionalString, ensureString } from "@/http/validation.js";
 
 type Services = ReturnType<typeof createDependencies>["services"];
 
@@ -14,6 +14,22 @@ export const buildUsersRouter = (services: Services) => {
   app.get("/", async (c) => {
     const query = c.req.query("query") ?? "";
     return ok(c, await services.userService.searchUsers(query));
+  });
+
+  app.post("/me", async (c) => {
+    const body = ensureObject(await c.req.json(), "body");
+    const authUser = c.get("authUser");
+
+    return ok(
+      c,
+      await services.authService.createMe({
+        userId: authUser.uid,
+        email: authUser.email,
+        name: ensureString(body.name, "name"),
+        username: ensureString(body.username, "username"),
+      }),
+      201
+    );
   });
 
   app.get("/me", async (c) => ok(c, await services.authService.getMe(c.get("authUser").uid)));

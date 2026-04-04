@@ -51,7 +51,7 @@ export const openApiDocument = {
     { name: "Sessions" },
     { name: "Matches" },
   ],
-  security: [{ bearerAuth: [] }],
+  security: [{ cookieAuth: [] }],
   paths: {
     "/api/health": {
       get: {
@@ -75,25 +75,44 @@ export const openApiDocument = {
         },
       },
     },
-    "/api/auth/register-profile": {
+    "/api/auth/session": {
       post: {
         tags: ["Auth"],
-        summary: "register or sync auth profile",
+        summary: "create session cookie",
+        security: [],
         requestBody: {
           required: true,
           content: jsonContent({
             type: "object",
             properties: {
-              name: { type: "string" },
-              username: { type: "string" },
+              idToken: { type: "string" },
             },
-            required: ["name"],
+            required: ["idToken"],
           }),
         },
         responses: {
           "201": {
-            description: "profile",
-            content: jsonContent(dataResponse({ $ref: "#/components/schemas/User" })),
+            description: "session created",
+            content: jsonContent(
+              dataResponse({
+                type: "object",
+                properties: {
+                  authenticated: { type: "boolean" },
+                  expiresAt: { type: "string", format: "date-time" },
+                },
+                required: ["authenticated", "expiresAt"],
+              })
+            ),
+          },
+        },
+      },
+      delete: {
+        tags: ["Auth"],
+        summary: "delete session cookie",
+        security: [],
+        responses: {
+          "204": {
+            description: "deleted",
           },
         },
       },
@@ -257,6 +276,27 @@ export const openApiDocument = {
       },
     },
     "/api/users/me": {
+      post: {
+        tags: ["Users"],
+        summary: "create or sync current user profile",
+        requestBody: {
+          required: true,
+          content: jsonContent({
+            type: "object",
+            properties: {
+              name: { type: "string" },
+              username: { type: "string" },
+            },
+            required: ["name", "username"],
+          }),
+        },
+        responses: {
+          "201": {
+            description: "user",
+            content: jsonContent(dataResponse({ $ref: "#/components/schemas/User" })),
+          },
+        },
+      },
       get: {
         tags: ["Users"],
         summary: "get current user",
@@ -284,16 +324,6 @@ export const openApiDocument = {
           "200": {
             description: "user",
             content: jsonContent(dataResponse({ $ref: "#/components/schemas/User" })),
-          },
-        },
-      },
-      delete: {
-        tags: ["Leagues"],
-        summary: "delete league",
-        parameters: [{ in: "path", name: "leagueId", required: true, schema: { type: "string" } }],
-        responses: {
-          "204": {
-            description: "deleted",
           },
         },
       },
@@ -353,14 +383,6 @@ export const openApiDocument = {
       get: {
         tags: ["Leagues"],
         summary: "list leagues",
-        parameters: [
-          {
-            in: "query",
-            name: "memberUserId",
-            required: false,
-            schema: { type: "string", deprecated: true },
-          },
-        ],
         responses: {
           "200": {
             description: "leagues",
@@ -734,10 +756,10 @@ export const openApiDocument = {
   },
   components: {
     securitySchemes: {
-      bearerAuth: {
-        type: "http",
-        scheme: "bearer",
-        bearerFormat: "JWT",
+      cookieAuth: {
+        type: "apiKey",
+        in: "cookie",
+        name: "jongbo_session",
       },
     },
     schemas: {

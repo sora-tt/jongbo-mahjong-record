@@ -14,16 +14,39 @@ import { buildSessionsRouter } from "@/http/routes/sessions.js";
 import { buildUsersRouter } from "@/http/routes/users.js";
 import { createDependencies } from "@/app/dependencies.js";
 
+const DEFAULT_ALLOWED_ORIGINS = ["http://127.0.0.1:3000", "http://localhost:3000"];
+
+const getAllowedOrigins = () => {
+  const raw = process.env.CORS_ALLOWED_ORIGINS;
+  if (!raw) {
+    return DEFAULT_ALLOWED_ORIGINS;
+  }
+
+  return raw
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
+};
+
 export const createApp = () => {
   const app = new Hono<AppBindings>();
   const { services } = createDependencies();
+  const allowedOrigins = getAllowedOrigins();
 
   app.use(
     "*",
     cors({
-      origin: "*",
+      origin: (origin) => {
+        if (!origin) {
+          return undefined;
+        }
+
+        return allowedOrigins.includes(origin) ? origin : undefined;
+      },
       allowMethods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
-      allowHeaders: ["Content-Type", "Authorization"],
+      allowHeaders: ["Content-Type"],
+      maxAge: 600,
+      credentials: true,
     })
   );
 
@@ -39,12 +62,11 @@ export const createApp = () => {
   app.get("/doc", (c) => c.json(openApiDocument));
   app.get("/ui", swaggerUI({ url: "/doc" }));
 
-  app.use("/api/auth/*", requireAuth);
+  app.route("/api/auth", buildAuthRouter(services));
   app.use("/api/rules/*", requireAuth);
   app.use("/api/users/*", requireAuth);
   app.use("/api/leagues/*", requireAuth);
 
-  app.route("/api/auth", buildAuthRouter(services));
   app.route("/api/rules", buildRulesRouter(services));
   app.route("/api/users", buildUsersRouter(services));
   app.route("/api/leagues", buildLeaguesRouter(services));

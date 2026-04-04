@@ -11,12 +11,57 @@
 - `GET /api/health`
 - `GET /doc`
 - `GET /ui`
+- `POST /api/auth/session`
+- `DELETE /api/auth/session`
 
-上記以外は Firebase Authentication の ID Token が必要です。
+上記以外は `jongbo_session` Cookie が必要です。
 
-```http
-Authorization: Bearer <ID_TOKEN>
+session 作成時だけ Firebase ID Token を使います。
+
+```json
+{
+  "idToken": "<ID_TOKEN>"
+}
 ```
+
+通常の API 呼び出しでは Cookie が自動送信される前提です。`curl` では `-b cookie.txt` を使ってください。
+
+### Session Cookie API
+
+#### POST /api/auth/session
+
+概要:
+
+- Firebase ID Token を session cookie に交換する
+
+リクエスト:
+
+```json
+{
+  "idToken": "<ID_TOKEN>"
+}
+```
+
+レスポンス:
+
+```json
+{
+  "data": {
+    "authenticated": true,
+    "expiresAt": "2026-04-08T10:00:00.000Z"
+  }
+}
+```
+
+#### DELETE /api/auth/session
+
+概要:
+
+- session cookie を削除する
+
+レスポンス:
+
+- `204 No Content`
 
 ### 共通レスポンス
 
@@ -63,39 +108,7 @@ Authorization: Bearer <ID_TOKEN>
 }
 ```
 
-## 3. Auth
-
-### POST /api/auth/register-profile
-
-概要:
-
-- Firebase Auth 済みユーザーの Firestore `users` プロフィールを作成または同期する。
-
-リクエスト:
-
-```json
-{
-  "name": "岩田",
-  "username": "iwata"
-}
-```
-
-レスポンス:
-
-```json
-{
-  "data": {
-    "id": "0001",
-    "username": "iwata",
-    "email": "iwata@mail",
-    "name": "岩田",
-    "createdAt": "2026-03-15T10:00:00.000Z",
-    "updatedAt": "2026-03-15T10:00:00.000Z"
-  }
-}
-```
-
-## 4. Rules
+## 3. Rules
 
 ### GET /api/rules
 
@@ -279,7 +292,7 @@ Authorization: Bearer <ID_TOKEN>
 
 - status: `204 No Content`
 
-## 5. Users
+## 4. Users
 
 ### GET /api/users
 
@@ -303,7 +316,7 @@ Authorization: Bearer <ID_TOKEN>
 {
   "data": [
     {
-      "id": "0001",
+      "id": "firebase-uid",
       "username": "iwata",
       "email": "iwata@mail",
       "name": "岩田",
@@ -329,7 +342,7 @@ Authorization: Bearer <ID_TOKEN>
 ```json
 {
   "data": {
-    "id": "0001",
+    "id": "firebase-uid",
     "username": "iwata",
     "email": "iwata@mail",
     "name": "岩田",
@@ -359,7 +372,7 @@ Authorization: Bearer <ID_TOKEN>
 ```json
 {
   "data": {
-    "id": "0001",
+    "id": "firebase-uid",
     "username": "iwata_taro",
     "email": "iwata@mail",
     "name": "岩田太郎",
@@ -374,6 +387,7 @@ Authorization: Bearer <ID_TOKEN>
 概要:
 
 - 自分自身のプロフィールを path 指定で取得する。
+- `userId` がログイン中ユーザーの UID と一致しない場合は `403 forbidden`。
 
 リクエスト:
 
@@ -384,7 +398,7 @@ Authorization: Bearer <ID_TOKEN>
 ```json
 {
   "data": {
-    "id": "0001",
+    "id": "firebase-uid",
     "username": "iwata",
     "email": "iwata@mail",
     "name": "岩田",
@@ -399,6 +413,7 @@ Authorization: Bearer <ID_TOKEN>
 概要:
 
 - 自分が参加しているシーズン一覧を取得する。
+- `userId` がログイン中ユーザーの UID と一致しない場合は `403 forbidden`。
 
 リクエスト:
 
@@ -475,7 +490,7 @@ Authorization: Bearer <ID_TOKEN>
 }
 ```
 
-## 6. Leagues
+## 5. Leagues
 
 ### GET /api/leagues
 
@@ -700,7 +715,7 @@ Authorization: Bearer <ID_TOKEN>
 
 - status: `204 No Content`
 
-## 7. Seasons
+## 6. Seasons
 
 ### GET /api/leagues/:leagueId/seasons
 
@@ -930,7 +945,7 @@ Authorization: Bearer <ID_TOKEN>
 
 - status: `204 No Content`
 
-## 8. Sessions
+## 7. Sessions
 
 ### GET /api/leagues/:leagueId/seasons/:seasonId/sessions
 
@@ -1107,7 +1122,7 @@ Authorization: Bearer <ID_TOKEN>
 
 - status: `204 No Content`
 
-## 9. Matches
+## 8. Matches
 
 ### GET /api/leagues/:leagueId/seasons/:seasonId/sessions/:sessionId/matches
 

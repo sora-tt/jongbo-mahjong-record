@@ -3,6 +3,7 @@ import * as React from "react";
 import "./styles/globals.css";
 
 import { Metadata } from "next";
+import { AppProviders } from "@/components/app/providers";
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -11,8 +12,10 @@ export const metadata: Metadata = {
 
 export const RootLayout: React.FC<RootLayoutProps> = ({ children }) => {
   return (
-    <html lang="en">
-      <body>{children}</body>
+    <html lang="ja">
+      <body>
+        <AppProviders>{children}</AppProviders>
+      </body>
     </html>
   );
 };
