@@ -4,7 +4,7 @@ import "./styles/globals.css";
 
 import { Metadata } from "next";
 
-import { ReduxProvider } from "@/components/providers/ReduxProvider";
+import { AppProviders } from "@/components/app/providers";
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -13,9 +13,9 @@ export const metadata: Metadata = {
 
 export const RootLayout: React.FC<RootLayoutProps> = ({ children }) => {
   return (
-    <html lang="en">
+    <html lang="ja">
       <body>
-        <ReduxProvider>{children}</ReduxProvider>
+        <AppProviders>{children}</AppProviders>
       </body>
     </html>
   );

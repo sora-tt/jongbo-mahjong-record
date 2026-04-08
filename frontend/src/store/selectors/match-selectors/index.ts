@@ -1,9 +1,9 @@
 import { createSelector } from "@reduxjs/toolkit";
 
-import { RootState } from "../../index";
-
 import { LeagueIdType } from "@/types/domain/league";
 import { MatchIdType } from "@/types/domain/match";
+
+import { RootState } from "../../index";
 
 // Basic selectors
 export const selectMatches = (state: RootState) => state.match.matches;

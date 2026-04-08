@@ -3,15 +3,15 @@ import type { ChangeEvent } from "react";
 
 import { useParams } from "next/navigation";
 
+import { leaguesData } from "@/mocks/league";
+import { rulesData } from "@/mocks/rule";
+import { userBaseListData } from "@/mocks/user-base";
+
 import type { Option } from "@/components/ui/dropdown/types";
 
 import type { LeagueIdType } from "@/types/domain/league";
 import type { Rule, RuleIdType } from "@/types/domain/rule";
 import type { UserBase, UserIdType } from "@/types/domain/user";
-
-import { leaguesData } from "@/mocks/league";
-import { rulesData } from "@/mocks/rule";
-import { userBaseListData } from "@/mocks/user-base";
 
 export const useLeagueEdit = () => {
   const params = useParams();

@@ -8,7 +8,14 @@ import { NAV_ITEMS } from "./constants";
 import { useHeader } from "./hooks/index";
 
 export const Header: React.FC = () => {
-  const { name, isMenuOpen, setIsMenuOpen, handleClose, handleLogout } =
+  const {
+    name,
+    isMenuOpen,
+    setIsMenuOpen,
+    handleClose,
+    handleLogout,
+    isLoggingOut,
+  } =
     useHeader();
 
   return (
@@ -121,10 +128,13 @@ export const Header: React.FC = () => {
             <button
               type="button"
               onClick={handleLogout}
+              disabled={isLoggingOut}
               className="flex w-full items-center rounded-lg px-3 py-2 text-[#8B6B6B] transition-colors duration-150 hover:bg-[#FFFAF8]"
             >
               <LogOut size={18} strokeWidth={1.5} />
-              <span className="ml-3 font-medium">ログアウト</span>
+              <span className="ml-3 font-medium">
+                {isLoggingOut ? "ログアウト中..." : "ログアウト"}
+              </span>
             </button>
           </div>
         </div>

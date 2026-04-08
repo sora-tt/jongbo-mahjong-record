@@ -126,7 +126,7 @@
 
 - `GET /api/leagues`
   - リーグ一覧取得。
-  - 初期段階では `memberUserId` 指定を許可し、将来的に認証ユーザーへ置換。
+  - 認証ユーザーの所属リーグのみ返す。
 - `POST /api/leagues`
   - リーグ作成。
 - `GET /api/leagues/:leagueId`
@@ -548,7 +548,7 @@
 使用エンドポイント:
 
 - `GET /api/users/:userId`
-- `GET /api/leagues?memberUserId=:userId`
+- `GET /api/leagues`
 
 推奨レスポンス:
 

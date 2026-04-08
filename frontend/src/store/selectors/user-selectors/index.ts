@@ -1,8 +1,8 @@
 import { createSelector } from "@reduxjs/toolkit";
 
-import { RootState } from "../../index";
-
 import { UserIdType } from "@/types/domain/user";
+
+import { RootState } from "../../index";
 
 // Basic selectors
 export const selectUsers = (state: RootState) => state.user.users;

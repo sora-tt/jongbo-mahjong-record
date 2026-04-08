@@ -1,6 +1,6 @@
-import type { Match } from "@/types/domain/match";
-
 import { dailyRecordData1 } from "@/mocks/daily-record";
+
+import type { Match } from "@/types/domain/match";
 
 export const useDailyRecordTable = () => {
   const dailyRecord = dailyRecordData1;

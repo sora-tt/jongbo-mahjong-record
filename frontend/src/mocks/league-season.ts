@@ -1,11 +1,11 @@
+import { LeagueSeason, LeagueSeasonIdType } from "@/types/domain/league";
+
 import {
   leagueSeasonMembersData,
   leagueSeasonMembersData2,
   leagueSeasonMembersData3,
   leagueSeasonMembersData4,
 } from "./league-season-member";
-
-import { LeagueSeason, LeagueSeasonIdType } from "@/types/domain/league";
 
 export const leagueSeasonData1: LeagueSeason = {
   leagueSeasonId: "0001",

@@ -1,33 +1,43 @@
-import { Hono } from "hono";
-import type { createDependencies } from "@/app/dependencies.js";
 import type { AppBindings } from "@/http/bindings.js";
 import { ok } from "@/http/response.js";
 import {
-  ensureObject,
-  ensureOptionalString,
-  ensureString,
-} from "@/http/validation.js";
+  SESSION_COOKIE_NAME,
+  getSessionCookieOptions,
+  getSessionMaxAgeSeconds,
+} from "@/http/session.js";
+import { ensureObject, ensureString } from "@/http/validation.js";
+import { getAdminAuth } from "@/infrastructure/firebase/auth.js";
+import { Hono } from "hono";
+import { deleteCookie, setCookie } from "hono/cookie";
 
-type Services = ReturnType<typeof createDependencies>["services"];
-
-export const buildAuthRouter = (services: Services) => {
+export const buildAuthRouter = () => {
   const app = new Hono<AppBindings>();
 
-  app.post("/register-profile", async (c) => {
+  app.post("/session", async (c) => {
     const body = ensureObject(await c.req.json(), "body");
-    const authUser = c.get("authUser");
+    const idToken = ensureString(body.idToken, "idToken");
+    const expiresIn = getSessionMaxAgeSeconds() * 1000;
+
+    await getAdminAuth().verifyIdToken(idToken);
+    const sessionCookie = await getAdminAuth().createSessionCookie(idToken, {
+      expiresIn,
+    });
+
+    setCookie(c, SESSION_COOKIE_NAME, sessionCookie, getSessionCookieOptions());
 
     return ok(
       c,
-      await services.authService.registerProfile({
-        userId: authUser.uid,
-        email: authUser.email,
-        defaultName: authUser.name,
-        name: ensureString(body.name, "name"),
-        username: ensureOptionalString(body.username, "username"),
-      }),
+      {
+        authenticated: true,
+        expiresAt: new Date(Date.now() + expiresIn).toISOString(),
+      },
       201,
     );
+  });
+
+  app.delete("/session", async (c) => {
+    deleteCookie(c, SESSION_COOKIE_NAME, { path: "/" });
+    return c.body(null, 204);
   });
 
   return app;

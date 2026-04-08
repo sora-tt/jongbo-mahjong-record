@@ -14,22 +14,21 @@ export class AuthService {
     return this.userRepository.get(userId);
   }
 
-  async registerProfile(input: {
+  async createMe(input: {
     userId: string;
     email: string | null;
-    defaultName: string | null;
     name: string;
-    username?: string;
+    username: string;
   }) {
-    const name = input.name.trim() || input.defaultName?.trim() || "";
+    const name = input.name.trim();
     if (!name) {
       throw new ValidationError("name is required");
     }
 
-    const username =
-      input.username && input.username.trim() !== ""
-        ? normalizeUsername(input.username)
-        : normalizeUsername(input.email?.split("@")[0] ?? input.userId);
+    const username = normalizeUsername(input.username);
+    if (!username) {
+      throw new ValidationError("username is required");
+    }
 
     return this.userRepository.upsertProfile({
       userId: input.userId,

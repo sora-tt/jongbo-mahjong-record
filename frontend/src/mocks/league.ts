@@ -1,10 +1,10 @@
+import { League, LeagueIdType } from "@/types/domain/league";
+import { AppDate } from "@/types/utils/app-date";
+
 import { leagueMembersData } from "./league-member";
 import { leagueRecordData1 } from "./league-record";
 import { leagueSeasonsData, leagueSeasonsData2 } from "./league-season";
 import { ruleData1 } from "./rule";
-
-import { League, LeagueIdType } from "@/types/domain/league";
-import { AppDate } from "@/types/utils/app-date";
 
 export const leagueData1: League = {
   leagueId: "000000",

@@ -1,7 +1,7 @@
+import { AppDate } from "@/types/utils/app-date";
+
 import { Rule } from "./rule";
 import { User, UserIdType } from "./user";
-
-import { AppDate } from "@/types/utils/app-date";
 
 export type LeagueIdType = string;
 

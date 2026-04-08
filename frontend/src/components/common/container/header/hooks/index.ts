@@ -1,17 +1,40 @@
 import { useState } from "react";
-
-import { userData1 } from "@/mocks/user";
+import { useRouter } from "next/navigation";
+import { logoutFromApp } from "@/lib/auth/flows";
+import { useAuth } from "@/providers/auth-provider";
 
 export const useHeader = () => {
-  const { name } = userData1;
-
+  const router = useRouter();
+  const { user } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const handleClose = () => setIsMenuOpen(false);
-  const handleLogout = () => {
-    // TODO: ログアウト処理を入れる
-    setIsMenuOpen(false);
+
+  const handleLogout = async () => {
+    if (isLoggingOut) {
+      return;
+    }
+
+    setIsLoggingOut(true);
+
+    try {
+      await logoutFromApp();
+      setIsMenuOpen(false);
+      router.replace("/login");
+    } finally {
+      setIsLoggingOut(false);
+    }
   };
 
-  return { name, isMenuOpen, setIsMenuOpen, handleClose, handleLogout };
+  const name = user?.displayName ?? user?.email ?? null;
+
+  return {
+    name,
+    isMenuOpen,
+    setIsMenuOpen,
+    handleClose,
+    handleLogout,
+    isLoggingOut,
+  };
 };

@@ -1,8 +1,8 @@
 import { createSelector } from "@reduxjs/toolkit";
 
-import { RootState } from "../../index";
-
 import { RuleIdType } from "@/types/domain/rule";
+
+import { RootState } from "../../index";
 
 // Basic selectors
 export const selectRules = (state: RootState) => state.rule.rules;
