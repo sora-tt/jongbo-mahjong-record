@@ -90,8 +90,3 @@ npm run typecheck    # Run TypeScript type check
 - The backend has parts still under development
 - Node.js version is managed via `.nvmrc`; run `nvm use` to match it
 - Do not commit environment variable files (e.g. `.env`)
-
-## Communication with the User
-
-- Always respond to the user in **Japanese**
-- The user's name is "Souma" (そうま), a beginner developer — explain things clearly and help build their skills
