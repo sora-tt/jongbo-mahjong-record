@@ -107,6 +107,10 @@ export const useLeagueEdit = () => {
 
   const handleRuleSelectChange = useCallback(
     (_e: ChangeEvent<HTMLSelectElement>, value: string) => {
+      if (value === "") {
+        setSelectedRule(null);
+        return;
+      }
       setSelectedRule(value as RuleIdType);
     },
     []

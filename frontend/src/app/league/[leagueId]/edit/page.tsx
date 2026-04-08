@@ -139,6 +139,7 @@ const EditLeaguePage: React.FC = () => {
                       type="button"
                       onClick={() => handleRemoveMember(id as UserIdType)}
                       className="text-[10px] font-semibold text-brand-500 hover:text-brand-700"
+                      aria-label="メンバーを削除"
                     >
                       ×
                     </button>
@@ -165,6 +166,7 @@ const EditLeaguePage: React.FC = () => {
               <Dropdown
                 defaultOption={RULE_SELECT_DEFAULT_TEXT}
                 options={ruleOptions}
+                value={selectedRule ?? ""}
                 onChange={handleRuleSelectChange}
               />
 
@@ -209,7 +211,6 @@ const EditLeaguePage: React.FC = () => {
                           {rule.name}
                         </h4>
 
-                        {/* ← バッジはそのままでOK と言われたので変更なし */}
                         <span
                           className={`
                             inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold
