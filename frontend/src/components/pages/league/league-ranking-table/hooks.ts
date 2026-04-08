@@ -1,7 +1,7 @@
 import type { LeagueMember } from "@/types/domain/league";
+import type { UserIdType } from "@/types/domain/user";
 
 import { useLeague } from "@/app/league/season/hooks";
-import { UserIdType } from "@/types/domain/user";
 
 export const useLeagueRankingTable = () => {
   const { league, error } = useLeague();
