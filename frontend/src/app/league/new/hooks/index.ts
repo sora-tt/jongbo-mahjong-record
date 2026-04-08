@@ -2,32 +2,36 @@
 
 import * as React from "react";
 
-import type { Option } from "@/components/ui/dropdown/types";
-
-import { rulesData } from "@/mocks/rule";
 import { userBaseListData } from "@/mocks/user-base";
-import { Rule, RuleIdType } from "@/types/domain/rule";
 import { UserBase, UserIdType } from "@/types/domain/user";
+
+type RuleSettings = {
+  okaStartPoints: string;
+  okaReturnPoints: string;
+  uma1: string;
+  uma2: string;
+  uma3: string;
+  uma4: string;
+};
 
 export const useLeagueNew = () => {
   const users = userBaseListData;
-  const rules = rulesData;
-
-  // Dropdown 用 options（value に id、label に表示名）
-  const ruleOptions: Option[] = Object.entries(rules).map(([id, rule]) => ({
-    label: rule.name,
-    value: id,
-  }));
 
   const [leagueName, setLeagueName] = React.useState("");
   const [memberQuery, setMemberQuery] = React.useState("");
   const [addedMembers, setAddedMembers] = React.useState<
     Record<UserIdType, UserBase>
   >({});
-  const [selectedRule, setSelectedRule] = React.useState<string>("");
-  const [addedRules, setAddedRules] = React.useState<Record<RuleIdType, Rule>>(
-    {}
-  );
+
+  // ウマとオカの手動設定用状態
+  const [ruleSettings, setRuleSettings] = React.useState<RuleSettings>({
+    okaStartPoints: "",
+    okaReturnPoints: "",
+    uma1: "",
+    uma2: "",
+    uma3: "",
+    uma4: "",
+  });
 
   // リーグ名入力
   const handleLeagueNameChange = React.useCallback(
@@ -80,68 +84,84 @@ export const useLeagueNew = () => {
     });
   }, []);
 
-  // Dropdown の onChange (e, value) に合わせたハンドラ
-  const handleRuleSelectChange = React.useCallback(
-    (_e: React.ChangeEvent<HTMLSelectElement>, value: string) => {
-      setSelectedRule(value);
+  // ルール設定入力ハンドラー
+  const handleRuleSettingChange = React.useCallback(
+    (field: keyof RuleSettings, value: string) => {
+      setRuleSettings((prev) => ({
+        ...prev,
+        [field]: value,
+      }));
     },
     []
   );
 
-  // ルール追加
-  const handleAddRule = React.useCallback(() => {
-    if (!selectedRule) return;
-
-    const rule = rules[selectedRule];
-    if (!rule) return;
-
-    setAddedRules((prev) => {
-      if (prev[rule.ruleId]) {
-        return prev;
-      }
-      return {
-        ...prev,
-        [rule.ruleId]: rule,
-      };
-    });
-
-    setSelectedRule("");
-  }, [selectedRule, rules]);
-
-  // ルール削除
-  const handleRemoveRule = React.useCallback((ruleId: RuleIdType) => {
-    setAddedRules((prev) => {
-      const rest = { ...prev };
-      delete rest[ruleId];
-      return rest;
-    });
-  }, []);
-
   // 送信（ひとまず console.log）
   const handleSubmit = React.useCallback(() => {
+    // ruleSettings の数値パースとバリデーション
+    const okaStartPoints = ruleSettings.okaStartPoints.trim()
+      ? parseInt(ruleSettings.okaStartPoints, 10)
+      : null;
+    const okaReturnPoints = ruleSettings.okaReturnPoints.trim()
+      ? parseInt(ruleSettings.okaReturnPoints, 10)
+      : null;
+    const uma = {
+      1: ruleSettings.uma1.trim() ? parseInt(ruleSettings.uma1, 10) : null,
+      2: ruleSettings.uma2.trim() ? parseInt(ruleSettings.uma2, 10) : null,
+      3: ruleSettings.uma3.trim() ? parseInt(ruleSettings.uma3, 10) : null,
+      4: ruleSettings.uma4.trim() ? parseInt(ruleSettings.uma4, 10) : null,
+    };
+
+    // バリデーション: 必須項目のチェック
+    if (!leagueName.trim()) {
+      alert("リーグ名を入力してください");
+      return;
+    }
+
+    if (Object.keys(addedMembers).length === 0) {
+      alert("最低1人のメンバーを追加してください");
+      return;
+    }
+
+    if (
+      okaStartPoints === null ||
+      okaReturnPoints === null ||
+      Object.values(uma).some((v) => v === null)
+    ) {
+      alert("オカとウマをすべて入力してください");
+      return;
+    }
+
     console.log("create league", {
       leagueName,
       // Record(オブジェクト) なので keys を配列にする
       memberIds: Object.keys(addedMembers) as UserIdType[],
-      ruleIds: Object.keys(addedRules) as RuleIdType[],
+      // ルール設定を直接ペイロードに含める
+      rule: {
+        oka: {
+          startPoints: okaStartPoints,
+          returnPoints: okaReturnPoints,
+        },
+        uma: {
+          1: uma[1],
+          2: uma[2],
+          3: uma[3],
+          4: uma[4],
+        },
+      },
     });
-  }, [leagueName, addedMembers, addedRules]);
+  }, [leagueName, addedMembers, ruleSettings]);
 
   return {
     leagueName,
     memberQuery,
     addedMembers,
-    selectedRule,
-    addedRules,
-    ruleOptions,
+    ruleSettings,
 
     handleLeagueNameChange,
     handleMemberQueryChange,
     handleAddMember,
     handleRemoveMember,
-    handleRuleSelectChange,
-    handleAddRule,
-    handleRemoveRule,
+    handleRuleSettingChange,
     handleSubmit,
   };
 };
