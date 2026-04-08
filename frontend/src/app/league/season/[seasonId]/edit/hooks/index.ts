@@ -1,22 +1,36 @@
-import { useCallback, useState, type ChangeEvent } from "react";
+import { useCallback, useMemo, useState, type ChangeEvent } from "react";
 
-import { leagueData1 } from "@/mocks/league";
+import { useParams } from "next/navigation";
+
+import { leaguesData } from "@/mocks/league";
 import { convertLeagueMemberToLeagueSeasonMember } from "@/types/domain/league-converter";
 
-import type { LeagueMember, LeagueSeasonMember } from "@/types/domain/league";
+import type {
+  LeagueMember,
+  LeagueSeasonIdType,
+  LeagueSeasonMember,
+} from "@/types/domain/league";
 import type { UserIdType } from "@/types/domain/user";
 
 export const useSeasonEdit = () => {
-  const leagueMembers: Record<UserIdType, LeagueMember> = leagueData1.members;
+  const params = useParams();
+  const seasonId = params.seasonId as LeagueSeasonIdType;
 
-  const currentSeason = Object.values(leagueData1.seasons)[0];
+  const foundLeague = Object.values(leaguesData).find(
+    (league) => seasonId in league.seasons
+  );
+
+  const leagueMembers = useMemo<Record<UserIdType, LeagueMember>>(
+    () => foundLeague?.members ?? {},
+    [foundLeague]
+  );
 
   const [seasonName, setSeasonName] = useState<string>(
-    () => currentSeason?.name ?? ""
+    () => foundLeague?.seasons[seasonId]?.name ?? ""
   );
   const [selectedMembers, setSelectedMembers] = useState<
     Record<UserIdType, LeagueSeasonMember>
-  >(() => currentSeason?.members ?? {});
+  >(() => foundLeague?.seasons[seasonId]?.members ?? {});
 
   const handleSeasonNameChange = useCallback(
     (e: ChangeEvent<HTMLInputElement>) => {
