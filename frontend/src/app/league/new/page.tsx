@@ -2,35 +2,28 @@
 
 import * as React from "react";
 
-import { ArrowLeft, Plus, Trash2, Trophy, Type, Users } from "lucide-react";
+import { ArrowLeft, Plus, Trophy, Type, Users } from "lucide-react";
 
 import Link from "next/link";
 
 import Header from "@/components/common/container/header";
 import { Spacer } from "@/components/common/ui/spacer";
 import { Button } from "@/components/ui/button";
-import { Dropdown } from "@/components/ui/dropdown";
 import { InputArea } from "@/components/ui/input-area";
 
 import { useLeagueNew } from "./hooks";
-
-const RULE_SELECT_DEFAULT_TEXT = "プリセットから選択…";
 
 const NewLeaguePage: React.FC = () => {
   const {
     leagueName,
     memberQuery,
     addedMembers,
-    selectedRule,
-    addedRules,
-    ruleOptions,
+    ruleSettings,
     handleLeagueNameChange,
     handleMemberQueryChange,
     handleAddMember,
     handleRemoveMember,
-    handleRuleSelectChange,
-    handleAddRule,
-    handleRemoveRule,
+    handleRuleSettingChange,
     handleSubmit,
   } = useLeagueNew();
 
@@ -158,150 +151,76 @@ const NewLeaguePage: React.FC = () => {
               ルール設定
             </label>
 
-            <Spacer display="flex" gap="small">
-              <Dropdown
-                defaultOption={RULE_SELECT_DEFAULT_TEXT}
-                options={ruleOptions}
-                onChange={handleRuleSelectChange}
-              />
-
-              <Button
-                variant="brand-primary"
-                onClick={handleAddRule}
-                disabled={!selectedRule}
-              >
-                <Plus className="h-4 w-4" /> 追加
-              </Button>
-            </Spacer>
-
-            {/* ルール一覧 */}
-            {Object.keys(addedRules).length > 0 ? (
-              <Spacer
-                display="flex"
-                className="flex-col"
-                gap="small"
-                padding={{ top: "small" }}
-              >
+            <Spacer className="space-y-3">
+              {/* オカ設定 */}
+              <Spacer className="space-y-2">
                 <h3 className="text-sm font-semibold text-brand-700">
-                  選択中のルール
+                  オカ設定
                 </h3>
-
-                {Object.entries(addedRules).map(([id, rule]) => (
-                  <Spacer
-                    key={id}
-                    className="
-                      rounded-xl border border-brand-200
-                      bg-gradient-to-r from-brand-50 to-brand-100
-                      p-4 transition-all
-                      hover:border-brand-300 hover:shadow-md hover:shadow-brand-200
-                    "
-                  >
-                    {/* 上段：ルール名 + バッジ + 削除ボタン */}
-                    <Spacer
-                      display="flex"
-                      className="items-center justify-between gap-2"
-                    >
-                      <Spacer display="flex" className="items-center gap-2">
-                        <h4 className="text-sm font-semibold text-brand-800">
-                          {rule.name}
-                        </h4>
-
-                        {/* ← バッジはそのままでOK と言われたので変更なし */}
-                        <span
-                          className={`
-                            inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold
-                            ${
-                              rule.mode === "sanma"
-                                ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                                : "bg-indigo-50 text-indigo-700 border border-indigo-200"
-                            }
-                          `}
-                        >
-                          {rule.mode === "sanma" ? "三人麻雀" : "四人麻雀"}
-                        </span>
-                      </Spacer>
-
-                      {/* 削除ボタン（brand 色ベース） */}
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveRule(id)}
-                        className="
-              inline-flex items-center justify-center
-              h-7 w-7 rounded-full
-              text-brand-500 hover:text-brand-700
-              hover:bg-white/70
-              transition-colors
-            "
-                        aria-label="ルールを削除"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </Spacer>
-
-                    {/* 下段：説明 + 詳細 */}
-                    <Spacer className="mt-2 space-y-1">
-                      {rule.description && (
-                        <p className="text-xs text-brand-700">
-                          {rule.description}
-                        </p>
-                      )}
-
-                      <Spacer className="space-y-0.5">
-                        <p className="text-xs text-brand-600">
-                          <span className="font-semibold text-brand-700">
-                            オカ：
-                          </span>
-                          {rule.oka.startPoints.toLocaleString()} 点持ち /{" "}
-                          {rule.oka.returnPoints.toLocaleString()} 点返し
-                        </p>
-
-                        <p className="text-xs text-brand-600">
-                          <span className="font-semibold text-brand-700">
-                            ウマ：
-                          </span>
-                          {Object.entries(rule.uma).map(([rank, points]) => {
-                            const label = `${rank}位`;
-                            const value =
-                              points > 0
-                                ? `+${points}`
-                                : points === 0
-                                  ? "±0"
-                                  : `${points}`;
-
-                            return (
-                              <span key={rank} className="mr-2">
-                                {label} {value}
-                              </span>
-                            );
-                          })}
-                        </p>
-
-                        <p className="text-xs text-brand-600">
-                          <span className="font-semibold text-brand-700">
-                            点数計算：
-                          </span>
-                          {rule.scoreCalc === "decimal" && "小数点有効"}
-                          {rule.scoreCalc === "fiveDropSixUp" && "五捨六入"}
-                          {rule.scoreCalc === "round" && "四捨五入"}
-                          {rule.scoreCalc === "floor" && "切り捨て"}
-                          {rule.scoreCalc === "ceil" && "切り上げ"}
-                        </p>
-                      </Spacer>
-                    </Spacer>
-                  </Spacer>
-                ))}
+                <Spacer display="flex" gap="small" className="flex-wrap">
+                  <div className="flex-1 min-w-0">
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      持ち点（点）
+                    </label>
+                    <input
+                      type="number"
+                      value={ruleSettings.okaStartPoints}
+                      onChange={(e) =>
+                        handleRuleSettingChange("okaStartPoints", e.target.value)
+                      }
+                      placeholder="例: 30000"
+                      className="w-full rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm text-gray-900 outline-none transition-all placeholder:text-gray-400 hover:border-gray-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50"
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      返し点（点）
+                    </label>
+                    <input
+                      type="number"
+                      value={ruleSettings.okaReturnPoints}
+                      onChange={(e) =>
+                        handleRuleSettingChange("okaReturnPoints", e.target.value)
+                      }
+                      placeholder="例: 30000"
+                      className="w-full rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm text-gray-900 outline-none transition-all placeholder:text-gray-400 hover:border-gray-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50"
+                    />
+                  </div>
+                </Spacer>
               </Spacer>
-            ) : (
-              <Spacer className="rounded-xl border border-dashed border-gray-200 bg-gray-50 px-2 py-4 text-center">
-                <Trophy className="mx-auto mb-2 h-8 w-8 text-gray-300" />
-                <p className="text-sm font-medium text-gray-600">
-                  ルールを選択して追加してください
-                </p>
-                <p className="mt-1 text-xs text-gray-500">
-                  選択したルールの詳細がここに表示されます
-                </p>
+
+              {/* ウマ設定 */}
+              <Spacer className="space-y-2">
+                <h3 className="text-sm font-semibold text-brand-700">
+                  ウマ設定
+                </h3>
+                <Spacer display="flex" gap="small" className="flex-wrap">
+                  {(
+                    [
+                      { field: "uma1", label: "1位" },
+                      { field: "uma2", label: "2位" },
+                      { field: "uma3", label: "3位" },
+                      { field: "uma4", label: "4位" },
+                    ] as const
+                  ).map(({ field, label }) => (
+                    <div key={field} className="flex-1 min-w-0">
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        {label}
+                      </label>
+                      <input
+                        type="number"
+                        value={ruleSettings[field]}
+                        onChange={(e) =>
+                          handleRuleSettingChange(field, e.target.value)
+                        }
+                        placeholder="例: 15"
+                        className="w-full rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm text-gray-900 outline-none transition-all placeholder:text-gray-400 hover:border-gray-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50"
+                      />
+                    </div>
+                  ))}
+                </Spacer>
               </Spacer>
-            )}
+            </Spacer>
           </Spacer>
 
           {/* アクションボタン */}
