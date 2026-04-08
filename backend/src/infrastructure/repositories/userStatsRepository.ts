@@ -24,7 +24,7 @@ export class FirestoreUserStatsRepository implements UserStatsRepository {
       leagueId: string | null;
       seasonId: string | null;
     },
-    data: Omit<UserStats, "id" | "createdAt" | "updatedAt">
+    data: Omit<UserStats, "id" | "createdAt" | "updatedAt">,
   ): Promise<string> {
     const existing = await this.query({
       userId: key.userId,
@@ -79,7 +79,11 @@ export class FirestoreUserStatsRepository implements UserStatsRepository {
     return doc.id;
   }
 
-  async deleteMissingSeasonStats(leagueId: string, seasonId: string, keepUserIds: string[]): Promise<void> {
+  async deleteMissingSeasonStats(
+    leagueId: string,
+    seasonId: string,
+    keepUserIds: string[],
+  ): Promise<void> {
     const snapshot = await this.db
       .collection("user_stats")
       .where("scope_type", "==", "season")
@@ -88,7 +92,9 @@ export class FirestoreUserStatsRepository implements UserStatsRepository {
       .get();
 
     await Promise.all(
-      snapshot.docs.filter((doc) => !keepUserIds.includes(String(doc.data().user_id))).map((doc) => doc.ref.delete())
+      snapshot.docs
+        .filter((doc) => !keepUserIds.includes(String(doc.data().user_id)))
+        .map((doc) => doc.ref.delete()),
     );
   }
 
@@ -98,7 +104,10 @@ export class FirestoreUserStatsRepository implements UserStatsRepository {
     leagueId?: string;
     seasonId?: string;
   }) {
-    let query = this.db.collection("user_stats").where("user_id", "==", params.userId).where("scope_type", "==", params.scopeType);
+    let query = this.db
+      .collection("user_stats")
+      .where("user_id", "==", params.userId)
+      .where("scope_type", "==", params.scopeType);
     if (params.leagueId !== undefined) {
       query = query.where("league_id", "==", params.leagueId);
     }

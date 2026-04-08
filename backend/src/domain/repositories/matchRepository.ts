@@ -5,7 +5,12 @@ export interface MatchRepository {
   listBySeason(leagueId: string, seasonId: string): Promise<Match[]>;
   listByLeague(leagueId: string): Promise<Match[]>;
   listAll(): Promise<Match[]>;
-  get(leagueId: string, seasonId: string, sessionId: string, matchId: string): Promise<Match>;
+  get(
+    leagueId: string,
+    seasonId: string,
+    sessionId: string,
+    matchId: string,
+  ): Promise<Match>;
   create(params: {
     leagueId: string;
     seasonId: string;
@@ -21,5 +26,10 @@ export interface MatchRepository {
     playedAt?: string;
     results?: MatchResult[];
   }): Promise<Match>;
-  delete(leagueId: string, seasonId: string, sessionId: string, matchId: string): Promise<void>;
+  delete(
+    leagueId: string,
+    seasonId: string,
+    sessionId: string,
+    matchId: string,
+  ): Promise<void>;
 }

@@ -7,9 +7,17 @@ import { NotFoundError } from "@/errors.js";
 export class FirestoreMatchRepository implements MatchRepository {
   constructor(private readonly db: Firestore) {}
 
-  async list(leagueId: string, seasonId: string, sessionId: string): Promise<Match[]> {
-    const snapshot = await this.collection(leagueId, seasonId, sessionId).orderBy("match_index", "asc").get();
-    return snapshot.docs.map((doc) => this.map(leagueId, seasonId, sessionId, doc.id, doc.data()));
+  async list(
+    leagueId: string,
+    seasonId: string,
+    sessionId: string,
+  ): Promise<Match[]> {
+    const snapshot = await this.collection(leagueId, seasonId, sessionId)
+      .orderBy("match_index", "asc")
+      .get();
+    return snapshot.docs.map((doc) =>
+      this.map(leagueId, seasonId, sessionId, doc.id, doc.data()),
+    );
   }
 
   async listBySeason(leagueId: string, seasonId: string): Promise<Match[]> {
@@ -24,32 +32,62 @@ export class FirestoreMatchRepository implements MatchRepository {
     const matches = await Promise.all(
       sessionsSnapshot.docs.map(async (sessionDoc) => {
         const snapshot = await sessionDoc.ref.collection("matches").get();
-        return snapshot.docs.map((doc) => this.map(leagueId, seasonId, sessionDoc.id, doc.id, doc.data()));
-      })
+        return snapshot.docs.map((doc) =>
+          this.map(leagueId, seasonId, sessionDoc.id, doc.id, doc.data()),
+        );
+      }),
     );
 
     return matches.flat();
   }
 
   async listByLeague(leagueId: string): Promise<Match[]> {
-    const seasonsSnapshot = await this.db.collection("leagues").doc(leagueId).collection("seasons").get();
-    const perSeason = await Promise.all(seasonsSnapshot.docs.map((seasonDoc) => this.listBySeason(leagueId, seasonDoc.id)));
+    const seasonsSnapshot = await this.db
+      .collection("leagues")
+      .doc(leagueId)
+      .collection("seasons")
+      .get();
+    const perSeason = await Promise.all(
+      seasonsSnapshot.docs.map((seasonDoc) =>
+        this.listBySeason(leagueId, seasonDoc.id),
+      ),
+    );
     return perSeason.flat();
   }
 
   async listAll(): Promise<Match[]> {
     const leaguesSnapshot = await this.db.collection("leagues").get();
-    const perLeague = await Promise.all(leaguesSnapshot.docs.map((leagueDoc) => this.listByLeague(leagueDoc.id)));
+    const perLeague = await Promise.all(
+      leaguesSnapshot.docs.map((leagueDoc) => this.listByLeague(leagueDoc.id)),
+    );
     return perLeague.flat();
   }
 
-  async get(leagueId: string, seasonId: string, sessionId: string, matchId: string): Promise<Match> {
-    const snapshot = await this.collection(leagueId, seasonId, sessionId).doc(matchId).get();
+  async get(
+    leagueId: string,
+    seasonId: string,
+    sessionId: string,
+    matchId: string,
+  ): Promise<Match> {
+    const snapshot = await this.collection(leagueId, seasonId, sessionId)
+      .doc(matchId)
+      .get();
     if (!snapshot.exists) {
-      throw new NotFoundError("match not found", { leagueId, seasonId, sessionId, matchId });
+      throw new NotFoundError("match not found", {
+        leagueId,
+        seasonId,
+        sessionId,
+        matchId,
+      });
     }
 
-    return this.map(leagueId, seasonId, sessionId, snapshot.id, snapshot.data() ?? {});
+    return this.map(
+      leagueId,
+      seasonId,
+      sessionId,
+      snapshot.id,
+      snapshot.data() ?? {},
+    );
   }
 
   async create(params: {
@@ -59,9 +97,18 @@ export class FirestoreMatchRepository implements MatchRepository {
     playedAt: string;
     results: MatchResult[];
   }): Promise<Match> {
-    const collection = this.collection(params.leagueId, params.seasonId, params.sessionId);
-    const existing = await collection.orderBy("match_index", "desc").limit(1).get();
-    const lastMatchIndex = existing.empty ? 0 : Number(existing.docs[0].data().match_index ?? 0);
+    const collection = this.collection(
+      params.leagueId,
+      params.seasonId,
+      params.sessionId,
+    );
+    const existing = await collection
+      .orderBy("match_index", "desc")
+      .limit(1)
+      .get();
+    const lastMatchIndex = existing.empty
+      ? 0
+      : Number(existing.docs[0].data().match_index ?? 0);
     const ref = collection.doc();
     const now = Timestamp.now();
 
@@ -92,7 +139,11 @@ export class FirestoreMatchRepository implements MatchRepository {
     playedAt?: string;
     results?: MatchResult[];
   }): Promise<Match> {
-    const ref = this.collection(params.leagueId, params.seasonId, params.sessionId).doc(params.matchId);
+    const ref = this.collection(
+      params.leagueId,
+      params.seasonId,
+      params.sessionId,
+    ).doc(params.matchId);
     const snapshot = await ref.get();
     if (!snapshot.exists) {
       throw new NotFoundError("match not found", params);
@@ -114,14 +165,29 @@ export class FirestoreMatchRepository implements MatchRepository {
     }
 
     await ref.update(patch);
-    return this.get(params.leagueId, params.seasonId, params.sessionId, params.matchId);
+    return this.get(
+      params.leagueId,
+      params.seasonId,
+      params.sessionId,
+      params.matchId,
+    );
   }
 
-  async delete(leagueId: string, seasonId: string, sessionId: string, matchId: string): Promise<void> {
+  async delete(
+    leagueId: string,
+    seasonId: string,
+    sessionId: string,
+    matchId: string,
+  ): Promise<void> {
     const ref = this.collection(leagueId, seasonId, sessionId).doc(matchId);
     const snapshot = await ref.get();
     if (!snapshot.exists) {
-      throw new NotFoundError("match not found", { leagueId, seasonId, sessionId, matchId });
+      throw new NotFoundError("match not found", {
+        leagueId,
+        seasonId,
+        sessionId,
+        matchId,
+      });
     }
 
     await ref.delete();
@@ -143,7 +209,7 @@ export class FirestoreMatchRepository implements MatchRepository {
     seasonId: string,
     sessionId: string,
     matchId: string,
-    data: FirebaseFirestore.DocumentData
+    data: FirebaseFirestore.DocumentData,
   ): Match {
     return {
       id: matchId,

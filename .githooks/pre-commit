@@ -1,0 +1,76 @@
+#!/usr/bin/env sh
+set -e
+
+echo "--- Pre-commit hook started ---"
+
+ROOT_DIR=$(git rev-parse --show-toplevel)
+cd "$ROOT_DIR"
+
+run_checks_for_dir() {
+  TARGET_DIR="$1"
+  FILES_NUL_PATH=$(mktemp)
+
+  echo "Processing ${TARGET_DIR}..."
+
+  git diff --cached --name-only -z --diff-filter=ACMR -- "$TARGET_DIR" \
+    | while IFS= read -r -d '' path; do
+        [ -z "$path" ] && continue
+        case "$path" in
+          "$TARGET_DIR"/*)
+            rel_path=${path#"$TARGET_DIR"/}
+            ;;
+          *)
+            rel_path=$path
+            ;;
+        esac
+        case "$rel_path" in
+          *.js|*.jsx|*.ts|*.tsx|*.mjs|*.cjs)
+            printf '%s\0' "$rel_path"
+            ;;
+        esac
+      done > "$FILES_NUL_PATH"
+
+  if [ ! -s "$FILES_NUL_PATH" ]; then
+    echo "No files to format in ${TARGET_DIR}."
+    rm -f "$FILES_NUL_PATH"
+    return 0
+  fi
+
+  if (
+    cd "$TARGET_DIR"
+    export PATH="$(pwd)/node_modules/.bin:$PATH"
+
+    if ! command -v prettier >/dev/null 2>&1; then
+      echo "Error: prettier is not installed in ${TARGET_DIR}. Please run 'npm ci'."
+      exit 1
+    fi
+
+    echo "Running Prettier on staged files in ${TARGET_DIR}..."
+    xargs -0 prettier --write -- < "$FILES_NUL_PATH"
+
+    if ! command -v eslint >/dev/null 2>&1; then
+      echo "Error: eslint is not installed in ${TARGET_DIR}. Please run 'npm ci'."
+      exit 1
+    fi
+
+    echo "Running ESLint on staged files in ${TARGET_DIR}..."
+    if [ -f "eslint.config.mjs" ]; then
+      xargs -0 eslint -c eslint.config.mjs --fix -- < "$FILES_NUL_PATH"
+    else
+      xargs -0 eslint --fix -- < "$FILES_NUL_PATH"
+    fi
+
+    echo "Adding formatted files to the commit in ${TARGET_DIR}..."
+    xargs -0 git add < "$FILES_NUL_PATH"
+  ); then
+    rm -f "$FILES_NUL_PATH"
+  else
+    rm -f "$FILES_NUL_PATH"
+    return 1
+  fi
+}
+
+run_checks_for_dir "frontend"
+run_checks_for_dir "backend"
+
+echo "--- Pre-commit hook finished successfully ---"

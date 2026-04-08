@@ -8,7 +8,7 @@ export class LeagueService {
   constructor(
     private readonly leagueRepository: LeagueRepository,
     private readonly ruleRepository: RuleRepository,
-    private readonly userRepository: UserRepository
+    private readonly userRepository: UserRepository,
   ) {}
 
   listLeagues(memberUserId: string) {
@@ -39,7 +39,11 @@ export class LeagueService {
     return this.leagueRepository.create({ ...input, memberUserIds }, rule);
   }
 
-  async updateLeague(userId: string, leagueId: string, input: UpdateLeagueInput) {
+  async updateLeague(
+    userId: string,
+    leagueId: string,
+    input: UpdateLeagueInput,
+  ) {
     await this.assertLeagueMembership(userId, leagueId);
     return this.leagueRepository.update(leagueId, input);
   }

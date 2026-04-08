@@ -29,11 +29,13 @@ export const calculateMatchPoints = (
     wind: Wind;
     rank: number;
     rawScore: number;
-  }>
+  }>,
 ): MatchResult[] => {
   const expectedPlayerCount = rule.gameType === "sanma" ? 3 : 4;
   if (results.length !== expectedPlayerCount) {
-    throw new ValidationError(`expected ${expectedPlayerCount} players for ${rule.gameType}`);
+    throw new ValidationError(
+      `expected ${expectedPlayerCount} players for ${rule.gameType}`,
+    );
   }
 
   const uniqueUserIds = new Set(results.map((result) => result.userId));
@@ -68,7 +70,7 @@ export const calculateMatchPoints = (
           ? rule.uma.second
           : result.rank === 3
             ? rule.uma.third
-            : rule.uma.fourth ?? 0;
+            : (rule.uma.fourth ?? 0);
 
     return {
       ...result,
@@ -78,7 +80,9 @@ export const calculateMatchPoints = (
 
   const totalPoint = withPoints.reduce((sum, result) => sum + result.point, 0);
   if (Math.abs(totalPoint) > 0.2) {
-    throw new ValidationError("calculated point total must be 0", { totalPoint });
+    throw new ValidationError("calculated point total must be 0", {
+      totalPoint,
+    });
   }
 
   return withPoints;

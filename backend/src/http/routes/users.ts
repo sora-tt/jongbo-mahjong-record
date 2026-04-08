@@ -16,7 +16,9 @@ export const buildUsersRouter = (services: Services) => {
     return ok(c, await services.userService.searchUsers(query));
   });
 
-  app.get("/me", async (c) => ok(c, await services.authService.getMe(c.get("authUser").uid)));
+  app.get("/me", async (c) =>
+    ok(c, await services.authService.getMe(c.get("authUser").uid)),
+  );
 
   app.patch("/me", async (c) => {
     const body = ensureObject(await c.req.json(), "body");
@@ -26,7 +28,7 @@ export const buildUsersRouter = (services: Services) => {
         userId: c.get("authUser").uid,
         name: ensureOptionalString(body.name, "name"),
         username: ensureOptionalString(body.username, "username"),
-      })
+      }),
     );
   });
 
@@ -59,7 +61,9 @@ export const buildUsersRouter = (services: Services) => {
 
     const scopeType = c.req.query("scopeType") as ScopeType | undefined;
     if (!scopeType || !["overall", "league", "season"].includes(scopeType)) {
-      throw new ValidationError("scopeType must be one of overall, league, season");
+      throw new ValidationError(
+        "scopeType must be one of overall, league, season",
+      );
     }
 
     return ok(
@@ -69,7 +73,7 @@ export const buildUsersRouter = (services: Services) => {
         scopeType,
         leagueId: c.req.query("leagueId") ?? undefined,
         seasonId: c.req.query("seasonId") ?? undefined,
-      })
+      }),
     );
   });
 

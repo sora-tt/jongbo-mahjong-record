@@ -14,7 +14,11 @@ export interface UserStatsRepository {
       leagueId: string | null;
       seasonId: string | null;
     },
-    data: Omit<UserStats, "id" | "createdAt" | "updatedAt">
+    data: Omit<UserStats, "id" | "createdAt" | "updatedAt">,
   ): Promise<string>;
-  deleteMissingSeasonStats(leagueId: string, seasonId: string, keepUserIds: string[]): Promise<void>;
+  deleteMissingSeasonStats(
+    leagueId: string,
+    seasonId: string,
+    keepUserIds: string[],
+  ): Promise<void>;
 }

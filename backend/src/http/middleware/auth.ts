@@ -11,7 +11,11 @@ export const requireAuth: MiddlewareHandler<AppBindings> = async (c, next) => {
 
   const [scheme, token] = authorization.split(" ");
   if (scheme !== "Bearer" || !token) {
-    throw new AppError("authorization header must be Bearer token", 401, "unauthorized");
+    throw new AppError(
+      "authorization header must be Bearer token",
+      401,
+      "unauthorized",
+    );
   }
 
   const decodedToken = await getAdminAuth().verifyIdToken(token);

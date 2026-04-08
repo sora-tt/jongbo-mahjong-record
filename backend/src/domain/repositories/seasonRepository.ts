@@ -1,10 +1,26 @@
-import type { CreateSeasonInput, PointProgression, SeasonDetail, SeasonMember, SeasonSummary, Standing, UpdateSeasonInput } from "@/domain/models.js";
+import type {
+  CreateSeasonInput,
+  PointProgression,
+  SeasonDetail,
+  SeasonMember,
+  SeasonSummary,
+  Standing,
+  UpdateSeasonInput,
+} from "@/domain/models.js";
 
 export interface SeasonRepository {
   list(leagueId: string): Promise<SeasonSummary[]>;
   get(leagueId: string, seasonId: string): Promise<SeasonDetail>;
-  create(leagueId: string, input: CreateSeasonInput, members: SeasonMember[]): Promise<SeasonDetail>;
-  update(leagueId: string, seasonId: string, input: UpdateSeasonInput): Promise<SeasonDetail>;
+  create(
+    leagueId: string,
+    input: CreateSeasonInput,
+    members: SeasonMember[],
+  ): Promise<SeasonDetail>;
+  update(
+    leagueId: string,
+    seasonId: string,
+    input: UpdateSeasonInput,
+  ): Promise<SeasonDetail>;
   delete(leagueId: string, seasonId: string): Promise<void>;
   listMembers(leagueId: string, seasonId: string): Promise<SeasonMember[]>;
   updateStatistics(params: {
