@@ -4,7 +4,9 @@ const DEFAULT_SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 5;
 
 export const getSessionMaxAgeSeconds = () => {
   const raw = process.env.SESSION_COOKIE_MAX_AGE_SECONDS;
-  const parsed = raw ? Number.parseInt(raw, 10) : DEFAULT_SESSION_MAX_AGE_SECONDS;
+  const parsed = raw
+    ? Number.parseInt(raw, 10)
+    : DEFAULT_SESSION_MAX_AGE_SECONDS;
 
   if (!Number.isFinite(parsed) || parsed <= 0) {
     return DEFAULT_SESSION_MAX_AGE_SECONDS;

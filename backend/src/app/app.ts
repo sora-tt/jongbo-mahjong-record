@@ -1,9 +1,7 @@
-import { swaggerUI } from "@hono/swagger-ui";
-import { Hono } from "hono";
-import { cors } from "hono/cors";
+import { createDependencies } from "@/app/dependencies.js";
 import { AppError } from "@/errors.js";
-import { requireAuth } from "@/http/middleware/auth.js";
 import type { AppBindings } from "@/http/bindings.js";
+import { requireAuth } from "@/http/middleware/auth.js";
 import { openApiDocument } from "@/http/openapi.js";
 import { buildAuthRouter } from "@/http/routes/auth.js";
 import { buildLeaguesRouter } from "@/http/routes/leagues.js";
@@ -12,9 +10,14 @@ import { buildRulesRouter } from "@/http/routes/rules.js";
 import { buildSeasonsRouter } from "@/http/routes/seasons.js";
 import { buildSessionsRouter } from "@/http/routes/sessions.js";
 import { buildUsersRouter } from "@/http/routes/users.js";
-import { createDependencies } from "@/app/dependencies.js";
+import { swaggerUI } from "@hono/swagger-ui";
+import { Hono } from "hono";
+import { cors } from "hono/cors";
 
-const DEFAULT_ALLOWED_ORIGINS = ["http://127.0.0.1:3000", "http://localhost:3000"];
+const DEFAULT_ALLOWED_ORIGINS = [
+  "http://127.0.0.1:3000",
+  "http://localhost:3000",
+];
 
 const getAllowedOrigins = () => {
   const raw = process.env.CORS_ALLOWED_ORIGINS;
@@ -62,7 +65,7 @@ export const createApp = () => {
   app.get("/doc", (c) => c.json(openApiDocument));
   app.get("/ui", swaggerUI({ url: "/doc" }));
 
-  app.route("/api/auth", buildAuthRouter(services));
+  app.route("/api/auth", buildAuthRouter());
   app.use("/api/rules/*", requireAuth);
   app.use("/api/users/*", requireAuth);
   app.use("/api/leagues/*", requireAuth);

@@ -11,7 +11,10 @@ export const requireAuth: MiddlewareHandler<AppBindings> = async (c, next) => {
     throw new AppError("session cookie is required", 401, "unauthorized");
   }
 
-  const decodedToken = await getAdminAuth().verifySessionCookie(sessionCookie, false);
+  const decodedToken = await getAdminAuth().verifySessionCookie(
+    sessionCookie,
+    false,
+  );
   c.set("authUser", {
     uid: decodedToken.uid,
     email: typeof decodedToken.email === "string" ? decodedToken.email : null,

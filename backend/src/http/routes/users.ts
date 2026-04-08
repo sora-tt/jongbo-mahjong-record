@@ -4,7 +4,11 @@ import type { AppBindings } from "@/http/bindings.js";
 import { ok } from "@/http/response.js";
 import type { ScopeType } from "@/domain/models.js";
 import { AppError, ValidationError } from "@/errors.js";
-import { ensureObject, ensureOptionalString, ensureString } from "@/http/validation.js";
+import {
+  ensureObject,
+  ensureOptionalString,
+  ensureString,
+} from "@/http/validation.js";
 
 type Services = ReturnType<typeof createDependencies>["services"];
 
@@ -28,11 +32,13 @@ export const buildUsersRouter = (services: Services) => {
         name: ensureString(body.name, "name"),
         username: ensureString(body.username, "username"),
       }),
-      201
+      201,
     );
   });
 
-  app.get("/me", async (c) => ok(c, await services.authService.getMe(c.get("authUser").uid)));
+  app.get("/me", async (c) =>
+    ok(c, await services.authService.getMe(c.get("authUser").uid)),
+  );
 
   app.patch("/me", async (c) => {
     const body = ensureObject(await c.req.json(), "body");

@@ -101,7 +101,7 @@ export const openApiDocument = {
                   expiresAt: { type: "string", format: "date-time" },
                 },
                 required: ["authenticated", "expiresAt"],
-              })
+              }),
             ),
           },
         },
@@ -301,7 +301,9 @@ export const openApiDocument = {
         responses: {
           "201": {
             description: "user",
-            content: jsonContent(dataResponse({ $ref: "#/components/schemas/User" })),
+            content: jsonContent(
+              dataResponse({ $ref: "#/components/schemas/User" }),
+            ),
           },
         },
       },
