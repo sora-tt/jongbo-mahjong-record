@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type ChangeEvent } from "react";
+import { useCallback, useState, type ChangeEvent } from "react";
 
 import { leagueData1 } from "@/mocks/league";
 import { convertLeagueMemberToLeagueSeasonMember } from "@/types/domain/league-converter";
@@ -11,16 +11,12 @@ export const useSeasonEdit = () => {
 
   const currentSeason = Object.values(leagueData1.seasons)[0];
 
-  const [seasonName, setSeasonName] = useState<string>("");
+  const [seasonName, setSeasonName] = useState<string>(
+    () => currentSeason?.name ?? ""
+  );
   const [selectedMembers, setSelectedMembers] = useState<
     Record<UserIdType, LeagueSeasonMember>
-  >({});
-
-  useEffect(() => {
-    if (!currentSeason) return;
-    setSeasonName(currentSeason.name);
-    setSelectedMembers(currentSeason.members);
-  }, [currentSeason]);
+  >(() => currentSeason?.members ?? {});
 
   const handleSeasonNameChange = useCallback(
     (e: ChangeEvent<HTMLInputElement>) => {
@@ -51,6 +47,7 @@ export const useSeasonEdit = () => {
   );
 
   const handleSubmit = useCallback(() => {
+    // TODO: PATCH /api/leagues/:leagueId/seasons/:seasonId
     const membersArray = Object.values(selectedMembers);
     console.log({ seasonName, membersArray });
   }, [seasonName, selectedMembers]);
