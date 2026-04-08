@@ -18,7 +18,7 @@ export const getDb = () => {
         : {
             credential: applicationDefault(),
             projectId,
-          }
+          },
     );
   }
 

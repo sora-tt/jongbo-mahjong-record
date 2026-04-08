@@ -8,7 +8,10 @@ export class FirestoreRuleRepository implements RuleRepository {
   constructor(private readonly db: Firestore) {}
 
   async list(): Promise<Rule[]> {
-    const snapshot = await this.db.collection("rules").orderBy("created_at", "asc").get();
+    const snapshot = await this.db
+      .collection("rules")
+      .orderBy("created_at", "asc")
+      .get();
     return snapshot.docs.map((doc) => this.map(doc.id, doc.data()));
   }
 
@@ -63,7 +66,7 @@ export class FirestoreRuleRepository implements RuleRepository {
       uma: Rule["uma"];
       oka: Rule["oka"];
       scoreCalculation: Rule["scoreCalculation"];
-    }>
+    }>,
   ): Promise<Rule> {
     const ref = this.db.collection("rules").doc(ruleId);
     const snapshot = await ref.get();
@@ -91,7 +94,8 @@ export class FirestoreRuleRepository implements RuleRepository {
         return_points: input.oka.returnPoints,
       };
     }
-    if (input.scoreCalculation !== undefined) patch.score_calculation = input.scoreCalculation;
+    if (input.scoreCalculation !== undefined)
+      patch.score_calculation = input.scoreCalculation;
 
     await ref.update(patch);
     return this.get(ruleId);

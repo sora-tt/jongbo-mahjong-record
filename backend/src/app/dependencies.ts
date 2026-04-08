@@ -30,7 +30,7 @@ export const createDependencies = () => {
     seasonRepository,
     sessionRepository,
     matchRepository,
-    userStatsRepository
+    userStatsRepository,
   );
 
   return {
@@ -38,15 +38,27 @@ export const createDependencies = () => {
       authService: new AuthService(userRepository),
       ruleService: new RuleService(ruleRepository),
       userService: new UserService(userRepository, userStatsRepository),
-      leagueService: new LeagueService(leagueRepository, ruleRepository, userRepository),
-      seasonService: new SeasonService(leagueRepository, seasonRepository, matchRepository),
-      sessionService: new SessionService(leagueRepository, seasonRepository, sessionRepository),
+      leagueService: new LeagueService(
+        leagueRepository,
+        ruleRepository,
+        userRepository,
+      ),
+      seasonService: new SeasonService(
+        leagueRepository,
+        seasonRepository,
+        matchRepository,
+      ),
+      sessionService: new SessionService(
+        leagueRepository,
+        seasonRepository,
+        sessionRepository,
+      ),
       matchService: new MatchService(
         ruleRepository,
         leagueRepository,
         sessionRepository,
         matchRepository,
-        statsRebuilder
+        statsRebuilder,
       ),
     },
   };

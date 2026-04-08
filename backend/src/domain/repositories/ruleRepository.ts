@@ -20,7 +20,7 @@ export interface RuleRepository {
       uma: Rule["uma"];
       oka: Rule["oka"];
       scoreCalculation: Rule["scoreCalculation"];
-    }>
+    }>,
   ): Promise<Rule>;
   delete(ruleId: string): Promise<void>;
 }

@@ -42,7 +42,7 @@ export const buildUsersRouter = (services: Services) => {
         userId: c.get("authUser").uid,
         name: ensureOptionalString(body.name, "name"),
         username: ensureOptionalString(body.username, "username"),
-      })
+      }),
     );
   });
 
@@ -75,7 +75,9 @@ export const buildUsersRouter = (services: Services) => {
 
     const scopeType = c.req.query("scopeType") as ScopeType | undefined;
     if (!scopeType || !["overall", "league", "season"].includes(scopeType)) {
-      throw new ValidationError("scopeType must be one of overall, league, season");
+      throw new ValidationError(
+        "scopeType must be one of overall, league, season",
+      );
     }
 
     return ok(
@@ -85,7 +87,7 @@ export const buildUsersRouter = (services: Services) => {
         scopeType,
         leagueId: c.req.query("leagueId") ?? undefined,
         seasonId: c.req.query("seasonId") ?? undefined,
-      })
+      }),
     );
   });
 

@@ -21,14 +21,23 @@ export class FirestoreUserRepository implements UserRepository {
       return [];
     }
 
-    const snapshots = await Promise.all(userIds.map((userId) => this.db.collection("users").doc(userId).get()));
-    return snapshots.filter((snapshot) => snapshot.exists).map((snapshot) => this.map(snapshot.id, snapshot.data() ?? {}));
+    const snapshots = await Promise.all(
+      userIds.map((userId) => this.db.collection("users").doc(userId).get()),
+    );
+    return snapshots
+      .filter((snapshot) => snapshot.exists)
+      .map((snapshot) => this.map(snapshot.id, snapshot.data() ?? {}));
   }
 
   async search(query: string): Promise<User[]> {
     const snapshot = await this.db.collection("users").limit(50).get();
     const keyword = query.trim().toLowerCase();
-    return snapshot.docs.map((doc) => this.map(doc.id, doc.data())).filter((user) => keyword === "" || user.username.toLowerCase().includes(keyword));
+    return snapshot.docs
+      .map((doc) => this.map(doc.id, doc.data()))
+      .filter(
+        (user) =>
+          keyword === "" || user.username.toLowerCase().includes(keyword),
+      );
   }
 
   async listJoiningSeasons(userId: string): Promise<JoiningSeason[]> {
@@ -36,7 +45,11 @@ export class FirestoreUserRepository implements UserRepository {
     const result: JoiningSeason[] = [];
 
     for (const leagueDoc of leaguesSnapshot.docs) {
-      const leagueMembersSnapshot = await leagueDoc.ref.collection("members").where("user_id", "==", userId).limit(1).get();
+      const leagueMembersSnapshot = await leagueDoc.ref
+        .collection("members")
+        .where("user_id", "==", userId)
+        .limit(1)
+        .get();
       if (leagueMembersSnapshot.empty) {
         continue;
       }
@@ -44,7 +57,10 @@ export class FirestoreUserRepository implements UserRepository {
       const seasonsSnapshot = await leagueDoc.ref.collection("seasons").get();
       seasonsSnapshot.docs.forEach((seasonDoc) => {
         const members = seasonDoc.data().members ?? [];
-        if (Array.isArray(members) && members.some((member) => member.user_id === userId)) {
+        if (
+          Array.isArray(members) &&
+          members.some((member) => member.user_id === userId)
+        ) {
           result.push({
             leagueId: leagueDoc.id,
             leagueName: String(leagueDoc.data().name ?? ""),
@@ -55,7 +71,9 @@ export class FirestoreUserRepository implements UserRepository {
       });
     }
 
-    return result.sort((left, right) => left.leagueName.localeCompare(right.leagueName, "ja"));
+    return result.sort((left, right) =>
+      left.leagueName.localeCompare(right.leagueName, "ja"),
+    );
   }
 
   async upsertProfile(input: {

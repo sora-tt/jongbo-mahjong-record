@@ -38,11 +38,7 @@ export class AuthService {
     });
   }
 
-  async updateMe(input: {
-    userId: string;
-    name?: string;
-    username?: string;
-  }) {
+  async updateMe(input: { userId: string; name?: string; username?: string }) {
     const patch = {
       userId: input.userId,
       name: input.name?.trim(),

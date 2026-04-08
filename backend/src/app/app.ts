@@ -47,7 +47,7 @@ export const createApp = () => {
       allowHeaders: ["Content-Type"],
       maxAge: 600,
       credentials: true,
-    })
+    }),
   );
 
   app.get("/api/health", (c) =>
@@ -56,7 +56,7 @@ export const createApp = () => {
         status: "ok",
         timestamp: new Date().toISOString(),
       },
-    })
+    }),
   );
 
   app.get("/doc", (c) => c.json(openApiDocument));
@@ -84,7 +84,7 @@ export const createApp = () => {
             details: error.details ?? {},
           },
         },
-        error.status as 400 | 401 | 403 | 404 | 409 | 500
+        error.status as 400 | 401 | 403 | 404 | 409 | 500,
       );
     }
 
@@ -97,7 +97,7 @@ export const createApp = () => {
           details: {},
         },
       },
-      500
+      500,
     );
   });
 

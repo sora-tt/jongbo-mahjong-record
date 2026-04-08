@@ -8,7 +8,10 @@ export const ensureString = (value: unknown, field: string): string => {
   return value.trim();
 };
 
-export const ensureOptionalString = (value: unknown, field: string): string | undefined => {
+export const ensureOptionalString = (
+  value: unknown,
+  field: string,
+): string | undefined => {
   if (value === undefined) {
     return undefined;
   }
@@ -24,7 +27,10 @@ export const ensureStringArray = (value: unknown, field: string): string[] => {
   return value.map((item, index) => ensureString(item, `${field}[${index}]`));
 };
 
-export const ensureObject = (value: unknown, field: string): Record<string, unknown> => {
+export const ensureObject = (
+  value: unknown,
+  field: string,
+): Record<string, unknown> => {
   if (value === null || typeof value !== "object" || Array.isArray(value)) {
     throw new ValidationError(`${field} must be an object`);
   }

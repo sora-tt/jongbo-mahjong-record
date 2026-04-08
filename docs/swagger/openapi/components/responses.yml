@@ -1,0 +1,25 @@
+components:
+  responses:
+    BadRequest:
+      description: リクエスト内容が不正です。
+      content:
+        application/json:
+          schema:
+            $ref: './schemas.yml#/components/schemas/Error'
+
+    Unauthorized:
+      description: 認証が必要です。アクセストークンが無効または不足しています。
+      content:
+        application/json:
+          schema:
+            $ref: './schemas.yml#/components/schemas/Error'
+
+    NotFound:
+      description: 指定されたリソースが見つかりません。
+      content:
+        application/json:
+          schema:
+            $ref: './schemas.yml#/components/schemas/Error'
+
+    NoContent:
+      description: 処理は正常に完了しましたが、返却するコンテンツはありません。

@@ -50,7 +50,8 @@ const createAggregate = (member: SeasonMember): Aggregate => ({
 
 const sortMatches = (matches: Match[]) =>
   [...matches].sort((left, right) => {
-    const timeDiff = new Date(left.playedAt).getTime() - new Date(right.playedAt).getTime();
+    const timeDiff =
+      new Date(left.playedAt).getTime() - new Date(right.playedAt).getTime();
     if (timeDiff !== 0) {
       return timeDiff;
     }
@@ -58,9 +59,12 @@ const sortMatches = (matches: Match[]) =>
     return left.matchIndex - right.matchIndex;
   });
 
-export const buildSeasonAggregates = (members: SeasonMember[], matches: Match[]) => {
+export const buildSeasonAggregates = (
+  members: SeasonMember[],
+  matches: Match[],
+) => {
   const aggregates = new Map<string, Aggregate>(
-    members.map((member) => [member.userId, createAggregate(member)])
+    members.map((member) => [member.userId, createAggregate(member)]),
   );
 
   const orderedMatches = sortMatches(matches);
@@ -75,9 +79,13 @@ export const buildSeasonAggregates = (members: SeasonMember[], matches: Match[])
       aggregate.totalRank += result.rank;
       aggregate.totalRawScore += result.rawScore;
       aggregate.highestScore =
-        aggregate.highestScore === null ? result.rawScore : Math.max(aggregate.highestScore, result.rawScore);
+        aggregate.highestScore === null
+          ? result.rawScore
+          : Math.max(aggregate.highestScore, result.rawScore);
       aggregate.lowestScore =
-        aggregate.lowestScore === null ? result.rawScore : Math.min(aggregate.lowestScore, result.rawScore);
+        aggregate.lowestScore === null
+          ? result.rawScore
+          : Math.min(aggregate.lowestScore, result.rawScore);
 
       if (result.rank === 1) {
         aggregate.firstCount += 1;
@@ -85,7 +93,10 @@ export const buildSeasonAggregates = (members: SeasonMember[], matches: Match[])
       } else {
         aggregate.currentWinStreak = 0;
       }
-      aggregate.maxWinStreak = Math.max(aggregate.maxWinStreak, aggregate.currentWinStreak);
+      aggregate.maxWinStreak = Math.max(
+        aggregate.maxWinStreak,
+        aggregate.currentWinStreak,
+      );
 
       if (result.rank === match.results.length) {
         aggregate.fourthCount += 1;
@@ -93,7 +104,10 @@ export const buildSeasonAggregates = (members: SeasonMember[], matches: Match[])
       } else {
         aggregate.currentLoseStreak = 0;
       }
-      aggregate.maxLoseStreak = Math.max(aggregate.maxLoseStreak, aggregate.currentLoseStreak);
+      aggregate.maxLoseStreak = Math.max(
+        aggregate.maxLoseStreak,
+        aggregate.currentLoseStreak,
+      );
 
       if (result.rank === 2) {
         aggregate.secondCount += 1;
@@ -135,7 +149,10 @@ export const buildStandings = (members: SeasonMember[], matches: Match[]) =>
     fourthCount: members.length === 4 ? aggregate.fourthCount : null,
   }));
 
-export const buildPointProgressions = (members: SeasonMember[], matches: Match[]): PointProgression[] =>
+export const buildPointProgressions = (
+  members: SeasonMember[],
+  matches: Match[],
+): PointProgression[] =>
   buildSeasonAggregates(members, matches).map((aggregate) => ({
     userId: aggregate.userId,
     userName: aggregate.userName,
@@ -144,7 +161,7 @@ export const buildPointProgressions = (members: SeasonMember[], matches: Match[]
 
 const createRateRecord = (
   entries: Aggregate[],
-  getValue: (entry: Aggregate) => number | null
+  getValue: (entry: Aggregate) => number | null,
 ): RecordHolder | null => {
   const candidates = entries
     .map((entry) => ({
@@ -161,7 +178,10 @@ const createRateRecord = (
   return candidates.sort((left, right) => right.value - left.value)[0] ?? null;
 };
 
-export const buildSeasonRecords = (members: SeasonMember[], matches: Match[]) => {
+export const buildSeasonRecords = (
+  members: SeasonMember[],
+  matches: Match[],
+) => {
   const entries = buildSeasonAggregates(members, matches);
 
   return {
@@ -172,7 +192,11 @@ export const buildSeasonRecords = (members: SeasonMember[], matches: Match[]) =>
       }
 
       return Number(
-        ((((entry.totalMatchCount - entry.fourthCount) / entry.totalMatchCount) * 100).toFixed(2))
+        (
+          ((entry.totalMatchCount - entry.fourthCount) /
+            entry.totalMatchCount) *
+          100
+        ).toFixed(2),
       );
     }),
     top2Rate: createRateRecord(entries, (entry) => {
@@ -180,7 +204,12 @@ export const buildSeasonRecords = (members: SeasonMember[], matches: Match[]) =>
         return null;
       }
 
-      return Number((((entry.firstCount + entry.secondCount) / entry.totalMatchCount) * 100).toFixed(2));
+      return Number(
+        (
+          ((entry.firstCount + entry.secondCount) / entry.totalMatchCount) *
+          100
+        ).toFixed(2),
+      );
     }),
   };
 };
@@ -198,9 +227,13 @@ export const buildLeagueRecords = (matches: Match[]) => {
       entry.totalMatchCount += 1;
       entry.totalPoints += result.point;
       entry.highestScore =
-        entry.highestScore === null ? result.rawScore : Math.max(entry.highestScore, result.rawScore);
+        entry.highestScore === null
+          ? result.rawScore
+          : Math.max(entry.highestScore, result.rawScore);
       entry.lowestScore =
-        entry.lowestScore === null ? result.rawScore : Math.min(entry.lowestScore, result.rawScore);
+        entry.lowestScore === null
+          ? result.rawScore
+          : Math.min(entry.lowestScore, result.rawScore);
 
       if (result.rank === 1) {
         entry.currentWinStreak += 1;
@@ -214,7 +247,10 @@ export const buildLeagueRecords = (matches: Match[]) => {
       } else {
         entry.currentLoseStreak = 0;
       }
-      entry.maxLoseStreak = Math.max(entry.maxLoseStreak, entry.currentLoseStreak);
+      entry.maxLoseStreak = Math.max(
+        entry.maxLoseStreak,
+        entry.currentLoseStreak,
+      );
 
       byUser.set(result.userId, entry);
     });
@@ -223,19 +259,22 @@ export const buildLeagueRecords = (matches: Match[]) => {
   const entries = [...byUser.values()];
   return {
     winStreak: createRateRecord(entries, (entry) => entry.maxWinStreak || null),
-    loseStreak: createRateRecord(entries, (entry) => entry.maxLoseStreak || null),
+    loseStreak: createRateRecord(
+      entries,
+      (entry) => entry.maxLoseStreak || null,
+    ),
     highestScore: createRateRecord(entries, (entry) => entry.highestScore),
     lowestScore:
       entries.length === 0
         ? null
-        : entries
+        : (entries
             .map((entry) => ({
               userId: entry.userId,
               userName: entry.userName,
               value: entry.lowestScore,
             }))
             .filter((entry): entry is RecordHolder => entry.value !== null)
-            .sort((left, right) => left.value - right.value)[0] ?? null,
+            .sort((left, right) => left.value - right.value)[0] ?? null),
   };
 };
 
@@ -284,8 +323,14 @@ export const buildUserStats = (params: {
     totalPoints += result.point;
     totalRank += result.rank;
     totalRawScore += result.rawScore;
-    highestScore = highestScore === null ? result.rawScore : Math.max(highestScore, result.rawScore);
-    lowestScore = lowestScore === null ? result.rawScore : Math.min(lowestScore, result.rawScore);
+    highestScore =
+      highestScore === null
+        ? result.rawScore
+        : Math.max(highestScore, result.rawScore);
+    lowestScore =
+      lowestScore === null
+        ? result.rawScore
+        : Math.min(lowestScore, result.rawScore);
 
     if (result.rank === 1) {
       firstCount += 1;
@@ -310,7 +355,8 @@ export const buildUserStats = (params: {
     }
   });
 
-  const averageRank = matchCount === 0 ? 0 : Number((totalRank / matchCount).toFixed(2));
+  const averageRank =
+    matchCount === 0 ? 0 : Number((totalRank / matchCount).toFixed(2));
 
   return {
     userId,
@@ -328,13 +374,26 @@ export const buildUserStats = (params: {
     secondCount,
     thirdCount,
     fourthCount: playerCount === 4 ? fourthCount : null,
-    firstRate: matchCount === 0 ? 0 : Number(((firstCount / matchCount) * 100).toFixed(2)),
-    secondRate: matchCount === 0 ? 0 : Number(((secondCount / matchCount) * 100).toFixed(2)),
-    thirdRate: matchCount === 0 ? 0 : Number(((thirdCount / matchCount) * 100).toFixed(2)),
-    fourthRate: playerCount === 4 && matchCount > 0 ? Number(((fourthCount / matchCount) * 100).toFixed(2)) : null,
+    firstRate:
+      matchCount === 0
+        ? 0
+        : Number(((firstCount / matchCount) * 100).toFixed(2)),
+    secondRate:
+      matchCount === 0
+        ? 0
+        : Number(((secondCount / matchCount) * 100).toFixed(2)),
+    thirdRate:
+      matchCount === 0
+        ? 0
+        : Number(((thirdCount / matchCount) * 100).toFixed(2)),
+    fourthRate:
+      playerCount === 4 && matchCount > 0
+        ? Number(((fourthCount / matchCount) * 100).toFixed(2))
+        : null,
     highestScore,
     lowestScore,
-    averageScore: matchCount === 0 ? null : Number((totalRawScore / matchCount).toFixed(2)),
+    averageScore:
+      matchCount === 0 ? null : Number((totalRawScore / matchCount).toFixed(2)),
     winStreak: matchCount === 0 ? null : winStreak,
     loseStreak: matchCount === 0 ? null : loseStreak,
   };

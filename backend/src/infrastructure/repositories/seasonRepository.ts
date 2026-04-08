@@ -22,21 +22,43 @@ export class FirestoreSeasonRepository implements SeasonRepository {
       throw new NotFoundError("league not found", { leagueId });
     }
 
-    const snapshot = await leagueRef.collection("seasons").orderBy("created_at", "asc").get();
-    return snapshot.docs.map((doc) => this.mapSummary(leagueId, doc.id, doc.data()));
+    const snapshot = await leagueRef
+      .collection("seasons")
+      .orderBy("created_at", "asc")
+      .get();
+    return snapshot.docs.map((doc) =>
+      this.mapSummary(leagueId, doc.id, doc.data()),
+    );
   }
 
   async get(leagueId: string, seasonId: string): Promise<SeasonDetail> {
-    const seasonSnapshot = await this.db.collection("leagues").doc(leagueId).collection("seasons").doc(seasonId).get();
+    const seasonSnapshot = await this.db
+      .collection("leagues")
+      .doc(leagueId)
+      .collection("seasons")
+      .doc(seasonId)
+      .get();
     if (!seasonSnapshot.exists) {
       throw new NotFoundError("season not found", { leagueId, seasonId });
     }
 
-    return this.mapDetail(leagueId, seasonSnapshot.id, seasonSnapshot.data() ?? {});
+    return this.mapDetail(
+      leagueId,
+      seasonSnapshot.id,
+      seasonSnapshot.data() ?? {},
+    );
   }
 
-  async create(leagueId: string, input: CreateSeasonInput, members: SeasonMember[]): Promise<SeasonDetail> {
-    const seasonRef = this.db.collection("leagues").doc(leagueId).collection("seasons").doc();
+  async create(
+    leagueId: string,
+    input: CreateSeasonInput,
+    members: SeasonMember[],
+  ): Promise<SeasonDetail> {
+    const seasonRef = this.db
+      .collection("leagues")
+      .doc(leagueId)
+      .collection("seasons")
+      .doc();
     const now = Timestamp.now();
     await seasonRef.set({
       id: seasonRef.id,
@@ -58,8 +80,16 @@ export class FirestoreSeasonRepository implements SeasonRepository {
     return this.get(leagueId, seasonRef.id);
   }
 
-  async update(leagueId: string, seasonId: string, input: UpdateSeasonInput): Promise<SeasonDetail> {
-    const seasonRef = this.db.collection("leagues").doc(leagueId).collection("seasons").doc(seasonId);
+  async update(
+    leagueId: string,
+    seasonId: string,
+    input: UpdateSeasonInput,
+  ): Promise<SeasonDetail> {
+    const seasonRef = this.db
+      .collection("leagues")
+      .doc(leagueId)
+      .collection("seasons")
+      .doc(seasonId);
     const snapshot = await seasonRef.get();
     if (!snapshot.exists) {
       throw new NotFoundError("season not found", { leagueId, seasonId });
@@ -78,7 +108,11 @@ export class FirestoreSeasonRepository implements SeasonRepository {
   }
 
   async delete(leagueId: string, seasonId: string): Promise<void> {
-    const ref = this.db.collection("leagues").doc(leagueId).collection("seasons").doc(seasonId);
+    const ref = this.db
+      .collection("leagues")
+      .doc(leagueId)
+      .collection("seasons")
+      .doc(seasonId);
     const snapshot = await ref.get();
     if (!snapshot.exists) {
       throw new NotFoundError("season not found", { leagueId, seasonId });
@@ -87,7 +121,10 @@ export class FirestoreSeasonRepository implements SeasonRepository {
     await this.db.recursiveDelete(ref);
   }
 
-  async listMembers(leagueId: string, seasonId: string): Promise<SeasonMember[]> {
+  async listMembers(
+    leagueId: string,
+    seasonId: string,
+  ): Promise<SeasonMember[]> {
     const season = await this.get(leagueId, seasonId);
     return season.members;
   }
@@ -104,36 +141,45 @@ export class FirestoreSeasonRepository implements SeasonRepository {
       top2Rate: { value: number; userId: string; userName: string } | null;
     } | null;
   }): Promise<void> {
-    await this.db.collection("leagues").doc(params.leagueId).collection("seasons").doc(params.seasonId).update({
-      total_match_count: params.totalMatchCount,
-      standings: params.standings.map((standing) => ({
-        rank: standing.rank,
-        user_id: standing.userId,
-        user_name: standing.userName,
-        total_points: standing.totalPoints,
-        match_count: standing.matchCount,
-        first_count: standing.firstCount,
-        second_count: standing.secondCount,
-        third_count: standing.thirdCount,
-        fourth_count: standing.fourthCount,
-      })),
-      point_progressions: params.pointProgressions.map((progression) => ({
-        user_id: progression.userId,
-        user_name: progression.userName,
-        points: progression.points.map((point) => ({
-          match_index: point.matchIndex,
-          total_points: point.totalPoints,
+    await this.db
+      .collection("leagues")
+      .doc(params.leagueId)
+      .collection("seasons")
+      .doc(params.seasonId)
+      .update({
+        total_match_count: params.totalMatchCount,
+        standings: params.standings.map((standing) => ({
+          rank: standing.rank,
+          user_id: standing.userId,
+          user_name: standing.userName,
+          total_points: standing.totalPoints,
+          match_count: standing.matchCount,
+          first_count: standing.firstCount,
+          second_count: standing.secondCount,
+          third_count: standing.thirdCount,
+          fourth_count: standing.fourthCount,
         })),
-      })),
-      season_records: params.seasonRecords
-        ? {
-            highest_score: this.toRecordHolderDoc(params.seasonRecords.highestScore),
-            avoid_last_rate: this.toRecordHolderDoc(params.seasonRecords.avoidLastRate),
-            top2_rate: this.toRecordHolderDoc(params.seasonRecords.top2Rate),
-          }
-        : null,
-      updated_at: Timestamp.now(),
-    });
+        point_progressions: params.pointProgressions.map((progression) => ({
+          user_id: progression.userId,
+          user_name: progression.userName,
+          points: progression.points.map((point) => ({
+            match_index: point.matchIndex,
+            total_points: point.totalPoints,
+          })),
+        })),
+        season_records: params.seasonRecords
+          ? {
+              highest_score: this.toRecordHolderDoc(
+                params.seasonRecords.highestScore,
+              ),
+              avoid_last_rate: this.toRecordHolderDoc(
+                params.seasonRecords.avoidLastRate,
+              ),
+              top2_rate: this.toRecordHolderDoc(params.seasonRecords.top2Rate),
+            }
+          : null,
+        updated_at: Timestamp.now(),
+      });
   }
 
   async findActiveSeason(leagueId: string): Promise<SeasonSummary | null> {
@@ -152,7 +198,11 @@ export class FirestoreSeasonRepository implements SeasonRepository {
     return this.mapSummary(leagueId, doc.id, doc.data());
   }
 
-  private mapSummary(leagueId: string, seasonId: string, data: FirebaseFirestore.DocumentData): SeasonSummary {
+  private mapSummary(
+    leagueId: string,
+    seasonId: string,
+    data: FirebaseFirestore.DocumentData,
+  ): SeasonSummary {
     return {
       id: seasonId,
       leagueId,
@@ -165,7 +215,11 @@ export class FirestoreSeasonRepository implements SeasonRepository {
     };
   }
 
-  private mapDetail(leagueId: string, seasonId: string, data: FirebaseFirestore.DocumentData): SeasonDetail {
+  private mapDetail(
+    leagueId: string,
+    seasonId: string,
+    data: FirebaseFirestore.DocumentData,
+  ): SeasonDetail {
     const standings = Array.isArray(data.standings)
       ? data.standings.map((standing) => ({
           rank: Number(standing.rank ?? 0),
@@ -184,10 +238,12 @@ export class FirestoreSeasonRepository implements SeasonRepository {
           userId: String(progression.user_id ?? ""),
           userName: String(progression.user_name ?? ""),
           points: Array.isArray(progression.points)
-            ? progression.points.map((point: FirebaseFirestore.DocumentData) => ({
-                matchIndex: Number(point.match_index ?? 0),
-                totalPoints: Number(point.total_points ?? 0),
-              }))
+            ? progression.points.map(
+                (point: FirebaseFirestore.DocumentData) => ({
+                  matchIndex: Number(point.match_index ?? 0),
+                  totalPoints: Number(point.total_points ?? 0),
+                }),
+              )
             : [],
         }))
       : [];
@@ -209,8 +265,12 @@ export class FirestoreSeasonRepository implements SeasonRepository {
       pointProgressions,
       seasonRecords: data.season_records
         ? {
-            highestScore: this.mapRecordHolder(data.season_records.highest_score),
-            avoidLastRate: this.mapRecordHolder(data.season_records.avoid_last_rate),
+            highestScore: this.mapRecordHolder(
+              data.season_records.highest_score,
+            ),
+            avoidLastRate: this.mapRecordHolder(
+              data.season_records.avoid_last_rate,
+            ),
             top2Rate: this.mapRecordHolder(data.season_records.top2_rate),
           }
         : null,
@@ -220,7 +280,9 @@ export class FirestoreSeasonRepository implements SeasonRepository {
     };
   }
 
-  private mapRecordHolder(value: FirebaseFirestore.DocumentData | null | undefined) {
+  private mapRecordHolder(
+    value: FirebaseFirestore.DocumentData | null | undefined,
+  ) {
     if (!value) {
       return null;
     }
@@ -232,7 +294,9 @@ export class FirestoreSeasonRepository implements SeasonRepository {
     };
   }
 
-  private toRecordHolderDoc(value: { value: number; userId: string; userName: string } | null) {
+  private toRecordHolderDoc(
+    value: { value: number; userId: string; userName: string } | null,
+  ) {
     if (!value) {
       return null;
     }

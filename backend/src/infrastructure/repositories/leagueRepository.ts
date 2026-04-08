@@ -15,20 +15,29 @@ import { NotFoundError } from "@/errors.js";
 export class FirestoreLeagueRepository implements LeagueRepository {
   constructor(
     private readonly db: Firestore,
-    private readonly userRepository: UserRepository
+    private readonly userRepository: UserRepository,
   ) {}
 
   async list(memberUserId?: string): Promise<LeagueSummary[]> {
     const docs =
       memberUserId === undefined
-        ? (await this.db.collection("leagues").orderBy("created_at", "asc").get()).docs
+        ? (
+            await this.db
+              .collection("leagues")
+              .orderBy("created_at", "asc")
+              .get()
+          ).docs
         : await this.findLeagueDocsByMember(memberUserId);
 
     return Promise.all(
       docs.map(async (doc) => {
         const data = doc.data() ?? {};
         const myStanding = data.active_season_id
-          ? await this.findMyStanding(doc.id, data.active_season_id, memberUserId ?? "")
+          ? await this.findMyStanding(
+              doc.id,
+              data.active_season_id,
+              memberUserId ?? "",
+            )
           : null;
 
         return {
@@ -51,7 +60,7 @@ export class FirestoreLeagueRepository implements LeagueRepository {
           createdAt: toIsoString(data.created_at),
           updatedAt: toIsoString(data.updated_at),
         };
-      })
+      }),
     );
   }
 
@@ -85,7 +94,9 @@ export class FirestoreLeagueRepository implements LeagueRepository {
         ? {
             winStreak: this.mapRecordHolder(data.league_records.win_streak),
             loseStreak: this.mapRecordHolder(data.league_records.lose_streak),
-            highestScore: this.mapRecordHolder(data.league_records.highest_score),
+            highestScore: this.mapRecordHolder(
+              data.league_records.highest_score,
+            ),
             lowestScore: this.mapRecordHolder(data.league_records.lowest_score),
           }
         : null,
@@ -127,7 +138,10 @@ export class FirestoreLeagueRepository implements LeagueRepository {
     return this.get(leagueRef.id);
   }
 
-  async update(leagueId: string, input: UpdateLeagueInput): Promise<LeagueDetail> {
+  async update(
+    leagueId: string,
+    input: UpdateLeagueInput,
+  ): Promise<LeagueDetail> {
     const leagueRef = this.db.collection("leagues").doc(leagueId);
     const snapshot = await leagueRef.get();
     if (!snapshot.exists) {
@@ -156,7 +170,10 @@ export class FirestoreLeagueRepository implements LeagueRepository {
   }
 
   async listMembers(leagueId: string): Promise<LeagueMember[]> {
-    const leagueSnapshot = await this.db.collection("leagues").doc(leagueId).get();
+    const leagueSnapshot = await this.db
+      .collection("leagues")
+      .doc(leagueId)
+      .get();
     if (!leagueSnapshot.exists) {
       throw new NotFoundError("league not found", { leagueId });
     }
@@ -169,7 +186,11 @@ export class FirestoreLeagueRepository implements LeagueRepository {
     }));
   }
 
-  async setActiveSeason(leagueId: string, seasonId: string | null, seasonName: string | null): Promise<void> {
+  async setActiveSeason(
+    leagueId: string,
+    seasonId: string | null,
+    seasonName: string | null,
+  ): Promise<void> {
     await this.db.collection("leagues").doc(leagueId).update({
       active_season_id: seasonId,
       active_season_name: seasonName,
@@ -187,42 +208,80 @@ export class FirestoreLeagueRepository implements LeagueRepository {
       lowestScore: { value: number; userId: string; userName: string } | null;
     } | null;
   }): Promise<void> {
-    await this.db.collection("leagues").doc(params.leagueId).update({
-      total_match_count: params.totalMatchCount,
-      league_records: params.leagueRecords
-        ? {
-            win_streak: this.toRecordHolderDoc(params.leagueRecords.winStreak),
-            lose_streak: this.toRecordHolderDoc(params.leagueRecords.loseStreak),
-            highest_score: this.toRecordHolderDoc(params.leagueRecords.highestScore),
-            lowest_score: this.toRecordHolderDoc(params.leagueRecords.lowestScore),
-          }
-        : null,
-      updated_at: Timestamp.now(),
-    });
+    await this.db
+      .collection("leagues")
+      .doc(params.leagueId)
+      .update({
+        total_match_count: params.totalMatchCount,
+        league_records: params.leagueRecords
+          ? {
+              win_streak: this.toRecordHolderDoc(
+                params.leagueRecords.winStreak,
+              ),
+              lose_streak: this.toRecordHolderDoc(
+                params.leagueRecords.loseStreak,
+              ),
+              highest_score: this.toRecordHolderDoc(
+                params.leagueRecords.highestScore,
+              ),
+              lowest_score: this.toRecordHolderDoc(
+                params.leagueRecords.lowestScore,
+              ),
+            }
+          : null,
+        updated_at: Timestamp.now(),
+      });
   }
 
   private async findLeagueDocsByMember(memberUserId: string) {
-    const memberSnapshots = await this.db.collectionGroup("members").where("user_id", "==", memberUserId).get();
-    const leagueIds = [...new Set(memberSnapshots.docs.map((doc) => doc.ref.parent.parent?.id).filter(Boolean))] as string[];
-    const snapshots = await Promise.all(leagueIds.map((leagueId) => this.db.collection("leagues").doc(leagueId).get()));
+    const memberSnapshots = await this.db
+      .collectionGroup("members")
+      .where("user_id", "==", memberUserId)
+      .get();
+    const leagueIds = [
+      ...new Set(
+        memberSnapshots.docs
+          .map((doc) => doc.ref.parent.parent?.id)
+          .filter(Boolean),
+      ),
+    ] as string[];
+    const snapshots = await Promise.all(
+      leagueIds.map((leagueId) =>
+        this.db.collection("leagues").doc(leagueId).get(),
+      ),
+    );
     return snapshots.filter(
-      (snapshot): snapshot is FirebaseFirestore.DocumentSnapshot<FirebaseFirestore.DocumentData> & { exists: true } =>
-        snapshot.exists
+      (
+        snapshot,
+      ): snapshot is FirebaseFirestore.DocumentSnapshot<FirebaseFirestore.DocumentData> & {
+        exists: true;
+      } => snapshot.exists,
     );
   }
 
-  private async findMyStanding(leagueId: string, seasonId: string, memberUserId: string) {
+  private async findMyStanding(
+    leagueId: string,
+    seasonId: string,
+    memberUserId: string,
+  ) {
     if (!memberUserId) {
       return null;
     }
 
-    const seasonSnapshot = await this.db.collection("leagues").doc(leagueId).collection("seasons").doc(seasonId).get();
+    const seasonSnapshot = await this.db
+      .collection("leagues")
+      .doc(leagueId)
+      .collection("seasons")
+      .doc(seasonId)
+      .get();
     if (!seasonSnapshot.exists) {
       return null;
     }
 
     const standings = seasonSnapshot.data()?.standings ?? [];
-    const standing = Array.isArray(standings) ? standings.find((item) => item.user_id === memberUserId) : undefined;
+    const standing = Array.isArray(standings)
+      ? standings.find((item) => item.user_id === memberUserId)
+      : undefined;
 
     if (!standing) {
       return null;
@@ -234,7 +293,9 @@ export class FirestoreLeagueRepository implements LeagueRepository {
     };
   }
 
-  private mapRecordHolder(value: FirebaseFirestore.DocumentData | null | undefined) {
+  private mapRecordHolder(
+    value: FirebaseFirestore.DocumentData | null | undefined,
+  ) {
     if (!value) {
       return null;
     }
@@ -246,7 +307,9 @@ export class FirestoreLeagueRepository implements LeagueRepository {
     };
   }
 
-  private toRecordHolderDoc(value: { value: number; userId: string; userName: string } | null) {
+  private toRecordHolderDoc(
+    value: { value: number; userId: string; userName: string } | null,
+  ) {
     if (!value) {
       return null;
     }
