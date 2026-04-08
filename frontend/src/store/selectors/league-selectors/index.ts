@@ -1,8 +1,8 @@
 import { createSelector } from "@reduxjs/toolkit";
 
-import { RootState } from "../../index";
+import { LeagueIdType, LeagueRecord } from "@/types/domain/league";
 
-import { LeagueIdType } from "@/types/domain/league";
+import { RootState } from "../../index";
 
 // Basic selectors
 export const selectLeagues = (state: RootState) => state.league.leagues;
@@ -56,5 +56,5 @@ export const selectLeaguesCount = createSelector(
 
 export const selectLeagueRecord = createSelector(
   [selectSelectedLeague],
-  (league) => league?.leagueRecord ?? {}
+  (league) => league?.leagueRecord ?? ({} as LeagueRecord)
 );

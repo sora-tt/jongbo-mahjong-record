@@ -57,12 +57,9 @@ export const useLeague = () => {
   useEffect(() => {
     const fetchLeague = async () => {
       const mockKey = searchParams.get("_mock");
-      // TODO: console.logは削除する;
-      console.log(`Search params: ${searchParams.toString()}`);
+      const isDev = process.env.NODE_ENV === "development";
 
-      if (mockKey) {
-        // TODO: console.logは削除する
-        console.log(`Loading mock data for key: ${mockKey}`);
+      if (isDev && mockKey) {
         dispatch(setLoading(true));
         const mockData = await loadMockData({ mockKey });
         if (mockData) {
