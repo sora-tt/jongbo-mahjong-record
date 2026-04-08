@@ -50,9 +50,6 @@ npm run typecheck    # Run TypeScript type check
 
 ### Frontend Design Patterns
 
-- Extract page-level logic into custom hooks under `src/app/*/hooks/index.ts`
-- Hooks return state and handlers; page components focus on rendering
-- Use the `Spacer` component for layout (pass `padding`, `gap`, `display` as props)
 - When creating a new page, refer to `src/app/home/page.tsx` as a template
 - IDs use branded types (e.g. `LeagueIdType`); collections follow the `Record<ID, Item>` pattern
 - API is not yet integrated. Data comes from mocks under `src/mocks/`. Update mocks when domain types change
