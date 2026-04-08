@@ -5,10 +5,16 @@ import * as React from "react";
 import Header from "@/components/common/container/header";
 
 import { useLeague } from "./hooks";
+import { formatScore, formatStreak } from "./utils";
 
 const LeaguePage: React.FC = () => {
-  const { winStreak, loseStreak, highestScore, lowestScore, seasons } =
-    useLeague();
+  const {
+    longestWinStreak,
+    longestLoseStreak,
+    currentHighestScore,
+    currentLowestScore,
+    leagueSeasons,
+  } = useLeague();
 
   return (
     <div className="flex-1 bg-white min-h-screen font-jp">
@@ -24,10 +30,15 @@ const LeaguePage: React.FC = () => {
                 連勝記録
               </div>
               <div className="text-xs text-text-muted mb-2">
-                {winStreak.player}
+                {longestWinStreak?.playerName || "データなし"}
               </div>
               <div className="text-3xl font-bold text-brand-600">
-                {winStreak.text}
+                {longestWinStreak
+                  ? formatStreak({
+                      count: longestWinStreak.count,
+                      unit: "連勝",
+                    })
+                  : "データなし"}
               </div>
             </div>
             {/* 連敗記録 */}
@@ -36,10 +47,15 @@ const LeaguePage: React.FC = () => {
                 連敗記録
               </div>
               <div className="text-xs text-text-muted mb-2">
-                {loseStreak.player}
+                {longestLoseStreak?.playerName || "データなし"}
               </div>
               <div className="text-3xl font-bold text-brand-600">
-                {loseStreak.text}
+                {longestLoseStreak
+                  ? formatStreak({
+                      count: longestLoseStreak.count,
+                      unit: "連敗",
+                    })
+                  : "データなし"}
               </div>
             </div>
             {/* 最高スコア */}
@@ -48,10 +64,12 @@ const LeaguePage: React.FC = () => {
                 最高スコア
               </div>
               <div className="text-xs text-text-muted mb-2">
-                {highestScore.player}
+                {currentHighestScore?.playerName || "データなし"}
               </div>
               <div className="text-3xl font-bold text-brand-600">
-                {highestScore.text}
+                {currentHighestScore
+                  ? formatScore({ score: currentHighestScore.score })
+                  : "データなし"}
               </div>
             </div>
             {/* 最低スコア */}
@@ -60,10 +78,12 @@ const LeaguePage: React.FC = () => {
                 最低スコア
               </div>
               <div className="text-xs text-text-muted mb-2">
-                {lowestScore.player}
+                {currentLowestScore?.playerName || "データなし"}
               </div>
               <div className="text-3xl font-bold text-brand-600">
-                {lowestScore.text}
+                {currentLowestScore
+                  ? formatScore({ score: currentLowestScore.score })
+                  : "データなし"}
               </div>
             </div>
           </div>
@@ -73,7 +93,7 @@ const LeaguePage: React.FC = () => {
         <div className="flex flex-col gap-4 mt-8">
           <div className="text-2xl font-bold text-text-dark">シーズン一覧</div>
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-            {seasons.map((season) => (
+            {leagueSeasons.map((season) => (
               <div
                 key={season.leagueSeasonId}
                 className={`bg-white rounded-lg p-4 hover:shadow-lg transition-shadow relative ${

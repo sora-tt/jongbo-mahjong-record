@@ -3,6 +3,7 @@ import * as React from "react";
 import "./styles/globals.css";
 
 import { Metadata } from "next";
+
 import { AppProviders } from "@/components/app/providers";
 
 export const metadata: Metadata = {

@@ -5,12 +5,14 @@ import { Option } from "./types";
 export interface Props {
   defaultOption: string;
   options: Option[];
+  value?: string;
   onChange?: (e: React.ChangeEvent<HTMLSelectElement>, value: string) => void;
 }
 
 export const Dropdown: React.FC<Props> = ({
   defaultOption,
   options,
+  value,
   onChange,
 }) => {
   const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -19,6 +21,7 @@ export const Dropdown: React.FC<Props> = ({
 
   return (
     <select
+      value={value ?? ""}
       onChange={handleChange}
       style={{ marginLeft: "10px", padding: "5px" }}
     >

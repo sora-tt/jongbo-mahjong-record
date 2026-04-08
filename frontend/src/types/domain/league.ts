@@ -1,7 +1,7 @@
+import { AppDate } from "@/types/utils/app-date";
+
 import { Rule } from "./rule";
 import { User, UserIdType } from "./user";
-
-import { AppDate } from "@/types/utils/app-date";
 
 export type LeagueIdType = string;
 
@@ -13,12 +13,12 @@ export type League = {
   createdAt: AppDate;
   rule: Rule;
   members: Record<UserIdType, LeagueMember>;
-  seasons: Record<LeagueSeasonIdType, LeagueSeason>;
+  seasons?: Record<LeagueSeasonIdType, LeagueSeason>;
+  leagueRecord?: LeagueRecord;
   //仮で追加
-  lastRecordedAt: AppDate;
-  totalGames: number;
+  lastRecordedAt?: AppDate;
+  totalGames?: number;
   titles?: LeagueTitle[];
-  records?: LeagueRecord;
 };
 
 export type LeagueMember = {
@@ -37,6 +37,9 @@ export type LeagueSeason = {
   leagueSeasonId: LeagueSeasonIdType;
   name: string;
   members: Record<UserIdType, LeagueSeasonMember>;
+  memberCount: number;
+  gameCount: number;
+  isOngoing: boolean;
 };
 
 export type LeagueSeasonMember = {
@@ -66,10 +69,10 @@ export type LeagueTitle = {
 };
 
 export type LeagueRecord = {
-  winStreak: { text: string; player: string };
-  loseStreak: { text: string; player: string };
-  highestScore: { text: string; player: string };
-  lowestScore: { text: string; player: string };
+  longestWinStreak?: { count: number; playerName: string };
+  longestLoseStreak?: { count: number; playerName: string };
+  currentHighestScore?: { score: number; playerName: string };
+  currentLowestScore?: { score: number; playerName: string };
 };
 
 export type LeagueSeasonOverview = {
