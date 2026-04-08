@@ -1,11 +1,11 @@
-# CLAUDE.md - 雀望録 (Jongbo Mahjong Record)
+# CLAUDE.md - Jongbo Mahjong Record
 
-## プロジェクト概要
+## Project Overview
 
-麻雀の成績管理Webアプリケーション。リーグ作成・対局記録・成績追跡が主な機能。
-モノレポ構成で `frontend/` と `backend/` に分離されている。
+A web application for managing mahjong scores. Main features include league creation, match recording, and statistics tracking.
+This is a monorepo with `frontend/` and `backend/` directories.
 
-## 技術スタック
+## Tech Stack
 
 ### Frontend (`frontend/`)
 
@@ -17,76 +17,81 @@
 - Hono (Node.js), Firebase Admin SDK (Firestore, Auth), TypeScript
 - DDD / Clean Architecture
 
-## 開発コマンド
+## Development Commands
 
 ### Frontend
 
 ```bash
 cd frontend
-npm run dev          # 開発サーバー起動 (Turbopack)
-npm run build        # ビルド
-npm run lint:fix     # ESLint 自動修正
-npm run typecheck    # TypeScript 型チェック
+npm run dev          # Start dev server (Turbopack)
+npm run build        # Build
+npm run lint:fix     # Run ESLint with auto-fix
+npm run typecheck    # Run TypeScript type check
 ```
 
 ### Backend
 
 ```bash
 cd backend
-npm run emulator     # Firebase Emulator 起動（先に実行）
-npm run dev:emulator # Emulator接続で開発サーバー起動
-npm run seed         # Firestore にシードデータ投入
-npm run typecheck    # TypeScript 型チェック
+npm run emulator     # Start Firebase Emulator (run this first)
+npm run dev:emulator # Start dev server connected to the Emulator
+npm run seed         # Seed data into Firestore
+npm run typecheck    # Run TypeScript type check
 ```
 
-## コーディング規約
+## Coding Conventions
 
-### 基本ルール（ESLint + Prettier で強制）
+### Basic Rules (enforced by ESLint + Prettier)
 
-- コンポーネントは **アロー関数 + `React.FC`** で定義
-- import 順序: React/Next → サードパーティ → 内部モジュール(`@/`) → CSS
-- Prettier: 2スペース、LF、trailing comma
-- 未使用変数は `_` プレフィックスを付ける
+- Components must be defined as **arrow functions with `React.FC`**
+- Import order: React/Next → third-party → internal modules (`@/`) → CSS
+- Prettier: 2-space indent, LF line endings, trailing commas
+- Prefix unused variables with `_`
 
-### Frontend の設計パターン
+### Frontend Design Patterns
 
-- ページごとのロジックは `src/app/*/hooks/index.ts` にカスタムhookとして抽出する
-- hooks から状態とハンドラを返し、ページコンポーネントは表示に専念する
-- レイアウトは `Spacer` コンポーネントで制御する（padding, gap, display を props で指定）
-- 新規ページ作成時は `src/app/home/page.tsx` を参考にする
-- ID は branded types（`LeagueIdType` 等）、コレクションは `Record<ID, Item>` パターン
-- 現在 API 未接続。データは `src/mocks/` のモックを使用。ドメイン型変更時はモックも更新すること
+- Extract page-level logic into custom hooks under `src/app/*/hooks/index.ts`
+- Hooks return state and handlers; page components focus on rendering
+- Use the `Spacer` component for layout (pass `padding`, `gap`, `display` as props)
+- When creating a new page, refer to `src/app/home/page.tsx` as a template
+- IDs use branded types (e.g. `LeagueIdType`); collections follow the `Record<ID, Item>` pattern
+- API is not yet integrated. Data comes from mocks under `src/mocks/`. Update mocks when domain types change
 
-### Backend の設計パターン
+### Backend Design Patterns
 
-- `src/http/routes/` → `src/application/services/` → `src/domain/` → `src/infrastructure/` の依存方向
-- リポジトリは `src/domain/repositories/` にインターフェース、`src/infrastructure/repositories/` に実装
+- Dependency direction: `src/http/routes/` → `src/application/services/` → `src/domain/` → `src/infrastructure/`
+- Repositories: interfaces in `src/domain/repositories/`, implementations in `src/infrastructure/repositories/`
 
-## Git ワークフロー
+## Git Workflow
 
-- メインブランチ: `develop`（**直接変更禁止**）
-- 作業ブランチ: `ISSUE-XX-description`（Issue 番号を必ず含める）
-- 開発フロー: Issue 作成 → ブランチ作成 → 開発 → PR 作成 → レビュー → マージ
-- コミットメッセージは英語で簡潔に
-- コードレビューは **日本語** で行う
-- 詳細: `docs/how-to-manage-our-development.md`
+- Main branch: `develop` (**direct changes are forbidden**)
+- Working branches: `ISSUE-XX-description` (always include the Issue number)
+- Development flow: create Issue → create branch → develop → create PR → review → merge
+- Write commit messages in English, keep them concise
+- **Write code reviews in Japanese**
+- For details, see `docs/how-to-manage-our-development.md`
 
-## ドキュメント一覧
+## Documentation Index
 
-| ファイル | 内容 |
+| File | Description |
 |---|---|
-| `docs/how-to-manage-our-development.md` | Git 運用ガイド |
-| `docs/pull-request-template.md` | PR テンプレート |
-| `docs/architecture.drawio` | アーキテクチャ図 |
-| `backend/docs/api-design.md` | API 設計書 |
-| `backend/docs/api-reference.md` | API リファレンス |
-| `backend/docs/auth-design.md` | 認証設計書 |
-| `backend/docs/firestore.yaml` | Firestore スキーマ定義 |
+| `docs/how-to-manage-our-development.md` | Git workflow guide |
+| `docs/pull-request-template.md` | PR template |
+| `docs/architecture.drawio` | Architecture diagram |
+| `backend/docs/api-design.md` | API design document |
+| `backend/docs/api-reference.md` | API reference |
+| `backend/docs/auth-design.md` | Authentication design document |
+| `backend/docs/firestore.yaml` | Firestore schema definition |
 | `docs/swagger/` | Swagger UI |
 
-## 注意事項
+## Notes
 
-- Frontend は現在モックデータで動作（API 統合は未実施）
-- Backend は開発途中の部分あり
-- Node.js バージョンは `.nvmrc` で管理。`nvm use` で合わせること
-- 環境変数ファイル（`.env` 等）はコミットしない
+- The frontend currently runs on mock data (API integration is pending)
+- The backend has parts still under development
+- Node.js version is managed via `.nvmrc`; run `nvm use` to match it
+- Do not commit environment variable files (e.g. `.env`)
+
+## Communication with the User
+
+- Always respond to the user in **Japanese**
+- The user's name is "Souma" (そうま), a beginner developer — explain things clearly and help build their skills
