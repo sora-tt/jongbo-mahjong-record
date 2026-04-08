@@ -13,15 +13,15 @@ export const usePersonalRecord = () => {
       const league = leaguesData[leagueId];
       // 各リーグのシーズンIDを取得
       const leagueSeasonIds = Object.keys(
-        league.seasons
+        league.seasons || {}
       ) as LeagueSeasonIdType[];
 
       return leagueSeasonIds.map((leagueSeasonId) => {
-        const leagueSeason = league.seasons[leagueSeasonId];
+        const leagueSeason = league.seasons?.[leagueSeasonId];
         return {
           id: leagueSeasonId,
           leagueId: leagueId,
-          name: `${league.name} - ${leagueSeason.name}`,
+          name: `${league.name} - ${leagueSeason?.name}`,
         };
       });
     });
@@ -58,8 +58,8 @@ export const usePersonalRecord = () => {
     }
 
     const league = leaguesData[selectedLeague.leagueId];
-    const leagueSeason = league.seasons[selectedLeagueSeasonId];
-    const leagueSeasonMember = leagueSeason.members[userId];
+    const leagueSeason = league.seasons?.[selectedLeagueSeasonId];
+    const leagueSeasonMember = leagueSeason?.members?.[userId];
 
     setSelectedLeagueSeasonMember(leagueSeasonMember || null);
   }, [selectedLeagueSeasonId, joiningLeagueSeasons, userId]);

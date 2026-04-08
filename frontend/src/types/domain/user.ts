@@ -1,7 +1,6 @@
 import { ColorState } from "./color";
 import { LeagueIdType } from "./league";
-
-import { AppDate } from "@/types/utils/app-date";
+import { AppDate } from "../utils/app-date";
 
 export type UserBase = {
   userId: UserIdType;

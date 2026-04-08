@@ -5,6 +5,8 @@ import * as React from "react";
 import clsx from "clsx";
 import { BookOpen, Calendar, Crown } from "lucide-react";
 
+import { COLOR_MAP } from "@/constants/color-map";
+
 import Header from "@/components/common/container/header";
 import { LeagueRankingTable } from "@/components/pages/league/league-ranking-table";
 import { Button } from "@/components/ui/button";
@@ -12,8 +14,6 @@ import { HeaderCard } from "@/components/ui/header-card";
 import { SectionCard } from "@/components/ui/section-card";
 
 import { useLeague } from "./hooks";
-
-import { COLOR_MAP } from "@/constants/color-map";
 
 const SeasonPage: React.FC = () => {
   const { league, error } = useLeague();
@@ -45,7 +45,9 @@ const SeasonPage: React.FC = () => {
               <Calendar size={14} className="text-white" />
               <span>
                 {createdAt.format("yyyy/MM/dd")} 〜{" "}
-                {lastRecordedAt.format("yyyy/MM/dd")}
+                {lastRecordedAt
+                  ? lastRecordedAt.format("yyyy/MM/dd")
+                  : "未記録"}
               </span>
             </span>
             <span className="inline-flex items-center gap-1">
