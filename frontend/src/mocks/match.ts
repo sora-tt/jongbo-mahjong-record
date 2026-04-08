@@ -6,6 +6,7 @@ import type {
   MatchIdType,
   MatchResultInput,
 } from "@/types/domain/match";
+import type { AppDate } from "@/types/utils/app-date";
 
 export const matchResultInputData1: MatchResultInput = {
   EAST: { player: userData1, score: -80, rank: 4 },
@@ -17,11 +18,11 @@ export const matchResultInputData1: MatchResultInput = {
 export const matchData1: Match = {
   matchId: "match-000001",
   leagueId: leagueData1.leagueId,
-  playedAt: leagueData1.lastRecordedAt,
-  createdAt: leagueData1.lastRecordedAt,
+  playedAt: leagueData1.lastRecordedAt as AppDate,
+  createdAt: leagueData1.lastRecordedAt as AppDate,
   results: {
     matchResultInput: matchResultInputData1,
-    createdAt: leagueData1.lastRecordedAt,
+    createdAt: leagueData1.lastRecordedAt as AppDate,
   },
 };
 
@@ -35,11 +36,11 @@ export const matchResultInputData2: MatchResultInput = {
 export const matchData2: Match = {
   matchId: "match-000002",
   leagueId: leagueData1.leagueId,
-  playedAt: leagueData1.lastRecordedAt,
-  createdAt: leagueData1.lastRecordedAt,
+  playedAt: leagueData1.lastRecordedAt as AppDate,
+  createdAt: leagueData1.lastRecordedAt as AppDate,
   results: {
     matchResultInput: matchResultInputData2,
-    createdAt: leagueData1.lastRecordedAt,
+    createdAt: leagueData1.lastRecordedAt as AppDate,
   },
 };
 
@@ -53,11 +54,11 @@ export const matchResultInputData3: MatchResultInput = {
 export const matchData3: Match = {
   matchId: "match-000003",
   leagueId: leagueData1.leagueId,
-  playedAt: leagueData1.lastRecordedAt,
-  createdAt: leagueData1.lastRecordedAt,
+  playedAt: leagueData1.lastRecordedAt as AppDate,
+  createdAt: leagueData1.lastRecordedAt as AppDate,
   results: {
     matchResultInput: matchResultInputData3,
-    createdAt: leagueData1.lastRecordedAt,
+    createdAt: leagueData1.lastRecordedAt as AppDate,
   },
 };
 
