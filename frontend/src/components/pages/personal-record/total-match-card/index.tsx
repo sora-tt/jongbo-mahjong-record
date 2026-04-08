@@ -1,10 +1,10 @@
 import * as React from "react";
 
+import { LeagueSeasonMember } from "@/types/domain/league";
+
 import { PersonalRecordCard } from "@/components/pages/personal-record/personal-record-card";
 
 import { useTotalMatchCard } from "./hooks";
-
-import { LeagueSeasonMember } from "@/types/domain/league";
 
 interface TotalMatchCardProps {
   selectedLeagueSeasonMember: LeagueSeasonMember | null;

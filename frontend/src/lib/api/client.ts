@@ -8,7 +8,12 @@ export class ApiError extends Error {
   code?: string;
   details?: unknown;
 
-  constructor(message: string, status: number, code?: string, details?: unknown) {
+  constructor(
+    message: string,
+    status: number,
+    code?: string,
+    details?: unknown
+  ) {
     super(message);
     this.name = "ApiError";
     this.status = status;
@@ -20,7 +25,8 @@ export class ApiError extends Error {
 const LOCAL_HOSTS = new Set(["127.0.0.1", "localhost"]);
 
 const getApiBaseUrl = () => {
-  const configuredBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8080";
+  const configuredBaseUrl =
+    process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8080";
 
   if (typeof window === "undefined") {
     return configuredBaseUrl;
@@ -46,7 +52,10 @@ const buildHeaders = async (headers?: HeadersInit) => {
   return nextHeaders;
 };
 
-export const apiRequest = async <T>(path: string, options: RequestOptions = {}): Promise<T> => {
+export const apiRequest = async <T>(
+  path: string,
+  options: RequestOptions = {}
+): Promise<T> => {
   const response = await fetch(`${getApiBaseUrl()}${path}`, {
     ...options,
     credentials: "include",
@@ -54,9 +63,10 @@ export const apiRequest = async <T>(path: string, options: RequestOptions = {}):
     body: options.body === undefined ? undefined : JSON.stringify(options.body),
   });
 
-  const payload = (await response.json().catch(() => null)) as
-    | { data?: T; error?: { message?: string; code?: string; details?: unknown } }
-    | null;
+  const payload = (await response.json().catch(() => null)) as {
+    data?: T;
+    error?: { message?: string; code?: string; details?: unknown };
+  } | null;
 
   if (!response.ok) {
     throw new ApiError(
@@ -80,10 +90,13 @@ export type UserProfile = {
 };
 
 export const createSession = async (idToken: string) =>
-  apiRequest<{ authenticated: boolean; expiresAt: string }>("/api/auth/session", {
-    method: "POST",
-    body: { idToken },
-  });
+  apiRequest<{ authenticated: boolean; expiresAt: string }>(
+    "/api/auth/session",
+    {
+      method: "POST",
+      body: { idToken },
+    }
+  );
 
 export const deleteSession = async () =>
   apiRequest<null>("/api/auth/session", {
@@ -93,7 +106,7 @@ export const deleteSession = async () =>
 export const createMe = async (input: { name: string; username: string }) =>
   apiRequest<UserProfile>("/api/users/me", {
     method: "POST",
-  body: input,
+    body: input,
   });
 
 export const fetchMe = async () =>

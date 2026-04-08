@@ -1,10 +1,10 @@
 import { useCallback, useState, type ChangeEvent } from "react";
 
-import type { LeagueMember, LeagueSeasonMember } from "@/types/domain/league";
-import type { UserIdType } from "@/types/domain/user";
-
 import { leagueData1 } from "@/mocks/league";
 import { convertLeagueMemberToLeagueSeasonMember } from "@/types/domain/league-converter";
+
+import type { LeagueMember, LeagueSeasonMember } from "@/types/domain/league";
+import type { UserIdType } from "@/types/domain/user";
 
 export const useSeasonNew = () => {
   const leagueMembers: Record<UserIdType, LeagueMember> = leagueData1.members;

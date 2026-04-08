@@ -1,7 +1,9 @@
 "use client";
 
 import * as React from "react";
+
 import { useRouter } from "next/navigation";
+
 import { loginToApp } from "@/lib/auth/flows";
 
 export const useLoginPage = () => {
@@ -19,7 +21,11 @@ export const useLoginPage = () => {
       await loginToApp({ email, password });
       router.replace("/home");
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "ログインに失敗しました");
+      setError(
+        submitError instanceof Error
+          ? submitError.message
+          : "ログインに失敗しました"
+      );
     } finally {
       setIsSubmitting(false);
     }

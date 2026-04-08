@@ -1,10 +1,13 @@
 "use client";
 
 import * as React from "react";
+
 import { useRouter } from "next/navigation";
+
 import { signupToApp } from "@/lib/auth/flows";
 
-const REQUIRED_FIELDS_ERROR = "メールアドレス、表示名、ユーザーネーム、パスワードを入力してください";
+const REQUIRED_FIELDS_ERROR =
+  "メールアドレス、表示名、ユーザーネーム、パスワードを入力してください";
 
 export const useSignupPage = () => {
   const router = useRouter();
@@ -33,7 +36,11 @@ export const useSignupPage = () => {
       });
       router.replace("/home");
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "アカウント作成に失敗しました");
+      setError(
+        submitError instanceof Error
+          ? submitError.message
+          : "アカウント作成に失敗しました"
+      );
     } finally {
       setIsSubmitting(false);
     }

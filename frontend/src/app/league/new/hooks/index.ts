@@ -2,12 +2,12 @@
 
 import * as React from "react";
 
-import type { Option } from "@/components/ui/dropdown/types";
-
 import { rulesData } from "@/mocks/rule";
 import { userBaseListData } from "@/mocks/user-base";
 import { Rule, RuleIdType } from "@/types/domain/rule";
 import { UserBase, UserIdType } from "@/types/domain/user";
+
+import type { Option } from "@/components/ui/dropdown/types";
 
 export const useLeagueNew = () => {
   const users = userBaseListData;

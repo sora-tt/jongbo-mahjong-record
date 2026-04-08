@@ -1,8 +1,8 @@
 import { useState } from "react";
 
-import { Props as DropdownProps } from "@/components/ui/dropdown";
-
 import { leagueMembersData } from "@/mocks/league-member";
+
+import { Props as DropdownProps } from "@/components/ui/dropdown";
 
 export const usePlayerSelect = () => {
   const [players, setPlayers] = useState({
