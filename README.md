@@ -15,15 +15,14 @@
 ## 前提
 
 - Node.js を利用します（nvm を用いてバージョン管理）。
-- npm を利用します。
+- pnpm を利用します（ルートで `pnpm install` すると全アプリケーションの依存が一括でインストールされます）。
 - 以下を順番に実行してください。
 ```bash
 cd /path/to/jongbo-mahjong-record
 git config core.hooksPath .githooks
-cd frontend
 nvm use
-cd ../backend
-nvm use
+npm install -g pnpm
+pnpm install
 ```
 
 ---
@@ -35,21 +34,26 @@ Next.js (App Router) で実装された Web フロントエンドです。
 ### セットアップと起動
 
 ```bash
-cd frontend
-npm ci
-npm run dev
+# ルートで pnpm install 済みであれば不要
+pnpm --filter mahjong-record-app-frontend install
+pnpm --filter mahjong-record-app-frontend dev
+```
+
+またはルートから:
+```bash
+pnpm dev:frontend
 ```
 
 - 起動後: http://localhost:3000
 
-### 主な npm scripts
+### 主な pnpm scripts
 
-- `npm run dev`: 開発サーバ起動
-- `npm run build`: 本番ビルド
-- `npm run start`: 本番ビルドの起動
-- `npm run lint`: ESLint
-- `npm run lint:fix`: ESLint 自動修正
-- `npm run typecheck`: TypeScript 型チェック
+- `pnpm dev:frontend` (ルート) または `pnpm dev` (frontend 内): 開発サーバ起動
+- `pnpm build`: 本番ビルド
+- `pnpm start`: 本番ビルドの起動
+- `pnpm lint`: ESLint
+- `pnpm lint:fix`: ESLint 自動修正
+- `pnpm typecheck`: TypeScript 型チェック
 
 ### 主なディレクトリ
 
@@ -67,8 +71,8 @@ Hono + Firestore で実装された API サーバです。ローカルでは Fir
 ### セットアップ
 
 ```bash
-cd backend
-npm ci
+# ルートで pnpm install 済みであれば不要
+pnpm --filter mahjong-record-app-backend install
 ```
 
 ### ローカル開発（Emulator 利用）
@@ -76,7 +80,7 @@ npm ci
 1. Emulator 起動
 
 ```bash
-npm run emulator
+pnpm run emulator
 ```
 
 - Auth: `127.0.0.1:9099`
@@ -86,27 +90,27 @@ npm run emulator
 2. seed データ投入
 
 ```bash
-npm run seed
+pnpm run seed
 ```
 
 3. API サーバ起動
 
 ```bash
-npm run dev:emulator
+pnpm run dev:emulator
 ```
 
 - API: `http://127.0.0.1:8080`
 
-### 主な npm scripts
+### 主な pnpm scripts
 
-- `npm run dev`: API サーバ起動（通常）
-- `npm run start`: API サーバ起動（単発実行）
-- `npm run typecheck`: TypeScript 型チェック
-- `npm run emulator`: Firebase Emulator 起動
-- `npm run seed`: Emulator 向け seed 投入
-- `npm run dev:emulator`: Emulator 接続で API 起動
-- `npm run lint`: ESLint ルールが正しく適用されているかチェック
-- `npm run lint:fix`: ESLint ルールに沿ってコードを修正
+- `pnpm dev`: API サーバ起動（通常）
+- `pnpm start`: API サーバ起動（単発実行）
+- `pnpm typecheck`: TypeScript 型チェック
+- `pnpm emulator`: Firebase Emulator 起動
+- `pnpm seed`: Emulator 向け seed 投入
+- `pnpm dev:emulator`: Emulator 接続で API 起動
+- `pnpm lint`: ESLint ルールが正しく適用されているかチェック
+- `pnpm lint:fix`: ESLint ルールに沿ってコードを修正
 
 ### API ドキュメント
 
