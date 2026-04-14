@@ -17,12 +17,12 @@ run_typecheck_for_dir() {
 
     TMPFILE=$(mktemp)
 
-    if npm run typecheck >"$TMPFILE" 2>&1; then
+    if pnpm run typecheck >"$TMPFILE" 2>&1; then
       printf '\033[32mType looks good in %s\033[0m\n' "$TARGET_DIR"
       rm -f "$TMPFILE"
     else
       printf '\033[31mTypecheck failed in %s\033[0m\n' "$TARGET_DIR"
-      printf "Please run 'npm run typecheck' locally in %s to fix the issues.\n" "$TARGET_DIR"
+      printf "Please run 'pnpm run typecheck' locally in %s to fix the issues.\n" "$TARGET_DIR"
       cat "$TMPFILE"
       rm -f "$TMPFILE"
       exit 1
