@@ -41,7 +41,7 @@ run_checks_for_dir() {
     export PATH="$(pwd)/node_modules/.bin:$PATH"
 
     if ! command -v prettier >/dev/null 2>&1; then
-      echo "Error: prettier is not installed in ${TARGET_DIR}. Please run 'npm ci'."
+      echo "Error: prettier is not installed in ${TARGET_DIR}. Please run 'pnpm install' at repository root."
       exit 1
     fi
 
@@ -49,7 +49,7 @@ run_checks_for_dir() {
     xargs -0 prettier --write -- < "$FILES_NUL_PATH"
 
     if ! command -v eslint >/dev/null 2>&1; then
-      echo "Error: eslint is not installed in ${TARGET_DIR}. Please run 'npm ci'."
+      echo "Error: eslint is not installed in ${TARGET_DIR}. Please run 'pnpm install' at repository root."
       exit 1
     fi
 
