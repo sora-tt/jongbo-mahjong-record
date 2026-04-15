@@ -22,29 +22,42 @@ This is a monorepo with `frontend/` and `backend/` directories.
 ### Frontend
 
 ```bash
+# From the repository root
+pnpm dev:frontend    # Start dev server (Turbopack)
+pnpm build           # Build
+pnpm lint:fix        # Run ESLint with auto-fix
+pnpm typecheck       # Run TypeScript type check
+
+# Or from frontend/
 cd frontend
-npm run dev          # Start dev server (Turbopack)
-npm run build        # Build
-npm run lint:fix     # Run ESLint with auto-fix
-npm run typecheck    # Run TypeScript type check
+pnpm dev             # Start dev server (Turbopack)
+pnpm build           # Build
+pnpm lint:fix        # Run ESLint with auto-fix
+pnpm typecheck       # Run TypeScript type check
 ```
 
 ### Backend
 
 ```bash
+# From the repository root
+pnpm dev:backend     # Start backend dev server
+pnpm typecheck       # Run TypeScript type check for all packages
+
+# Or from backend/
 cd backend
-npm run emulator     # Start Firebase Emulator (run this first)
-npm run dev:emulator # Start dev server connected to the Emulator
-npm run seed         # Seed data into Firestore
-npm run typecheck    # Run TypeScript type check
+pnpm emulator        # Start Firebase Emulator (run this first)
+pnpm dev:emulator    # Start dev server connected to the Emulator
+pnpm seed            # Seed data into Firestore
+pnpm typecheck       # Run TypeScript type check
 ```
 
 ## Coding Conventions
 
 ### Basic Rules (enforced by ESLint + Prettier)
 
-- Components must be defined as **arrow functions with `React.FC`**
-- Import order: React/Next → third-party → internal modules (`@/`) → CSS
+- Components must be defined as **arrow functions**
+- Using `React.FC` is recommended, but not mandatory
+- Import order must follow `{frontend,backend}/eslint.config.mjs`: `builtin` → `external` (place `react` first and keep `next/**` grouped after it) → `internal` (`@/`) → `relative` → `type`; treat `**/*.css` as a separate group
 - Prettier: 2-space indent, LF line endings, trailing commas
 - Prefix unused variables with `_`
 
@@ -54,7 +67,7 @@ npm run typecheck    # Run TypeScript type check
 - Hooks return state and handlers; page components focus on rendering
 - When creating a new page, refer to `src/app/home/page.tsx` as a template
 - IDs use branded types (e.g. `LeagueIdType`); collections follow the `Record<ID, Item>` pattern
-- API is not yet integrated. Data comes from mocks under `src/mocks/`. Update mocks when domain types change
+- API integration is still ongoing, and some data currently comes from mocks under `src/mocks/`. Update mocks when domain types change
 
 ### Backend Design Patterns
 
@@ -97,5 +110,6 @@ npm run typecheck    # Run TypeScript type check
 
 - The frontend currently runs on mock data (API integration is pending)
 - The backend has parts still under development
+- Use `pnpm` for dependency management and script execution across the monorepo
 - Node.js version is managed via `.nvmrc`; run `nvm use` to match it
 - Do not commit environment variable files (e.g. `.env`)
