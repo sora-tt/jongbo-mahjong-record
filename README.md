@@ -21,7 +21,7 @@
 cd /path/to/jongbo-mahjong-record
 git config core.hooksPath .githooks
 nvm use
-npm install -g pnpm
+corepack enable
 pnpm install
 ```
 
@@ -108,7 +108,7 @@ pnpm run dev:emulator
 - `pnpm typecheck`: TypeScript 型チェック
 - `pnpm emulator`: Firebase Emulator 起動
 - `pnpm seed`: Emulator 向け seed 投入
-- `pnpm dev:emulator`: Emulator 接続で API 起動
+- `pnpm run dev:emulator`: Emulator 接続で API 起動
 - `pnpm lint`: ESLint ルールが正しく適用されているかチェック
 - `pnpm lint:fix`: ESLint ルールに沿ってコードを修正
 
