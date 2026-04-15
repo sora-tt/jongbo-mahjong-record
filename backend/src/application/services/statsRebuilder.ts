@@ -4,13 +4,15 @@ import {
   buildSeasonRecords,
   buildStandings,
   buildUserStats,
-} from "@/domain/aggregation.js";
-import type { MatchResult, ScopeType, SeasonMember } from "@/domain/models.js";
-import type { LeagueRepository } from "@/domain/repositories/leagueRepository.js";
-import type { MatchRepository } from "@/domain/repositories/matchRepository.js";
-import type { SeasonRepository } from "@/domain/repositories/seasonRepository.js";
-import type { SessionRepository } from "@/domain/repositories/sessionRepository.js";
-import type { UserStatsRepository } from "@/domain/repositories/userStatsRepository.js";
+} from "@/domain/shared/aggregation.js";
+import type { MatchResult } from "@/domain/match/types.js";
+import type { MatchRepository } from "@/domain/match/repository.js";
+import type { LeagueRepository } from "@/domain/league/repository.js";
+import type { SeasonMember } from "@/domain/season/types.js";
+import type { SeasonRepository } from "@/domain/season/repository.js";
+import type { SessionRepository } from "@/domain/session/repository.js";
+import type { ScopeType } from "@/domain/shared/types.js";
+import type { UserStatsRepository } from "@/domain/user/repository.js";
 
 export class StatsRebuilder {
   constructor(

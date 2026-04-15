@@ -1,5 +1,5 @@
-import { ValidationError } from "@/errors.js";
-import type { UserRepository } from "@/domain/repositories/userRepository.js";
+import { ValidationError } from "@/domain/shared/errors.js";
+import type { UserRepository } from "@/domain/user/repository.js";
 
 const normalizeUsername = (value: string) =>
   value

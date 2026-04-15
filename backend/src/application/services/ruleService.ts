@@ -1,5 +1,5 @@
-import type { RuleRepository } from "@/domain/repositories/ruleRepository.js";
-import { ValidationError } from "@/errors.js";
+import type { RuleRepository } from "@/domain/rule/repository.js";
+import { ValidationError } from "@/domain/shared/errors.js";
 
 export class RuleService {
   constructor(private readonly ruleRepository: RuleRepository) {}

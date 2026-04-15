@@ -12,7 +12,9 @@
     "types": ["node"],
     "jsx": "react-jsx",
     "jsxImportSource": "hono/jsx",
-    "outDir": "./dist"
+    "outDir": "./dist",
+    "composite": true,
+    "declaration": true
   },
   "exclude": ["node_modules"]
 }
