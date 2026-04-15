@@ -17,7 +17,7 @@ export const useSeasonEdit = () => {
   const seasonId = params.seasonId as LeagueSeasonIdType;
 
   const foundLeague = Object.values(leaguesData).find(
-    (league) => seasonId in league.seasons
+    (league) => league.seasons != null && seasonId in league.seasons
   );
 
   const leagueMembers = useMemo<Record<UserIdType, LeagueMember>>(
@@ -26,11 +26,11 @@ export const useSeasonEdit = () => {
   );
 
   const [seasonName, setSeasonName] = useState<string>(
-    () => foundLeague?.seasons[seasonId]?.name ?? ""
+    () => foundLeague?.seasons?.[seasonId]?.name ?? ""
   );
   const [selectedMembers, setSelectedMembers] = useState<
     Record<UserIdType, LeagueSeasonMember>
-  >(() => foundLeague?.seasons[seasonId]?.members ?? {});
+  >(() => foundLeague?.seasons?.[seasonId]?.members ?? {});
 
   const handleSeasonNameChange = useCallback(
     (e: ChangeEvent<HTMLInputElement>) => {

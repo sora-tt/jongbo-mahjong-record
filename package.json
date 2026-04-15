@@ -1,0 +1,13 @@
+{
+  "name": "jongbo-mahjong-record",
+  "private": true,
+  "scripts": {
+    "dev:frontend": "pnpm --filter mahjong-record-app-frontend dev",
+    "dev:backend": "pnpm --filter mahjong-record-app-backend dev",
+    "build": "pnpm --filter mahjong-record-app-frontend build",
+    "lint": "pnpm -r lint",
+    "lint:fix": "pnpm -r lint:fix",
+    "typecheck": "pnpm -r typecheck"
+  },
+  "packageManager": "pnpm@10.33.0"
+}
