@@ -300,17 +300,6 @@ const EditLeaguePage: React.FC = () => {
                             );
                           })}
                         </p>
-
-                        <p className="text-xs text-brand-600">
-                          <span className="font-semibold text-brand-700">
-                            点数計算：
-                          </span>
-                          {rule.scoreCalc === "decimal" && "小数点有効"}
-                          {rule.scoreCalc === "fiveDropSixUp" && "五捨六入"}
-                          {rule.scoreCalc === "round" && "四捨五入"}
-                          {rule.scoreCalc === "floor" && "切り捨て"}
-                          {rule.scoreCalc === "ceil" && "切り上げ"}
-                        </p>
                       </Spacer>
                     </Spacer>
                   </Spacer>
