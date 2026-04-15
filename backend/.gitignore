@@ -30,3 +30,4 @@ lerna-debug.log*
 
 # add
 cookie.txt
+*.tsbuildinfo

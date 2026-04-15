@@ -15,6 +15,12 @@ export class ValidationError extends AppError {
   }
 }
 
+export class UnauthorizedError extends AppError {
+  constructor(message: string, details?: Record<string, unknown>) {
+    super(message, 401, "authentication_error", details);
+  }
+}
+
 export class NotFoundError extends AppError {
   constructor(message: string, details?: Record<string, unknown>) {
     super(message, 404, "not_found", details);

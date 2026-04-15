@@ -1,3 +1,4 @@
+import { UnauthorizedError } from "@/domain/shared/errors.js";
 import { getAdminAuth } from "@/infrastructure/firebase/client.js";
 import type { AppBindings } from "@/presentation/bindings.js";
 import { ok } from "@/presentation/response.js";
@@ -20,11 +21,19 @@ export const buildAuthRouter = () =>
         const { idToken } = c.req.valid("json");
         const expiresIn = getSessionMaxAgeSeconds() * 1000;
 
-        await getAdminAuth().verifyIdToken(idToken);
-        const sessionCookie = await getAdminAuth().createSessionCookie(
-          idToken,
-          { expiresIn },
-        );
+        let sessionCookie: string;
+
+        try {
+          await getAdminAuth().verifyIdToken(idToken);
+
+          sessionCookie = await getAdminAuth().createSessionCookie(idToken, {
+            expiresIn,
+          });
+        } catch (e) {
+          throw new UnauthorizedError("Invalid or expired idToken", {
+            originalError: e instanceof Error ? e.message : String(e),
+          });
+        }
 
         setCookie(
           c,
