@@ -7,11 +7,18 @@ import { leaguesData } from "@/mocks/league";
 import { rulesData } from "@/mocks/rule";
 import { userBaseListData } from "@/mocks/user-base";
 
-import type { Option } from "@/components/ui/dropdown/types";
-
 import type { LeagueIdType } from "@/types/domain/league";
-import type { Rule, RuleIdType } from "@/types/domain/rule";
+import type { OkaType, Rank, Rule, RuleIdType } from "@/types/domain/rule";
 import type { UserBase, UserIdType } from "@/types/domain/user";
+
+type RuleSettings = {
+  okaStartPoints: string;
+  okaReturnPoints: string;
+  uma1: string;
+  uma2: string;
+  uma3: string;
+  uma4: string;
+};
 
 export const useLeagueEdit = () => {
   const params = useParams();
@@ -22,9 +29,15 @@ export const useLeagueEdit = () => {
   const [addedMembers, setAddedMembers] = useState<
     Record<UserIdType, UserBase>
   >({});
-  const [selectedRule, setSelectedRule] = useState<RuleIdType | null>(null);
   const [addedRules, setAddedRules] = useState<Record<RuleIdType, Rule>>({});
-  const [ruleOptions, setRuleOptions] = useState<Option[]>([]);
+  const [ruleSettings, setRuleSettings] = useState<RuleSettings>({
+    okaStartPoints: "",
+    okaReturnPoints: "",
+    uma1: "",
+    uma2: "",
+    uma3: "",
+    uma4: "",
+  });
 
   const allRules = rulesData;
 
@@ -48,12 +61,15 @@ export const useLeagueEdit = () => {
           [dummyLeague.rule.ruleId]: dummyLeague.rule,
         });
 
-        setRuleOptions(
-          Object.entries(allRules).map(([id, rule]) => ({
-            label: rule.name,
-            value: id,
-          }))
-        );
+        // ルール情報を RuleSettings に変換して初期化
+        setRuleSettings({
+          okaStartPoints: dummyLeague.rule.oka.startPoints.toString(),
+          okaReturnPoints: dummyLeague.rule.oka.returnPoints.toString(),
+          uma1: dummyLeague.rule.uma[1]?.toString() || "",
+          uma2: dummyLeague.rule.uma[2]?.toString() || "",
+          uma3: dummyLeague.rule.uma[3]?.toString() || "",
+          uma4: dummyLeague.rule.uma[4]?.toString() || "",
+        });
       };
       fetchLeague();
     }
@@ -95,7 +111,7 @@ export const useLeagueEdit = () => {
     });
 
     setMemberQuery("");
-  }, [memberQuery, userBaseListData]);
+  }, [memberQuery]);
 
   const handleRemoveMember = useCallback((id: UserIdType) => {
     setAddedMembers((prev) => {
@@ -105,36 +121,6 @@ export const useLeagueEdit = () => {
     });
   }, []);
 
-  const handleRuleSelectChange = useCallback(
-    (_e: ChangeEvent<HTMLSelectElement>, value: string) => {
-      if (value === "") {
-        setSelectedRule(null);
-        return;
-      }
-      setSelectedRule(value as RuleIdType);
-    },
-    []
-  );
-
-  const handleAddRule = useCallback(() => {
-    if (!selectedRule) return;
-
-    const rule = allRules[selectedRule];
-    if (!rule) return;
-
-    setAddedRules((prev) => {
-      if (prev[rule.ruleId]) {
-        return prev;
-      }
-      return {
-        ...prev,
-        [rule.ruleId]: rule,
-      };
-    });
-
-    setSelectedRule(null);
-  }, [selectedRule, allRules]);
-
   const handleRemoveRule = useCallback((ruleId: RuleIdType) => {
     setAddedRules((prev) => {
       const newRules = { ...prev };
@@ -143,29 +129,62 @@ export const useLeagueEdit = () => {
     });
   }, []);
 
+  const handleRuleSettingChange = useCallback(
+    (field: keyof RuleSettings, value: string) => {
+      setRuleSettings((prev) => ({ ...prev, [field]: value }));
+    },
+    []
+  );
+
   const handleSubmit = useCallback(() => {
+    // ルール設定が編集されている場合は、それを反映
+    const okaStartPoints = ruleSettings.okaStartPoints.trim()
+      ? parseInt(ruleSettings.okaStartPoints, 10)
+      : null;
+    const okaReturnPoints = ruleSettings.okaReturnPoints.trim()
+      ? parseInt(ruleSettings.okaReturnPoints, 10)
+      : null;
+
+    if (!okaStartPoints || !okaReturnPoints) {
+      alert("オカの設定をすべて入力してください");
+      return;
+    }
+
+    const oka: OkaType = {
+      startPoints: okaStartPoints,
+      returnPoints: okaReturnPoints,
+    };
+
+    const uma: Record<Rank, number> = {
+      1: ruleSettings.uma1.trim() ? parseInt(ruleSettings.uma1, 10) : 0,
+      2: ruleSettings.uma2.trim() ? parseInt(ruleSettings.uma2, 10) : 0,
+      3: ruleSettings.uma3.trim() ? parseInt(ruleSettings.uma3, 10) : 0,
+      4: ruleSettings.uma4.trim() ? parseInt(ruleSettings.uma4, 10) : 0,
+    };
+
     console.log("Updated League:", {
       leagueName,
       members: Object.values(addedMembers),
-      rules: Object.values(addedRules),
+      rule: {
+        oka,
+        uma,
+      },
     });
     alert("リーグ情報を更新しました");
-  }, [leagueName, addedMembers, addedRules]);
+  }, [leagueName, addedMembers, ruleSettings]);
 
   return {
     leagueName,
     memberQuery,
     addedMembers,
-    selectedRule,
     addedRules,
-    ruleOptions,
+    ruleSettings,
     handleLeagueNameChange,
     handleMemberQueryChange,
     handleAddMember,
     handleRemoveMember,
-    handleRuleSelectChange,
-    handleAddRule,
     handleRemoveRule,
+    handleRuleSettingChange,
     handleSubmit,
   };
 };
