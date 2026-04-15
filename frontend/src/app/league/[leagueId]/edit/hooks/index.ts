@@ -40,6 +40,7 @@ export const useLeagueEdit = () => {
   });
 
   const allRules = rulesData;
+  const users = userBaseListData;
 
   useEffect(() => {
     if (leagueId) {
@@ -93,7 +94,7 @@ export const useLeagueEdit = () => {
     const trimmed = memberQuery.trim();
     if (!trimmed) return;
 
-    const found = userBaseListData[trimmed as UserIdType];
+    const found = users[trimmed as UserIdType];
     if (!found) {
       alert("該当するメンバーIDが見つかりません");
       return;
@@ -111,7 +112,7 @@ export const useLeagueEdit = () => {
     });
 
     setMemberQuery("");
-  }, [memberQuery]);
+  }, [memberQuery, users]);
 
   const handleRemoveMember = useCallback((id: UserIdType) => {
     setAddedMembers((prev) => {
@@ -145,8 +146,13 @@ export const useLeagueEdit = () => {
       ? parseInt(ruleSettings.okaReturnPoints, 10)
       : null;
 
-    if (!okaStartPoints || !okaReturnPoints) {
+    if (okaStartPoints === null || okaReturnPoints === null) {
       alert("オカの設定をすべて入力してください");
+      return;
+    }
+
+    if (Number.isNaN(okaStartPoints) || Number.isNaN(okaReturnPoints)) {
+      alert("オカの設定には数値を入力してください");
       return;
     }
 
@@ -155,11 +161,26 @@ export const useLeagueEdit = () => {
       returnPoints: okaReturnPoints,
     };
 
+    const uma1 = ruleSettings.uma1.trim() ? parseInt(ruleSettings.uma1, 10) : 0;
+    const uma2 = ruleSettings.uma2.trim() ? parseInt(ruleSettings.uma2, 10) : 0;
+    const uma3 = ruleSettings.uma3.trim() ? parseInt(ruleSettings.uma3, 10) : 0;
+    const uma4 = ruleSettings.uma4.trim() ? parseInt(ruleSettings.uma4, 10) : 0;
+
+    if (
+      Number.isNaN(uma1) ||
+      Number.isNaN(uma2) ||
+      Number.isNaN(uma3) ||
+      Number.isNaN(uma4)
+    ) {
+      alert("ウマは数値で入力してください");
+      return;
+    }
+
     const uma: Record<Rank, number> = {
-      1: ruleSettings.uma1.trim() ? parseInt(ruleSettings.uma1, 10) : 0,
-      2: ruleSettings.uma2.trim() ? parseInt(ruleSettings.uma2, 10) : 0,
-      3: ruleSettings.uma3.trim() ? parseInt(ruleSettings.uma3, 10) : 0,
-      4: ruleSettings.uma4.trim() ? parseInt(ruleSettings.uma4, 10) : 0,
+      1: uma1,
+      2: uma2,
+      3: uma3,
+      4: uma4,
     };
 
     console.log("Updated League:", {
