@@ -100,6 +100,7 @@ pnpm typecheck       # Run TypeScript type check
 ## Code Review Guidelines
 
 - **Write code reviews in Japanese**
+- Leave not only comments, but also suggested code changes when possible to make it easier for the author to understand and apply the feedback
 - Focus on code quality, readability, and adherence to conventions
 - Provide constructive feedback and suggestions for improvement
 - If you find a bug or potential issue, explain it clearly and suggest a fix
