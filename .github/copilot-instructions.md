@@ -59,7 +59,7 @@ pnpm typecheck       # Run TypeScript type check
 - Using `React.FC` is recommended, but not mandatory
 - Import order in the frontend must follow `frontend/eslint.config.mjs`: `builtin` → `external` (place `react` first and keep `next/**` grouped after it) → `internal` (`@/`) → `relative` → `type`; treat `**/*.css` as a separate group
 - Prettier: 2-space indent, LF line endings, trailing commas
-- Prefix unused variables with `_`
+- Prefix unused function arguments with `_`
 
 ### Frontend Design Patterns
 
