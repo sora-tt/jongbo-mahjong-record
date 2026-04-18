@@ -57,7 +57,7 @@ pnpm typecheck       # Run TypeScript type check
 
 - Components must be defined as **arrow functions**
 - Using `React.FC` is recommended, but not mandatory
-- Import order must follow `{frontend,backend}/eslint.config.mjs`: `builtin` → `external` (place `react` first and keep `next/**` grouped after it) → `internal` (`@/`) → `relative` → `type`; treat `**/*.css` as a separate group
+- Import order in the frontend must follow `frontend/eslint.config.mjs`: `builtin` → `external` (place `react` first and keep `next/**` grouped after it) → `internal` (`@/`) → `relative` → `type`; treat `**/*.css` as a separate group
 - Prettier: 2-space indent, LF line endings, trailing commas
 - Prefix unused variables with `_`
 
@@ -76,9 +76,11 @@ pnpm typecheck       # Run TypeScript type check
 
 ## Git Workflow
 
-- Main branch: `develop` (**direct changes are forbidden**)
+- Default branch: `develop` (**direct changes are forbidden**)
+  - All development must be done in separate branches created from `develop`
+  - `main` branch is for releases only, should be same as production, and should not be used for development
 - Working branches: `ISSUE-XX-description` (always include the Issue number)
-- Development flow: create Issue → create branch → develop → create PR → review → merge
+- Development flow: create Issue → create branch → implement changes → create PR → review → merge into `develop`
 - Write commit messages in English, keep them concise
 - For details, see `docs/how-to-manage-our-development.md`
 
