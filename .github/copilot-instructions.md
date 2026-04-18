@@ -24,7 +24,7 @@ This is a monorepo with `frontend/` and `backend/` directories.
 ```bash
 # From the repository root
 pnpm dev:frontend    # Start dev server (Turbopack)
-pnpm build           # Build
+pnpm build           # Build frontend
 pnpm lint:fix        # Run ESLint with auto-fix
 pnpm typecheck       # Run TypeScript type check
 
