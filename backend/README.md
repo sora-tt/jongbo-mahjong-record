@@ -7,14 +7,15 @@ Hono + Firebase Admin SDK + Firestore で動く麻雀記録 API です。
 依存関係を入れます。
 
 ```bash
-cd /Users/tatsuya/dev/study/react/jongbo-mahjong-record/backend
-npm install
+cd /path/to/jongbo-mahjong-record
+pnpm install
+cd backend
 ```
 
 ### 1. Firebase Emulator を起動
 
 ```bash
-npm run emulator
+pnpm emulator
 ```
 
 - Auth: `127.0.0.1:9099`
@@ -24,7 +25,7 @@ npm run emulator
 ### 2. seed データを投入
 
 ```bash
-npm run seed
+pnpm seed
 ```
 
 seed では Auth Emulator にもテストユーザーを投入します。共通パスワードは `password123` です。
@@ -32,7 +33,7 @@ seed では Auth Emulator にもテストユーザーを投入します。共通
 ### 3. API サーバを起動
 
 ```bash
-npm run dev:emulator
+pnpm dev:emulator
 ```
 
 - API: `http://127.0.0.1:8080`
@@ -130,4 +131,4 @@ curl -X DELETE http://127.0.0.1:8080/api/auth/session \
 - `firestore.rules` は Emulator を含むローカル検証向けの緩い設定です。本番用にそのまま使わないでください
 - Swagger UI は `http://127.0.0.1:8080/ui`、OpenAPI JSON は `http://127.0.0.1:8080/doc` です
 - `firebase-tools` は Node 20 / 22 / 24 を想定しています。ローカルでは Node 22 LTS を推奨します
-- `npm run emulator` では既知の deprecation warning を避けるために `NODE_NO_WARNINGS=1` を付けています
+- `pnpm emulator` では既知の deprecation warning を避けるために `NODE_NO_WARNINGS=1` を付けています
