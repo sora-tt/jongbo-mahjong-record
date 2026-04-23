@@ -45,10 +45,6 @@ export class FirestoreLeagueRepository implements LeagueRepository {
         return {
           id: doc.id,
           name: String(data.name ?? ""),
-          rule: {
-            id: String(data.rule_id ?? ""),
-            name: String(data.rule_name ?? ""),
-          },
           memberCount: Number(data.member_count ?? 0),
           totalMatchCount: Number(data.total_match_count ?? 0),
           activeSeason:

@@ -1,7 +1,11 @@
-import { createMe, createSession, deleteSession, fetchMe } from "@/lib/api/client";
+import { createSession, deleteSession } from "@/lib/api/auth";
+import { createMe, fetchMe } from "@/lib/api/users";
 import { loginWithEmail, logout, signupWithEmail } from "@/lib/firebase/auth";
 
-export const loginToApp = async (input: { email: string; password: string }) => {
+export const loginToApp = async (input: {
+  email: string;
+  password: string;
+}) => {
   const credential = await loginWithEmail(input.email, input.password);
   await createSession(await credential.user.getIdToken());
   return fetchMe();
