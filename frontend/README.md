@@ -32,7 +32,7 @@ Auth Emulator を使う場合は、以下も設定します。
 backend を `http://127.0.0.1:8080` で起動したうえで、frontend を起動します。
 
 ```bash
-npm run dev
+cd frontend && pnpm dev
 ```
 
 ブラウザで `http://localhost:3000` を開きます。
