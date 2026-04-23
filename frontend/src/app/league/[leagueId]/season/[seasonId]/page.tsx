@@ -3,7 +3,7 @@
 import * as React from "react";
 
 import clsx from "clsx";
-import { BookOpen, Calendar, Crown } from "lucide-react";
+import { Calendar, Crown } from "lucide-react";
 
 import { COLOR_MAP } from "@/constants/color-map";
 
@@ -13,26 +13,48 @@ import { Button } from "@/components/ui/button";
 import { HeaderCard } from "@/components/ui/header-card";
 import { SectionCard } from "@/components/ui/section-card";
 
-import { useLeague } from "./hooks";
+import { useSeasonPage } from "./hooks";
+
+const formatDate = (value: string | null) => {
+  if (!value) {
+    return "未記録";
+  }
+
+  return new Intl.DateTimeFormat("ja-JP", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date(value));
+};
 
 const SeasonPage: React.FC = () => {
-  const { league, error } = useLeague();
+  const { season, titles, loading, error } = useSeasonPage();
+
+  if (loading) {
+    return (
+      <div className="flex-1 bg-white min-h-full font-jp">
+        <Header />
+        <div className="flex min-h-[calc(100vh-56px)] items-center justify-center px-4 text-center text-text-muted">
+          シーズン情報を読み込んでいます...
+        </div>
+      </div>
+    );
+  }
 
   if (error) {
     return (
       <div className="flex-1 bg-white min-h-full font-jp">
         <Header />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <p className="text-red-500">{error}</p>
+          <div className="bg-error-bg border-2 border-error-border rounded-lg p-4">
+            <p className="text-error-text text-sm">{error}</p>
+          </div>
         </div>
       </div>
     );
   }
 
-  if (!league) return null;
-
-  const { name, createdAt, lastRecordedAt, rule, totalGames, members, titles } =
-    league;
+  if (!season) return null;
 
   return (
     <div className="flex-1 bg-white min-h-full font-jp">
@@ -40,19 +62,13 @@ const SeasonPage: React.FC = () => {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <section className="mb-6">
-          <HeaderCard title={name} align="center">
+          <HeaderCard title={season.name} align="center">
             <span className="inline-flex items-center gap-1">
               <Calendar size={14} className="text-white" />
               <span>
-                {createdAt.format("yyyy/MM/dd")} 〜{" "}
-                {lastRecordedAt
-                  ? lastRecordedAt.format("yyyy/MM/dd")
-                  : "未記録"}
+                {formatDate(season.createdAt)} 〜{" "}
+                {formatDate(season.latestPlayedAt)}
               </span>
-            </span>
-            <span className="inline-flex items-center gap-1">
-              <BookOpen size={14} className="text-white" />
-              <span>{rule.name}</span>
             </span>
           </HeaderCard>
         </section>
@@ -67,10 +83,10 @@ const SeasonPage: React.FC = () => {
         <section className="mb-8">
           <SectionCard
             title="順位表"
-            rightText={`総対局数：${totalGames}`}
+            rightText={`総対局数：${season.totalMatchCount}`}
             bodyClassName="p-4 overflow-x-auto"
           >
-            <LeagueRankingTable />
+            <LeagueRankingTable members={season.standings} />
           </SectionCard>
         </section>
 
@@ -78,18 +94,22 @@ const SeasonPage: React.FC = () => {
           <SectionCard title="総合pt推移" bodyClassName="p-4">
             <div className="w-full h-48 bg-gray-50 rounded-md mb-3" />
             <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
-              {Object.values(members).map((member) => (
+              {season.pointProgressions.map((progression, index) => (
                 <div
-                  key={member.player.userId}
+                  key={progression.userId}
                   className="flex items-center gap-1"
                 >
                   <span
                     className={clsx(
                       "inline-block w-2 h-2 rounded-full",
-                      COLOR_MAP[member.player.color] ?? "bg-gray-500"
+                      Object.values(COLOR_MAP)[
+                        index % Object.values(COLOR_MAP).length
+                      ]
                     )}
                   />
-                  <span className="text-text-muted">{member.player.name}</span>
+                  <span className="text-text-muted">
+                    {progression.userName}
+                  </span>
                 </div>
               ))}
             </div>
@@ -102,7 +122,7 @@ const SeasonPage: React.FC = () => {
         <section className="mb-8">
           <SectionCard title="タイトル" bodyClassName="p-4">
             <div>
-              {titles ? (
+              {titles.length > 0 ? (
                 titles.map((t) => (
                   <div
                     key={t.label}

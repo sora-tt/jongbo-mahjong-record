@@ -6,8 +6,8 @@ import Link from "next/link";
 
 import Header from "@/components/common/container/header";
 
-import { useLeague } from "./hooks";
-import { formatScore, formatStreak } from "./utils";
+import { useLeaguePage } from "./hooks";
+import { formatScore, formatStreak } from "../utils";
 
 const LeaguePage: React.FC = () => {
   const {
@@ -19,7 +19,7 @@ const LeaguePage: React.FC = () => {
     leagueSeasons,
     loading,
     error,
-  } = useLeague();
+  } = useLeaguePage();
 
   if (loading) {
     return (
@@ -53,11 +53,9 @@ const LeaguePage: React.FC = () => {
     <div className="flex-1 bg-white min-h-screen font-jp">
       <Header />
       <div className="flex flex-col max-w-7xl gap-4 mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* 画面上部：リーグ全シーズンの記録 */}
         <div className="flex flex-col gap-4">
           <div className="text-2xl font-bold text-text-dark">リーグ記録</div>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-            {/* 連勝記録 */}
             <div className="bg-white rounded-lg border-2 border-brand-200 p-4">
               <div className="text-sm font-bold text-text-muted mb-2">
                 連勝記録
@@ -74,7 +72,6 @@ const LeaguePage: React.FC = () => {
                   : "データなし"}
               </div>
             </div>
-            {/* 連敗記録 */}
             <div className="bg-white rounded-lg border-2 border-brand-200 p-4">
               <div className="text-sm font-bold text-text-muted mb-2">
                 連敗記録
@@ -91,7 +88,6 @@ const LeaguePage: React.FC = () => {
                   : "データなし"}
               </div>
             </div>
-            {/* 最高スコア */}
             <div className="bg-white rounded-lg border-2 border-brand-200 p-4">
               <div className="text-sm font-bold text-text-muted mb-2">
                 最高スコア
@@ -105,7 +101,6 @@ const LeaguePage: React.FC = () => {
                   : "データなし"}
               </div>
             </div>
-            {/* 最低スコア */}
             <div className="bg-white rounded-lg border-2 border-brand-200 p-4">
               <div className="text-sm font-bold text-text-muted mb-2">
                 最低スコア
@@ -122,14 +117,13 @@ const LeaguePage: React.FC = () => {
           </div>
         </div>
 
-        {/* 画面下部：シーズン一覧 */}
         <div className="flex flex-col gap-4 mt-8">
           <div className="text-2xl font-bold text-text-dark">シーズン一覧</div>
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             {leagueSeasons.map((season) => (
               <Link
                 key={season.id}
-                href={`/league/season?seasonId=${season.id}`}
+                href={`/league/${league.id}/season/${season.id}`}
                 className={`bg-white rounded-lg p-4 hover:shadow-lg transition-shadow relative ${
                   season.status === "active"
                     ? "border-2 border-brand-600"
