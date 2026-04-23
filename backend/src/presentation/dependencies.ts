@@ -56,7 +56,6 @@ export const createDependencies = () => {
         sessionRepository,
       ),
       matchService: new MatchService(
-        ruleRepository,
         leagueRepository,
         sessionRepository,
         matchRepository,

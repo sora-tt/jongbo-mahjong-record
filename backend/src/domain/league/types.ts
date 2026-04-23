@@ -26,10 +26,6 @@ export type LeagueSummary = {
 export type LeagueDetail = {
   id: string;
   name: string;
-  rule: {
-    id: string;
-    name: string;
-  };
   memberCount: number;
   totalMatchCount: number;
   activeSeason: {
