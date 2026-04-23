@@ -9,10 +9,6 @@ export type LeagueMember = {
 export type LeagueSummary = {
   id: string;
   name: string;
-  rule: {
-    id: string;
-    name: string;
-  };
   memberCount: number;
   totalMatchCount: number;
   activeSeason: {
