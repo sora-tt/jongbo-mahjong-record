@@ -3,7 +3,11 @@ import type { Rule } from "@/domain/rule/types.js";
 import type { MatchResult } from "@/domain/match/types.js";
 import { ValidationError } from "@/domain/shared/errors.js";
 
-const roundScore = (value: number, mode: Rule["scoreCalculation"]) => {
+type MatchCalculationRule = Pick<Rule, "gameType" | "uma" | "oka"> & {
+  scoreCalculation?: Rule["scoreCalculation"];
+};
+
+const roundScore = (value: number, mode?: Rule["scoreCalculation"]) => {
   switch (mode) {
     case "decimal":
       return value / 1000;
@@ -19,12 +23,12 @@ const roundScore = (value: number, mode: Rule["scoreCalculation"]) => {
     case "ceil":
       return Math.ceil(value / 1000);
     default:
-      return value / 1000;
+      return Math.floor(value / 1000);
   }
 };
 
 export const calculateMatchPoints = (
-  rule: Rule,
+  rule: MatchCalculationRule,
   results: Array<{
     userId: string;
     userName: string;

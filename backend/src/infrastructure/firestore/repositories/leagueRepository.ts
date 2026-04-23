@@ -6,6 +6,7 @@ import type {
 } from "@/domain/league/types.js";
 import type {
   CreateLeagueInput,
+  LeagueRule,
   LeagueRepository,
   UpdateLeagueInput,
 } from "@/domain/league/repository.js";
@@ -74,10 +75,6 @@ export class FirestoreLeagueRepository implements LeagueRepository {
     return {
       id: snapshot.id,
       name: String(data.name ?? ""),
-      rule: {
-        id: String(data.rule_id ?? ""),
-        name: String(data.rule_name ?? ""),
-      },
       memberCount: Number(data.member_count ?? 0),
       totalMatchCount: Number(data.total_match_count ?? 0),
       activeSeason:
@@ -103,6 +100,15 @@ export class FirestoreLeagueRepository implements LeagueRepository {
     };
   }
 
+  async getRule(leagueId: string): Promise<LeagueRule> {
+    const snapshot = await this.db.collection("leagues").doc(leagueId).get();
+    if (!snapshot.exists) {
+      throw new NotFoundError("league not found", { leagueId });
+    }
+
+    return this.mapLeagueRule(snapshot.data()?.rule);
+  }
+
   async create(input: CreateLeagueInput, rule: Rule): Promise<LeagueDetail> {
     const now = Timestamp.now();
     const leagueRef = this.db.collection("leagues").doc();
@@ -112,8 +118,7 @@ export class FirestoreLeagueRepository implements LeagueRepository {
     batch.set(leagueRef, {
       id: leagueRef.id,
       name: input.name,
-      rule_id: rule.id,
-      rule_name: rule.name,
+      rule: this.toLeagueRuleDoc(rule),
       member_count: members.length,
       total_match_count: 0,
       active_season_id: null,
@@ -316,6 +321,38 @@ export class FirestoreLeagueRepository implements LeagueRepository {
       value: value.value,
       user_id: value.userId,
       user_name: value.userName,
+    };
+  }
+
+  private mapLeagueRule(value: FirebaseFirestore.DocumentData | null | undefined) {
+    return {
+      gameType: value?.game_type === "sanma" ? "sanma" : "yonma",
+      uma: {
+        first: Number(value?.uma?.first ?? 0),
+        second: Number(value?.uma?.second ?? 0),
+        third: Number(value?.uma?.third ?? 0),
+        fourth: value?.uma?.fourth ?? null,
+      },
+      oka: {
+        startingPoints: Number(value?.oka?.starting_points ?? 0),
+        returnPoints: Number(value?.oka?.return_points ?? 0),
+      },
+    } satisfies LeagueRule;
+  }
+
+  private toLeagueRuleDoc(rule: LeagueRule) {
+    return {
+      game_type: rule.gameType,
+      uma: {
+        first: rule.uma.first,
+        second: rule.uma.second,
+        third: rule.uma.third,
+        fourth: rule.uma.fourth,
+      },
+      oka: {
+        starting_points: rule.oka.startingPoints,
+        return_points: rule.oka.returnPoints,
+      },
     };
   }
 }

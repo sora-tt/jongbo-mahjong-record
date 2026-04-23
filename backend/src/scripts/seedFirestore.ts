@@ -34,8 +34,19 @@ type SeedSeason = {
 type SeedLeague = {
   id: string;
   name: string;
-  ruleId: string;
-  ruleName: string;
+  rule: {
+    gameType: "sanma" | "yonma";
+    uma: {
+      first: number;
+      second: number;
+      third: number;
+      fourth: number | null;
+    };
+    oka: {
+      startingPoints: number;
+      returnPoints: number;
+    };
+  };
   members: Array<{ userId: string; userName: string }>;
   activeSeasonId: string | null;
   activeSeasonName: string | null;
@@ -147,8 +158,11 @@ const leagues: SeedLeague[] = [
   {
     id: "000000",
     name: "雀望リーグ",
-    ruleId: "0001",
-    ruleName: "Mリーグルール",
+    rule: {
+      gameType: rules[0].gameType,
+      uma: rules[0].uma,
+      oka: rules[0].oka,
+    },
     members: allMembers,
     activeSeasonId: "0001",
     activeSeasonName: "2026シーズン春夏",
@@ -293,8 +307,11 @@ const leagues: SeedLeague[] = [
   {
     id: "000001",
     name: "土田リーグ",
-    ruleId: "0001",
-    ruleName: "Mリーグルール",
+    rule: {
+      gameType: rules[0].gameType,
+      uma: rules[0].uma,
+      oka: rules[0].oka,
+    },
     members: allMembers,
     activeSeasonId: "0003",
     activeSeasonName: "レギュラーシーズン",
@@ -509,8 +526,19 @@ const seedLeagues = async () => {
     await leagueRef.set({
       id: league.id,
       name: league.name,
-      rule_id: league.ruleId,
-      rule_name: league.ruleName,
+      rule: {
+        game_type: league.rule.gameType,
+        uma: {
+          first: league.rule.uma.first,
+          second: league.rule.uma.second,
+          third: league.rule.uma.third,
+          fourth: league.rule.uma.fourth,
+        },
+        oka: {
+          starting_points: league.rule.oka.startingPoints,
+          return_points: league.rule.oka.returnPoints,
+        },
+      },
       member_count: league.members.length,
       total_match_count: totalMatchCount,
       active_season_id: league.activeSeasonId,

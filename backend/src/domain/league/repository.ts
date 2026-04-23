@@ -5,6 +5,8 @@ import type {
 } from "@/domain/league/types.js";
 import type { Rule } from "@/domain/rule/types.js";
 
+export type LeagueRule = Pick<Rule, "gameType" | "uma" | "oka">;
+
 export type CreateLeagueInput = {
   name: string;
   ruleId: string;
@@ -18,6 +20,7 @@ export type UpdateLeagueInput = {
 export interface LeagueRepository {
   list(memberUserId?: string): Promise<LeagueSummary[]>;
   get(leagueId: string): Promise<LeagueDetail>;
+  getRule(leagueId: string): Promise<LeagueRule>;
   create(input: CreateLeagueInput, rule: Rule): Promise<LeagueDetail>;
   update(leagueId: string, input: UpdateLeagueInput): Promise<LeagueDetail>;
   delete(leagueId: string): Promise<void>;
