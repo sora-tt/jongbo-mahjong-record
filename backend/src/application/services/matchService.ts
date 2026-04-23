@@ -1,10 +1,13 @@
-import { calculateMatchPoints } from "@/domain/scoring.js";
-import type { CreateMatchInput, UpdateMatchInput } from "@/domain/models.js";
-import type { LeagueRepository } from "@/domain/repositories/leagueRepository.js";
-import type { MatchRepository } from "@/domain/repositories/matchRepository.js";
-import type { RuleRepository } from "@/domain/repositories/ruleRepository.js";
-import type { SessionRepository } from "@/domain/repositories/sessionRepository.js";
-import { AppError, ValidationError } from "@/errors.js";
+import type { LeagueRepository } from "@/domain/league/repository.js";
+import type {
+  CreateMatchInput,
+  MatchRepository,
+  UpdateMatchInput,
+} from "@/domain/match/repository.js";
+import type { RuleRepository } from "@/domain/rule/repository.js";
+import { calculateMatchPoints } from "@/domain/shared/scoring.js";
+import { AppError, ValidationError } from "@/domain/shared/errors.js";
+import type { SessionRepository } from "@/domain/session/repository.js";
 import { StatsRebuilder } from "@/application/services/statsRebuilder.js";
 
 export class MatchService {

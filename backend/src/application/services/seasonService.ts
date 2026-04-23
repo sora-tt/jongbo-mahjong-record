@@ -1,8 +1,15 @@
-import type { CreateSeasonInput, UpdateSeasonInput } from "@/domain/models.js";
-import type { LeagueRepository } from "@/domain/repositories/leagueRepository.js";
-import type { MatchRepository } from "@/domain/repositories/matchRepository.js";
-import type { SeasonRepository } from "@/domain/repositories/seasonRepository.js";
-import { AppError, ConflictError, ValidationError } from "@/errors.js";
+import type { LeagueRepository } from "@/domain/league/repository.js";
+import type { MatchRepository } from "@/domain/match/repository.js";
+import type {
+  CreateSeasonInput,
+  SeasonRepository,
+  UpdateSeasonInput,
+} from "@/domain/season/repository.js";
+import {
+  AppError,
+  ConflictError,
+  ValidationError,
+} from "@/domain/shared/errors.js";
 
 export class SeasonService {
   constructor(

@@ -1,8 +1,11 @@
-import type { CreateLeagueInput, UpdateLeagueInput } from "@/domain/models.js";
-import type { LeagueRepository } from "@/domain/repositories/leagueRepository.js";
-import type { RuleRepository } from "@/domain/repositories/ruleRepository.js";
-import type { UserRepository } from "@/domain/repositories/userRepository.js";
-import { AppError, ValidationError } from "@/errors.js";
+import type {
+  CreateLeagueInput,
+  LeagueRepository,
+  UpdateLeagueInput,
+} from "@/domain/league/repository.js";
+import type { RuleRepository } from "@/domain/rule/repository.js";
+import { AppError, ValidationError } from "@/domain/shared/errors.js";
+import type { UserRepository } from "@/domain/user/repository.js";
 
 export class LeagueService {
   constructor(

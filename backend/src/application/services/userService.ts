@@ -1,7 +1,9 @@
-import type { ScopeType } from "@/domain/models.js";
-import type { UserRepository } from "@/domain/repositories/userRepository.js";
-import type { UserStatsRepository } from "@/domain/repositories/userStatsRepository.js";
-import { NotFoundError, ValidationError } from "@/errors.js";
+import type { ScopeType } from "@/domain/shared/types.js";
+import { NotFoundError, ValidationError } from "@/domain/shared/errors.js";
+import type {
+  UserRepository,
+  UserStatsRepository,
+} from "@/domain/user/repository.js";
 
 export class UserService {
   constructor(

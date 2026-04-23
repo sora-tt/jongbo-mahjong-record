@@ -1,6 +1,6 @@
-import { getAdminAuth } from "@/infrastructure/firebase/auth.js";
-import { Timestamp } from "firebase-admin/firestore";
+import { getAdminAuth } from "@/infrastructure/firebase/client.js";
 import { getDb } from "@/infrastructure/firestore/client.js";
+import { Timestamp } from "firebase-admin/firestore";
 
 type SeedUser = {
   id: string;

@@ -1,11 +1,11 @@
+import type { LeagueRepository } from "@/domain/league/repository.js";
+import type { SeasonRepository } from "@/domain/season/repository.js";
 import type {
   CreateSessionInput,
+  SessionRepository,
   UpdateSessionInput,
-} from "@/domain/models.js";
-import type { LeagueRepository } from "@/domain/repositories/leagueRepository.js";
-import type { SeasonRepository } from "@/domain/repositories/seasonRepository.js";
-import type { SessionRepository } from "@/domain/repositories/sessionRepository.js";
-import { AppError, ValidationError } from "@/errors.js";
+} from "@/domain/session/repository.js";
+import { AppError, ValidationError } from "@/domain/shared/errors.js";
 
 export class SessionService {
   constructor(

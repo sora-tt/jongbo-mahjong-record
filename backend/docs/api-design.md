@@ -844,9 +844,7 @@
     "leagueId": "league_001",
     "seasonId": "season_001",
     "memberCount": 4,
-    "members": [
-      { "userId": "0001", "userName": "田中" }
-    ],
+    "members": [{ "userId": "0001", "userName": "田中" }],
     "startedAt": "2026-03-14T10:00:00.000Z"
   }
 }
