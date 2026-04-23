@@ -67,6 +67,8 @@ export const useSeasonEdit = () => {
   }, [seasonName, selectedMembers]);
 
   return {
+    leagueId: foundLeague?.leagueId ?? null,
+    seasonId,
     leagueMembers,
     selectedMembers,
     seasonName,
