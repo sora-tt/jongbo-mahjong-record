@@ -2,23 +2,22 @@ import * as React from "react";
 
 import { PersonalRecordCard } from "@/components/pages/personal-record/personal-record-card";
 
-import { useTotalMatchCard } from "./hooks";
-
-import { LeagueSeasonMember } from "@/types/domain/league";
+import type { PersonalRecordStats } from "@/types/domain/personal-record";
 
 interface TotalMatchCardProps {
-  selectedLeagueSeasonMember: LeagueSeasonMember | null;
+  selectedStats: PersonalRecordStats | null;
 }
 
 export const TotalMatchCard: React.FC<TotalMatchCardProps> = ({
-  selectedLeagueSeasonMember,
+  selectedStats,
 }) => {
-  const { gamesPlayed } = useTotalMatchCard({ selectedLeagueSeasonMember });
   const title = "総対戦数";
   const unit = "戦";
   const description = undefined;
   const value =
-    typeof gamesPlayed === "number" ? Math.floor(gamesPlayed) : gamesPlayed;
+    typeof selectedStats?.totalMatchCount === "number"
+      ? Math.floor(selectedStats.totalMatchCount)
+      : selectedStats?.totalMatchCount;
 
   return (
     <PersonalRecordCard
