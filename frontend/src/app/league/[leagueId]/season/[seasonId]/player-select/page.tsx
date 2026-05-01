@@ -11,7 +11,7 @@ const SELECT_PLAYER_DEFAULT_TEXT = "プレイヤーを選択";
 
 const PlayerSelectPage: React.FC = () => {
   const {
-    seasonName,
+    players,
     isLoading,
     isSubmitting,
     error,
@@ -49,6 +49,7 @@ const PlayerSelectPage: React.FC = () => {
             <Dropdown
               defaultOption={SELECT_PLAYER_DEFAULT_TEXT}
               options={firstOptions}
+              value={players.first}
               onChange={onFirstPlayerChange}
             />
           </div>
@@ -56,6 +57,7 @@ const PlayerSelectPage: React.FC = () => {
             <Dropdown
               defaultOption={SELECT_PLAYER_DEFAULT_TEXT}
               options={secondOptions}
+              value={players.second}
               onChange={onSecondPlayerChange}
             />
           </div>
@@ -63,6 +65,7 @@ const PlayerSelectPage: React.FC = () => {
             <Dropdown
               defaultOption={SELECT_PLAYER_DEFAULT_TEXT}
               options={thirdOptions}
+              value={players.third}
               onChange={onThirdPlayerChange}
             />
           </div>
@@ -70,6 +73,7 @@ const PlayerSelectPage: React.FC = () => {
             <Dropdown
               defaultOption={SELECT_PLAYER_DEFAULT_TEXT}
               options={fourthOptions}
+              value={players.fourth}
               onChange={onFourthPlayerChange}
             />
           </div>
