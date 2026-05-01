@@ -11,14 +11,33 @@ const SELECT_PLAYER_DEFAULT_TEXT = "プレイヤーを選択";
 
 const PlayerSelectPage: React.FC = () => {
   const {
+    seasonName,
+    isLoading,
+    isSubmitting,
+    error,
+    canSubmit,
     handleSubmit,
     handleBack,
     onFirstPlayerChange,
     onSecondPlayerChange,
     onThirdPlayerChange,
     onFourthPlayerChange,
-    options,
+    firstOptions,
+    secondOptions,
+    thirdOptions,
+    fourthOptions,
   } = usePlayerSelect();
+
+  if (isLoading) {
+    return (
+      <div className="flex-1 bg-white min-h-screen font-jp">
+        <div className="flex flex-col items-center justify-center min-h-screen px-4 text-center text-text-muted">
+          プレイヤー候補を読み込んでいます...
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex-1 bg-white min-h-screen font-jp">
       <div className="flex flex-col items-center justify-center min-h-screen">
@@ -29,36 +48,42 @@ const PlayerSelectPage: React.FC = () => {
           <div className="mb-2">
             <Dropdown
               defaultOption={SELECT_PLAYER_DEFAULT_TEXT}
-              options={options}
+              options={firstOptions}
               onChange={onFirstPlayerChange}
             />
           </div>
           <div className="mb-2">
             <Dropdown
               defaultOption={SELECT_PLAYER_DEFAULT_TEXT}
-              options={options}
+              options={secondOptions}
               onChange={onSecondPlayerChange}
             />
           </div>
-
           <div className="mb-2">
             <Dropdown
               defaultOption={SELECT_PLAYER_DEFAULT_TEXT}
-              options={options}
+              options={thirdOptions}
               onChange={onThirdPlayerChange}
             />
           </div>
           <div className="mb-2">
             <Dropdown
               defaultOption={SELECT_PLAYER_DEFAULT_TEXT}
-              options={options}
+              options={fourthOptions}
               onChange={onFourthPlayerChange}
             />
           </div>
+          {error && (
+            <p className="text-sm text-error-text text-center">{error}</p>
+          )}
         </div>
         <div className="flex flex-col px-24 gap-4">
-          <Button variant="brand-primary" onClick={handleSubmit}>
-            決定
+          <Button
+            variant="brand-primary"
+            onClick={handleSubmit}
+            disabled={!canSubmit || isSubmitting}
+          >
+            {isSubmitting ? "準備中..." : "決定"}
           </Button>
           <Button variant="brand-secondary" onClick={handleBack}>
             戻る
