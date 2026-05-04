@@ -17,6 +17,8 @@ import type { UserIdType } from "@/types/domain/user";
 
 const SeasonEditPage: React.FC = () => {
   const {
+    leagueId,
+    seasonId,
     leagueMembers,
     selectedMembers,
     seasonName,
@@ -144,7 +146,11 @@ const SeasonEditPage: React.FC = () => {
               {/* サブリンク */}
               <Spacer padding={{ top: "xxsmall" }} className="text-center">
                 <Link
-                  href="/league/season"
+                  href={
+                    leagueId
+                      ? `/league/${leagueId}/season/${seasonId}`
+                      : "/league"
+                  }
                   className="
                     inline-flex items-center gap-2
                     text-sm font-medium
