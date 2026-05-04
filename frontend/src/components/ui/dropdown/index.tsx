@@ -6,6 +6,7 @@ export interface Props {
   defaultOption: string;
   options: Option[];
   value?: string;
+  disabled?: boolean;
   onChange?: (e: React.ChangeEvent<HTMLSelectElement>, value: string) => void;
 }
 
@@ -13,6 +14,7 @@ export const Dropdown: React.FC<Props> = ({
   defaultOption,
   options,
   value,
+  disabled = false,
   onChange,
 }) => {
   const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -22,6 +24,7 @@ export const Dropdown: React.FC<Props> = ({
   return (
     <select
       value={value ?? ""}
+      disabled={disabled}
       onChange={handleChange}
       style={{ marginLeft: "10px", padding: "5px" }}
     >

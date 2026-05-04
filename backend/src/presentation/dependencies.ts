@@ -57,6 +57,7 @@ export const createDependencies = () => {
       ),
       matchService: new MatchService(
         leagueRepository,
+        seasonRepository,
         sessionRepository,
         matchRepository,
         statsRebuilder,

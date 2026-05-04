@@ -1,30 +1,25 @@
-import type { Wind } from "@/domain/shared/types.js";
-import type { Rule } from "@/domain/rule/types.js";
 import type { MatchResult } from "@/domain/match/types.js";
+import type { Rule } from "@/domain/rule/types.js";
 import { ValidationError } from "@/domain/shared/errors.js";
+import type { Wind } from "@/domain/shared/types.js";
 
-type MatchCalculationRule = Pick<Rule, "gameType" | "uma" | "oka"> & {
-  scoreCalculation?: Rule["scoreCalculation"];
-};
+type MatchCalculationRule = Pick<Rule, "gameType" | "uma" | "oka">;
 
-const roundScore = (value: number, mode?: Rule["scoreCalculation"]) => {
-  switch (mode) {
-    case "decimal":
-      return value / 1000;
-    case "fiveDropSixUp": {
-      const base = Math.floor(value / 1000);
-      const remainder = Math.abs(value % 1000);
-      return remainder >= 600 ? (value >= 0 ? base + 1 : base - 1) : base;
-    }
-    case "round":
-      return Math.round(value / 1000);
-    case "floor":
-      return Math.floor(value / 1000);
-    case "ceil":
-      return Math.ceil(value / 1000);
-    default:
-      return Math.floor(value / 1000);
+const getUmaByRank = (rule: MatchCalculationRule, rank: number) => {
+  const playerCount = rule.gameType === "sanma" ? 3 : 4;
+  const oka =
+    ((rule.oka.returnPoints - rule.oka.startingPoints) * playerCount) / 1000;
+
+  if (rank === 1) {
+    return rule.uma.first + oka;
   }
+  if (rank === 2) {
+    return rule.uma.second;
+  }
+  if (rank === 3) {
+    return rule.uma.third;
+  }
+  return rule.uma.fourth ?? 0;
 };
 
 export const calculateMatchPoints = (
@@ -46,15 +41,11 @@ export const calculateMatchPoints = (
 
   const uniqueUserIds = new Set(results.map((result) => result.userId));
   const uniqueWinds = new Set(results.map((result) => result.wind));
-  const uniqueRanks = new Set(results.map((result) => result.rank));
   if (uniqueUserIds.size !== results.length) {
     throw new ValidationError("results must not contain duplicate userId");
   }
   if (uniqueWinds.size !== results.length) {
     throw new ValidationError("results must not contain duplicate wind");
-  }
-  if (uniqueRanks.size !== results.length) {
-    throw new ValidationError("results must not contain duplicate rank");
   }
 
   const rawTotal = results.reduce((sum, result) => sum + result.rawScore, 0);
@@ -66,21 +57,44 @@ export const calculateMatchPoints = (
     });
   }
 
-  const withPoints = results.map((result) => {
+  // rank は入力値を信用せず、rawScore から再計算する。同点時も backend 側で一貫して扱う。
+  const sorted = [...results].sort(
+    (left, right) => right.rawScore - left.rawScore,
+  );
+  const ranked: Array<(typeof results)[number]> = [];
+
+  sorted.forEach((result, index) => {
+    const previous = ranked[index - 1];
+    const rank =
+      index === 0 || previous.rawScore !== result.rawScore
+        ? index + 1
+        : previous.rank;
+
+    ranked.push({
+      ...result,
+      rank,
+    });
+  });
+
+  const withPoints = ranked.map((result) => {
+    // 同順位がいる場合、その順位帯の uma を等分して配る。1 位 uma には oka を事前加算している。
+    const tiedPlayers = ranked.filter(
+      (candidate) => candidate.rank === result.rank,
+    );
+    const occupiedRanks = Array.from(
+      { length: tiedPlayers.length },
+      (_, index) => result.rank + index,
+    );
+    const splitUma =
+      occupiedRanks.reduce((sum, rank) => sum + getUmaByRank(rule, rank), 0) /
+      tiedPlayers.length;
+    // rawScore は 100 点単位で渡される前提なので、素点差は 1000 で割るだけでよい。
     const adjusted = result.rawScore - rule.oka.returnPoints;
-    const base = roundScore(adjusted, rule.scoreCalculation);
-    const uma =
-      result.rank === 1
-        ? rule.uma.first
-        : result.rank === 2
-          ? rule.uma.second
-          : result.rank === 3
-            ? rule.uma.third
-            : (rule.uma.fourth ?? 0);
+    const base = adjusted / 1000;
 
     return {
       ...result,
-      point: Number((base + uma).toFixed(1)),
+      point: Number((base + splitUma).toFixed(1)),
     };
   });
 
