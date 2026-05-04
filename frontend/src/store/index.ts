@@ -2,6 +2,7 @@ import { configureStore } from "@reduxjs/toolkit";
 
 import leagueReducer from "./slices/league-slice";
 import matchReducer from "./slices/match-slice";
+import recordingFlowReducer from "./slices/recording-flow-slice";
 import ruleReducer from "./slices/rule-slice";
 import userReducer from "./slices/user-slice";
 
@@ -11,6 +12,7 @@ export const store = configureStore({
     user: userReducer,
     match: matchReducer,
     rule: ruleReducer,
+    recordingFlow: recordingFlowReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
