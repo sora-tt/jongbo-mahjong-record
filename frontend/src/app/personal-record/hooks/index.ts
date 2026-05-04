@@ -1,74 +1,184 @@
 import * as React from "react";
 
-import { leaguesData } from "@/mocks/league";
-import { userData1 } from "@/mocks/user";
-import { LeagueSeasonIdType, LeagueSeasonMember } from "@/types/domain/league";
+import { useRouter } from "next/navigation";
+
+import { ApiError } from "@/lib/api/core";
+import { fetchJoiningSeasons, fetchMe, fetchUserStats } from "@/lib/api/users";
+
+import type {
+  PersonalRecordSeasonOption,
+  PersonalRecordStats,
+} from "@/types/domain/personal-record";
+
+const DEFAULT_INITIAL_ERROR_MESSAGE =
+  "個人成績画面の取得に失敗しました。時間をおいて再度お試しください。";
+const DEFAULT_STATS_ERROR_MESSAGE =
+  "個人成績の取得に失敗しました。時間をおいて再度お試しください。";
+
+const buildSeasonOptionId = (leagueId: string, seasonId: string) =>
+  `${leagueId}:${seasonId}`;
+
+const calculateTop2Rate = (
+  firstCount: number,
+  secondCount: number,
+  total: number
+) => {
+  if (total === 0) {
+    return 0;
+  }
+
+  return ((firstCount + secondCount) / total) * 100;
+};
+
+const toPersonalRecordStats = (
+  stats: Awaited<ReturnType<typeof fetchUserStats>>
+): PersonalRecordStats => ({
+  totalPoints: stats.totalPoints,
+  totalMatchCount: stats.totalMatchCount,
+  rank: stats.currentRank,
+  averageRank: stats.averageRank,
+  top2Rate: calculateTop2Rate(
+    stats.firstCount,
+    stats.secondCount,
+    stats.totalMatchCount
+  ),
+  numberOfEachOrder: {
+    first: stats.firstCount,
+    second: stats.secondCount,
+    third: stats.thirdCount,
+    fourth: stats.fourthCount ?? 0,
+  },
+});
 
 export const usePersonalRecord = () => {
-  const { userId, name, joiningLeagueIds } = userData1;
+  const router = useRouter();
+  const [userId, setUserId] = React.useState("");
+  const [userName, setUserName] = React.useState("");
+  const [joiningLeagueSeasons, setJoiningLeagueSeasons] = React.useState<
+    PersonalRecordSeasonOption[]
+  >([]);
+  const [selectedLeagueSeasonId, setSelectedLeagueSeasonId] =
+    React.useState("");
+  const [selectedStats, setSelectedStats] =
+    React.useState<PersonalRecordStats | null>(null);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [isStatsLoading, setIsStatsLoading] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
 
-  // 参加しているリーグのシーズン情報を結合して表示用に整形
-  const joiningLeagueSeasons = React.useMemo(() => {
-    return joiningLeagueIds?.flatMap((leagueId) => {
-      const league = leaguesData[leagueId];
-      // 各リーグのシーズンIDを取得
-      const leagueSeasonIds = Object.keys(
-        league.seasons || {}
-      ) as LeagueSeasonIdType[];
+  React.useEffect(() => {
+    let isActive = true;
 
-      return leagueSeasonIds.map((leagueSeasonId) => {
-        const leagueSeason = league.seasons?.[leagueSeasonId];
-        return {
-          id: leagueSeasonId,
-          leagueId: leagueId,
-          name: `${league.name} - ${leagueSeason?.name}`,
-        };
-      });
-    });
-  }, [joiningLeagueIds, leaguesData]);
+    const load = async () => {
+      setIsLoading(true);
+      setError(null);
 
-  const [selectedLeagueSeasonId, setSelectedLeagueSeasonId] = React.useState<
-    LeagueSeasonIdType | ""
-  >("");
-  const [selectedLeagueSeasonMember, setSelectedLeagueSeasonMember] =
-    React.useState<LeagueSeasonMember | null>(null);
+      try {
+        const me = await fetchMe();
+        const seasons = await fetchJoiningSeasons(me.id);
+
+        if (!isActive) {
+          return;
+        }
+
+        setUserId(me.id);
+        setUserName(me.name);
+        setJoiningLeagueSeasons(
+          seasons.map((season) => ({
+            id: buildSeasonOptionId(season.leagueId, season.seasonId),
+            leagueId: season.leagueId,
+            seasonId: season.seasonId,
+            name: `${season.leagueName} - ${season.seasonName}`,
+          }))
+        );
+      } catch (loadError) {
+        if (!isActive) {
+          return;
+        }
+
+        if (loadError instanceof ApiError && loadError.status === 401) {
+          router.replace("/login");
+          return;
+        }
+
+        setError(
+          loadError instanceof Error
+            ? loadError.message
+            : DEFAULT_INITIAL_ERROR_MESSAGE
+        );
+      } finally {
+        if (isActive) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    void load();
+
+    return () => {
+      isActive = false;
+    };
+  }, [router]);
 
   const onChangeLeagueSeason = React.useCallback(
     (e: React.ChangeEvent<HTMLSelectElement>) => {
-      const newSelectedId = e.target.value as LeagueSeasonIdType | "";
-      setSelectedLeagueSeasonId(newSelectedId);
+      setSelectedLeagueSeasonId(e.target.value);
+      setError(null);
     },
     []
   );
 
-  const onDisplayButtonClick = React.useCallback(() => {
-    if (!selectedLeagueSeasonId) {
-      setSelectedLeagueSeasonMember(null);
+  const onDisplayButtonClick = React.useCallback(async () => {
+    if (!selectedLeagueSeasonId || !userId) {
+      setSelectedStats(null);
       return;
     }
 
-    const selectedLeague = joiningLeagueSeasons?.find(
+    const selectedSeason = joiningLeagueSeasons.find(
       (season) => season.id === selectedLeagueSeasonId
     );
 
-    // selectedLeague が undefined でないことを保証する
-    if (!selectedLeague) {
-      setSelectedLeagueSeasonMember(null);
+    if (!selectedSeason) {
+      setSelectedStats(null);
       return;
     }
 
-    const league = leaguesData[selectedLeague.leagueId];
-    const leagueSeason = league.seasons?.[selectedLeagueSeasonId];
-    const leagueSeasonMember = leagueSeason?.members?.[userId];
+    setIsStatsLoading(true);
+    setError(null);
 
-    setSelectedLeagueSeasonMember(leagueSeasonMember || null);
-  }, [selectedLeagueSeasonId, joiningLeagueSeasons, userId]);
+    try {
+      const stats = await fetchUserStats({
+        userId,
+        scopeType: "season",
+        leagueId: selectedSeason.leagueId,
+        seasonId: selectedSeason.seasonId,
+      });
+
+      setSelectedStats(toPersonalRecordStats(stats));
+    } catch (loadError) {
+      if (loadError instanceof ApiError && loadError.status === 401) {
+        router.replace("/login");
+        return;
+      }
+
+      setSelectedStats(null);
+      setError(
+        loadError instanceof Error
+          ? loadError.message
+          : DEFAULT_STATS_ERROR_MESSAGE
+      );
+    } finally {
+      setIsStatsLoading(false);
+    }
+  }, [joiningLeagueSeasons, router, selectedLeagueSeasonId, userId]);
 
   return {
-    userName: name,
+    userName,
     joiningLeagueSeasons,
     selectedLeagueSeasonId,
-    selectedLeagueSeasonMember,
+    selectedStats,
+    isLoading,
+    isStatsLoading,
+    error,
     onChangeLeagueSeason,
     onDisplayButtonClick,
   };
