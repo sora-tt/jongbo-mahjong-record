@@ -5,39 +5,33 @@ import type {
   SelectedPlayers,
 } from "@/types/domain/player-select";
 
-const EMPTY_SELECTED_PLAYERS: SelectedPlayers = {
+const createEmptySelectedPlayers = (): SelectedPlayers => ({
   east: "",
   south: "",
   west: "",
   north: "",
-};
+});
 
-const initialState: RecordingFlowState = {
+const createInitialState = (): RecordingFlowState => ({
   leagueId: null,
   seasonId: null,
   selectedPlayerIds: [],
-  selectedPlayersBySeat: EMPTY_SELECTED_PLAYERS,
+  selectedPlayersBySeat: createEmptySelectedPlayers(),
   sessionId: null,
-};
+});
+
+const initialState: RecordingFlowState = createInitialState();
 
 const recordingFlowSlice = createSlice({
   name: "recordingFlow",
   initialState,
   reducers: {
-    setRecordingFlow: (state, action: PayloadAction<RecordingFlowState>) => {
-      state.leagueId = action.payload.leagueId;
-      state.seasonId = action.payload.seasonId;
-      state.selectedPlayerIds = action.payload.selectedPlayerIds;
-      state.selectedPlayersBySeat = action.payload.selectedPlayersBySeat;
-      state.sessionId = action.payload.sessionId;
-    },
-    clearRecordingFlow: (state) => {
-      state.leagueId = initialState.leagueId;
-      state.seasonId = initialState.seasonId;
-      state.selectedPlayerIds = initialState.selectedPlayerIds;
-      state.selectedPlayersBySeat = initialState.selectedPlayersBySeat;
-      state.sessionId = initialState.sessionId;
-    },
+    setRecordingFlow: (_state, action: PayloadAction<RecordingFlowState>) => ({
+      ...action.payload,
+      selectedPlayerIds: [...action.payload.selectedPlayerIds],
+      selectedPlayersBySeat: { ...action.payload.selectedPlayersBySeat },
+    }),
+    clearRecordingFlow: () => createInitialState(),
   },
 });
 

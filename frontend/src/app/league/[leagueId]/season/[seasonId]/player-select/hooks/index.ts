@@ -9,16 +9,22 @@ import { setRecordingFlow } from "@/store/slices/recording-flow-slice";
 
 import { type Props as DropdownProps } from "@/components/ui/dropdown";
 
-import type { PlayerSelectOption } from "@/types/domain/player-select";
+import type {
+  PlayerSeat,
+  PlayerSelectOption,
+  SelectedPlayers,
+} from "@/types/domain/player-select";
 
 const DEFAULT_ERROR_MESSAGE =
   "プレイヤー選択画面の取得に失敗しました。時間をおいて再度お試しください。";
 
-const INITIAL_PLAYERS = {
-  first: "",
-  second: "",
-  third: "",
-  fourth: "",
+const PLAYER_SEATS: PlayerSeat[] = ["east", "south", "west", "north"];
+
+const INITIAL_PLAYERS: SelectedPlayers = {
+  east: "",
+  south: "",
+  west: "",
+  north: "",
 };
 
 export const usePlayerSelect = () => {
@@ -90,11 +96,11 @@ export const usePlayerSelect = () => {
   }, [params.leagueId, params.seasonId, router]);
 
   const handlePlayerChange = React.useCallback(
-    (position: keyof typeof INITIAL_PLAYERS): DropdownProps["onChange"] =>
+    (seat: PlayerSeat): DropdownProps["onChange"] =>
       (_, value) => {
         setPlayers((prev) => ({
           ...prev,
-          [position]: value,
+          [seat]: value,
         }));
         setError(null);
       },
@@ -102,36 +108,35 @@ export const usePlayerSelect = () => {
   );
 
   const getPositionOptions = React.useCallback(
-    (position: keyof typeof INITIAL_PLAYERS) => {
+    (seat: PlayerSeat) => {
       const selectedIds = new Set(
-        (Object.keys(INITIAL_PLAYERS) as Array<keyof typeof INITIAL_PLAYERS>)
-          .filter((currentPosition) => currentPosition !== position)
-          .map((currentPosition) => players[currentPosition])
+        PLAYER_SEATS.filter((currentSeat) => currentSeat !== seat)
+          .map((currentSeat) => players[currentSeat])
           .filter(Boolean)
       );
 
       return options.filter(
         (option) =>
-          option.value === players[position] || !selectedIds.has(option.value)
+          option.value === players[seat] || !selectedIds.has(option.value)
       );
     },
     [options, players]
   );
 
   const firstOptions = React.useMemo(
-    () => getPositionOptions("first"),
+    () => getPositionOptions("east"),
     [getPositionOptions]
   );
   const secondOptions = React.useMemo(
-    () => getPositionOptions("second"),
+    () => getPositionOptions("south"),
     [getPositionOptions]
   );
   const thirdOptions = React.useMemo(
-    () => getPositionOptions("third"),
+    () => getPositionOptions("west"),
     [getPositionOptions]
   );
   const fourthOptions = React.useMemo(
-    () => getPositionOptions("fourth"),
+    () => getPositionOptions("north"),
     [getPositionOptions]
   );
 
@@ -143,7 +148,7 @@ export const usePlayerSelect = () => {
     selectedPlayerIds.length <= 4 &&
     !hasDuplicatePlayers;
 
-  const handleSubmit = React.useCallback(() => {
+  const handleSubmit = React.useCallback(async () => {
     const leagueId = params.leagueId;
     const seasonId = params.seasonId;
 
@@ -158,23 +163,24 @@ export const usePlayerSelect = () => {
     }
 
     setIsSubmitting(true);
+    setError(null);
 
-    dispatch(
-      setRecordingFlow({
-        leagueId,
-        seasonId,
-        selectedPlayerIds,
-        selectedPlayersBySeat: {
-          east: players.first,
-          south: players.second,
-          west: players.third,
-          north: players.fourth,
-        },
-        sessionId: null,
-      })
-    );
+    try {
+      dispatch(
+        setRecordingFlow({
+          leagueId,
+          seasonId,
+          selectedPlayerIds,
+          selectedPlayersBySeat: players,
+          sessionId: null,
+        })
+      );
 
-    router.push(`/league/${leagueId}/season/${seasonId}/matches/new`);
+      router.push(`/league/${leagueId}/season/${seasonId}/matches/new`);
+    } catch {
+      setIsSubmitting(false);
+      setError("画面遷移に失敗しました。時間をおいて再度お試しください。");
+    }
   }, [
     canSubmit,
     dispatch,
@@ -205,10 +211,10 @@ export const usePlayerSelect = () => {
     isSubmitting,
     error,
     canSubmit,
-    onFirstPlayerChange: handlePlayerChange("first"),
-    onSecondPlayerChange: handlePlayerChange("second"),
-    onThirdPlayerChange: handlePlayerChange("third"),
-    onFourthPlayerChange: handlePlayerChange("fourth"),
+    onFirstPlayerChange: handlePlayerChange("east"),
+    onSecondPlayerChange: handlePlayerChange("south"),
+    onThirdPlayerChange: handlePlayerChange("west"),
+    onFourthPlayerChange: handlePlayerChange("north"),
     firstOptions,
     secondOptions,
     thirdOptions,

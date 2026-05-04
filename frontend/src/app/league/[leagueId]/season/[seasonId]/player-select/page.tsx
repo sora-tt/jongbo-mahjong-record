@@ -49,7 +49,7 @@ const PlayerSelectPage: React.FC = () => {
             <Dropdown
               defaultOption={SELECT_PLAYER_DEFAULT_TEXT}
               options={firstOptions}
-              value={players.first}
+              value={players.east}
               onChange={onFirstPlayerChange}
             />
           </div>
@@ -57,7 +57,7 @@ const PlayerSelectPage: React.FC = () => {
             <Dropdown
               defaultOption={SELECT_PLAYER_DEFAULT_TEXT}
               options={secondOptions}
-              value={players.second}
+              value={players.south}
               onChange={onSecondPlayerChange}
             />
           </div>
@@ -65,7 +65,7 @@ const PlayerSelectPage: React.FC = () => {
             <Dropdown
               defaultOption={SELECT_PLAYER_DEFAULT_TEXT}
               options={thirdOptions}
-              value={players.third}
+              value={players.west}
               onChange={onThirdPlayerChange}
             />
           </div>
@@ -73,7 +73,7 @@ const PlayerSelectPage: React.FC = () => {
             <Dropdown
               defaultOption={SELECT_PLAYER_DEFAULT_TEXT}
               options={fourthOptions}
-              value={players.fourth}
+              value={players.north}
               onChange={onFourthPlayerChange}
             />
           </div>
