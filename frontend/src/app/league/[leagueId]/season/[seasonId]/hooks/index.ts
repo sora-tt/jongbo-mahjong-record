@@ -2,6 +2,7 @@ import * as React from "react";
 
 import { useParams, useRouter } from "next/navigation";
 
+import { COLOR_MAP } from "@/constants/color-map";
 import { ApiError } from "@/lib/api/core";
 import { fetchSeasonDetail } from "@/lib/api/seasons";
 
@@ -24,6 +25,7 @@ export const useSeasonPage = () => {
   > | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  const colorValues = React.useMemo(() => Object.values(COLOR_MAP), []);
 
   React.useEffect(() => {
     let isActive = true;
@@ -110,6 +112,7 @@ export const useSeasonPage = () => {
     leagueId: params.leagueId,
     season,
     titles,
+    colorValues,
     loading,
     error,
   };
