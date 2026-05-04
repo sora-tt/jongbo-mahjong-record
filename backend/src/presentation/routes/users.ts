@@ -2,9 +2,12 @@ import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import type { AppBindings } from "@/presentation/bindings.js";
 import { ok } from "@/presentation/response.js";
-import { createMeSchema, updateMeSchema } from "@/presentation/schemas/user.js";
-import { AppError, ValidationError } from "@/domain/shared/errors.js";
-import type { ScopeType } from "@/domain/shared/types.js";
+import {
+  createMeSchema,
+  getUserStatsQuerySchema,
+  updateMeSchema,
+} from "@/presentation/schemas/user.js";
+import { AppError } from "@/domain/shared/errors.js";
 import type { Services } from "@/presentation/dependencies.js";
 
 export const buildUsersRouter = (services: Services) =>
@@ -59,27 +62,26 @@ export const buildUsersRouter = (services: Services) =>
 
       return ok(c, await services.userService.listJoiningSeasons(userId));
     })
-    .get("/:userId/stats", async (c) => {
-      const authUser = c.get("authUser");
-      const userId = c.req.param("userId");
-      if (authUser.uid !== userId) {
-        throw new AppError("forbidden", 403, "forbidden", { userId });
-      }
+    .get(
+      "/:userId/stats",
+      zValidator("query", getUserStatsQuerySchema),
+      async (c) => {
+        const authUser = c.get("authUser");
+        const userId = c.req.param("userId");
+        if (authUser.uid !== userId) {
+          throw new AppError("forbidden", 403, "forbidden", { userId });
+        }
 
-      const scopeType = c.req.query("scopeType") as ScopeType | undefined;
-      if (!scopeType || !["overall", "league", "season"].includes(scopeType)) {
-        throw new ValidationError(
-          "scopeType must be one of overall, league, season",
+        const query = c.req.valid("query");
+
+        return ok(
+          c,
+          await services.userService.getUserStats({
+            userId,
+            scopeType: query.scopeType,
+            leagueId: query.leagueId,
+            seasonId: query.seasonId,
+          }),
         );
-      }
-
-      return ok(
-        c,
-        await services.userService.getUserStats({
-          userId,
-          scopeType,
-          leagueId: c.req.query("leagueId") ?? undefined,
-          seasonId: c.req.query("seasonId") ?? undefined,
-        }),
-      );
-    });
+      },
+    );
