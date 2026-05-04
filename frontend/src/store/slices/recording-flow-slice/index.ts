@@ -12,7 +12,7 @@ const createEmptySelectedPlayers = (): SelectedPlayers => ({
   north: "",
 });
 
-const createInitialState = (): RecordingFlowState => ({
+export const createInitialRecordingFlowState = (): RecordingFlowState => ({
   leagueId: null,
   seasonId: null,
   selectedPlayerIds: [],
@@ -20,7 +20,7 @@ const createInitialState = (): RecordingFlowState => ({
   sessionId: null,
 });
 
-const initialState: RecordingFlowState = createInitialState();
+const initialState: RecordingFlowState = createInitialRecordingFlowState();
 
 const recordingFlowSlice = createSlice({
   name: "recordingFlow",
@@ -31,7 +31,7 @@ const recordingFlowSlice = createSlice({
       selectedPlayerIds: [...action.payload.selectedPlayerIds],
       selectedPlayersBySeat: { ...action.payload.selectedPlayersBySeat },
     }),
-    clearRecordingFlow: () => createInitialState(),
+    clearRecordingFlow: () => createInitialRecordingFlowState(),
   },
 });
 

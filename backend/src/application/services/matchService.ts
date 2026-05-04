@@ -6,12 +6,14 @@ import type {
 } from "@/domain/match/repository.js";
 import { calculateMatchPoints } from "@/domain/shared/scoring.js";
 import { AppError, ValidationError } from "@/domain/shared/errors.js";
+import type { SeasonRepository } from "@/domain/season/repository.js";
 import type { SessionRepository } from "@/domain/session/repository.js";
 import { StatsRebuilder } from "@/application/services/statsRebuilder.js";
 
 export class MatchService {
   constructor(
     private readonly leagueRepository: LeagueRepository,
+    private readonly seasonRepository: SeasonRepository,
     private readonly sessionRepository: SessionRepository,
     private readonly matchRepository: MatchRepository,
     private readonly statsRebuilder: StatsRebuilder,
@@ -23,7 +25,7 @@ export class MatchService {
     seasonId: string,
     sessionId: string,
   ) {
-    await this.assertSessionMembership(userId, leagueId, seasonId, sessionId);
+    await this.assertSeasonMembership(userId, leagueId, seasonId);
     return this.matchRepository.list(leagueId, seasonId, sessionId);
   }
 
@@ -34,7 +36,7 @@ export class MatchService {
     sessionId: string,
     matchId: string,
   ) {
-    await this.assertSessionMembership(userId, leagueId, seasonId, sessionId);
+    await this.assertSeasonMembership(userId, leagueId, seasonId);
     return this.matchRepository.get(leagueId, seasonId, sessionId, matchId);
   }
 
@@ -45,7 +47,7 @@ export class MatchService {
     sessionId: string,
     input: CreateMatchInput,
   ) {
-    await this.assertSessionMembership(userId, leagueId, seasonId, sessionId);
+    await this.assertSeasonMembership(userId, leagueId, seasonId);
     const [rule, session] = await Promise.all([
       this.leagueRepository.getRule(leagueId),
       this.sessionRepository.get(leagueId, seasonId, sessionId),
@@ -75,7 +77,7 @@ export class MatchService {
     matchId: string,
     input: UpdateMatchInput,
   ) {
-    await this.assertSessionMembership(userId, leagueId, seasonId, sessionId);
+    await this.assertSeasonMembership(userId, leagueId, seasonId);
     const [rule, session, existing] = await Promise.all([
       this.leagueRepository.getRule(leagueId),
       this.sessionRepository.get(leagueId, seasonId, sessionId),
@@ -106,7 +108,7 @@ export class MatchService {
     sessionId: string,
     matchId: string,
   ) {
-    await this.assertSessionMembership(userId, leagueId, seasonId, sessionId);
+    await this.assertSeasonMembership(userId, leagueId, seasonId);
     await this.matchRepository.delete(leagueId, seasonId, sessionId, matchId);
     await this.statsRebuilder.rebuildSeason(leagueId, seasonId);
   }
@@ -137,28 +139,14 @@ export class MatchService {
     );
   }
 
-  private async assertSessionMembership(
+  private async assertSeasonMembership(
     userId: string,
     leagueId: string,
     seasonId: string,
-    sessionId: string,
   ) {
-    const league = await this.leagueRepository.listMembers(leagueId);
-    if (!league.some((member) => member.userId === userId)) {
-      throw new AppError("forbidden", 403, "forbidden", { leagueId });
-    }
-
-    const session = await this.sessionRepository.get(
-      leagueId,
-      seasonId,
-      sessionId,
-    );
-    if (!session.members.some((member) => member.userId === userId)) {
-      throw new AppError("forbidden", 403, "forbidden", {
-        leagueId,
-        seasonId,
-        sessionId,
-      });
+    const members = await this.seasonRepository.listMembers(leagueId, seasonId);
+    if (!members.some((member) => member.userId === userId)) {
+      throw new AppError("forbidden", 403, "forbidden", { leagueId, seasonId });
     }
   }
 }

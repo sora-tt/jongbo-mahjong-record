@@ -75,6 +75,7 @@ export class FirestoreLeagueRepository implements LeagueRepository {
     return {
       id: snapshot.id,
       name: String(data.name ?? ""),
+      rule: this.mapLeagueRule(data.rule),
       memberCount: Number(data.member_count ?? 0),
       totalMatchCount: Number(data.total_match_count ?? 0),
       activeSeason:
@@ -324,7 +325,9 @@ export class FirestoreLeagueRepository implements LeagueRepository {
     };
   }
 
-  private mapLeagueRule(value: FirebaseFirestore.DocumentData | null | undefined) {
+  private mapLeagueRule(
+    value: FirebaseFirestore.DocumentData | null | undefined,
+  ) {
     return {
       gameType: value?.game_type === "sanma" ? "sanma" : "yonma",
       uma: {
