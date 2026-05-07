@@ -26,6 +26,19 @@ export type LeagueSummary = {
 export type LeagueDetail = {
   id: string;
   name: string;
+  rule: {
+    gameType: "sanma" | "yonma";
+    uma: {
+      first: number;
+      second: number;
+      third: number;
+      fourth: number | null;
+    };
+    oka: {
+      startingPoints: number;
+      returnPoints: number;
+    };
+  };
   memberCount: number;
   totalMatchCount: number;
   activeSeason: {
