@@ -2,6 +2,8 @@
 
 import * as React from "react";
 
+import Link from "next/link";
+
 import Header from "@/components/common/container/header";
 
 import { useLeague } from "./hooks";
@@ -9,12 +11,43 @@ import { formatScore, formatStreak } from "./utils";
 
 const LeaguePage: React.FC = () => {
   const {
+    league,
     longestWinStreak,
     longestLoseStreak,
     currentHighestScore,
     currentLowestScore,
     leagueSeasons,
+    loading,
+    error,
   } = useLeague();
+
+  if (loading) {
+    return (
+      <div className="flex-1 bg-white min-h-screen font-jp">
+        <Header />
+        <div className="flex min-h-[calc(100vh-56px)] items-center justify-center px-4 text-center text-text-muted">
+          リーグ情報を読み込んでいます...
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex-1 bg-white min-h-screen font-jp">
+        <Header />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="bg-error-bg border-2 border-error-border rounded-lg p-4">
+            <p className="text-error-text text-sm">{error}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!league) {
+    return null;
+  }
 
   return (
     <div className="flex-1 bg-white min-h-screen font-jp">
@@ -30,12 +63,12 @@ const LeaguePage: React.FC = () => {
                 連勝記録
               </div>
               <div className="text-xs text-text-muted mb-2">
-                {longestWinStreak?.playerName || "データなし"}
+                {longestWinStreak?.userName || "データなし"}
               </div>
               <div className="text-3xl font-bold text-brand-600">
                 {longestWinStreak
                   ? formatStreak({
-                      count: longestWinStreak.count,
+                      count: longestWinStreak.value,
                       unit: "連勝",
                     })
                   : "データなし"}
@@ -47,12 +80,12 @@ const LeaguePage: React.FC = () => {
                 連敗記録
               </div>
               <div className="text-xs text-text-muted mb-2">
-                {longestLoseStreak?.playerName || "データなし"}
+                {longestLoseStreak?.userName || "データなし"}
               </div>
               <div className="text-3xl font-bold text-brand-600">
                 {longestLoseStreak
                   ? formatStreak({
-                      count: longestLoseStreak.count,
+                      count: longestLoseStreak.value,
                       unit: "連敗",
                     })
                   : "データなし"}
@@ -64,11 +97,11 @@ const LeaguePage: React.FC = () => {
                 最高スコア
               </div>
               <div className="text-xs text-text-muted mb-2">
-                {currentHighestScore?.playerName || "データなし"}
+                {currentHighestScore?.userName || "データなし"}
               </div>
               <div className="text-3xl font-bold text-brand-600">
                 {currentHighestScore
-                  ? formatScore({ score: currentHighestScore.score })
+                  ? formatScore({ score: currentHighestScore.value })
                   : "データなし"}
               </div>
             </div>
@@ -78,11 +111,11 @@ const LeaguePage: React.FC = () => {
                 最低スコア
               </div>
               <div className="text-xs text-text-muted mb-2">
-                {currentLowestScore?.playerName || "データなし"}
+                {currentLowestScore?.userName || "データなし"}
               </div>
               <div className="text-3xl font-bold text-brand-600">
                 {currentLowestScore
-                  ? formatScore({ score: currentLowestScore.score })
+                  ? formatScore({ score: currentLowestScore.value })
                   : "データなし"}
               </div>
             </div>
@@ -94,10 +127,11 @@ const LeaguePage: React.FC = () => {
           <div className="text-2xl font-bold text-text-dark">シーズン一覧</div>
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             {leagueSeasons.map((season) => (
-              <div
-                key={season.leagueSeasonId}
+              <Link
+                key={season.id}
+                href={`/league/season?seasonId=${season.id}`}
                 className={`bg-white rounded-lg p-4 hover:shadow-lg transition-shadow relative ${
-                  season.isOngoing
+                  season.status === "active"
                     ? "border-2 border-brand-600"
                     : "border-2 border-gray-300"
                 }`}
@@ -111,20 +145,20 @@ const LeaguePage: React.FC = () => {
                       参加者：{season.memberCount}人
                     </div>
                     <div className="text-sm text-text-muted">
-                      対局数：{season.gameCount}局
+                      対局数：{season.totalMatchCount}局
                     </div>
                   </div>
                   <div
                     className={`flex items-center justify-center w-16 h-12 rounded-lg font-bold text-base ${
-                      season.isOngoing
+                      season.status === "active"
                         ? "bg-brand-600 text-white"
                         : "bg-gray-200 text-gray-600"
                     }`}
                   >
-                    {season.isOngoing ? "進行中" : "終了"}
+                    {season.status === "active" ? "進行中" : "終了"}
                   </div>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         </div>

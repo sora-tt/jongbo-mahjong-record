@@ -1,104 +1,87 @@
-import { useEffect } from "react";
+import * as React from "react";
 
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
-import { leagueData1 } from "@/mocks/league";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import {
-  selectLeagueLoading,
-  selectLeagueError,
-  selectLeagueRecord,
-  selectLeagueSeasons,
-  selectSelectedLeagueId,
-} from "@/store/selectors/league-selectors";
-import {
-  setLeagues,
-  setSelectedLeagueId,
-  setLoading,
-  setError,
-} from "@/store/slices/league-slice";
-import { League } from "@/types/domain/league";
+import { ApiError } from "@/lib/api/core";
+import { fetchLeagueDetail } from "@/lib/api/leagues";
+import { fetchLeagueSeasons } from "@/lib/api/seasons";
 
-/**
- * mock-dataディレクトリから動的にmockデータを読み込む
- * @param mockKey - mockファイル名（例: "league-default", "league-1"）
- * @returns mockLeagueデータまたはnull
- */
-const loadMockData = async ({
-  mockKey,
-}: {
-  mockKey: string;
-}): Promise<{ mockLeague: League } | null> => {
-  try {
-    const mockModule = await import(`../mock-data/${mockKey}.ts`);
-    return mockModule || null;
-  } catch (error) {
-    console.error(`Failed to load mock data: ${mockKey}`, error);
-    return null;
-  }
-};
+const DEFAULT_ERROR_MESSAGE =
+  "リーグ詳細の取得に失敗しました。時間をおいて再度お試しください。";
 
 export const useLeague = () => {
-  const dispatch = useAppDispatch();
+  const router = useRouter();
   const searchParams = useSearchParams();
-  const selectedLeagueId = useAppSelector(selectSelectedLeagueId);
-  const {
-    longestWinStreak,
-    longestLoseStreak,
-    currentHighestScore,
-    currentLowestScore,
-  } = useAppSelector(selectLeagueRecord);
-  const leagueSeasons = useAppSelector((state) =>
-    selectLeagueSeasons(state, selectedLeagueId)
-  );
-  const loading = useAppSelector(selectLeagueLoading);
-  const error = useAppSelector(selectLeagueError);
+  const [league, setLeague] = React.useState<Awaited<
+    ReturnType<typeof fetchLeagueDetail>
+  > | null>(null);
+  const [leagueSeasons, setLeagueSeasons] = React.useState<
+    Awaited<ReturnType<typeof fetchLeagueSeasons>>
+  >([]);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchLeague = async () => {
-      const mockKey = searchParams.get("_mock");
-      const isDev = process.env.NODE_ENV === "development";
+  React.useEffect(() => {
+    let isActive = true;
 
-      if (isDev && mockKey) {
-        dispatch(setLoading(true));
-        const mockData = await loadMockData({ mockKey });
-        if (mockData) {
-          dispatch(setLeagues([mockData.mockLeague]));
-          dispatch(setSelectedLeagueId(mockData.mockLeague.leagueId));
-        } else {
-          dispatch(setError(`Mock data not found: ${mockKey}`));
-        }
-        dispatch(setLoading(false));
-        return;
-      }
+    const leagueId = searchParams.get("leagueId");
 
-      // APIからデータを取得
-      dispatch(setLoading(true));
+    if (!leagueId) {
+      setError("leagueId が指定されていません");
+      setLoading(false);
+      return;
+    }
+
+    const load = async () => {
+      setLoading(true);
+      setError(null);
+
       try {
-        // TODO: 実際のAPI呼び出しに置き換える
-        // const response = await fetch('/api/leagues/current');
-        // const data = await response.json();
-        // dispatch(setLeagues([data]));
-        // dispatch(setSelectedLeagueId(data.leagueId));
+        const [leagueDetail, seasons] = await Promise.all([
+          fetchLeagueDetail(leagueId),
+          fetchLeagueSeasons(leagueId),
+        ]);
 
-        // 暫定: APIが未実装なので、mockデータを使用
-        dispatch(setLeagues([leagueData1]));
-        dispatch(setSelectedLeagueId(leagueData1.leagueId));
-      } catch (err) {
-        dispatch(
-          setError(
-            err instanceof Error ? err.message : "Failed to fetch league"
-          )
+        if (!isActive) {
+          return;
+        }
+
+        setLeague(leagueDetail);
+        setLeagueSeasons(seasons);
+      } catch (loadError) {
+        if (!isActive) {
+          return;
+        }
+
+        if (loadError instanceof ApiError && loadError.status === 401) {
+          router.replace("/login");
+          return;
+        }
+
+        setError(
+          loadError instanceof Error ? loadError.message : DEFAULT_ERROR_MESSAGE
         );
       } finally {
-        dispatch(setLoading(false));
+        if (isActive) {
+          setLoading(false);
+        }
       }
     };
 
-    fetchLeague();
-  }, [dispatch, searchParams]);
+    void load();
+
+    return () => {
+      isActive = false;
+    };
+  }, [router, searchParams]);
+
+  const longestWinStreak = league?.leagueRecords?.winStreak ?? null;
+  const longestLoseStreak = league?.leagueRecords?.loseStreak ?? null;
+  const currentHighestScore = league?.leagueRecords?.highestScore ?? null;
+  const currentLowestScore = league?.leagueRecords?.lowestScore ?? null;
 
   return {
+    league,
     longestWinStreak,
     longestLoseStreak,
     currentHighestScore,

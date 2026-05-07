@@ -1154,7 +1154,6 @@ export const openApiDocument = {
         properties: {
           id: { type: "string" },
           name: { type: "string" },
-          rule: { type: "object" },
           memberCount: { type: "number" },
           totalMatchCount: { type: "number" },
           activeSeason: { type: "object", nullable: true },

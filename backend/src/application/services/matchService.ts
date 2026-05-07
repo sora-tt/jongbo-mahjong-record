@@ -4,7 +4,6 @@ import type {
   MatchRepository,
   UpdateMatchInput,
 } from "@/domain/match/repository.js";
-import type { RuleRepository } from "@/domain/rule/repository.js";
 import { calculateMatchPoints } from "@/domain/shared/scoring.js";
 import { AppError, ValidationError } from "@/domain/shared/errors.js";
 import type { SessionRepository } from "@/domain/session/repository.js";
@@ -12,7 +11,6 @@ import { StatsRebuilder } from "@/application/services/statsRebuilder.js";
 
 export class MatchService {
   constructor(
-    private readonly ruleRepository: RuleRepository,
     private readonly leagueRepository: LeagueRepository,
     private readonly sessionRepository: SessionRepository,
     private readonly matchRepository: MatchRepository,
@@ -48,11 +46,10 @@ export class MatchService {
     input: CreateMatchInput,
   ) {
     await this.assertSessionMembership(userId, leagueId, seasonId, sessionId);
-    const [league, session] = await Promise.all([
-      this.leagueRepository.get(leagueId),
+    const [rule, session] = await Promise.all([
+      this.leagueRepository.getRule(leagueId),
       this.sessionRepository.get(leagueId, seasonId, sessionId),
     ]);
-    const rule = await this.ruleRepository.get(league.rule.id);
     const results = this.buildMatchResults(
       input.results,
       session.members,
@@ -79,13 +76,12 @@ export class MatchService {
     input: UpdateMatchInput,
   ) {
     await this.assertSessionMembership(userId, leagueId, seasonId, sessionId);
-    const [league, session, existing] = await Promise.all([
-      this.leagueRepository.get(leagueId),
+    const [rule, session, existing] = await Promise.all([
+      this.leagueRepository.getRule(leagueId),
       this.sessionRepository.get(leagueId, seasonId, sessionId),
       this.matchRepository.get(leagueId, seasonId, sessionId, matchId),
     ]);
 
-    const rule = await this.ruleRepository.get(league.rule.id);
     const nextResults =
       input.results === undefined
         ? undefined
@@ -118,7 +114,7 @@ export class MatchService {
   private buildMatchResults(
     results: CreateMatchInput["results"],
     members: Array<{ userId: string; userName: string }>,
-    rule: Awaited<ReturnType<RuleRepository["get"]>>,
+    rule: Awaited<ReturnType<LeagueRepository["getRule"]>>,
   ) {
     const memberNameByUserId = new Map(
       members.map((member) => [member.userId, member.userName]),
