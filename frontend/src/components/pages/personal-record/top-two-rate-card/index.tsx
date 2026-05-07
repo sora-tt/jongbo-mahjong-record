@@ -2,22 +2,22 @@ import * as React from "react";
 
 import { PersonalRecordCard } from "@/components/pages/personal-record/personal-record-card";
 
-import { useTopTwoRateCard } from "./hooks";
-
-import { LeagueSeasonMember } from "@/types/domain/league";
+import type { PersonalRecordStats } from "@/types/domain/personal-record";
 
 interface TopTwoRateCardProps {
-  selectedLeagueSeasonMember: LeagueSeasonMember | null;
+  selectedStats: PersonalRecordStats | null;
 }
 
 export const TopTwoRateCard: React.FC<TopTwoRateCardProps> = ({
-  selectedLeagueSeasonMember,
+  selectedStats,
 }) => {
-  const { top2Rate } = useTopTwoRateCard({ selectedLeagueSeasonMember });
   const title = "連対率";
   const unit = "%";
   const description = undefined;
-  const value = typeof top2Rate === "number" ? top2Rate.toFixed(2) : top2Rate;
+  const value =
+    typeof selectedStats?.top2Rate === "number"
+      ? selectedStats.top2Rate.toFixed(2)
+      : selectedStats?.top2Rate;
 
   return (
     <PersonalRecordCard

@@ -5,6 +5,8 @@ import * as React from "react";
 import clsx from "clsx";
 import { Calendar, Crown } from "lucide-react";
 
+import { COLOR_MAP } from "@/constants/color-map";
+
 import Header from "@/components/common/container/header";
 import { LeagueRankingTable } from "@/components/pages/league/league-ranking-table";
 import { Button } from "@/components/ui/button";
@@ -26,7 +28,7 @@ const formatDate = (value: string | null) => {
 };
 
 const SeasonPage: React.FC = () => {
-  const { season, titles, colorValues, loading, error } = useSeasonPage();
+  const { season, titles, loading, error } = useSeasonPage();
 
   if (loading) {
     return (
@@ -100,7 +102,9 @@ const SeasonPage: React.FC = () => {
                   <span
                     className={clsx(
                       "inline-block w-2 h-2 rounded-full",
-                      colorValues[index % colorValues.length]
+                      Object.values(COLOR_MAP)[
+                        index % Object.values(COLOR_MAP).length
+                      ]
                     )}
                   />
                   <span className="text-text-muted">

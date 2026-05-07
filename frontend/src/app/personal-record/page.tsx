@@ -15,10 +15,24 @@ const PersonalRecordPage: React.FC = () => {
     userName,
     joiningLeagueSeasons,
     selectedLeagueSeasonId,
-    selectedLeagueSeasonMember,
+    selectedStats,
+    isLoading,
+    isStatsLoading,
+    error,
     onChangeLeagueSeason,
     onDisplayButtonClick,
   } = usePersonalRecord();
+
+  if (isLoading) {
+    return (
+      <div className="flex-1 bg-white min-h-screen font-jp">
+        <Header />
+        <div className="flex min-h-[calc(100vh-56px)] items-center justify-center px-4 text-center text-text-muted">
+          個人成績を読み込んでいます...
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 bg-white min-h-screen font-jp">
@@ -45,28 +59,21 @@ const PersonalRecordPage: React.FC = () => {
             </select>
             <div className="flex">
               <button
-                className="w-12 bg-brand-500 rounded text-white justify-center items-center"
+                className="min-w-16 bg-brand-500 rounded px-3 text-white justify-center items-center disabled:bg-gray-300"
                 onClick={onDisplayButtonClick}
+                disabled={!selectedLeagueSeasonId || isStatsLoading}
               >
-                表示
+                {isStatsLoading ? "取得中" : "表示"}
               </button>
             </div>
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-3 mt-1">
-          <TotalMatchCard
-            selectedLeagueSeasonMember={selectedLeagueSeasonMember}
-          />
-          <TotalPointCard
-            selectedLeagueSeasonMember={selectedLeagueSeasonMember}
-          />
-          <AverageRankCard
-            selectedLeagueSeasonMember={selectedLeagueSeasonMember}
-          />
-          <TopTwoRateCard
-            selectedLeagueSeasonMember={selectedLeagueSeasonMember}
-          />
+          <TotalMatchCard selectedStats={selectedStats} />
+          <TotalPointCard selectedStats={selectedStats} />
+          <AverageRankCard selectedStats={selectedStats} />
+          <TopTwoRateCard selectedStats={selectedStats} />
         </div>
 
         <div className="flex flex-col gap-2">
@@ -87,35 +94,37 @@ const PersonalRecordPage: React.FC = () => {
                 <tr>
                   <td className="py-2 px-4 border-b border-gray-300">1位</td>
                   <td className="py-2 px-4 border-b border-gray-300">
-                    {selectedLeagueSeasonMember?.numberOfEachOrder?.first ??
-                      "-"}
+                    {selectedStats?.numberOfEachOrder.first ?? "-"}
                   </td>
                 </tr>
                 <tr>
                   <td className="py-2 px-4 border-b border-gray-300">2位</td>
                   <td className="py-2 px-4 border-b border-gray-300">
-                    {selectedLeagueSeasonMember?.numberOfEachOrder?.second ??
-                      "-"}
+                    {selectedStats?.numberOfEachOrder.second ?? "-"}
                   </td>
                 </tr>
                 <tr>
                   <td className="py-2 px-4 border-b border-gray-300">3位</td>
                   <td className="py-2 px-4 border-b border-gray-300">
-                    {selectedLeagueSeasonMember?.numberOfEachOrder?.third ??
-                      "-"}
+                    {selectedStats?.numberOfEachOrder.third ?? "-"}
                   </td>
                 </tr>
                 <tr>
                   <td className="py-2 px-4">4位</td>
                   <td className="py-2 px-4">
-                    {selectedLeagueSeasonMember?.numberOfEachOrder?.fourth ??
-                      "-"}
+                    {selectedStats?.numberOfEachOrder.fourth ?? "-"}
                   </td>
                 </tr>
               </tbody>
             </table>
           </div>
         </div>
+
+        {error && (
+          <div className="bg-error-bg border-2 border-error-border rounded-lg p-4">
+            <p className="text-error-text text-sm">{error}</p>
+          </div>
+        )}
       </div>
     </div>
   );

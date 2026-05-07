@@ -6,8 +6,8 @@ import Link from "next/link";
 
 import Header from "@/components/common/container/header";
 
-import { formatScore, formatStreak } from "../utils";
 import { useLeaguePage } from "./hooks";
+import { formatScore, formatStreak } from "../utils";
 
 const LeaguePage: React.FC = () => {
   const {

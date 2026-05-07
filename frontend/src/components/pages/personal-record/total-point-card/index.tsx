@@ -2,23 +2,22 @@ import * as React from "react";
 
 import { PersonalRecordCard } from "@/components/pages/personal-record/personal-record-card";
 
-import { useTotalPointCard } from "./hooks";
-
-import { LeagueSeasonMember } from "@/types/domain/league";
+import type { PersonalRecordStats } from "@/types/domain/personal-record";
 
 interface TotalPointCardProps {
-  selectedLeagueSeasonMember: LeagueSeasonMember | null;
+  selectedStats: PersonalRecordStats | null;
 }
 
 export const TotalPointCard: React.FC<TotalPointCardProps> = ({
-  selectedLeagueSeasonMember,
+  selectedStats,
 }) => {
-  const { totalPoints } = useTotalPointCard({ selectedLeagueSeasonMember });
   const title = "総合pt";
   const unit = "pt";
   const description = undefined;
   const value =
-    typeof totalPoints === "number" ? totalPoints.toFixed(2) : totalPoints;
+    typeof selectedStats?.totalPoints === "number"
+      ? selectedStats.totalPoints.toFixed(2)
+      : selectedStats?.totalPoints;
 
   return (
     <PersonalRecordCard
