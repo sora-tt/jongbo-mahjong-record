@@ -66,7 +66,7 @@ const LeagueCard: React.FC<Props> = ({
 
         <div className="flex flex-col h-full gap-3">
           <Link
-            href={`/league?leagueId=${leagueId}`}
+            href={`/league/${leagueId}`}
             className="w-full px-4 py-3 bg-brand-500 hover:bg-brand-600 text-white font-medium rounded-lg transition-colors duration-150 flex items-center justify-center gap-2"
           >
             <FileText size={18} />
@@ -76,8 +76,8 @@ const LeagueCard: React.FC<Props> = ({
           <Link
             href={
               activeSeason
-                ? `/league/season?seasonId=${activeSeason.id}`
-                : "/league/season"
+                ? `/league/${leagueId}/season/${activeSeason.id}`
+                : `/league/${leagueId}`
             }
             className="w-full px-4 py-3 border-2 border-brand-500 text-brand-600 font-medium rounded-lg hover:bg-brand-50 transition-colors duration-150 flex items-center justify-center gap-2"
           >

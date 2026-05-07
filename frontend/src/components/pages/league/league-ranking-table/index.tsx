@@ -11,11 +11,22 @@ import {
   TableCell,
 } from "@/components/ui/table";
 
-import { useLeagueRankingTable } from "./hooks";
+type Member = {
+  rank: number;
+  userId: string;
+  userName: string;
+  totalPoints: number;
+  firstCount: number;
+  secondCount: number;
+  thirdCount: number;
+  fourthCount: number | null;
+};
 
-export const LeagueRankingTable: React.FC = () => {
-  const { members } = useLeagueRankingTable();
+type Props = {
+  members: Member[];
+};
 
+export const LeagueRankingTable: React.FC<Props> = ({ members }) => {
   return (
     <Table>
       <TableHead>
@@ -31,10 +42,10 @@ export const LeagueRankingTable: React.FC = () => {
       </TableHead>
 
       <TableBody>
-        {Object.values(members).map((member) => (
-          <TableRow key={member.player.userId} className="text-text-muted">
+        {members.map((member) => (
+          <TableRow key={member.userId} className="text-text-muted">
             <TableCell>{member.rank}</TableCell>
-            <TableCell>{member.player.name}</TableCell>
+            <TableCell>{member.userName}</TableCell>
             <TableCell
               className={clsx(
                 "font-semibold",
@@ -43,14 +54,14 @@ export const LeagueRankingTable: React.FC = () => {
             >
               {member.totalPoints.toFixed(1)}
             </TableCell>
-            <TableCell>{member.numberOfEachOrder.first}</TableCell>
-            <TableCell>{member.numberOfEachOrder.second}</TableCell>
-            <TableCell>{member.numberOfEachOrder.third}</TableCell>
-            <TableCell>{member.numberOfEachOrder.fourth}</TableCell>
+            <TableCell>{member.firstCount}</TableCell>
+            <TableCell>{member.secondCount}</TableCell>
+            <TableCell>{member.thirdCount}</TableCell>
+            <TableCell>{member.fourthCount ?? "-"}</TableCell>
           </TableRow>
         ))}
 
-        {Object.values(members).length === 0 && (
+        {members.length === 0 && (
           <TableRow>
             <TableCell
               colSpan={7}

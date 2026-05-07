@@ -1,6 +1,6 @@
 import * as React from "react";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 
 import { ApiError } from "@/lib/api/core";
 import { fetchLeagueDetail } from "@/lib/api/leagues";
@@ -9,9 +9,9 @@ import { fetchLeagueSeasons } from "@/lib/api/seasons";
 const DEFAULT_ERROR_MESSAGE =
   "リーグ詳細の取得に失敗しました。時間をおいて再度お試しください。";
 
-export const useLeague = () => {
+export const useLeaguePage = () => {
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const params = useParams<{ leagueId: string }>();
   const [league, setLeague] = React.useState<Awaited<
     ReturnType<typeof fetchLeagueDetail>
   > | null>(null);
@@ -24,7 +24,7 @@ export const useLeague = () => {
   React.useEffect(() => {
     let isActive = true;
 
-    const leagueId = searchParams.get("leagueId");
+    const leagueId = params.leagueId;
 
     if (!leagueId) {
       setError("leagueId が指定されていません");
@@ -73,7 +73,7 @@ export const useLeague = () => {
     return () => {
       isActive = false;
     };
-  }, [router, searchParams]);
+  }, [params.leagueId, router]);
 
   const longestWinStreak = league?.leagueRecords?.winStreak ?? null;
   const longestLoseStreak = league?.leagueRecords?.loseStreak ?? null;
