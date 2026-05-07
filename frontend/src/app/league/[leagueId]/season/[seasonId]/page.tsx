@@ -28,7 +28,8 @@ const formatDate = (value: string | null) => {
 };
 
 const SeasonPage: React.FC = () => {
-  const { season, titles, loading, error } = useSeasonPage();
+  const { season, titles, loading, error, handleStartRecording } =
+    useSeasonPage();
 
   if (loading) {
     return (
@@ -76,7 +77,9 @@ const SeasonPage: React.FC = () => {
         <section className="mb-6">
           <div className="flex gap-3">
             <Button variant="brand-primary">更新する</Button>
-            <Button variant="brand-secondary">記録する</Button>
+            <Button variant="brand-secondary" onClick={handleStartRecording}>
+              記録する
+            </Button>
           </div>
         </section>
 

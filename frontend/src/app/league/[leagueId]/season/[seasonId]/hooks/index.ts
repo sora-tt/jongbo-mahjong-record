@@ -106,11 +106,23 @@ export const useSeasonPage = () => {
     ].filter((title): title is Title => title !== null);
   }, [season]);
 
+  const handleStartRecording = React.useCallback(() => {
+    const leagueId = params.leagueId;
+    const seasonId = params.seasonId;
+
+    if (!leagueId || !seasonId) {
+      setError("leagueId または seasonId が指定されていません");
+      return;
+    }
+    router.push(`/league/${leagueId}/season/${seasonId}/player-select`);
+  }, [params.leagueId, params.seasonId, router]);
+
   return {
     leagueId: params.leagueId,
     season,
     titles,
     loading,
     error,
+    handleStartRecording,
   };
 };
