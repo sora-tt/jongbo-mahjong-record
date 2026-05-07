@@ -2,15 +2,16 @@ import * as React from "react";
 
 import { Plus } from "lucide-react";
 
+import Link from "next/link";
+
 type Props = {
   onClick?: () => void;
 };
 
 const CreateLeagueCard: React.FC<Props> = ({ onClick }) => {
   return (
-    <div
-      role="button"
-      tabIndex={0}
+    <Link
+      href="/league/new"
       onClick={onClick}
       className="bg-white rounded-lg border-2 border-dashed border-brand-200 hover:border-brand-500 hover:bg-brand-50 transition-all duration-200 cursor-pointer flex items-center justify-center min-h-[260px]"
     >
@@ -25,7 +26,7 @@ const CreateLeagueCard: React.FC<Props> = ({ onClick }) => {
           リーグを作成して友達を招待しましょう
         </p>
       </div>
-    </div>
+    </Link>
   );
 };
 
