@@ -2,38 +2,31 @@
 
 import * as React from "react";
 
-import { ArrowLeft, Plus, Trash2, Trophy, Type, Users } from "lucide-react";
+import { ArrowLeft, Plus, Trophy, Type, Users } from "lucide-react";
 
 import Link from "next/link";
 
 import Header from "@/components/common/container/header";
 import { Spacer } from "@/components/common/ui/spacer";
 import { Button } from "@/components/ui/button";
-import { Dropdown } from "@/components/ui/dropdown";
 import { InputArea } from "@/components/ui/input-area";
 
 import { useLeagueEdit } from "./hooks";
 
-import type { RuleIdType } from "@/types/domain/rule";
 import type { UserIdType } from "@/types/domain/user";
-
-const RULE_SELECT_DEFAULT_TEXT = "プリセットから選択…";
 
 const EditLeaguePage: React.FC = () => {
   const {
     leagueName,
     memberQuery,
     addedMembers,
-    selectedRule,
     addedRules,
-    ruleOptions,
+    ruleSettings,
     handleLeagueNameChange,
     handleMemberQueryChange,
     handleAddMember,
     handleRemoveMember,
-    handleRuleSelectChange,
-    handleAddRule,
-    handleRemoveRule,
+    handleRuleSettingChange,
     handleSubmit,
   } = useLeagueEdit();
 
@@ -162,21 +155,69 @@ const EditLeaguePage: React.FC = () => {
               ルール設定
             </label>
 
-            <Spacer display="flex" gap="small">
-              <Dropdown
-                defaultOption={RULE_SELECT_DEFAULT_TEXT}
-                options={ruleOptions}
-                value={selectedRule ?? ""}
-                onChange={handleRuleSelectChange}
-              />
+            {/* オカ設定 */}
+            <Spacer className="space-y-2">
+              <h3 className="text-sm font-semibold text-brand-700">オカ設定</h3>
+              <Spacer display="flex" gap="small" className="flex-wrap">
+                <div className="flex-1 min-w-0">
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    持ち点（点）
+                  </label>
+                  <input
+                    type="number"
+                    value={ruleSettings.okaStartPoints}
+                    onChange={(e) =>
+                      handleRuleSettingChange("okaStartPoints", e.target.value)
+                    }
+                    placeholder="例: 30000"
+                    className="w-full rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm text-gray-900 outline-none transition-all placeholder:text-gray-400 hover:border-gray-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50"
+                  />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    返し点（点）
+                  </label>
+                  <input
+                    type="number"
+                    value={ruleSettings.okaReturnPoints}
+                    onChange={(e) =>
+                      handleRuleSettingChange("okaReturnPoints", e.target.value)
+                    }
+                    placeholder="例: 30000"
+                    className="w-full rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm text-gray-900 outline-none transition-all placeholder:text-gray-400 hover:border-gray-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50"
+                  />
+                </div>
+              </Spacer>
+            </Spacer>
 
-              <Button
-                variant="brand-primary"
-                onClick={handleAddRule}
-                disabled={!selectedRule}
-              >
-                <Plus className="h-4 w-4" /> 追加
-              </Button>
+            {/* ウマ設定 */}
+            <Spacer className="space-y-2">
+              <h3 className="text-sm font-semibold text-brand-700">ウマ設定</h3>
+              <Spacer display="flex" gap="small" className="flex-wrap">
+                {(
+                  [
+                    { field: "uma1", label: "1位" },
+                    { field: "uma2", label: "2位" },
+                    { field: "uma3", label: "3位" },
+                    { field: "uma4", label: "4位" },
+                  ] as const
+                ).map(({ field, label }) => (
+                  <div key={field} className="flex-1 min-w-0">
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      {label} ウマ（点）
+                    </label>
+                    <input
+                      type="number"
+                      value={ruleSettings[field]}
+                      onChange={(e) =>
+                        handleRuleSettingChange(field, e.target.value)
+                      }
+                      placeholder="例: 0"
+                      className="w-full rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm text-gray-900 outline-none transition-all placeholder:text-gray-400 hover:border-gray-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50"
+                    />
+                  </div>
+                ))}
+              </Spacer>
             </Spacer>
 
             {/* ルール一覧 */}
@@ -188,7 +229,7 @@ const EditLeaguePage: React.FC = () => {
                 padding={{ top: "small" }}
               >
                 <h3 className="text-sm font-semibold text-brand-700">
-                  選択中のルール
+                  参考: 現在のルール
                 </h3>
 
                 {Object.entries(addedRules).map(([id, rule]) => (
@@ -207,10 +248,6 @@ const EditLeaguePage: React.FC = () => {
                       className="items-center justify-between gap-2"
                     >
                       <Spacer display="flex" className="items-center gap-2">
-                        <h4 className="text-sm font-semibold text-brand-800">
-                          {rule.name}
-                        </h4>
-
                         <span
                           className={`
                             inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold
@@ -224,22 +261,6 @@ const EditLeaguePage: React.FC = () => {
                           {rule.mode === "sanma" ? "三人麻雀" : "四人麻雀"}
                         </span>
                       </Spacer>
-
-                      {/* 削除ボタン（brand 色ベース） */}
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveRule(id as RuleIdType)}
-                        className="
-              inline-flex items-center justify-center
-              h-7 w-7 rounded-full
-              text-brand-500 hover:text-brand-700
-              hover:bg-white/70
-              transition-colors
-            "
-                        aria-label="ルールを削除"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
                     </Spacer>
 
                     {/* 下段：説明 + 詳細 */}
@@ -279,33 +300,12 @@ const EditLeaguePage: React.FC = () => {
                             );
                           })}
                         </p>
-
-                        <p className="text-xs text-brand-600">
-                          <span className="font-semibold text-brand-700">
-                            点数計算：
-                          </span>
-                          {rule.scoreCalc === "decimal" && "小数点有効"}
-                          {rule.scoreCalc === "fiveDropSixUp" && "五捨六入"}
-                          {rule.scoreCalc === "round" && "四捨五入"}
-                          {rule.scoreCalc === "floor" && "切り捨て"}
-                          {rule.scoreCalc === "ceil" && "切り上げ"}
-                        </p>
                       </Spacer>
                     </Spacer>
                   </Spacer>
                 ))}
               </Spacer>
-            ) : (
-              <Spacer className="rounded-xl border border-dashed border-gray-200 bg-gray-50 px-2 py-4 text-center">
-                <Trophy className="mx-auto mb-2 h-8 w-8 text-gray-300" />
-                <p className="text-sm font-medium text-gray-600">
-                  ルールを選択して追加してください
-                </p>
-                <p className="mt-1 text-xs text-gray-500">
-                  選択したルールの詳細がここに表示されます
-                </p>
-              </Spacer>
-            )}
+            ) : null}
           </Spacer>
 
           {/* アクションボタン */}
