@@ -10,7 +10,6 @@ import type {
   LeagueRepository,
   UpdateLeagueInput,
 } from "@/domain/league/repository.js";
-import type { Rule } from "@/domain/rule/types.js";
 import type { UserRepository } from "@/domain/user/repository.js";
 import { toIsoString } from "@/infrastructure/firestore/utils.js";
 import { NotFoundError } from "@/domain/shared/errors.js";
@@ -110,7 +109,7 @@ export class FirestoreLeagueRepository implements LeagueRepository {
     return this.mapLeagueRule(snapshot.data()?.rule);
   }
 
-  async create(input: CreateLeagueInput, rule: Rule): Promise<LeagueDetail> {
+  async create(input: CreateLeagueInput): Promise<LeagueDetail> {
     const now = Timestamp.now();
     const leagueRef = this.db.collection("leagues").doc();
     const members = await this.userRepository.getByIds(input.memberUserIds);
@@ -119,7 +118,7 @@ export class FirestoreLeagueRepository implements LeagueRepository {
     batch.set(leagueRef, {
       id: leagueRef.id,
       name: input.name,
-      rule: this.toLeagueRuleDoc(rule),
+      rule: this.toLeagueRuleDoc(input.rule),
       member_count: members.length,
       total_match_count: 0,
       active_season_id: null,

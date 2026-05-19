@@ -44,7 +44,6 @@ export const openApiDocument = {
   tags: [
     { name: "Health" },
     { name: "Auth" },
-    { name: "Rules" },
     { name: "Users" },
     { name: "Leagues" },
     { name: "Seasons" },
@@ -110,120 +109,6 @@ export const openApiDocument = {
         tags: ["Auth"],
         summary: "delete session cookie",
         security: [],
-        responses: {
-          "204": {
-            description: "deleted",
-          },
-        },
-      },
-    },
-    "/api/rules": {
-      get: {
-        tags: ["Rules"],
-        summary: "list rules",
-        responses: {
-          "200": {
-            description: "rules",
-            content: jsonContent(
-              dataResponse({
-                type: "array",
-                items: { $ref: "#/components/schemas/Rule" },
-              }),
-            ),
-          },
-        },
-      },
-      post: {
-        tags: ["Rules"],
-        summary: "create rule",
-        requestBody: {
-          required: true,
-          content: jsonContent({
-            type: "object",
-            properties: {
-              name: { type: "string" },
-              description: { type: "string" },
-              gameType: { type: "string", enum: ["sanma", "yonma"] },
-              uma: { type: "object" },
-              oka: { type: "object" },
-              scoreCalculation: {
-                type: "string",
-                enum: ["decimal", "fiveDropSixUp", "round", "floor", "ceil"],
-              },
-            },
-            required: ["name", "gameType", "uma", "oka", "scoreCalculation"],
-          }),
-        },
-        responses: {
-          "201": {
-            description: "rule",
-            content: jsonContent(
-              dataResponse({ $ref: "#/components/schemas/Rule" }),
-            ),
-          },
-        },
-      },
-    },
-    "/api/rules/{ruleId}": {
-      get: {
-        tags: ["Rules"],
-        summary: "get rule",
-        parameters: [
-          {
-            in: "path",
-            name: "ruleId",
-            required: true,
-            schema: { type: "string" },
-          },
-        ],
-        responses: {
-          "200": {
-            description: "rule",
-            content: jsonContent(
-              dataResponse({ $ref: "#/components/schemas/Rule" }),
-            ),
-          },
-          "404": {
-            description: "not found",
-            content: jsonContent(errorResponse),
-          },
-        },
-      },
-      patch: {
-        tags: ["Rules"],
-        summary: "update rule",
-        parameters: [
-          {
-            in: "path",
-            name: "ruleId",
-            required: true,
-            schema: { type: "string" },
-          },
-        ],
-        requestBody: {
-          required: true,
-          content: jsonContent({ type: "object" }),
-        },
-        responses: {
-          "200": {
-            description: "rule",
-            content: jsonContent(
-              dataResponse({ $ref: "#/components/schemas/Rule" }),
-            ),
-          },
-        },
-      },
-      delete: {
-        tags: ["Rules"],
-        summary: "delete rule",
-        parameters: [
-          {
-            in: "path",
-            name: "ruleId",
-            required: true,
-            schema: { type: "string" },
-          },
-        ],
         responses: {
           "204": {
             description: "deleted",
@@ -1062,20 +947,6 @@ export const openApiDocument = {
       },
     },
     schemas: {
-      Rule: {
-        type: "object",
-        properties: {
-          id: { type: "string" },
-          name: { type: "string" },
-          description: { type: "string" },
-          gameType: { type: "string", enum: ["sanma", "yonma"] },
-          uma: { type: "object" },
-          oka: { type: "object" },
-          scoreCalculation: { type: "string" },
-          createdAt: { type: "string", format: "date-time" },
-          updatedAt: { type: "string", format: "date-time" },
-        },
-      },
       User: {
         type: "object",
         properties: {
@@ -1154,6 +1025,7 @@ export const openApiDocument = {
         properties: {
           id: { type: "string" },
           name: { type: "string" },
+          rule: { $ref: "#/components/schemas/LeagueRule" },
           memberCount: { type: "number" },
           totalMatchCount: { type: "number" },
           activeSeason: { type: "object", nullable: true },
@@ -1249,10 +1121,35 @@ export const openApiDocument = {
         type: "object",
         properties: {
           name: { type: "string" },
-          ruleId: { type: "string" },
+          rule: { $ref: "#/components/schemas/LeagueRule" },
           memberUserIds: { type: "array", items: { type: "string" } },
         },
-        required: ["name", "ruleId", "memberUserIds"],
+        required: ["name", "rule", "memberUserIds"],
+      },
+      LeagueRule: {
+        type: "object",
+        properties: {
+          gameType: { type: "string", enum: ["sanma", "yonma"] },
+          oka: {
+            type: "object",
+            properties: {
+              startingPoints: { type: "number" },
+              returnPoints: { type: "number" },
+            },
+            required: ["startingPoints", "returnPoints"],
+          },
+          uma: {
+            type: "object",
+            properties: {
+              first: { type: "number" },
+              second: { type: "number" },
+              third: { type: "number" },
+              fourth: { type: "number", nullable: true },
+            },
+            required: ["first", "second", "third", "fourth"],
+          },
+        },
+        required: ["gameType", "oka", "uma"],
       },
       CreateSeasonInput: {
         type: "object",

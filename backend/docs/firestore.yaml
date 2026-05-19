@@ -239,44 +239,6 @@ leagues:
     created_at: timestamp
     updated_at: timestamp
 
-rules:
-  collections:
-  fields:
-    id: string
-    name: string
-    description: string
-
-    # sanma / yonma を区別
-    game_type:
-      type: string
-      enum: [sanma, yonma]
-
-    # ウマ
-    uma:
-      type: object
-      fields:
-        first: number
-        second: number
-        third: number
-        fourth:
-          type: number
-          nullable: true
-
-    # オカ
-    oka:
-      type: object
-      fields:
-        starting_points: number
-        return_points: number
-
-    # ポイント計算方法
-    score_calculation:
-      type: string
-      enum: ["decimal", "fiveDropSixUp", "round", "floor", "ceil"]
-
-    created_at: timestamp
-    updated_at: timestamp
-
 user_stats:
   collections:
   fields:

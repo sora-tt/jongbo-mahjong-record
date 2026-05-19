@@ -108,21 +108,14 @@
 - `GET /api/health`
   - サーバ稼働確認。
 
-### 6.2 ルール
-
-- `GET /api/rules`
-  - ルール一覧取得。
-- `GET /api/rules/:ruleId`
-  - ルール詳細取得。
-
-### 6.3 ユーザー
+### 6.2 ユーザー
 
 - `GET /api/users/:userId`
   - ユーザー基本情報取得。
 - `GET /api/users/:userId/stats`
   - `scopeType`, `leagueId`, `seasonId` を条件に個人成績取得。
 
-### 6.4 リーグ
+### 6.3 リーグ
 
 - `GET /api/leagues`
   - リーグ一覧取得。
@@ -135,7 +128,7 @@
 - `PATCH /api/leagues/:leagueId`
   - リーグ名更新などの軽微変更。
 
-### 6.5 シーズン
+### 6.4 シーズン
 
 - `GET /api/leagues/:leagueId/seasons`
   - シーズン一覧取得。
@@ -147,7 +140,7 @@
 - `PATCH /api/leagues/:leagueId/seasons/:seasonId`
   - 名称変更、`status` 変更。
 
-### 6.6 セッション
+### 6.5 セッション
 
 - `GET /api/leagues/:leagueId/seasons/:seasonId/sessions`
   - セッション一覧取得。
@@ -422,8 +415,12 @@
 ### 8.1 リーグ作成
 
 - `name` 必須。
-- `ruleId` 必須。
-- `memberUserIds` は 1 件以上。
+- `rule.gameType` 必須。
+- `rule.oka.startingPoints`, `rule.oka.returnPoints` 必須。
+- `rule.uma.first`, `rule.uma.second`, `rule.uma.third` 必須。
+- 四麻では `rule.uma.fourth` 必須。
+- 三麻では `rule.uma.fourth` は `null`。
+- `memberUserIds` は 0 件以上。作成者は backend で自動追加。
 
 ### 8.2 シーズン作成
 
@@ -730,7 +727,6 @@
 
 使用エンドポイント:
 
-- `GET /api/rules`
 - `GET /api/users?query=:keyword`
 - `POST /api/leagues`
 
@@ -739,7 +735,19 @@
 ```json
 {
   "name": "Mリーグ",
-  "ruleId": "rule_001",
+  "rule": {
+    "gameType": "yonma",
+    "uma": {
+      "first": 20,
+      "second": 10,
+      "third": -10,
+      "fourth": -20
+    },
+    "oka": {
+      "startingPoints": 25000,
+      "returnPoints": 30000
+    }
+  },
   "memberUserIds": ["0001", "0002", "0003", "0004"]
 }
 ```

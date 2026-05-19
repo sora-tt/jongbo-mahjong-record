@@ -108,191 +108,7 @@ session 作成時だけ Firebase ID Token を使います。
 }
 ```
 
-## 3. Rules
-
-### GET /api/rules
-
-概要:
-
-- ルール一覧を取得する。
-
-リクエスト:
-
-- なし
-
-レスポンス:
-
-```json
-{
-  "data": [
-    {
-      "id": "0001",
-      "name": "Mリーグルール",
-      "description": "frontend mock を元にした四麻ルール",
-      "gameType": "yonma",
-      "uma": {
-        "first": 20,
-        "second": 10,
-        "third": -10,
-        "fourth": -20
-      },
-      "oka": {
-        "startingPoints": 25000,
-        "returnPoints": 30000
-      },
-      "scoreCalculation": "decimal",
-      "createdAt": "2026-03-15T10:00:00.000Z",
-      "updatedAt": "2026-03-15T10:00:00.000Z"
-    }
-  ]
-}
-```
-
-### GET /api/rules/:ruleId
-
-概要:
-
-- ルール詳細を取得する。
-
-リクエスト:
-
-- path: `ruleId`
-
-レスポンス:
-
-```json
-{
-  "data": {
-    "id": "0001",
-    "name": "Mリーグルール",
-    "description": "frontend mock を元にした四麻ルール",
-    "gameType": "yonma",
-    "uma": {
-      "first": 20,
-      "second": 10,
-      "third": -10,
-      "fourth": -20
-    },
-    "oka": {
-      "startingPoints": 25000,
-      "returnPoints": 30000
-    },
-    "scoreCalculation": "decimal",
-    "createdAt": "2026-03-15T10:00:00.000Z",
-    "updatedAt": "2026-03-15T10:00:00.000Z"
-  }
-}
-```
-
-### POST /api/rules
-
-概要:
-
-- ルールを新規作成する。
-
-リクエスト:
-
-```json
-{
-  "name": "ラス回避ルール",
-  "description": "四麻ルール",
-  "gameType": "yonma",
-  "uma": {
-    "first": 25,
-    "second": 10,
-    "third": -5,
-    "fourth": -30
-  },
-  "oka": {
-    "startingPoints": 25000,
-    "returnPoints": 30000
-  },
-  "scoreCalculation": "decimal"
-}
-```
-
-レスポンス:
-
-```json
-{
-  "data": {
-    "id": "generated-rule-id",
-    "name": "ラス回避ルール",
-    "description": "四麻ルール",
-    "gameType": "yonma",
-    "uma": {
-      "first": 25,
-      "second": 10,
-      "third": -5,
-      "fourth": -30
-    },
-    "oka": {
-      "startingPoints": 25000,
-      "returnPoints": 30000
-    },
-    "scoreCalculation": "decimal",
-    "createdAt": "2026-03-15T10:00:00.000Z",
-    "updatedAt": "2026-03-15T10:00:00.000Z"
-  }
-}
-```
-
-### PATCH /api/rules/:ruleId
-
-概要:
-
-- ルールを更新する。
-
-リクエスト:
-
-```json
-{
-  "name": "Mリーグルール改",
-  "description": "説明更新"
-}
-```
-
-レスポンス:
-
-```json
-{
-  "data": {
-    "id": "0001",
-    "name": "Mリーグルール改",
-    "description": "説明更新",
-    "gameType": "yonma",
-    "uma": {
-      "first": 20,
-      "second": 10,
-      "third": -10,
-      "fourth": -20
-    },
-    "oka": {
-      "startingPoints": 25000,
-      "returnPoints": 30000
-    },
-    "scoreCalculation": "decimal",
-    "createdAt": "2026-03-15T10:00:00.000Z",
-    "updatedAt": "2026-03-15T10:30:00.000Z"
-  }
-}
-```
-
-### DELETE /api/rules/:ruleId
-
-概要:
-
-- ルールを削除する。
-
-リクエスト:
-
-- path: `ruleId`
-
-レスポンス:
-
-- status: `204 No Content`
-
-## 4. Users
+## 3. Users
 
 ### GET /api/users
 
@@ -490,7 +306,7 @@ session 作成時だけ Firebase ID Token を使います。
 }
 ```
 
-## 5. Leagues
+## 4. Leagues
 
 ### GET /api/leagues
 
@@ -543,7 +359,19 @@ session 作成時だけ Firebase ID Token を使います。
 ```json
 {
   "name": "新リーグ",
-  "ruleId": "0001",
+  "rule": {
+    "gameType": "yonma",
+    "uma": {
+      "first": 20,
+      "second": 10,
+      "third": -10,
+      "fourth": -20
+    },
+    "oka": {
+      "startingPoints": 25000,
+      "returnPoints": 30000
+    }
+  },
   "memberUserIds": ["0002", "0003", "0004"]
 }
 ```
@@ -556,8 +384,17 @@ session 作成時だけ Firebase ID Token を使います。
     "id": "generated-league-id",
     "name": "新リーグ",
     "rule": {
-      "id": "0001",
-      "name": "Mリーグルール"
+      "gameType": "yonma",
+      "uma": {
+        "first": 20,
+        "second": 10,
+        "third": -10,
+        "fourth": -20
+      },
+      "oka": {
+        "startingPoints": 25000,
+        "returnPoints": 30000
+      }
     },
     "memberCount": 4,
     "totalMatchCount": 0,

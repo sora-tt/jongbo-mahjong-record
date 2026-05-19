@@ -6,7 +6,6 @@ import { openApiDocument } from "@/presentation/openapi.js";
 import { buildAuthRouter } from "@/presentation/routes/auth.js";
 import { buildLeaguesRouter } from "@/presentation/routes/leagues.js";
 import { buildMatchesRouter } from "@/presentation/routes/matches.js";
-import { buildRulesRouter } from "@/presentation/routes/rules.js";
 import { buildSeasonsRouter } from "@/presentation/routes/seasons.js";
 import { buildSessionsRouter } from "@/presentation/routes/sessions.js";
 import { buildUsersRouter } from "@/presentation/routes/users.js";
@@ -63,10 +62,8 @@ export const createApp = () => {
     .get("/doc", (c) => c.json(openApiDocument))
     .get("/ui", swaggerUI({ url: "/doc" }))
     .route("/api/auth", buildAuthRouter())
-    .use("/api/rules/*", requireAuth)
     .use("/api/users/*", requireAuth)
     .use("/api/leagues/*", requireAuth)
-    .route("/api/rules", buildRulesRouter(services))
     .route("/api/users", buildUsersRouter(services))
     .route("/api/leagues", buildLeaguesRouter(services))
     .route("/api/leagues", buildSeasonsRouter(services))
