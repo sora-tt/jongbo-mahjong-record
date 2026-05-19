@@ -15,13 +15,29 @@ import { useSeasonNew } from "./hooks";
 
 const SeasonNewPage: React.FC = () => {
   const {
+    leagueId,
+    leagueName,
     leagueMembers,
     selectedMembers,
     seasonName,
+    loading,
+    isSubmitting,
+    error,
     handleMemberToggle,
     handleSeasonNameChange,
     handleSubmit,
   } = useSeasonNew();
+
+  if (loading) {
+    return (
+      <Spacer className="min-h-screen bg-white">
+        <Header />
+        <Spacer className="flex min-h-[calc(100vh-56px)] items-center justify-center px-4 text-center text-text-muted">
+          シーズン作成画面を読み込んでいます...
+        </Spacer>
+      </Spacer>
+    );
+  }
 
   return (
     <Spacer className="min-h-screen">
@@ -33,7 +49,6 @@ const SeasonNewPage: React.FC = () => {
         padding="medium"
         className="bg-white text-black flex-col"
       >
-        {/* タイトル */}
         <Spacer display="flex" gap="xxsmall" className="items-center">
           <Spacer
             display="flex"
@@ -47,7 +62,6 @@ const SeasonNewPage: React.FC = () => {
           <h1 className="font-bold text-xl">シーズン作成</h1>
         </Spacer>
 
-        {/* カード本体 */}
         <Spacer
           display="flex"
           gap="small"
@@ -56,7 +70,11 @@ const SeasonNewPage: React.FC = () => {
           border={{ color: "brand-200", width: "2" }}
           className="w-full flex-col"
         >
-          {/* シーズン名入力 */}
+          <Spacer className="space-y-1">
+            <p className="text-sm font-semibold text-gray-700">対象リーグ</p>
+            <p className="text-sm text-text-muted">{leagueName}</p>
+          </Spacer>
+
           <InputArea
             label="シーズン名"
             icon={<Type className="h-4 w-4" />}
@@ -66,7 +84,6 @@ const SeasonNewPage: React.FC = () => {
             onChange={handleSeasonNameChange}
           />
 
-          {/* 参加者セクション */}
           <Spacer className="space-y-2">
             <Spacer display="flex" className="items-end justify-between">
               <Spacer>
@@ -87,16 +104,15 @@ const SeasonNewPage: React.FC = () => {
               </Spacer>
             </Spacer>
 
-            {/* メンバー一覧 */}
             <Spacer className="overflow-hidden rounded-xl border border-gray-200 bg-white">
               <Spacer className="max-h-64 overflow-y-auto p-4">
                 <Spacer className="grid grid-cols-3 gap-3 sm:grid-cols-4">
-                  {Object.entries(leagueMembers).map(([id, member]) => {
-                    const isSelected = id in selectedMembers;
+                  {leagueMembers.map((member) => {
+                    const isSelected = member.userId in selectedMembers;
 
                     return (
                       <label
-                        key={id}
+                        key={member.userId}
                         className={`group relative cursor-pointer overflow-hidden rounded-xl border-2 transition-all ${
                           isSelected
                             ? "border-brand-500 bg-gradient-to-br bg-brand-50 shadow-md"
@@ -106,7 +122,7 @@ const SeasonNewPage: React.FC = () => {
                         <input
                           type="checkbox"
                           checked={isSelected}
-                          onChange={() => handleMemberToggle(id)}
+                          onChange={() => handleMemberToggle(member.userId)}
                           className="peer sr-only"
                         />
                         <Spacer
@@ -114,7 +130,7 @@ const SeasonNewPage: React.FC = () => {
                           className="items-center justify-center p-3"
                         >
                           <span className="text-xs font-semibold text-gray-900">
-                            {member.player.name}
+                            {member.userName}
                           </span>
                         </Spacer>
 
@@ -130,19 +146,24 @@ const SeasonNewPage: React.FC = () => {
               </Spacer>
             </Spacer>
 
-            {/* ボタン類 */}
+            {error ? (
+              <Spacer className="rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+                <p className="text-sm text-red-700">{error}</p>
+              </Spacer>
+            ) : null}
+
             <Spacer
               display="flex"
               gap="small"
               className="items-center flex-col"
             >
-              {/* メインボタン */}
-              <Button onClick={handleSubmit}>シーズンを作成</Button>
+              <Button onClick={handleSubmit} disabled={isSubmitting}>
+                {isSubmitting ? "作成中..." : "シーズンを作成"}
+              </Button>
 
-              {/* サブリンク */}
               <Spacer padding={{ top: "xxsmall" }} className="text-center">
                 <Link
-                  href="/league"
+                  href={leagueId ? `/league/${leagueId}` : "/league"}
                   className="
                     inline-flex items-center gap-2
                     text-sm font-medium
