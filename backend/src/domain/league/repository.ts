@@ -26,6 +26,8 @@ export type CreateLeagueInput = {
 
 export type UpdateLeagueInput = {
   name?: string;
+  rule?: LeagueRule;
+  memberUserIds?: string[];
 };
 
 export interface LeagueRepository {

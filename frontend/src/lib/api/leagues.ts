@@ -5,6 +5,7 @@ import { apiClient, parseDataResponse } from "@/lib/api/core";
 const fetchLeaguesRequest = apiClient.api.leagues.$get;
 const fetchLeagueDetailRequest = apiClient.api.leagues[":leagueId"].$get;
 const createLeagueRequest = apiClient.api.leagues.$post;
+const updateLeagueRequest = apiClient.api.leagues[":leagueId"].$patch;
 
 type FetchLeaguesResponse = InferResponseType<
   typeof fetchLeaguesRequest
@@ -13,6 +14,10 @@ type FetchLeaguesResponse = InferResponseType<
 type CreateLeagueResponse = InferResponseType<
   typeof createLeagueRequest,
   201
+>["data"];
+
+type UpdateLeagueResponse = InferResponseType<
+  typeof updateLeagueRequest
 >["data"];
 
 type FetchLeagueDetailResponse = InferResponseType<
@@ -37,6 +42,8 @@ export type CreateLeagueInput = {
   };
 };
 
+export type UpdateLeagueInput = Partial<CreateLeagueInput>;
+
 export const fetchLeagues = async () => {
   const response = await fetchLeaguesRequest();
   return parseDataResponse<FetchLeaguesResponse>(response);
@@ -48,6 +55,18 @@ export const createLeague = async (input: CreateLeagueInput) => {
   });
 
   return parseDataResponse<CreateLeagueResponse>(response);
+};
+
+export const updateLeague = async (
+  leagueId: string,
+  input: UpdateLeagueInput
+) => {
+  const response = await updateLeagueRequest({
+    param: { leagueId },
+    json: input,
+  });
+
+  return parseDataResponse<UpdateLeagueResponse>(response);
 };
 
 export const fetchLeagueDetail = async (leagueId: string) => {

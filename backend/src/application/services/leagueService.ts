@@ -45,7 +45,23 @@ export class LeagueService {
     input: UpdateLeagueInput,
   ) {
     await this.assertLeagueMembership(userId, leagueId);
-    return this.leagueRepository.update(leagueId, input);
+
+    const memberUserIds =
+      input.memberUserIds === undefined
+        ? undefined
+        : [...new Set([userId, ...input.memberUserIds])];
+
+    if (memberUserIds !== undefined) {
+      const users = await this.userRepository.getByIds(memberUserIds);
+      if (users.length !== memberUserIds.length) {
+        throw new ValidationError("some memberUserIds were not found");
+      }
+    }
+
+    return this.leagueRepository.update(leagueId, {
+      ...input,
+      memberUserIds,
+    });
   }
 
   async deleteLeague(userId: string, leagueId: string) {

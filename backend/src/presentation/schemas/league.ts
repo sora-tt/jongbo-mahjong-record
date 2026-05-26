@@ -46,4 +46,6 @@ export const createLeagueSchema: z.ZodType<CreateLeagueInput> = z.object({
 
 export const updateLeagueSchema: z.ZodType<UpdateLeagueInput> = z.object({
   name: z.string().min(1).optional(),
+  rule: leagueRuleSchema.optional(),
+  memberUserIds: z.array(z.string().min(1)).optional(),
 });
