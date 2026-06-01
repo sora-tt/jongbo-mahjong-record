@@ -10,6 +10,7 @@ import {
 const fetchMeRequest = apiClient.api.users.me.$get;
 const fetchJoiningSeasonsRequest =
   apiClient.api.users[":userId"]["joining-seasons"].$get;
+const searchUsersRequest = apiClient.api.users.$get;
 
 type CreateMeResponse = InferResponseType<
   typeof apiClient.api.users.me.$post,
@@ -20,6 +21,7 @@ type FetchMeResponse = InferResponseType<typeof fetchMeRequest>["data"];
 type FetchJoiningSeasonsResponse = InferResponseType<
   typeof fetchJoiningSeasonsRequest
 >["data"];
+type SearchUsersResponse = InferResponseType<typeof searchUsersRequest>["data"];
 type FetchUserStatsResponse = {
   id: string;
   userId: string;
@@ -69,6 +71,14 @@ export const createMe = async (input: { name: string; username: string }) => {
 export const fetchMe = async () => {
   const response = await fetchMeRequest();
   return parseDataResponse<FetchMeResponse>(response);
+};
+
+export const searchUsers = async (query: string) => {
+  const response = await searchUsersRequest({
+    query: { query },
+  });
+
+  return parseDataResponse<SearchUsersResponse>(response);
 };
 
 export const fetchJoiningSeasons = async (userId: string) => {

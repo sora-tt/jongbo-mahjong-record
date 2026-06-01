@@ -3,14 +3,12 @@ import type {
   LeagueRepository,
   UpdateLeagueInput,
 } from "@/domain/league/repository.js";
-import type { RuleRepository } from "@/domain/rule/repository.js";
 import { AppError, ValidationError } from "@/domain/shared/errors.js";
 import type { UserRepository } from "@/domain/user/repository.js";
 
 export class LeagueService {
   constructor(
     private readonly leagueRepository: LeagueRepository,
-    private readonly ruleRepository: RuleRepository,
     private readonly userRepository: UserRepository,
   ) {}
 
@@ -33,13 +31,12 @@ export class LeagueService {
     if (memberUserIds.length === 0) {
       throw new ValidationError("memberUserIds must not be empty");
     }
-    const rule = await this.ruleRepository.get(input.ruleId);
     const users = await this.userRepository.getByIds(memberUserIds);
     if (users.length !== memberUserIds.length) {
       throw new ValidationError("some memberUserIds were not found");
     }
 
-    return this.leagueRepository.create({ ...input, memberUserIds }, rule);
+    return this.leagueRepository.create({ ...input, memberUserIds });
   }
 
   async updateLeague(

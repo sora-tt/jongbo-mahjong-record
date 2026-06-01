@@ -1,9 +1,20 @@
 import type { MatchResult } from "@/domain/match/types.js";
-import type { Rule } from "@/domain/rule/types.js";
 import { ValidationError } from "@/domain/shared/errors.js";
-import type { Wind } from "@/domain/shared/types.js";
+import type { GameType, Wind } from "@/domain/shared/types.js";
 
-type MatchCalculationRule = Pick<Rule, "gameType" | "uma" | "oka">;
+type MatchCalculationRule = {
+  gameType: GameType;
+  uma: {
+    first: number;
+    second: number;
+    third: number;
+    fourth: number | null;
+  };
+  oka: {
+    startingPoints: number;
+    returnPoints: number;
+  };
+};
 
 const getUmaByRank = (rule: MatchCalculationRule, rank: number) => {
   const playerCount = rule.gameType === "sanma" ? 3 : 4;

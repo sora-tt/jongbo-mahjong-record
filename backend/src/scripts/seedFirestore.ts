@@ -478,36 +478,6 @@ const seedAuthUsers = async () => {
   );
 };
 
-const seedRules = async () => {
-  const db = getDb();
-  const batch = db.batch();
-  const now = Timestamp.now();
-
-  rules.forEach((rule) => {
-    batch.set(db.collection("rules").doc(rule.id), {
-      id: rule.id,
-      name: rule.name,
-      description: rule.description,
-      game_type: rule.gameType,
-      uma: {
-        first: rule.uma.first,
-        second: rule.uma.second,
-        third: rule.uma.third,
-        fourth: rule.uma.fourth,
-      },
-      oka: {
-        starting_points: rule.oka.startingPoints,
-        return_points: rule.oka.returnPoints,
-      },
-      score_calculation: rule.scoreCalculation,
-      created_at: now,
-      updated_at: now,
-    });
-  });
-
-  await batch.commit();
-};
-
 const seedLeagues = async () => {
   const db = getDb();
   const userStatsDocs: Array<{ id: string; data: Record<string, unknown> }> =
@@ -853,7 +823,6 @@ const main = async () => {
   await clearDatabase();
   await seedAuthUsers();
   await seedUsers();
-  await seedRules();
   await seedLeagues();
   console.log("seed completed");
 };

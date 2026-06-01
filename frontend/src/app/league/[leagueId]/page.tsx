@@ -5,6 +5,7 @@ import * as React from "react";
 import Link from "next/link";
 
 import Header from "@/components/common/container/header";
+import { Button } from "@/components/ui/button";
 
 import { useLeaguePage } from "./hooks";
 import { formatScore, formatStreak } from "../utils";
@@ -119,42 +120,61 @@ const LeaguePage: React.FC = () => {
 
         <div className="flex flex-col gap-4 mt-8">
           <div className="text-2xl font-bold text-text-dark">シーズン一覧</div>
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-            {leagueSeasons.map((season) => (
-              <Link
-                key={season.id}
-                href={`/league/${league.id}/season/${season.id}`}
-                className={`bg-white rounded-lg p-4 hover:shadow-lg transition-shadow relative ${
-                  season.status === "active"
-                    ? "border-2 border-brand-600"
-                    : "border-2 border-gray-300"
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <div className="text-lg font-bold text-text-dark mb-2">
-                      {season.name}
-                    </div>
-                    <div className="text-sm text-text-muted">
-                      参加者：{season.memberCount}人
-                    </div>
-                    <div className="text-sm text-text-muted">
-                      対局数：{season.totalMatchCount}局
-                    </div>
-                  </div>
-                  <div
-                    className={`flex items-center justify-center w-16 h-12 rounded-lg font-bold text-base ${
+          {leagueSeasons.length === 0 ? (
+            <div className="flex flex-col items-center gap-4 rounded-lg border-2 border-dashed border-gray-300 bg-white p-6">
+              <p className="text-sm text-text-muted">
+                まだシーズンが作成されていません。
+              </p>
+              <Link href="/league/season/new">
+                <Button>シーズンを作成</Button>
+              </Link>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-4">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                {leagueSeasons.map((season) => (
+                  <Link
+                    key={season.id}
+                    href={`/league/${league.id}/season/${season.id}`}
+                    className={`bg-white rounded-lg p-4 hover:shadow-lg transition-shadow relative ${
                       season.status === "active"
-                        ? "bg-brand-600 text-white"
-                        : "bg-gray-200 text-gray-600"
+                        ? "border-2 border-brand-600"
+                        : "border-2 border-gray-300"
                     }`}
                   >
-                    {season.status === "active" ? "進行中" : "終了"}
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="text-lg font-bold text-text-dark mb-2">
+                          {season.name}
+                        </div>
+                        <div className="text-sm text-text-muted">
+                          参加者：{season.memberCount}人
+                        </div>
+                        <div className="text-sm text-text-muted">
+                          対局数：{season.totalMatchCount}局
+                        </div>
+                      </div>
+                      <div
+                        className={`flex items-center justify-center w-16 h-12 rounded-lg font-bold text-base ${
+                          season.status === "active"
+                            ? "bg-brand-600 text-white"
+                            : "bg-gray-200 text-gray-600"
+                        }`}
+                      >
+                        {season.status === "active" ? "進行中" : "終了"}
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+
+              <div className="flex justify-center">
+                <Link href="/league/season/new">
+                  <Button>シーズンを作成</Button>
+                </Link>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
