@@ -125,7 +125,7 @@ const LeaguePage: React.FC = () => {
               <p className="text-sm text-text-muted">
                 まだシーズンが作成されていません。
               </p>
-              <Link href="/league/season/new">
+              <Link href={`/league/${league.id}/season/new`}>
                 <Button>シーズンを作成</Button>
               </Link>
             </div>
@@ -169,7 +169,7 @@ const LeaguePage: React.FC = () => {
               </div>
 
               <div className="flex justify-center">
-                <Link href="/league/season/new">
+                <Link href={`/league/${league.id}/season/new`}>
                   <Button>シーズンを作成</Button>
                 </Link>
               </div>
