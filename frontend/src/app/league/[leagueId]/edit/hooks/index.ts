@@ -1,17 +1,21 @@
-import { useCallback, useEffect, useState } from "react";
-import type { ChangeEvent } from "react";
+import * as React from "react";
 
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 
-import { leaguesData } from "@/mocks/league";
-import { rulesData } from "@/mocks/rule";
-import { userBaseListData } from "@/mocks/user-base";
+import { ApiError } from "@/lib/api/core";
+import { fetchLeagueDetail, updateLeague } from "@/lib/api/leagues";
+import { searchUsers } from "@/lib/api/users";
 
-import type { LeagueIdType } from "@/types/domain/league";
-import type { OkaType, Rank, Rule, RuleIdType } from "@/types/domain/rule";
-import type { UserBase, UserIdType } from "@/types/domain/user";
+import type { UserIdType } from "@/types/domain/user";
+
+type MemberCandidate = {
+  userId: UserIdType;
+  name: string;
+  username: string;
+};
 
 type RuleSettings = {
+  gameType: "sanma" | "yonma";
   okaStartPoints: string;
   okaReturnPoints: string;
   uma1: string;
@@ -20,17 +24,28 @@ type RuleSettings = {
   uma4: string;
 };
 
-export const useLeagueEdit = () => {
-  const params = useParams();
-  const leagueId = params.leagueId as LeagueIdType;
+const DEFAULT_ERROR_MESSAGE =
+  "リーグ情報の取得に失敗しました。時間をおいて再度お試しください。";
 
-  const [leagueName, setLeagueName] = useState<string>("");
-  const [memberQuery, setMemberQuery] = useState<string>("");
-  const [addedMembers, setAddedMembers] = useState<
-    Record<UserIdType, UserBase>
+export const useLeagueEdit = () => {
+  const router = useRouter();
+  const params = useParams<{ leagueId: string }>();
+  const leagueId = params.leagueId;
+
+  const [leagueName, setLeagueName] = React.useState("");
+  const [memberQuery, setMemberQuery] = React.useState("");
+  const [addedMembers, setAddedMembers] = React.useState<
+    Record<UserIdType, MemberCandidate>
   >({});
-  const [addedRules, setAddedRules] = useState<Record<RuleIdType, Rule>>({});
-  const [ruleSettings, setRuleSettings] = useState<RuleSettings>({
+  const [memberCandidates, setMemberCandidates] = React.useState<
+    MemberCandidate[]
+  >([]);
+  const [isSearchingMembers, setIsSearchingMembers] = React.useState(false);
+  const [loading, setLoading] = React.useState(true);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  const [ruleSettings, setRuleSettings] = React.useState<RuleSettings>({
+    gameType: "yonma",
     okaStartPoints: "",
     okaReturnPoints: "",
     uma1: "",
@@ -39,82 +54,159 @@ export const useLeagueEdit = () => {
     uma4: "",
   });
 
-  const allRules = rulesData;
-  const users = userBaseListData;
+  React.useEffect(() => {
+    let isActive = true;
 
-  useEffect(() => {
-    if (leagueId) {
-      const fetchLeague = async () => {
-        const dummyLeague =
-          leaguesData[leagueId] ?? Object.values(leaguesData)[0];
+    if (!leagueId) {
+      setError("leagueId が指定されていません");
+      setLoading(false);
+      return;
+    }
 
-        setLeagueName(dummyLeague.name);
+    const load = async () => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const league = await fetchLeagueDetail(leagueId);
+
+        if (!isActive) {
+          return;
+        }
+
+        setLeagueName(league.name);
         setAddedMembers(
-          Object.values(dummyLeague.members).reduce(
-            (acc, leagueMember) => ({
+          league.members.reduce(
+            (acc, member) => ({
               ...acc,
-              [leagueMember.player.userId]: leagueMember.player,
+              [member.userId]: {
+                userId: member.userId,
+                name: member.userName,
+                username: member.userId,
+              },
             }),
-            {} as Record<UserIdType, UserBase>
+            {} as Record<UserIdType, MemberCandidate>
           )
         );
-        setAddedRules({
-          [dummyLeague.rule.ruleId]: dummyLeague.rule,
-        });
-
-        // ルール情報を RuleSettings に変換して初期化
         setRuleSettings({
-          okaStartPoints: dummyLeague.rule.oka.startPoints.toString(),
-          okaReturnPoints: dummyLeague.rule.oka.returnPoints.toString(),
-          uma1: dummyLeague.rule.uma[1]?.toString() || "",
-          uma2: dummyLeague.rule.uma[2]?.toString() || "",
-          uma3: dummyLeague.rule.uma[3]?.toString() || "",
-          uma4: dummyLeague.rule.uma[4]?.toString() || "",
+          gameType: league.rule.gameType,
+          okaStartPoints: league.rule.oka.startingPoints.toString(),
+          okaReturnPoints: league.rule.oka.returnPoints.toString(),
+          uma1: league.rule.uma.first.toString(),
+          uma2: league.rule.uma.second.toString(),
+          uma3: league.rule.uma.third.toString(),
+          uma4: league.rule.uma.fourth?.toString() ?? "",
         });
-      };
-      fetchLeague();
-    }
-  }, [leagueId, allRules]);
+      } catch (loadError) {
+        if (!isActive) {
+          return;
+        }
 
-  const handleLeagueNameChange = useCallback(
-    (e: ChangeEvent<HTMLInputElement>) => {
+        if (loadError instanceof ApiError && loadError.status === 401) {
+          router.replace("/login");
+          return;
+        }
+
+        setError(
+          loadError instanceof Error ? loadError.message : DEFAULT_ERROR_MESSAGE
+        );
+      } finally {
+        if (isActive) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void load();
+
+    return () => {
+      isActive = false;
+    };
+  }, [leagueId, router]);
+
+  const handleLeagueNameChange = React.useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
       setLeagueName(e.target.value);
     },
     []
   );
 
-  const handleMemberQueryChange = useCallback(
-    (e: ChangeEvent<HTMLInputElement>) => {
+  const handleMemberQueryChange = React.useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
       setMemberQuery(e.target.value);
     },
     []
   );
 
-  const handleAddMember = useCallback(() => {
-    const trimmed = memberQuery.trim();
-    if (!trimmed) return;
-
-    const found = users[trimmed as UserIdType];
-    if (!found) {
-      alert("該当するメンバーIDが見つかりません");
+  React.useEffect(() => {
+    const trimmedQuery = memberQuery.trim();
+    if (!trimmedQuery) {
+      setMemberCandidates([]);
+      setIsSearchingMembers(false);
       return;
     }
 
+    let isActive = true;
+    setIsSearchingMembers(true);
+
+    const timeoutId = window.setTimeout(async () => {
+      try {
+        const users = await searchUsers(trimmedQuery);
+        if (!isActive) {
+          return;
+        }
+
+        setMemberCandidates(
+          users
+            .map((user) => ({
+              userId: user.id,
+              name: user.name,
+              username: user.username,
+            }))
+            .filter((user) => !(user.userId in addedMembers))
+        );
+      } catch (searchError) {
+        if (!isActive) {
+          return;
+        }
+
+        setMemberCandidates([]);
+        setError(
+          searchError instanceof Error
+            ? searchError.message
+            : "メンバー検索に失敗しました"
+        );
+      } finally {
+        if (isActive) {
+          setIsSearchingMembers(false);
+        }
+      }
+    }, 300);
+
+    return () => {
+      isActive = false;
+      window.clearTimeout(timeoutId);
+    };
+  }, [memberQuery, addedMembers]);
+
+  const handleAddMember = React.useCallback((member: MemberCandidate) => {
     setAddedMembers((prev) => {
-      if (prev[found.userId]) {
+      if (prev[member.userId]) {
         return prev;
       }
 
       return {
         ...prev,
-        [found.userId]: found,
+        [member.userId]: member,
       };
     });
 
     setMemberQuery("");
-  }, [memberQuery, users]);
+    setMemberCandidates([]);
+    setError(null);
+  }, []);
 
-  const handleRemoveMember = useCallback((id: UserIdType) => {
+  const handleRemoveMember = React.useCallback((id: UserIdType) => {
     setAddedMembers((prev) => {
       const newMembers = { ...prev };
       delete newMembers[id];
@@ -122,89 +214,135 @@ export const useLeagueEdit = () => {
     });
   }, []);
 
-  const handleRemoveRule = useCallback((ruleId: RuleIdType) => {
-    setAddedRules((prev) => {
-      const newRules = { ...prev };
-      delete newRules[ruleId];
-      return newRules;
-    });
-  }, []);
-
-  const handleRuleSettingChange = useCallback(
+  const handleRuleSettingChange = React.useCallback(
     (field: keyof RuleSettings, value: string) => {
       setRuleSettings((prev) => ({ ...prev, [field]: value }));
     },
     []
   );
 
-  const handleSubmit = useCallback(() => {
-    // ルール設定が編集されている場合は、それを反映
+  const umaTotalError = React.useMemo(() => {
+    const umaValues =
+      ruleSettings.gameType === "sanma"
+        ? [ruleSettings.uma1, ruleSettings.uma2, ruleSettings.uma3]
+        : [
+            ruleSettings.uma1,
+            ruleSettings.uma2,
+            ruleSettings.uma3,
+            ruleSettings.uma4,
+          ];
+
+    if (umaValues.some((value) => !value.trim())) {
+      return null;
+    }
+
+    const total = umaValues.reduce(
+      (sum, value) => sum + parseInt(value, 10),
+      0
+    );
+
+    if (Number.isNaN(total) || total === 0) {
+      return null;
+    }
+
+    return `ウマの合計が0になるように入力してください（現在: ${total}）`;
+  }, [ruleSettings]);
+
+  const handleSubmit = React.useCallback(async () => {
+    setError(null);
+
     const okaStartPoints = ruleSettings.okaStartPoints.trim()
       ? parseInt(ruleSettings.okaStartPoints, 10)
       : null;
     const okaReturnPoints = ruleSettings.okaReturnPoints.trim()
       ? parseInt(ruleSettings.okaReturnPoints, 10)
       : null;
-
-    if (okaStartPoints === null || okaReturnPoints === null) {
-      alert("オカの設定をすべて入力してください");
-      return;
-    }
-
-    if (Number.isNaN(okaStartPoints) || Number.isNaN(okaReturnPoints)) {
-      alert("オカの設定には数値を入力してください");
-      return;
-    }
-
-    const oka: OkaType = {
-      startPoints: okaStartPoints,
-      returnPoints: okaReturnPoints,
+    const uma = {
+      1: ruleSettings.uma1.trim() ? parseInt(ruleSettings.uma1, 10) : null,
+      2: ruleSettings.uma2.trim() ? parseInt(ruleSettings.uma2, 10) : null,
+      3: ruleSettings.uma3.trim() ? parseInt(ruleSettings.uma3, 10) : null,
+      4: ruleSettings.uma4.trim() ? parseInt(ruleSettings.uma4, 10) : null,
     };
 
-    const uma1 = ruleSettings.uma1.trim() ? parseInt(ruleSettings.uma1, 10) : 0;
-    const uma2 = ruleSettings.uma2.trim() ? parseInt(ruleSettings.uma2, 10) : 0;
-    const uma3 = ruleSettings.uma3.trim() ? parseInt(ruleSettings.uma3, 10) : 0;
-    const uma4 = ruleSettings.uma4.trim() ? parseInt(ruleSettings.uma4, 10) : 0;
+    if (!leagueId) {
+      setError("leagueId が指定されていません");
+      return;
+    }
+
+    if (!leagueName.trim()) {
+      setError("リーグ名を入力してください");
+      return;
+    }
 
     if (
-      Number.isNaN(uma1) ||
-      Number.isNaN(uma2) ||
-      Number.isNaN(uma3) ||
-      Number.isNaN(uma4)
+      okaStartPoints === null ||
+      okaReturnPoints === null ||
+      uma[1] === null ||
+      uma[2] === null ||
+      uma[3] === null ||
+      (ruleSettings.gameType === "yonma" && uma[4] === null)
     ) {
-      alert("ウマは数値で入力してください");
+      setError("モードに応じたオカとウマをすべて入力してください");
       return;
     }
 
-    const uma: Record<Rank, number> = {
-      1: uma1,
-      2: uma2,
-      3: uma3,
-      4: uma4,
-    };
+    if (umaTotalError) {
+      return;
+    }
 
-    console.log("Updated League:", {
-      leagueName,
-      members: Object.values(addedMembers),
-      rule: {
-        oka,
-        uma,
-      },
-    });
-    alert("リーグ情報を更新しました");
-  }, [leagueName, addedMembers, ruleSettings]);
+    setIsSubmitting(true);
+
+    try {
+      const updatedLeague = await updateLeague(leagueId, {
+        name: leagueName.trim(),
+        memberUserIds: Object.keys(addedMembers),
+        rule: {
+          gameType: ruleSettings.gameType,
+          oka: {
+            startingPoints: okaStartPoints,
+            returnPoints: okaReturnPoints,
+          },
+          uma: {
+            first: uma[1],
+            second: uma[2],
+            third: uma[3],
+            fourth: ruleSettings.gameType === "sanma" ? null : uma[4],
+          },
+        },
+      });
+
+      router.push(`/league/${updatedLeague.id}`);
+    } catch (submitError) {
+      if (submitError instanceof ApiError && submitError.status === 401) {
+        router.replace("/login");
+        return;
+      }
+
+      setError(
+        submitError instanceof Error
+          ? submitError.message
+          : "リーグ情報の更新に失敗しました"
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [leagueId, leagueName, addedMembers, ruleSettings, umaTotalError, router]);
 
   return {
     leagueName,
     memberQuery,
     addedMembers,
-    addedRules,
+    memberCandidates,
+    isSearchingMembers,
+    loading,
+    isSubmitting,
+    error,
+    umaTotalError,
     ruleSettings,
     handleLeagueNameChange,
     handleMemberQueryChange,
     handleAddMember,
     handleRemoveMember,
-    handleRemoveRule,
     handleRuleSettingChange,
     handleSubmit,
   };

@@ -2,6 +2,8 @@
 
 import * as React from "react";
 
+import { Pencil } from "lucide-react";
+
 import Link from "next/link";
 
 import Header from "@/components/common/container/header";
@@ -55,7 +57,19 @@ const LeaguePage: React.FC = () => {
       <Header />
       <div className="flex flex-col max-w-7xl gap-4 mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex flex-col gap-4">
-          <div className="text-2xl font-bold text-text-dark">リーグ記録</div>
+          <div className="flex items-center justify-between gap-3">
+            <div className="text-2xl font-bold text-text-dark">リーグ記録</div>
+            <Link href={`/league/${league.id}/edit`}>
+              <Button
+                variant="brand-secondary"
+                size="sm"
+                className="border border-brand-200 bg-white text-brand-600 hover:bg-brand-50"
+              >
+                <Pencil className="h-4 w-4" />
+                リーグ設定を変更
+              </Button>
+            </Link>
+          </div>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
             <div className="bg-white rounded-lg border-2 border-brand-200 p-4">
               <div className="text-sm font-bold text-text-muted mb-2">

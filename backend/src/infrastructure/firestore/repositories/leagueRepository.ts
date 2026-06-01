@@ -157,8 +157,35 @@ export class FirestoreLeagueRepository implements LeagueRepository {
     if (input.name !== undefined) {
       patch.name = input.name;
     }
+    if (input.rule !== undefined) {
+      patch.rule = this.toLeagueRuleDoc(input.rule);
+    }
+    if (input.memberUserIds !== undefined) {
+      patch.member_count = input.memberUserIds.length;
+    }
 
-    await leagueRef.update(patch);
+    const batch = this.db.batch();
+    batch.update(leagueRef, patch);
+
+    if (input.memberUserIds !== undefined) {
+      const users = await this.userRepository.getByIds(input.memberUserIds);
+      const membersSnapshot = await leagueRef.collection("members").get();
+
+      membersSnapshot.docs.forEach((doc) => {
+        batch.delete(doc.ref);
+      });
+
+      users.forEach((user) => {
+        const memberRef = leagueRef.collection("members").doc();
+        batch.set(memberRef, {
+          id: memberRef.id,
+          user_id: user.id,
+          user_name: user.name,
+        });
+      });
+    }
+
+    await batch.commit();
     return this.get(leagueId);
   }
 

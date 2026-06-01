@@ -20,7 +20,12 @@ const EditLeaguePage: React.FC = () => {
     leagueName,
     memberQuery,
     addedMembers,
-    addedRules,
+    memberCandidates,
+    isSearchingMembers,
+    loading,
+    isSubmitting,
+    error,
+    umaTotalError,
     ruleSettings,
     handleLeagueNameChange,
     handleMemberQueryChange,
@@ -29,6 +34,31 @@ const EditLeaguePage: React.FC = () => {
     handleRuleSettingChange,
     handleSubmit,
   } = useLeagueEdit();
+
+  const umaFields =
+    ruleSettings.gameType === "sanma"
+      ? ([
+          { field: "uma1", label: "1位" },
+          { field: "uma2", label: "2位" },
+          { field: "uma3", label: "3位" },
+        ] as const)
+      : ([
+          { field: "uma1", label: "1位" },
+          { field: "uma2", label: "2位" },
+          { field: "uma3", label: "3位" },
+          { field: "uma4", label: "4位" },
+        ] as const);
+
+  if (loading) {
+    return (
+      <Spacer className="min-h-screen bg-white flex flex-col">
+        <Header />
+        <Spacer className="flex min-h-[calc(100vh-56px)] items-center justify-center px-4 text-center text-text-muted">
+          リーグ情報を読み込んでいます...
+        </Spacer>
+      </Spacer>
+    );
+  }
 
   return (
     <Spacer className="min-h-screen bg-white flex flex-col">
@@ -81,7 +111,7 @@ const EditLeaguePage: React.FC = () => {
                   メンバー
                 </label>
                 <p className="mt-1 text-xs text-gray-500">
-                  現在のメンバーです。メンバーIDを入力して「追加」を押すと、下にメンバーが増えていきます
+                  ユーザー名で検索して追加します。更新者本人は自動でメンバーに含まれます
                 </p>
               </Spacer>
 
@@ -97,23 +127,53 @@ const EditLeaguePage: React.FC = () => {
             </Spacer>
 
             {/* 入力 + ボタン */}
-            <Spacer display="flex" gap="small">
+            <Spacer display="flex" gap="small" className="flex-col">
               <input
                 type="text"
                 value={memberQuery}
                 onChange={handleMemberQueryChange}
-                placeholder="メンバーIDを入力（例: 0001）"
-                className="flex-1 min-w-0 rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm text-gray-900 outline-none transition-all placeholder:text-gray-400 hover:border-gray-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50"
+                placeholder="ユーザー名で検索"
+                className="w-full rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm text-gray-900 outline-none transition-all placeholder:text-gray-400 hover:border-gray-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50"
               />
-
-              <Button
-                variant="brand-primary"
-                onClick={handleAddMember}
-                disabled={!memberQuery.trim()}
-              >
-                <Plus className="h-4 w-4" /> 追加
-              </Button>
             </Spacer>
+
+            {memberQuery.trim() ? (
+              <Spacer className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-3">
+                {isSearchingMembers ? (
+                  <p className="text-xs text-gray-500">検索中です...</p>
+                ) : memberCandidates.length > 0 ? (
+                  <Spacer className="space-y-2">
+                    {memberCandidates.map((member) => (
+                      <Spacer
+                        key={member.userId}
+                        display="flex"
+                        className="items-center justify-between gap-3 rounded-lg bg-white px-3 py-2"
+                      >
+                        <Spacer>
+                          <p className="text-sm font-semibold text-gray-800">
+                            {member.name}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            @{member.username}
+                          </p>
+                        </Spacer>
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={() => handleAddMember(member)}
+                        >
+                          <Plus className="h-4 w-4" /> 追加
+                        </Button>
+                      </Spacer>
+                    ))}
+                  </Spacer>
+                ) : (
+                  <p className="text-xs text-gray-500">
+                    条件に一致するユーザーが見つかりません
+                  </p>
+                )}
+              </Spacer>
+            ) : null}
 
             {/* 追加済みメンバー一覧 */}
             {Object.keys(addedMembers).length > 0 ? (
@@ -127,7 +187,9 @@ const EditLeaguePage: React.FC = () => {
                     <span className="font-semibold text-gray-800">
                       {user.name}
                     </span>
-                    <span className="text-[10px] text-gray-500">({id})</span>
+                    <span className="text-[10px] text-gray-500">
+                      @{user.username}
+                    </span>
                     <button
                       type="button"
                       onClick={() => handleRemoveMember(id as UserIdType)}
@@ -155,158 +217,112 @@ const EditLeaguePage: React.FC = () => {
               ルール設定
             </label>
 
-            {/* オカ設定 */}
-            <Spacer className="space-y-2">
-              <h3 className="text-sm font-semibold text-brand-700">オカ設定</h3>
-              <Spacer display="flex" gap="small" className="flex-wrap">
-                <div className="flex-1 min-w-0">
-                  <label className="block text-xs font-medium text-gray-600 mb-1">
-                    持ち点（点）
-                  </label>
-                  <input
-                    type="number"
-                    value={ruleSettings.okaStartPoints}
-                    onChange={(e) =>
-                      handleRuleSettingChange("okaStartPoints", e.target.value)
-                    }
-                    placeholder="例: 30000"
-                    className="w-full rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm text-gray-900 outline-none transition-all placeholder:text-gray-400 hover:border-gray-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50"
-                  />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <label className="block text-xs font-medium text-gray-600 mb-1">
-                    返し点（点）
-                  </label>
-                  <input
-                    type="number"
-                    value={ruleSettings.okaReturnPoints}
-                    onChange={(e) =>
-                      handleRuleSettingChange("okaReturnPoints", e.target.value)
-                    }
-                    placeholder="例: 30000"
-                    className="w-full rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm text-gray-900 outline-none transition-all placeholder:text-gray-400 hover:border-gray-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50"
-                  />
-                </div>
+            <Spacer className="space-y-3">
+              <Spacer className="space-y-2">
+                <h3 className="text-sm font-semibold text-brand-700">モード</h3>
+                <Spacer display="flex" gap="small">
+                  {(
+                    [
+                      { value: "yonma", label: "4麻" },
+                      { value: "sanma", label: "3麻" },
+                    ] as const
+                  ).map(({ value, label }) => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => handleRuleSettingChange("gameType", value)}
+                      className={`rounded-xl border px-4 py-2 text-sm font-semibold transition-colors ${
+                        ruleSettings.gameType === value
+                          ? "border-brand-500 bg-brand-50 text-brand-700"
+                          : "border-gray-300 bg-white text-gray-600 hover:border-gray-400"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </Spacer>
               </Spacer>
-            </Spacer>
 
-            {/* ウマ設定 */}
-            <Spacer className="space-y-2">
-              <h3 className="text-sm font-semibold text-brand-700">ウマ設定</h3>
-              <Spacer display="flex" gap="small" className="flex-wrap">
-                {(
-                  [
-                    { field: "uma1", label: "1位" },
-                    { field: "uma2", label: "2位" },
-                    { field: "uma3", label: "3位" },
-                    { field: "uma4", label: "4位" },
-                  ] as const
-                ).map(({ field, label }) => (
-                  <div key={field} className="flex-1 min-w-0">
+              {/* オカ設定 */}
+              <Spacer className="space-y-2">
+                <h3 className="text-sm font-semibold text-brand-700">
+                  オカ設定
+                </h3>
+                <Spacer display="flex" gap="small" className="flex-wrap">
+                  <div className="flex-1 min-w-0">
                     <label className="block text-xs font-medium text-gray-600 mb-1">
-                      {label} ウマ（点）
+                      持ち点（点）
                     </label>
                     <input
                       type="number"
-                      value={ruleSettings[field]}
+                      value={ruleSettings.okaStartPoints}
                       onChange={(e) =>
-                        handleRuleSettingChange(field, e.target.value)
+                        handleRuleSettingChange(
+                          "okaStartPoints",
+                          e.target.value
+                        )
                       }
-                      placeholder="例: 0"
+                      placeholder="例: 30000"
                       className="w-full rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm text-gray-900 outline-none transition-all placeholder:text-gray-400 hover:border-gray-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50"
                     />
                   </div>
-                ))}
+                  <div className="flex-1 min-w-0">
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      返し点（点）
+                    </label>
+                    <input
+                      type="number"
+                      value={ruleSettings.okaReturnPoints}
+                      onChange={(e) =>
+                        handleRuleSettingChange(
+                          "okaReturnPoints",
+                          e.target.value
+                        )
+                      }
+                      placeholder="例: 30000"
+                      className="w-full rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm text-gray-900 outline-none transition-all placeholder:text-gray-400 hover:border-gray-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50"
+                    />
+                  </div>
+                </Spacer>
+              </Spacer>
+
+              {/* ウマ設定 */}
+              <Spacer className="space-y-2">
+                <h3 className="text-sm font-semibold text-brand-700">
+                  ウマ設定
+                </h3>
+                <Spacer display="flex" gap="small" className="flex-wrap">
+                  {umaFields.map(({ field, label }) => (
+                    <div key={field} className="flex-1 min-w-0">
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        {label} ウマ（点）
+                      </label>
+                      <input
+                        type="number"
+                        value={ruleSettings[field]}
+                        onChange={(e) =>
+                          handleRuleSettingChange(field, e.target.value)
+                        }
+                        placeholder="例: 0"
+                        className="w-full rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm text-gray-900 outline-none transition-all placeholder:text-gray-400 hover:border-gray-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50"
+                      />
+                    </div>
+                  ))}
+                </Spacer>
+                {umaTotalError ? (
+                  <p className="text-xs font-medium text-red-600">
+                    {umaTotalError}
+                  </p>
+                ) : null}
               </Spacer>
             </Spacer>
-
-            {/* ルール一覧 */}
-            {Object.keys(addedRules).length > 0 ? (
-              <Spacer
-                display="flex"
-                className="flex-col"
-                gap="small"
-                padding={{ top: "small" }}
-              >
-                <h3 className="text-sm font-semibold text-brand-700">
-                  参考: 現在のルール
-                </h3>
-
-                {Object.entries(addedRules).map(([id, rule]) => (
-                  <Spacer
-                    key={id}
-                    className="
-                      rounded-xl border border-brand-200
-                      bg-gradient-to-r from-brand-50 to-brand-100
-                      p-4 transition-all
-                      hover:border-brand-300 hover:shadow-md hover:shadow-brand-200
-                    "
-                  >
-                    {/* 上段：ルール名 + バッジ + 削除ボタン */}
-                    <Spacer
-                      display="flex"
-                      className="items-center justify-between gap-2"
-                    >
-                      <Spacer display="flex" className="items-center gap-2">
-                        <span
-                          className={`
-                            inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold
-                            ${
-                              rule.mode === "sanma"
-                                ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                                : "bg-indigo-50 text-indigo-700 border border-indigo-200"
-                            }
-                          `}
-                        >
-                          {rule.mode === "sanma" ? "三人麻雀" : "四人麻雀"}
-                        </span>
-                      </Spacer>
-                    </Spacer>
-
-                    {/* 下段：説明 + 詳細 */}
-                    <Spacer className="mt-2 space-y-1">
-                      {rule.description && (
-                        <p className="text-xs text-brand-700">
-                          {rule.description}
-                        </p>
-                      )}
-
-                      <Spacer className="space-y-0.5">
-                        <p className="text-xs text-brand-600">
-                          <span className="font-semibold text-brand-700">
-                            オカ：
-                          </span>
-                          {rule.oka.startPoints.toLocaleString()} 点持ち /
-                          {rule.oka.returnPoints.toLocaleString()} 点返し
-                        </p>
-
-                        <p className="text-xs text-brand-600">
-                          <span className="font-semibold text-brand-700">
-                            ウマ：
-                          </span>
-                          {Object.entries(rule.uma).map(([rank, points]) => {
-                            const label = `${rank}位`;
-                            const value =
-                              points > 0
-                                ? `+${points}`
-                                : points === 0
-                                  ? "±0"
-                                  : `${points}`;
-
-                            return (
-                              <span key={rank} className="mr-2">
-                                {label} {value}
-                              </span>
-                            );
-                          })}
-                        </p>
-                      </Spacer>
-                    </Spacer>
-                  </Spacer>
-                ))}
-              </Spacer>
-            ) : null}
           </Spacer>
+
+          {error ? (
+            <Spacer className="rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+              <p className="text-sm text-red-700">{error}</p>
+            </Spacer>
+          ) : null}
 
           {/* アクションボタン */}
           <Spacer
@@ -314,8 +330,13 @@ const EditLeaguePage: React.FC = () => {
             gap="small"
             className="items-center flex-col pt-2"
           >
-            <Button variant="brand-primary" size="lg" onClick={handleSubmit}>
-              変更を適用
+            <Button
+              variant="brand-primary"
+              size="lg"
+              onClick={handleSubmit}
+              disabled={isSubmitting || Boolean(umaTotalError)}
+            >
+              {isSubmitting ? "更新中..." : "変更を適用"}
             </Button>
 
             <Spacer className="text-center">
