@@ -30,7 +30,12 @@ export class StatsRebuilder {
       leagueId,
       seasonId,
     );
-    const standings = buildStandings(season.members, seasonMatches);
+    const rule = await this.leagueRepository.getRule(leagueId);
+    const standings = buildStandings(
+      season.members,
+      seasonMatches,
+      rule.gameType,
+    );
     const pointProgressions = buildPointProgressions(
       season.members,
       seasonMatches,

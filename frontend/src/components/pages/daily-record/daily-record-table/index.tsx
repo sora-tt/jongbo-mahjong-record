@@ -15,6 +15,34 @@ import { useDailyRecordTable } from "./hooks";
 
 const WIND_ORDER = ["EAST", "SOUTH", "WEST", "NORTH"] as const;
 
+export type DailyRecordTablePlayer = {
+  userId: string;
+  name: string;
+};
+
+export type DailyRecordTableMatch = {
+  matchId: string;
+  results: {
+    matchResultInput: Record<
+      (typeof WIND_ORDER)[number],
+      {
+        player: DailyRecordTablePlayer;
+        score: number;
+        rank: number;
+      } | null
+    >;
+  };
+};
+
+type Props = {
+  players?: DailyRecordTablePlayer[];
+  matches?: DailyRecordTableMatch[];
+  totals?: Record<string, number>;
+  deletingMatchId?: string | null;
+  onEditMatch?: (matchId: string) => void;
+  onDeleteMatch?: (matchId: string) => void;
+};
+
 const formatScore = ({ score }: { score: number | null | undefined }) => {
   if (score === null || score === undefined) return "";
   if (score === 0) return "0.0pt";
@@ -29,8 +57,18 @@ const scoreClass = ({ score }: { score: number | null | undefined }) => {
   return score > 0 ? "text-blue-500" : "text-red-500";
 };
 
-export const DailyRecordTable: React.FC = () => {
-  const { players, matches, totals } = useDailyRecordTable();
+export const DailyRecordTable: React.FC<Props> = ({
+  players: playersProp,
+  matches: matchesProp,
+  totals: totalsProp,
+  deletingMatchId = null,
+  onEditMatch,
+  onDeleteMatch,
+}) => {
+  const fallback = useDailyRecordTable();
+  const players = playersProp ?? fallback.players;
+  const matches = matchesProp ?? fallback.matches;
+  const totals = totalsProp ?? fallback.totals;
 
   return (
     <Table>
@@ -59,7 +97,7 @@ export const DailyRecordTable: React.FC = () => {
 
               {players.map((player) => {
                 const resultForPlayer = resultArray.find(
-                  (r) => r.player.userId === player.userId
+                  (r) => r?.player.userId === player.userId
                 );
                 const score = resultForPlayer?.score ?? null;
 
@@ -79,6 +117,8 @@ export const DailyRecordTable: React.FC = () => {
                     type="button"
                     aria-label="対局結果を編集"
                     className="p-1 rounded-full hover:bg-gray-100 hover:text-gray-700 transition-colors duration-150"
+                    onClick={() => onEditMatch?.(match.matchId)}
+                    disabled={!onEditMatch}
                   >
                     <Edit2 size={16} />
                   </button>
@@ -86,6 +126,10 @@ export const DailyRecordTable: React.FC = () => {
                     type="button"
                     aria-label="対局結果を削除"
                     className="p-1 rounded-full hover:bg-gray-100 hover:text-red-500 transition-colors duration-150"
+                    onClick={() => onDeleteMatch?.(match.matchId)}
+                    disabled={
+                      !onDeleteMatch || deletingMatchId === match.matchId
+                    }
                   >
                     <Trash2 size={16} />
                   </button>

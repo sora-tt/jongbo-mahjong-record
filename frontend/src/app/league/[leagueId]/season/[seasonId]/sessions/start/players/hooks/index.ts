@@ -176,7 +176,9 @@ export const usePlayerSelect = () => {
         })
       );
 
-      router.push(`/league/${leagueId}/season/${seasonId}/matches/new`);
+      router.push(
+        `/league/${leagueId}/season/${seasonId}/sessions/start/match`
+      );
     } catch {
       setIsSubmitting(false);
       setError("画面遷移に失敗しました。時間をおいて再度お試しください。");

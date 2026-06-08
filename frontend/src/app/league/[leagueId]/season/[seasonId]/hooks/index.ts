@@ -114,7 +114,9 @@ export const useSeasonPage = () => {
       setError("leagueId または seasonId が指定されていません");
       return;
     }
-    router.push(`/league/${leagueId}/season/${seasonId}/player-select`);
+    router.push(
+      `/league/${leagueId}/season/${seasonId}/sessions/start/players`
+    );
   }, [params.leagueId, params.seasonId, router]);
 
   return {
