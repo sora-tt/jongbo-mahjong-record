@@ -2,11 +2,14 @@ import * as React from "react";
 
 import { useParams, useRouter } from "next/navigation";
 
+import { COLOR_MAP } from "@/constants/color-map";
 import { ApiError } from "@/lib/api/core";
 import { fetchSeasonDetail } from "@/lib/api/seasons";
 
 const DEFAULT_ERROR_MESSAGE =
   "シーズン詳細の取得に失敗しました。時間をおいて再度お試しください。";
+
+type SeasonDetail = Awaited<ReturnType<typeof fetchSeasonDetail>>;
 
 type Title = {
   label: string;
@@ -14,7 +17,67 @@ type Title = {
   value: string;
 };
 
+type SeasonChartSeries = {
+  userId: string;
+  userName: string;
+  colorClassName: string;
+};
+
+type SeasonChartData = {
+  matchIndex: number;
+  [userId: string]: number;
+};
+
 const formatPercent = (value: number) => `${value.toFixed(2)}%`;
+
+const colorClassNames = Object.values(COLOR_MAP);
+
+const buildSeasonChartData = (season: SeasonDetail) => {
+  const series: SeasonChartSeries[] = season.pointProgressions.map(
+    (progression, index) => ({
+      userId: progression.userId,
+      userName: progression.userName,
+      colorClassName: colorClassNames[index % colorClassNames.length],
+    })
+  );
+
+  const progressionByUser = new Map(
+    season.pointProgressions.map((progression) => [
+      progression.userId,
+      new Map(
+        progression.points.map((point) => [point.matchIndex, point.totalPoints])
+      ),
+    ])
+  );
+
+  const latestPointByUser = new Map<string, number>();
+
+  const chartData: SeasonChartData[] = Array.from(
+    { length: season.totalMatchCount },
+    (_, index) => {
+      const matchIndex = index + 1;
+      const row: SeasonChartData = { matchIndex };
+
+      series.forEach((item) => {
+        const progression = progressionByUser.get(item.userId);
+        const currentPoint = progression?.get(matchIndex);
+        if (typeof currentPoint === "number") {
+          latestPointByUser.set(item.userId, currentPoint);
+        }
+
+        row[item.userId] = latestPointByUser.get(item.userId) ?? 0;
+      });
+
+      return row;
+    }
+  );
+
+  return {
+    series,
+    chartData,
+    isChartEmpty: season.totalMatchCount === 0 || series.length === 0,
+  };
+};
 
 export const useSeasonPage = () => {
   const router = useRouter();
@@ -106,6 +169,18 @@ export const useSeasonPage = () => {
     ].filter((title): title is Title => title !== null);
   }, [season]);
 
+  const pointProgressionChart = React.useMemo(() => {
+    if (!season) {
+      return {
+        series: [] as SeasonChartSeries[],
+        chartData: [] as SeasonChartData[],
+        isChartEmpty: true,
+      };
+    }
+
+    return buildSeasonChartData(season);
+  }, [season]);
+
   const handleStartRecording = React.useCallback(() => {
     const leagueId = params.leagueId;
     const seasonId = params.seasonId;
@@ -121,6 +196,7 @@ export const useSeasonPage = () => {
     leagueId: params.leagueId,
     season,
     titles,
+    pointProgressionChart,
     loading,
     error,
     handleStartRecording,
