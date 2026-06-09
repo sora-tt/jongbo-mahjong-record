@@ -27,7 +27,7 @@ type SeasonPointProgressionChartData = {
 type Props = {
   data: SeasonPointProgressionChartData[];
   series: SeasonPointProgressionChartSeries[];
-  height?: number;
+  height?: number | string;
 };
 
 const formatPoint = (value: number) => `${value.toFixed(1)}pt`;
@@ -35,7 +35,7 @@ const formatPoint = (value: number) => `${value.toFixed(1)}pt`;
 export const SeasonPointProgressionChart: React.FC<Props> = ({
   data,
   series,
-  height = 220,
+  height = "clamp(200px, 38vw, 280px)",
 }) => {
   return (
     <div style={{ width: "100%", height }}>
@@ -69,9 +69,12 @@ export const SeasonPointProgressionChart: React.FC<Props> = ({
               borderRadius: "8px",
               fontSize: "12px",
             }}
-            formatter={(value: number | string) => {
+            formatter={(value) => {
+              const singleValue = Array.isArray(value) ? value[0] : value;
               const numericValue =
-                typeof value === "number" ? value : Number(value);
+                typeof singleValue === "number"
+                  ? singleValue
+                  : Number(singleValue);
               return Number.isFinite(numericValue)
                 ? formatPoint(numericValue)
                 : "-";
