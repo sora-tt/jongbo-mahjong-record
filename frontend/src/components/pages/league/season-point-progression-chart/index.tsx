@@ -32,6 +32,16 @@ type Props = {
 
 const formatPoint = (value: number) => `${value.toFixed(1)}pt`;
 
+const formatTooltipValue: NonNullable<
+  React.ComponentProps<typeof Tooltip>["formatter"]
+> = (value) => {
+  const singleValue = Array.isArray(value) ? value[0] : value;
+  const numericValue =
+    typeof singleValue === "number" ? singleValue : Number(singleValue);
+
+  return Number.isFinite(numericValue) ? formatPoint(numericValue) : "-";
+};
+
 export const SeasonPointProgressionChart: React.FC<Props> = ({
   data,
   series,
@@ -69,16 +79,7 @@ export const SeasonPointProgressionChart: React.FC<Props> = ({
               borderRadius: "8px",
               fontSize: "12px",
             }}
-            formatter={(value) => {
-              const singleValue = Array.isArray(value) ? value[0] : value;
-              const numericValue =
-                typeof singleValue === "number"
-                  ? singleValue
-                  : Number(singleValue);
-              return Number.isFinite(numericValue)
-                ? formatPoint(numericValue)
-                : "-";
-            }}
+            formatter={formatTooltipValue}
             labelFormatter={(label) => `対局 ${label}`}
           />
 

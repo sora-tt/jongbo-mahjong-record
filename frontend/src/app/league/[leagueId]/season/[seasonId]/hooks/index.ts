@@ -23,12 +23,41 @@ type SeasonChartSeries = {
   colorClassName: string;
 };
 
+type SeasonChartViewSeries = SeasonChartSeries & {
+  strokeColor: string;
+};
+
 type SeasonChartData = {
   matchIndex: number;
   [userId: string]: number;
 };
 
 const formatPercent = (value: number) => `${value.toFixed(2)}%`;
+
+const CHART_STROKE_COLORS = [
+  "#ef4444",
+  "#3b82f6",
+  "#22c55e",
+  "#eab308",
+  "#a855f7",
+  "#ec4899",
+  "#f97316",
+  "#0ea5e9",
+  "#10b981",
+  "#f59e0b",
+  "#84cc16",
+  "#14b8a6",
+  "#06b6d4",
+  "#6366f1",
+  "#8b5cf6",
+  "#d946ef",
+  "#f43f5e",
+  "#db2777",
+  "#a16207",
+  "#78716c",
+  "#6b7280",
+  "#111827",
+];
 
 const colorClassNames = Object.values(COLOR_MAP);
 
@@ -181,6 +210,42 @@ export const useSeasonPage = () => {
     return buildSeasonChartData(season);
   }, [season]);
 
+  const chartSeries: SeasonChartViewSeries[] = React.useMemo(
+    () =>
+      pointProgressionChart.series.map((item, index) => ({
+        userId: item.userId,
+        userName: item.userName,
+        colorClassName: item.colorClassName,
+        strokeColor:
+          CHART_STROKE_COLORS[index % CHART_STROKE_COLORS.length] ?? "#111827",
+      })),
+    [pointProgressionChart.series]
+  );
+
+  const [visibleUserIds, setVisibleUserIds] = React.useState<string[]>([]);
+
+  React.useEffect(() => {
+    setVisibleUserIds(chartSeries.map((item) => item.userId));
+  }, [chartSeries]);
+
+  const visibleSeries: SeasonChartViewSeries[] = React.useMemo(
+    () =>
+      chartSeries.filter((item) =>
+        visibleUserIds.some((userId) => userId === item.userId)
+      ),
+    [chartSeries, visibleUserIds]
+  );
+
+  const handleToggleChartSeries = React.useCallback((userId: string) => {
+    setVisibleUserIds((prev) => {
+      if (prev.some((id) => id === userId)) {
+        return prev.filter((id) => id !== userId);
+      }
+
+      return [...prev, userId];
+    });
+  }, []);
+
   const handleStartRecording = React.useCallback(() => {
     const leagueId = params.leagueId;
     const seasonId = params.seasonId;
@@ -197,8 +262,12 @@ export const useSeasonPage = () => {
     season,
     titles,
     pointProgressionChart,
+    chartSeries,
+    visibleSeries,
+    visibleUserIds,
     loading,
     error,
     handleStartRecording,
+    handleToggleChartSeries,
   };
 };
