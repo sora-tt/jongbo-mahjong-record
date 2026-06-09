@@ -5,10 +5,9 @@ import * as React from "react";
 import clsx from "clsx";
 import { Calendar, Crown } from "lucide-react";
 
-import { COLOR_MAP } from "@/constants/color-map";
-
 import Header from "@/components/common/container/header";
 import { LeagueRankingTable } from "@/components/pages/league/league-ranking-table";
+import { SeasonPointProgressionChart } from "@/components/pages/league/season-point-progression-chart";
 import { Button } from "@/components/ui/button";
 import { HeaderCard } from "@/components/ui/header-card";
 import { SectionCard } from "@/components/ui/section-card";
@@ -27,9 +26,52 @@ const formatDate = (value: string | null) => {
   }).format(new Date(value));
 };
 
+const CHART_STROKE_COLORS = [
+  "#ef4444",
+  "#3b82f6",
+  "#22c55e",
+  "#eab308",
+  "#a855f7",
+  "#ec4899",
+  "#f97316",
+  "#0ea5e9",
+  "#10b981",
+  "#f59e0b",
+  "#84cc16",
+  "#14b8a6",
+  "#06b6d4",
+  "#6366f1",
+  "#8b5cf6",
+  "#d946ef",
+  "#f43f5e",
+  "#db2777",
+  "#a16207",
+  "#78716c",
+  "#6b7280",
+  "#111827",
+];
+
 const SeasonPage: React.FC = () => {
-  const { season, titles, loading, error, handleStartRecording } =
-    useSeasonPage();
+  const {
+    season,
+    titles,
+    pointProgressionChart,
+    loading,
+    error,
+    handleStartRecording,
+  } = useSeasonPage();
+
+  const chartSeries = React.useMemo(
+    () =>
+      pointProgressionChart.series.map((item, index) => ({
+        userId: item.userId,
+        userName: item.userName,
+        colorClassName: item.colorClassName,
+        strokeColor:
+          CHART_STROKE_COLORS[index % CHART_STROKE_COLORS.length] ?? "#111827",
+      })),
+    [pointProgressionChart.series]
+  );
 
   if (loading) {
     return (
@@ -95,24 +137,20 @@ const SeasonPage: React.FC = () => {
 
         <section className="mb-8">
           <SectionCard title="総合pt推移" bodyClassName="p-4">
-            <div className="w-full h-48 bg-gray-50 rounded-md mb-3" />
+            <SeasonPointProgressionChart
+              data={pointProgressionChart.chartData}
+              series={chartSeries}
+            />
             <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
-              {season.pointProgressions.map((progression, index) => (
-                <div
-                  key={progression.userId}
-                  className="flex items-center gap-1"
-                >
+              {chartSeries.map((item) => (
+                <div key={item.userId} className="flex items-center gap-1">
                   <span
                     className={clsx(
                       "inline-block w-2 h-2 rounded-full",
-                      Object.values(COLOR_MAP)[
-                        index % Object.values(COLOR_MAP).length
-                      ]
+                      item.colorClassName
                     )}
                   />
-                  <span className="text-text-muted">
-                    {progression.userName}
-                  </span>
+                  <span className="text-text-muted">{item.userName}</span>
                 </div>
               ))}
             </div>
