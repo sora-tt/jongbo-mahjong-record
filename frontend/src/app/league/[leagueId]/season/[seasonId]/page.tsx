@@ -73,6 +73,30 @@ const SeasonPage: React.FC = () => {
     [pointProgressionChart.series]
   );
 
+  const [visibleUserIds, setVisibleUserIds] = React.useState<string[]>([]);
+
+  React.useEffect(() => {
+    setVisibleUserIds(chartSeries.map((item) => item.userId));
+  }, [chartSeries]);
+
+  const visibleSeries = React.useMemo(
+    () =>
+      chartSeries.filter((item) =>
+        visibleUserIds.some((userId) => userId === item.userId)
+      ),
+    [chartSeries, visibleUserIds]
+  );
+
+  const handleToggleSeries = React.useCallback((userId: string) => {
+    setVisibleUserIds((prev) => {
+      if (prev.some((id) => id === userId)) {
+        return prev.filter((id) => id !== userId);
+      }
+
+      return [...prev, userId];
+    });
+  }, []);
+
   if (loading) {
     return (
       <div className="flex-1 bg-white min-h-full font-jp">
@@ -137,13 +161,33 @@ const SeasonPage: React.FC = () => {
 
         <section className="mb-8">
           <SectionCard title="総合pt推移" bodyClassName="p-4">
-            <SeasonPointProgressionChart
-              data={pointProgressionChart.chartData}
-              series={chartSeries}
-            />
+            {pointProgressionChart.isChartEmpty ? (
+              <div className="mb-3 flex h-[220px] w-full items-center justify-center rounded-md bg-gray-50 text-sm text-text-muted">
+                まだ対局データがないため、グラフを表示できません
+              </div>
+            ) : visibleSeries.length > 0 ? (
+              <SeasonPointProgressionChart
+                data={pointProgressionChart.chartData}
+                series={visibleSeries}
+              />
+            ) : (
+              <div className="mb-3 flex h-[220px] w-full items-center justify-center rounded-md bg-gray-50 text-sm text-text-muted">
+                凡例からプレイヤーを選択するとグラフを表示できます
+              </div>
+            )}
             <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
               {chartSeries.map((item) => (
-                <div key={item.userId} className="flex items-center gap-1">
+                <button
+                  key={item.userId}
+                  type="button"
+                  className={clsx(
+                    "flex items-center gap-1 transition-opacity",
+                    visibleUserIds.some((userId) => userId === item.userId)
+                      ? "opacity-100"
+                      : "opacity-40"
+                  )}
+                  onClick={() => handleToggleSeries(item.userId)}
+                >
                   <span
                     className={clsx(
                       "inline-block w-2 h-2 rounded-full",
@@ -151,7 +195,7 @@ const SeasonPage: React.FC = () => {
                     )}
                   />
                   <span className="text-text-muted">{item.userName}</span>
-                </div>
+                </button>
               ))}
             </div>
             <p className="mt-2 text-[10px] text-text-muted">
