@@ -27,10 +27,10 @@ export const NAV_ITEMS = [
   {
     icon: BarChart3,
     label: "成績",
-    href: "/personal-record",
+    href: "/stats",
     active:
       typeof window !== "undefined" &&
-      window.location.pathname.startsWith("/personal-record"),
+      window.location.pathname.startsWith("/stats"),
   },
   {
     icon: Users,
