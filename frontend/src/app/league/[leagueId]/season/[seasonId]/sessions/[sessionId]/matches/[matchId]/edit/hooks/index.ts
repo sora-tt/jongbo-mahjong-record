@@ -4,15 +4,9 @@ import { useParams, useRouter } from "next/navigation";
 
 import { ApiError } from "@/lib/api/core";
 import { fetchLeagueDetail } from "@/lib/api/leagues";
-import { createMatch } from "@/lib/api/matches";
+import { fetchMatches, updateMatch } from "@/lib/api/matches";
 import { fetchSeasonDetail } from "@/lib/api/seasons";
-import { createSession, deleteSession } from "@/lib/api/sessions";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { selectRecordingFlow } from "@/store/selectors/recording-flow-selectors";
-import {
-  clearRecordingFlow,
-  setRecordingFlow,
-} from "@/store/slices/recording-flow-slice";
+import { fetchSessionDetail } from "@/lib/api/sessions";
 
 import { type Props as DropdownProps } from "@/components/ui/dropdown";
 
@@ -22,9 +16,9 @@ import type {
 } from "@/types/domain/player-select";
 
 const DEFAULT_ERROR_MESSAGE =
-  "対局記録画面の取得に失敗しました。時間をおいて再度お試しください。";
+  "対局編集画面の取得に失敗しました。時間をおいて再度お試しください。";
 const DEFAULT_SUBMIT_ERROR_MESSAGE =
-  "対局記録の保存に失敗しました。時間をおいて再度お試しください。";
+  "対局結果の更新に失敗しました。時間をおいて再度お試しください。";
 
 const SCORE_POSITIONS = ["first", "second", "third", "fourth"] as const;
 
@@ -36,7 +30,6 @@ const WIND_BY_POSITION = {
 } as const;
 
 type ScorePosition = (typeof SCORE_POSITIONS)[number];
-
 type ScoreState = Record<ScorePosition, string>;
 
 const INITIAL_SCORES: ScoreState = {
@@ -87,11 +80,14 @@ const buildRanks = (
   );
 };
 
-export const useRecordMatchPage = () => {
-  const dispatch = useAppDispatch();
+export const useEditMatchPage = () => {
   const router = useRouter();
-  const params = useParams<{ leagueId: string; seasonId: string }>();
-  const recordingFlow = useAppSelector(selectRecordingFlow);
+  const params = useParams<{
+    leagueId: string;
+    seasonId: string;
+    sessionId: string;
+    matchId: string;
+  }>();
   const [options, setOptions] = React.useState<PlayerSelectOption[]>([]);
   const [players, setPlayers] = React.useState<SelectedPlayers>(
     EMPTY_SELECTED_PLAYERS
@@ -107,21 +103,13 @@ export const useRecordMatchPage = () => {
   React.useEffect(() => {
     let isActive = true;
 
-    const leagueId = params.leagueId;
-    const seasonId = params.seasonId;
+    const { leagueId, seasonId, sessionId, matchId } = params;
 
-    if (!leagueId || !seasonId) {
-      setError("leagueId または seasonId が指定されていません");
+    if (!leagueId || !seasonId || !sessionId || !matchId) {
+      setError(
+        "leagueId、seasonId、sessionId、matchId のいずれかが指定されていません"
+      );
       setIsLoading(false);
-      return;
-    }
-
-    if (
-      recordingFlow.leagueId !== leagueId ||
-      recordingFlow.seasonId !== seasonId ||
-      recordingFlow.selectedPlayerIds.length < 3
-    ) {
-      router.replace(`/league/${leagueId}/season/${seasonId}/player-select`);
       return;
     }
 
@@ -130,12 +118,20 @@ export const useRecordMatchPage = () => {
       setError(null);
 
       try {
-        const [season, league] = await Promise.all([
+        const [season, league, session, matches] = await Promise.all([
           fetchSeasonDetail(leagueId, seasonId),
           fetchLeagueDetail(leagueId),
+          fetchSessionDetail({ leagueId, seasonId, sessionId }),
+          fetchMatches({ leagueId, seasonId, sessionId }),
         ]);
+        const targetMatch = matches.find((match) => match.id === matchId);
 
         if (!isActive) {
+          return;
+        }
+
+        if (!targetMatch) {
+          setError("編集対象の対局結果が見つかりません");
           return;
         }
 
@@ -143,13 +139,28 @@ export const useRecordMatchPage = () => {
           season.members.map((member) => [member.userId, member.userName])
         );
         setOptions(
-          recordingFlow.selectedPlayerIds.map((userId) => ({
-            label: memberNameByUserId.get(userId) ?? "不明なユーザー",
-            value: userId,
+          session.members.map((member) => ({
+            label: memberNameByUserId.get(member.userId) ?? member.userName,
+            value: member.userId,
           }))
         );
         setStartingPoints(league.rule.oka.startingPoints);
-        setPlayers(recordingFlow.selectedPlayersBySeat);
+
+        const nextPlayers = { ...EMPTY_SELECTED_PLAYERS };
+        const nextScores = { ...INITIAL_SCORES };
+
+        targetMatch.results.forEach((result) => {
+          const scorePosition = SCORE_POSITIONS.find(
+            (position) => WIND_BY_POSITION[position] === result.wind
+          );
+          nextPlayers[result.wind] = result.userId;
+          if (scorePosition) {
+            nextScores[scorePosition] = String(result.rawScore / 100);
+          }
+        });
+
+        setPlayers(nextPlayers);
+        setScores(nextScores);
       } catch (loadError) {
         if (!isActive) {
           return;
@@ -175,16 +186,7 @@ export const useRecordMatchPage = () => {
     return () => {
       isActive = false;
     };
-  }, [
-    params.leagueId,
-    params.seasonId,
-    recordingFlow.leagueId,
-    recordingFlow.seasonId,
-    recordingFlow.selectedPlayerIds,
-    recordingFlow.selectedPlayerIds.length,
-    recordingFlow.selectedPlayersBySeat,
-    router,
-  ]);
+  }, [params, router]);
 
   const swapPlayers = React.useCallback(
     (position: keyof SelectedPlayers): DropdownProps["onChange"] =>
@@ -216,15 +218,15 @@ export const useRecordMatchPage = () => {
     };
 
   const handleSubmit = React.useCallback(async () => {
-    const leagueId = params.leagueId;
-    const seasonId = params.seasonId;
+    const { leagueId, seasonId, sessionId, matchId } = params;
 
-    if (!leagueId || !seasonId) {
-      setError("leagueId または seasonId が指定されていません");
+    if (!leagueId || !seasonId || !sessionId || !matchId) {
+      setError(
+        "leagueId、seasonId、sessionId、matchId のいずれかが指定されていません"
+      );
       return;
     }
 
-    const selectedPlayerIds = Object.values(players).filter(Boolean);
     const parsedRows = SCORE_POSITIONS.map((position) => {
       const wind = WIND_BY_POSITION[position];
       const userId = players[wind];
@@ -283,23 +285,12 @@ export const useRecordMatchPage = () => {
     setIsSubmitting(true);
     setError(null);
 
-    let createdSessionId: string | null = null;
-
     try {
-      const session = await createSession({
+      await updateMatch({
         leagueId,
         seasonId,
-        startedAt: new Date().toISOString(),
-        memberUserIds: selectedPlayerIds,
-        tableLabel: null,
-      });
-      createdSessionId = session.id;
-
-      await createMatch({
-        leagueId,
-        seasonId,
-        sessionId: session.id,
-        playedAt: new Date().toISOString(),
+        sessionId,
+        matchId,
         results: rowsWithScores.map((row) => ({
           userId: row.userId,
           wind: row.wind,
@@ -308,34 +299,10 @@ export const useRecordMatchPage = () => {
         })),
       });
 
-      dispatch(
-        setRecordingFlow({
-          ...recordingFlow,
-          selectedPlayerIds,
-          selectedPlayersBySeat: players,
-          sessionId: session.id,
-        })
-      );
-
       router.push(
-        `/league/${leagueId}/season/${seasonId}/sessions/${session.id}/results`
+        `/league/${leagueId}/season/${seasonId}/sessions/${sessionId}/results`
       );
     } catch (submitError) {
-      if (
-        createdSessionId &&
-        !(submitError instanceof ApiError && submitError.status === 401)
-      ) {
-        try {
-          await deleteSession({
-            leagueId,
-            seasonId,
-            sessionId: createdSessionId,
-          });
-        } catch {
-          // rollback 失敗時は元エラーを優先する
-        }
-      }
-
       if (submitError instanceof ApiError && submitError.status === 401) {
         router.replace("/login");
         return;
@@ -346,32 +313,22 @@ export const useRecordMatchPage = () => {
           ? submitError.message
           : DEFAULT_SUBMIT_ERROR_MESSAGE
       );
-    } finally {
       setIsSubmitting(false);
     }
-  }, [
-    dispatch,
-    params.leagueId,
-    params.seasonId,
-    players,
-    recordingFlow,
-    router,
-    scores,
-    startingPoints,
-  ]);
+  }, [params, players, router, scores, startingPoints]);
 
   const handleBack = React.useCallback(() => {
-    const leagueId = params.leagueId;
-    const seasonId = params.seasonId;
+    const { leagueId, seasonId, sessionId } = params;
 
-    if (!leagueId || !seasonId) {
-      dispatch(clearRecordingFlow());
+    if (!leagueId || !seasonId || !sessionId) {
       router.push("/");
       return;
     }
 
-    router.push(`/league/${leagueId}/season/${seasonId}/player-select`);
-  }, [dispatch, params.leagueId, params.seasonId, router]);
+    router.push(
+      `/league/${leagueId}/season/${seasonId}/sessions/${sessionId}/results`
+    );
+  }, [params, router]);
 
   return {
     players,

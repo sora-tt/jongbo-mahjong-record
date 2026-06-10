@@ -4,7 +4,11 @@ import type {
   SeasonMember,
   Standing,
 } from "@/domain/season/types.js";
-import type { RecordHolder, ScopeType } from "@/domain/shared/types.js";
+import type {
+  GameType,
+  RecordHolder,
+  ScopeType,
+} from "@/domain/shared/types.js";
 import type { UserStats } from "@/domain/user/types.js";
 
 type Aggregate = {
@@ -138,6 +142,7 @@ const sortAggregateEntries = (entries: Aggregate[]) =>
 export const buildStandings = (
   members: SeasonMember[],
   matches: Match[],
+  gameType: GameType,
 ): Standing[] =>
   buildSeasonAggregates(members, matches).map((aggregate, index) => ({
     rank: index + 1,
@@ -148,7 +153,7 @@ export const buildStandings = (
     firstCount: aggregate.firstCount,
     secondCount: aggregate.secondCount,
     thirdCount: aggregate.thirdCount,
-    fourthCount: members.length === 4 ? aggregate.fourthCount : null,
+    fourthCount: gameType === "yonma" ? aggregate.fourthCount : null,
   }));
 
 export const buildPointProgressions = (

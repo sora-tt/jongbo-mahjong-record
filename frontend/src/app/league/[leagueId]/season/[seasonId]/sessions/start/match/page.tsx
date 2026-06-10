@@ -2,6 +2,8 @@
 
 import * as React from "react";
 
+import { LoaderCircle } from "lucide-react";
+
 import { Button } from "@/components/ui/button/index";
 import { Dropdown } from "@/components/ui/dropdown/index";
 import { TextBox } from "@/components/ui/text-box/index";
@@ -123,10 +125,19 @@ const NewMatchPage: React.FC = () => {
             variant="brand-primary"
             onClick={handleSubmit}
             disabled={isSubmitting}
+            aria-label={isSubmitting ? "保存中" : undefined}
           >
-            {isSubmitting ? "保存中..." : "決定"}
+            {isSubmitting ? (
+              <LoaderCircle size={18} className="animate-spin" />
+            ) : (
+              "決定"
+            )}
           </Button>
-          <Button variant="brand-secondary" onClick={handleBack}>
+          <Button
+            variant="brand-secondary"
+            onClick={handleBack}
+            disabled={isSubmitting}
+          >
             戻る
           </Button>
         </div>
