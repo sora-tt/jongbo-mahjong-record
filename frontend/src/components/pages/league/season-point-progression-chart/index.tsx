@@ -70,7 +70,7 @@ export const SeasonPointProgressionChart: React.FC<Props> = ({
             axisLine={false}
             width={52}
             tick={{ fill: "#6b7280", fontSize: 12 }}
-            tickFormatter={(value: number) => `${value}pt`}
+            tickFormatter={(value: number) => formatPoint(value)}
           />
           <ReferenceLine y={0} stroke="#9ca3af" strokeDasharray="4 4" />
           <Tooltip

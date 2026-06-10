@@ -123,6 +123,7 @@ const SeasonPage: React.FC = () => {
                 <button
                   key={item.userId}
                   type="button"
+                  aria-pressed={visibleUserIds.includes(item.userId)}
                   className={clsx(
                     "flex min-h-7 items-center gap-1 rounded px-1 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-300",
                     visibleUserIds.some((userId) => userId === item.userId)
@@ -134,7 +135,7 @@ const SeasonPage: React.FC = () => {
                   <span
                     className={clsx(
                       "inline-block w-2 h-2 rounded-full",
-                      item.colorClassName
+                      item.strokeColor
                     )}
                   />
                   <span className="text-text-muted">{item.userName}</span>
