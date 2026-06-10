@@ -5,10 +5,9 @@ import * as React from "react";
 import clsx from "clsx";
 import { Calendar, Crown } from "lucide-react";
 
-import { COLOR_MAP } from "@/constants/color-map";
-
 import Header from "@/components/common/container/header";
 import { LeagueRankingTable } from "@/components/pages/league/league-ranking-table";
+import { SeasonPointProgressionChart } from "@/components/pages/league/season-point-progression-chart";
 import { Button } from "@/components/ui/button";
 import { HeaderCard } from "@/components/ui/header-card";
 import { SectionCard } from "@/components/ui/section-card";
@@ -28,8 +27,18 @@ const formatDate = (value: string | null) => {
 };
 
 const SeasonPage: React.FC = () => {
-  const { season, titles, loading, error, handleStartRecording } =
-    useSeasonPage();
+  const {
+    season,
+    titles,
+    pointProgressionChart,
+    chartSeries,
+    visibleSeries,
+    visibleUserIds,
+    loading,
+    error,
+    handleStartRecording,
+    handleToggleChartSeries,
+  } = useSeasonPage();
 
   if (loading) {
     return (
@@ -95,28 +104,45 @@ const SeasonPage: React.FC = () => {
 
         <section className="mb-8">
           <SectionCard title="総合pt推移" bodyClassName="p-4">
-            <div className="w-full h-48 bg-gray-50 rounded-md mb-3" />
-            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
-              {season.pointProgressions.map((progression, index) => (
-                <div
-                  key={progression.userId}
-                  className="flex items-center gap-1"
+            {pointProgressionChart.isChartEmpty ? (
+              <div className="mb-3 flex h-[clamp(200px,38vw,280px)] w-full items-center justify-center rounded-md bg-gray-50 px-4 text-center text-sm text-text-muted">
+                まだ対局データがないため、グラフを表示できません
+              </div>
+            ) : visibleSeries.length > 0 ? (
+              <SeasonPointProgressionChart
+                data={pointProgressionChart.chartData}
+                series={visibleSeries}
+              />
+            ) : (
+              <div className="mb-3 flex h-[clamp(200px,38vw,280px)] w-full items-center justify-center rounded-md bg-gray-50 px-4 text-center text-sm text-text-muted">
+                凡例からプレイヤーを選択するとグラフを表示できます
+              </div>
+            )}
+            <div className="flex flex-wrap gap-x-2 gap-y-2 text-xs sm:gap-x-4 sm:gap-y-1">
+              {chartSeries.map((item) => (
+                <button
+                  key={item.userId}
+                  type="button"
+                  aria-pressed={visibleUserIds.includes(item.userId)}
+                  className={clsx(
+                    "flex min-h-7 items-center gap-1 rounded px-1 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-300",
+                    visibleUserIds.some((userId) => userId === item.userId)
+                      ? "opacity-100"
+                      : "opacity-40"
+                  )}
+                  onClick={() => handleToggleChartSeries(item.userId)}
                 >
                   <span
                     className={clsx(
                       "inline-block w-2 h-2 rounded-full",
-                      Object.values(COLOR_MAP)[
-                        index % Object.values(COLOR_MAP).length
-                      ]
+                      item.strokeColor
                     )}
                   />
-                  <span className="text-text-muted">
-                    {progression.userName}
-                  </span>
-                </div>
+                  <span className="text-text-muted">{item.userName}</span>
+                </button>
               ))}
             </div>
-            <p className="mt-2 text-[10px] text-text-muted">
+            <p className="mt-2 text-xs text-text-muted sm:text-[10px]">
               ※プレイヤー名をタップするとデータを非表示にできます
             </p>
           </SectionCard>
