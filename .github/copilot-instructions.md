@@ -114,5 +114,6 @@ pnpm typecheck       # Run TypeScript type check
 - The frontend currently runs on mock data (API integration is pending)
 - The backend has parts still under development
 - Use `pnpm` for dependency management and script execution across the monorepo
+- If Node.js is still on version 23.0.0, npm/pnpm and related commands may not work correctly, so run `nvm use` before executing them
 - Node.js version is managed via `.nvmrc`; run `nvm use` to match it
 - Do not commit environment variable files (e.g. `.env`)
