@@ -1,8 +1,13 @@
 "use client";
 
 import * as React from "react";
+
+import {
+  logout,
+  subscribeAuthState,
+  type FirebaseUser,
+} from "@/lib/firebase/auth";
 import { hasFirebaseConfig } from "@/lib/firebase/client";
-import { logout, subscribeAuthState, type FirebaseUser } from "@/lib/firebase/auth";
 
 type AuthContextValue = {
   user: FirebaseUser | null;
@@ -12,7 +17,9 @@ type AuthContextValue = {
 
 const AuthContext = React.createContext<AuthContextValue | null>(null);
 
-export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) => {
+export const AuthProvider: React.FC<React.PropsWithChildren> = ({
+  children,
+}) => {
   const [user, setUser] = React.useState<FirebaseUser | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
 

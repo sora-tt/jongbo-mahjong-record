@@ -1,3 +1,6 @@
+import { LeagueSeasonMember } from "@/types/domain/league";
+import { UserIdType } from "@/types/domain/user";
+
 import {
   userData1,
   userData2,
@@ -9,9 +12,6 @@ import {
   userData8,
   userData9,
 } from "./user";
-
-import { LeagueSeasonMember } from "@/types/domain/league";
-import { UserIdType } from "@/types/domain/user";
 
 export const leagueSeasonMemberData1: LeagueSeasonMember = {
   player: userData1,

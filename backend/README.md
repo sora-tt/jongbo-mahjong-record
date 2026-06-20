@@ -124,6 +124,37 @@ curl -X DELETE http://127.0.0.1:8080/api/auth/session \
   - 省略時は `432000` 秒 = 5 日
 - `GOOGLE_CLOUD_PROJECT`
   - Firebase project id
+- `FIREBASE_SERVICE_ACCOUNT_KEY`
+  - Firebase service account JSON を 1 行文字列で指定
+  - Vercel 本番では基本的にこの設定が必要
+
+## Vercel デプロイ
+
+この backend は Vercel Functions として deploy できます。
+
+### 推奨構成
+
+- frontend と backend は別 Vercel project にする
+- frontend 側で `/api/*` を backend project へ rewrite する
+- ブラウザからは frontend と同一 origin に見えるため、session cookie を維持しやすい
+
+### backend project の設定
+
+- Root Directory: `backend`
+- Build Command: 省略可
+- Install Command: 省略可
+- Functions entrypoint: `api/[[...route]].ts`
+
+この最小構成では Vercel 上で公開するのは `/api/*` エンドポイントのみです。
+
+### backend project に設定する環境変数
+
+- `GOOGLE_CLOUD_PROJECT`
+- `FIREBASE_SERVICE_ACCOUNT_KEY`
+- `CORS_ALLOWED_ORIGINS`
+- `SESSION_COOKIE_MAX_AGE_SECONDS`（任意）
+
+`FIREBASE_SERVICE_ACCOUNT_KEY` には Firebase service account JSON 全体を 1 行で入れてください。`private_key` に含まれる改行は `\n` のままで問題ありません。
 
 ## 補足
 

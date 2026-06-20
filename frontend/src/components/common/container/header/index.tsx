@@ -15,8 +15,7 @@ export const Header: React.FC = () => {
     handleClose,
     handleLogout,
     isLoggingOut,
-  } =
-    useHeader();
+  } = useHeader();
 
   return (
     <>
