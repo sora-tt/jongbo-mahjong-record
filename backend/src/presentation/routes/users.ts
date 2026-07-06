@@ -31,9 +31,17 @@ export const buildUsersRouter = (services: Services) =>
         201,
       );
     })
-    .get("/me", async (c) =>
-      ok(c, await services.authService.getMe(c.get("authUser").uid)),
-    )
+    .get("/me", async (c) => {
+      const authUser = c.get("authUser");
+      return ok(
+        c,
+        await services.authService.getMe({
+          userId: authUser.uid,
+          email: authUser.email,
+          name: authUser.name,
+        }),
+      );
+    })
     .patch("/me", zValidator("json", updateMeSchema), async (c) => {
       const input = c.req.valid("json");
       return ok(

@@ -13,7 +13,7 @@ export const Home: React.FC = () => {
   const { userName, leagues, hasLeagues, isLoading, error } = useHome();
 
   return (
-    <div className="flex-1 bg-white min-h-full font-jp">
+    <div className="flex-1 bg-white min-h-screen font-jp">
       <Header />
       {isLoading ? (
         <div className="flex min-h-[calc(100vh-56px)] items-center justify-center px-4 text-center text-text-muted">

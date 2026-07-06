@@ -46,7 +46,7 @@ export const createApp = () => {
           return allowedOrigins.includes(origin) ? origin : undefined;
         },
         allowMethods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
-        allowHeaders: ["Content-Type"],
+        allowHeaders: ["Content-Type", "x-id-token"],
         maxAge: 600,
         credentials: true,
       }),
@@ -63,6 +63,7 @@ export const createApp = () => {
     .get("/ui", swaggerUI({ url: "/doc" }))
     .route("/api/auth", buildAuthRouter())
     .use("/api/users/*", requireAuth)
+    .use("/api/leagues", requireAuth)
     .use("/api/leagues/*", requireAuth)
     .route("/api/users", buildUsersRouter(services))
     .route("/api/leagues", buildLeaguesRouter(services))

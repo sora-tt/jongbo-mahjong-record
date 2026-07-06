@@ -263,30 +263,63 @@ export class FirestoreLeagueRepository implements LeagueRepository {
       });
   }
 
-  private async findLeagueDocsByMember(memberUserId: string) {
-    const memberSnapshots = await this.db
-      .collectionGroup("members")
-      .where("user_id", "==", memberUserId)
-      .get();
-    const leagueIds = [
-      ...new Set(
-        memberSnapshots.docs
-          .map((doc) => doc.ref.parent.parent?.id)
-          .filter(Boolean),
-      ),
-    ] as string[];
-    const snapshots = await Promise.all(
-      leagueIds.map((leagueId) =>
-        this.db.collection("leagues").doc(leagueId).get(),
-      ),
-    );
-    return snapshots.filter(
-      (
-        snapshot,
-      ): snapshot is FirebaseFirestore.DocumentSnapshot<FirebaseFirestore.DocumentData> & {
-        exists: true;
-      } => snapshot.exists,
-    );
+  private async findLeagueDocsByMember(
+    memberUserId: string,
+  ): Promise<
+    FirebaseFirestore.DocumentSnapshot<FirebaseFirestore.DocumentData>[]
+  > {
+    try {
+      const memberSnapshots = await this.db
+        .collectionGroup("members")
+        .where("user_id", "==", memberUserId)
+        .get();
+      const leagueIds = [
+        ...new Set(
+          memberSnapshots.docs
+            .map((doc) => doc.ref.parent.parent?.id)
+            .filter(Boolean),
+        ),
+      ] as string[];
+      const snapshots = await Promise.all(
+        leagueIds.map((leagueId) =>
+          this.db.collection("leagues").doc(leagueId).get(),
+        ),
+      );
+      return snapshots.filter(
+        (
+          snapshot,
+        ): snapshot is FirebaseFirestore.DocumentSnapshot<FirebaseFirestore.DocumentData> & {
+          exists: true;
+        } => snapshot.exists,
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const shouldFallback =
+        message.includes("requires an index") ||
+        message.includes("FAILED_PRECONDITION") ||
+        message.includes("9 FAILED_PRECONDITION");
+
+      if (!shouldFallback) {
+        throw error;
+      }
+
+      const leaguesSnapshot = await this.db.collection("leagues").get();
+      const matched: FirebaseFirestore.DocumentSnapshot<FirebaseFirestore.DocumentData>[] =
+        [];
+
+      for (const leagueDoc of leaguesSnapshot.docs) {
+        const memberSnapshot = await leagueDoc.ref
+          .collection("members")
+          .where("user_id", "==", memberUserId)
+          .limit(1)
+          .get();
+        if (!memberSnapshot.empty) {
+          matched.push(leagueDoc);
+        }
+      }
+
+      return matched;
+    }
   }
 
   private async findMyStanding(

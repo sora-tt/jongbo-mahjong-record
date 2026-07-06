@@ -6,8 +6,8 @@ import {
   getApiBaseUrl,
   parseDataResponse,
 } from "@/lib/api/core";
+import { getCurrentIdToken } from "@/lib/firebase/auth";
 
-const fetchMeRequest = apiClient.api.users.me.$get;
 const fetchJoiningSeasonsRequest =
   apiClient.api.users[":userId"]["joining-seasons"].$get;
 const searchUsersRequest = apiClient.api.users.$get;
@@ -17,11 +17,22 @@ type CreateMeResponse = InferResponseType<
   201
 >["data"];
 
-type FetchMeResponse = InferResponseType<typeof fetchMeRequest>["data"];
+type FetchMeResponse = InferResponseType<
+  typeof apiClient.api.users.me.$get
+>["data"];
 type FetchJoiningSeasonsResponse = InferResponseType<
   typeof fetchJoiningSeasonsRequest
 >["data"];
-type SearchUsersResponse = InferResponseType<typeof searchUsersRequest>["data"];
+type SearchUser = {
+  id: string;
+  username: string;
+  name: string;
+  email: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+type SearchUsersResponse = SearchUser[];
 type FetchUserStatsResponse = {
   id: string;
   userId: string;
@@ -60,17 +71,80 @@ type ApiErrorPayload = {
   };
 };
 
-export const createMe = async (input: { name: string; username: string }) => {
-  const response = await apiClient.api.users.me.$post({
-    json: input,
-  });
+const USERS_API_TIMEOUT_MS = 8000;
 
-  return parseDataResponse<CreateMeResponse>(response);
+const fetchWithTimeout = async (input: string, init: RequestInit) => {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), USERS_API_TIMEOUT_MS);
+
+  try {
+    return await fetch(input, {
+      ...init,
+      signal: controller.signal,
+    });
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      (error.name === "AbortError" || error.message.includes("aborted"))
+    ) {
+      throw new ApiError(
+        `users api request timed out after ${USERS_API_TIMEOUT_MS}ms`,
+        504,
+        "upstream_timeout"
+      );
+    }
+
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
 };
 
-export const fetchMe = async () => {
-  const response = await fetchMeRequest();
-  return parseDataResponse<FetchMeResponse>(response);
+const parseFetchDataResponse = async <T>(response: Response): Promise<T> => {
+  const payload = (await response.json().catch(() => null)) as
+    | { data: T }
+    | ApiErrorPayload
+    | null;
+
+  if (!response.ok) {
+    throw new ApiError(
+      payload && "error" in payload && payload.error?.message
+        ? payload.error.message
+        : "API request failed",
+      response.status,
+      payload && "error" in payload ? payload.error?.code : undefined,
+      payload && "error" in payload ? payload.error?.details : undefined
+    );
+  }
+
+  return (payload as { data: T }).data;
+};
+
+export const createMe = async (
+  input: { name: string; username: string },
+  idToken?: string
+) => {
+  const response = await fetchWithTimeout(`${getApiBaseUrl()}/api/users/me`, {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      ...(idToken ? { "x-id-token": idToken } : {}),
+    },
+    body: JSON.stringify(input),
+  });
+
+  return parseFetchDataResponse<CreateMeResponse>(response);
+};
+
+export const fetchMe = async (idToken?: string) => {
+  const authToken = idToken ?? (await getCurrentIdToken());
+  const response = await fetchWithTimeout(`${getApiBaseUrl()}/api/users/me`, {
+    method: "GET",
+    credentials: "include",
+    headers: authToken ? { "x-id-token": authToken } : undefined,
+  });
+  return parseFetchDataResponse<FetchMeResponse>(response);
 };
 
 export const searchUsers = async (query: string) => {
