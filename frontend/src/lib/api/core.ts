@@ -38,6 +38,7 @@ const hasErrorPayload = (
 ): payload is ApiErrorPayload => payload !== null && "error" in payload;
 
 const LOCAL_HOSTS = new Set(["127.0.0.1", "localhost"]);
+const DEFAULT_LOCAL_API_BASE_URL = "http://127.0.0.1:8080";
 
 const trimTrailingSlash = (value: string) => value.replace(/\/$/, "");
 
@@ -45,15 +46,7 @@ export const getApiBaseUrl = () => {
   const configuredBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
 
   if (!configuredBaseUrl) {
-    if (typeof window !== "undefined") {
-      return window.location.origin;
-    }
-
-    if (process.env.VERCEL_URL) {
-      return `https://${process.env.VERCEL_URL}`;
-    }
-
-    return "http://127.0.0.1:8080";
+    return DEFAULT_LOCAL_API_BASE_URL;
   }
 
   if (typeof window === "undefined") {

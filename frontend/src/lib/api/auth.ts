@@ -12,6 +12,9 @@ export const createSession = async (idToken: string) => {
     header: {
       "x-id-token": idToken,
     },
+    json: {
+      idToken,
+    },
   });
 
   return parseDataResponse<CreateSessionResponse>(response);

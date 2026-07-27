@@ -22,10 +22,6 @@ Auth Emulator を使う場合は、以下も設定します。
 
 - `NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_URL`
 
-Vercel で backend を別 project に deploy し、frontend 側から同一 origin で proxy したい場合は以下も設定します。
-
-- `BACKEND_VERCEL_URL`
-
 `./.env.example` には以下も含まれています。
 
 - `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`
@@ -53,10 +49,9 @@ cd frontend && pnpm dev
 
 ## 補足
 
-- Vercel 本番では `NEXT_PUBLIC_API_BASE_URL` を未設定にすると、frontend 自身の origin に API を向けます
-- `BACKEND_VERCEL_URL` が設定されていれば、Next.js rewrite で `/api/*` を backend project に転送します
-- この構成だと browser からは same-origin に見えるため、session cookie と middleware の整合が取りやすくなります
-- この rewrite は API 用です。backend の `/doc` や `/ui` を公開したい場合は追加ルーティングが必要です
+- API は frontend を経由せず backend を直接呼び出します
+- 本番環境では `NEXT_PUBLIC_API_BASE_URL` に backend の URL を設定してください（例: `https://jongbo-mahjong-record-backend.vercel.app`）
+- backend 側の `CORS_ALLOWED_ORIGINS` に frontend origin を含める必要があります
 
 - クライアント側の Firebase 初期化は [`src/lib/firebase/client.ts`](/Users/tatsuya/dev/study/react/jongbo-mahjong-record/frontend/src/lib/firebase/client.ts)
 - 認証 API は [`src/lib/firebase/auth.ts`](/Users/tatsuya/dev/study/react/jongbo-mahjong-record/frontend/src/lib/firebase/auth.ts)
