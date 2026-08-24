@@ -45,6 +45,10 @@ const trimTrailingSlash = (value: string) => value.replace(/\/$/, "");
 export const getApiBaseUrl = () => {
   const configuredBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
 
+  if (typeof window !== "undefined" && process.env.NODE_ENV === "production") {
+    return window.location.origin;
+  }
+
   if (!configuredBaseUrl) {
     return DEFAULT_LOCAL_API_BASE_URL;
   }
