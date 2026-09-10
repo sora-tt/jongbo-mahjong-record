@@ -4,6 +4,7 @@ import * as React from "react";
 
 import { AuthFormShell } from "@/components/pages/auth/auth-form-shell";
 import { InputArea } from "@/components/pages/entry-pages/input-area";
+
 import { useSignupPage } from "./hooks";
 
 const SignUpPage: React.FC = () => {

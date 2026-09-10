@@ -49,6 +49,10 @@ cd frontend && pnpm dev
 
 ## 補足
 
+- API は frontend を経由せず backend を直接呼び出します
+- 本番環境では `NEXT_PUBLIC_API_BASE_URL` に backend の URL を設定してください（例: `https://jongbo-mahjong-record-backend.vercel.app`）
+- backend 側の `CORS_ALLOWED_ORIGINS` に frontend origin を含める必要があります
+
 - クライアント側の Firebase 初期化は [`src/lib/firebase/client.ts`](/Users/tatsuya/dev/study/react/jongbo-mahjong-record/frontend/src/lib/firebase/client.ts)
 - 認証 API は [`src/lib/firebase/auth.ts`](/Users/tatsuya/dev/study/react/jongbo-mahjong-record/frontend/src/lib/firebase/auth.ts)
 - backend API ラッパーは [`src/lib/api/client.ts`](/Users/tatsuya/dev/study/react/jongbo-mahjong-record/frontend/src/lib/api/client.ts)

@@ -1,3 +1,7 @@
+import { LeagueMember } from "@/types/domain/league";
+import { UserIdType } from "@/types/domain/user";
+import { AppDate } from "@/types/utils/app-date";
+
 import {
   userData1,
   userData2,
@@ -9,10 +13,6 @@ import {
   userData8,
   userData9,
 } from "./user";
-
-import { LeagueMember } from "@/types/domain/league";
-import { UserIdType } from "@/types/domain/user";
-import { AppDate } from "@/types/utils/app-date";
 
 export const leagueMemberData1: LeagueMember = {
   player: userData1,

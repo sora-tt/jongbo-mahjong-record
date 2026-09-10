@@ -1,4 +1,4 @@
-import { ValidationError } from "@/domain/shared/errors.js";
+import { NotFoundError, ValidationError } from "@/domain/shared/errors.js";
 import type { UserRepository } from "@/domain/user/repository.js";
 
 const normalizeUsername = (value: string) =>
@@ -7,11 +7,34 @@ const normalizeUsername = (value: string) =>
     .toLowerCase()
     .replace(/[^a-z0-9_]/g, "_");
 
+const getFallbackName = (email: string | null, name: string | null) =>
+  name?.trim() || email?.split("@")[0]?.trim() || "user";
+
+const getFallbackUsername = (email: string | null, name: string | null) =>
+  normalizeUsername(email?.split("@")[0] ?? name ?? "user") || "user";
+
 export class AuthService {
   constructor(private readonly userRepository: UserRepository) {}
 
-  getMe(userId: string) {
-    return this.userRepository.get(userId);
+  async getMe(input: {
+    userId: string;
+    email: string | null;
+    name: string | null;
+  }) {
+    try {
+      return await this.userRepository.get(input.userId);
+    } catch (error) {
+      if (!(error instanceof NotFoundError)) {
+        throw error;
+      }
+
+      return this.userRepository.upsertProfile({
+        userId: input.userId,
+        email: input.email,
+        name: getFallbackName(input.email, input.name),
+        username: getFallbackUsername(input.email, input.name),
+      });
+    }
   }
 
   async createMe(input: {

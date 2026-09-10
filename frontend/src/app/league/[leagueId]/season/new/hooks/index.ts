@@ -21,7 +21,7 @@ export const useSeasonNew = () => {
 
   const [leagueName, setLeagueName] = React.useState("");
   const [leagueMembers, setLeagueMembers] = React.useState<SelectableMember[]>(
-    [],
+    []
   );
   const [selectedMembers, setSelectedMembers] = React.useState<
     Record<string, SelectableMember>
@@ -64,8 +64,8 @@ export const useSeasonNew = () => {
               acc[member.userId] = member;
               return acc;
             },
-            {} as Record<string, SelectableMember>,
-          ),
+            {} as Record<string, SelectableMember>
+          )
         );
       } catch (loadError) {
         if (!isActive) {
@@ -78,7 +78,7 @@ export const useSeasonNew = () => {
         }
 
         setError(
-          loadError instanceof Error ? loadError.message : DEFAULT_ERROR_MESSAGE,
+          loadError instanceof Error ? loadError.message : DEFAULT_ERROR_MESSAGE
         );
       } finally {
         if (isActive) {
@@ -113,14 +113,14 @@ export const useSeasonNew = () => {
         return next;
       });
     },
-    [leagueMembers],
+    [leagueMembers]
   );
 
   const handleSeasonNameChange = React.useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       setSeasonName(e.target.value);
     },
-    [],
+    []
   );
 
   const handleSubmit = React.useCallback(async () => {
@@ -158,7 +158,7 @@ export const useSeasonNew = () => {
       setError(
         submitError instanceof Error
           ? submitError.message
-          : "シーズン作成に失敗しました",
+          : "シーズン作成に失敗しました"
       );
     } finally {
       setIsSubmitting(false);

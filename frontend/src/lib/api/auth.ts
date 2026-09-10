@@ -9,7 +9,12 @@ type CreateSessionResponse = InferResponseType<
 
 export const createSession = async (idToken: string) => {
   const response = await apiClient.api.auth.session.$post({
-    json: { idToken },
+    header: {
+      "x-id-token": idToken,
+    },
+    json: {
+      idToken,
+    },
   });
 
   return parseDataResponse<CreateSessionResponse>(response);

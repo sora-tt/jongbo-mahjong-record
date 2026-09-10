@@ -203,9 +203,7 @@ const NewLeaguePage: React.FC = () => {
 
             <Spacer className="space-y-3">
               <Spacer className="space-y-2">
-                <h3 className="text-sm font-semibold text-brand-700">
-                  モード
-                </h3>
+                <h3 className="text-sm font-semibold text-brand-700">モード</h3>
                 <Spacer display="flex" gap="small">
                   {(
                     [
@@ -243,7 +241,10 @@ const NewLeaguePage: React.FC = () => {
                       type="number"
                       value={ruleSettings.okaStartPoints}
                       onChange={(e) =>
-                        handleRuleSettingChange("okaStartPoints", e.target.value)
+                        handleRuleSettingChange(
+                          "okaStartPoints",
+                          e.target.value
+                        )
                       }
                       placeholder="例: 30000"
                       className="w-full rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm text-gray-900 outline-none transition-all placeholder:text-gray-400 hover:border-gray-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50"
@@ -257,7 +258,10 @@ const NewLeaguePage: React.FC = () => {
                       type="number"
                       value={ruleSettings.okaReturnPoints}
                       onChange={(e) =>
-                        handleRuleSettingChange("okaReturnPoints", e.target.value)
+                        handleRuleSettingChange(
+                          "okaReturnPoints",
+                          e.target.value
+                        )
                       }
                       placeholder="例: 30000"
                       className="w-full rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm text-gray-900 outline-none transition-all placeholder:text-gray-400 hover:border-gray-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50"

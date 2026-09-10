@@ -1,6 +1,6 @@
-import type { User } from "@/types/domain/user";
-
 import { AppDate } from "@/types/utils/app-date";
+
+import type { User } from "@/types/domain/user";
 
 export const userData1: User = {
   userId: "0001",

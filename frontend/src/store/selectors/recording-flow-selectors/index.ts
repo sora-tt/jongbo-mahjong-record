@@ -1,7 +1,8 @@
 import { createSelector } from "@reduxjs/toolkit";
 
-import type { RootState } from "@/store";
 import { createInitialRecordingFlowState } from "@/store/slices/recording-flow-slice";
+
+import type { RootState } from "@/store";
 
 export const selectRecordingFlow = (state: RootState) =>
   state.recordingFlow ?? createInitialRecordingFlowState();

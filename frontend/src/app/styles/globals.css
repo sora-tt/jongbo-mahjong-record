@@ -7,8 +7,8 @@
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #ffffff;
+    --foreground: #171717;
   }
 }
 
@@ -45,4 +45,9 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-jp); /* 日本語主体ならこちら */
+}
+
+html,
+body {
+  min-height: 100%;
 }

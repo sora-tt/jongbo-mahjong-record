@@ -1,12 +1,22 @@
 "use client";
 
 import * as React from "react";
+
 import { AuthFormShell } from "@/components/pages/auth/auth-form-shell";
 import { InputArea } from "@/components/pages/entry-pages/input-area";
+
 import { useLoginPage } from "./hooks";
 
 const LoginPage: React.FC = () => {
-  const { email, password, error, isSubmitting, setEmail, setPassword, handleSubmit } = useLoginPage();
+  const {
+    email,
+    password,
+    error,
+    isSubmitting,
+    setEmail,
+    setPassword,
+    handleSubmit,
+  } = useLoginPage();
 
   return (
     <AuthFormShell
