@@ -551,8 +551,8 @@ export const openApiDocument = {
         },
       },
       delete: {
-        tags: ["Sessions"],
-        summary: "delete session",
+        tags: ["Seasons"],
+        summary: "delete season",
         parameters: [
           {
             in: "path",
@@ -563,12 +563,6 @@ export const openApiDocument = {
           {
             in: "path",
             name: "seasonId",
-            required: true,
-            schema: { type: "string" },
-          },
-          {
-            in: "path",
-            name: "sessionId",
             required: true,
             schema: { type: "string" },
           },
@@ -732,7 +726,17 @@ export const openApiDocument = {
         ],
         requestBody: {
           required: true,
-          content: jsonContent({ type: "object" }),
+          content: jsonContent({
+            type: "object",
+            properties: {
+              endedAt: {
+                type: "string",
+                format: "date-time",
+                nullable: true,
+              },
+              tableLabel: { type: "string", nullable: true },
+            },
+          }),
         },
         responses: {
           "200": {
@@ -890,7 +894,27 @@ export const openApiDocument = {
           ],
           requestBody: {
             required: true,
-            content: jsonContent({ type: "object" }),
+            content: jsonContent({
+              type: "object",
+              properties: {
+                playedAt: { type: "string", format: "date-time" },
+                results: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      userId: { type: "string" },
+                      wind: {
+                        type: "string",
+                        enum: ["east", "south", "west", "north"],
+                      },
+                      rawScore: { type: "number" },
+                    },
+                    required: ["userId", "wind", "rawScore"],
+                  },
+                },
+              },
+            }),
           },
           responses: {
             "200": {

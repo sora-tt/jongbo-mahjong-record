@@ -128,4 +128,28 @@ test("OpenAPI publishes the canonical auth and match request contracts", async (
     ).sort(),
     ["name", "status"],
   );
+  const seasonPath =
+    document.paths["/api/leagues/{leagueId}/seasons/{seasonId}"];
+  assert.deepEqual(
+    seasonPath.delete?.parameters?.map((parameter) => parameter.name),
+    ["leagueId", "seasonId"],
+  );
+  assert.deepEqual(seasonPath.delete?.tags, ["Seasons"]);
+  assert.equal(seasonPath.delete?.summary, "delete season");
+  const sessionPatchSchema =
+    document.paths[
+      "/api/leagues/{leagueId}/seasons/{seasonId}/sessions/{sessionId}"
+    ].patch?.requestBody?.content?.["application/json"]?.schema;
+  assert.deepEqual(Object.keys(sessionPatchSchema?.properties ?? {}).sort(), [
+    "endedAt",
+    "tableLabel",
+  ]);
+  const matchPatchSchema =
+    document.paths[
+      "/api/leagues/{leagueId}/seasons/{seasonId}/sessions/{sessionId}/matches/{matchId}"
+    ].patch?.requestBody?.content?.["application/json"]?.schema;
+  assert.deepEqual(Object.keys(matchPatchSchema?.properties ?? {}).sort(), [
+    "playedAt",
+    "results",
+  ]);
 });
