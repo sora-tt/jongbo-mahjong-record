@@ -4,6 +4,7 @@ import type {
   UpdateLeagueInput,
 } from "@/domain/league/repository.js";
 import { AppError, ValidationError } from "@/domain/shared/errors.js";
+import { validateLeagueRule } from "@/domain/league/rule.js";
 import type { UserRepository } from "@/domain/user/repository.js";
 
 export class LeagueService {
@@ -27,6 +28,7 @@ export class LeagueService {
   }
 
   async createLeague(ownerUserId: string, input: CreateLeagueInput) {
+    validateLeagueRule(input.rule);
     const memberUserIds = [...new Set([ownerUserId, ...input.memberUserIds])];
     if (memberUserIds.length === 0) {
       throw new ValidationError("memberUserIds must not be empty");
@@ -45,6 +47,9 @@ export class LeagueService {
     input: UpdateLeagueInput,
   ) {
     await this.assertLeagueMembership(userId, leagueId);
+    if (input.rule !== undefined) {
+      validateLeagueRule(input.rule);
+    }
 
     const memberUserIds =
       input.memberUserIds === undefined

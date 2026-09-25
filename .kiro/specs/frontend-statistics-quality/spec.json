@@ -1,0 +1,24 @@
+{
+  "name": "frontend-statistics-quality",
+  "displayName": "FE統計・品質整理",
+  "description": "統計、順位表、日次記録、ポイント推移をBE API正本と共通UIへ移行し、不要な旧型・mock・Redux・重複コード・未接続操作を整理する。",
+  "version": "1.0.0",
+  "language": "ja",
+  "phase": "tasks-generated",
+  "created_at": "2026-09-25T00:00:00Z",
+  "updated_at": "2026-09-25T07:30:00Z",
+  "approvals": {
+    "requirements": {
+      "generated": true,
+      "approved": true
+    },
+    "design": {
+      "generated": true,
+      "approved": true
+    },
+    "tasks": {
+      "generated": true,
+      "approved": true
+    }
+  }
+}

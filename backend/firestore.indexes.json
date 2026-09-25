@@ -3,8 +3,16 @@
     {
       "collectionGroup": "members",
       "queryScope": "COLLECTION_GROUP",
+      "fields": [{ "fieldPath": "user_id", "order": "ASCENDING" }]
+    },
+    {
+      "collectionGroup": "user_stats",
+      "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "user_id", "order": "ASCENDING" }
+        { "fieldPath": "user_id", "order": "ASCENDING" },
+        { "fieldPath": "scope_type", "order": "ASCENDING" },
+        { "fieldPath": "league_id", "order": "ASCENDING" },
+        { "fieldPath": "season_id", "order": "ASCENDING" }
       ]
     }
   ],

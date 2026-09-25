@@ -7,7 +7,6 @@ import type {
 const resultSchema = z.object({
   userId: z.string().min(1),
   wind: z.enum(["east", "south", "west", "north"]),
-  rank: z.number().int().min(1).max(4),
   rawScore: z.number().int(),
 });
 

@@ -2,8 +2,8 @@
 
 ## 1. 目的
 
-- `backend/docs/firestore.yaml` を唯一の正として、麻雀記録アプリの API を `Hono` で再実装する。
-- 現在の `backend/src` にある途中実装は参考程度とし、Firestore 定義と不整合なものは削除または置換する。
+- `backend/src`と`backend/docs/firestore.yaml`のcanonical契約を正として、麻雀記録アプリのAPIを`Hono`で提供する。
+- Firestoreのsnake_case保存、API/DomainのcamelCase DTO、Repository mapperを同じ契約で管理する。
 - `mockRepository` ベースの設計は採用せず、実行環境によって Firestore 本番環境とローカル Emulator を切り替える。
 - `frontend` の既存 UI で必要になる一覧・詳細・記録入力・個人成績表示を支える API を先に定義する。
 
@@ -12,7 +12,7 @@
 - DB スキーマの正本は `backend/docs/firestore.yaml`。
 - 参考実装は `/Users/tatsuya/dev/study/react/mahjong-record-app/packages/backend/src`。
 - UI 参照元は `./frontend/src`。
-- 認証は今回の初期実装では簡易化し、将来的に Firebase Auth などを差し込める構成にする。
+- 認証はFirebase AuthのID Tokenを`x-id-token`でsession Cookieへ交換し、保護APIは`jongbo_session` Cookieを検証する。
 - API パスは `/api` プレフィックスを付ける。
 
 ## 3. Firestore モデル対応
@@ -21,10 +21,8 @@
 
 - `users`
   - ユーザー基本情報。
-- `rules`
-  - ルールマスタ。
 - `leagues`
-  - リーグ本体。
+  - リーグ本体。`rule`はLeagueドキュメント内に埋め込む。
 - `user_stats`
   - ユーザー単位の集計結果キャッシュ。
 
@@ -126,7 +124,7 @@
   - リーグ詳細取得。
   - 返却にはメンバー一覧、アクティブシーズン要約、歴代記録を含める。
 - `PATCH /api/leagues/:leagueId`
-  - リーグ名更新などの軽微変更。
+  - リーグ名、ルール、メンバーの軽微変更。
 
 ### 6.4 シーズン
 
@@ -177,8 +175,7 @@
 
 ```json
 {
-  "data": {},
-  "meta": {}
+  "data": {}
 }
 ```
 
@@ -188,7 +185,7 @@
 {
   "error": {
     "code": "validation_error",
-    "message": "rank must be unique",
+    "message": "request validation failed",
     "details": {}
   }
 }
@@ -204,10 +201,6 @@
     {
       "id": "league_001",
       "name": "社内リーグ",
-      "rule": {
-        "id": "rule_yonma_001",
-        "name": "Mリーグ風ルール"
-      },
       "memberCount": 8,
       "totalMatchCount": 120,
       "activeSeason": {
@@ -231,8 +224,9 @@
     "id": "league_001",
     "name": "社内リーグ",
     "rule": {
-      "id": "rule_yonma_001",
-      "name": "Mリーグ風ルール"
+      "gameType": "yonma",
+      "uma": { "first": 20, "second": 10, "third": -10, "fourth": -20 },
+      "oka": { "startingPoints": 25000, "returnPoints": 30000 }
     },
     "memberCount": 8,
     "totalMatchCount": 120,
@@ -356,30 +350,22 @@
   "results": [
     {
       "userId": "user_001",
-      "userName": "田中",
       "wind": "east",
-      "rank": 1,
       "rawScore": 42000
     },
     {
       "userId": "user_002",
-      "userName": "佐藤",
       "wind": "south",
-      "rank": 2,
       "rawScore": 31000
     },
     {
       "userId": "user_003",
-      "userName": "鈴木",
       "wind": "west",
-      "rank": 3,
       "rawScore": 18000
     },
     {
       "userId": "user_004",
-      "userName": "高橋",
       "wind": "north",
-      "rank": 4,
       "rawScore": 9000
     }
   ]
@@ -420,6 +406,7 @@
 - `rule.uma.first`, `rule.uma.second`, `rule.uma.third` 必須。
 - 四麻では `rule.uma.fourth` 必須。
 - 三麻では `rule.uma.fourth` は `null`。
+- 三麻では非nullの3値、四麻では4値の `rule.uma` 合計が厳密に0。
 - `memberUserIds` は 0 件以上。作成者は backend で自動追加。
 
 ### 8.2 シーズン作成
@@ -437,8 +424,8 @@
 ### 8.4 試合作成・更新
 
 - `results.length` は `session.memberCount` と一致。
-- `wind` は重複不可。
-- `rank` は重複不可。
+- `userId` と `wind` はセッション内で重複不可。
+- `rank` と `point` はリクエストに含めず、raw scoreから backend が算出する。
 - `rawScore` 合計はルールの `oka.starting_points * memberCount` と一致させるか、少なくとも入力方式を明示する。
 - `point` はクライアント入力不可、サーバ計算。
 - `matchIndex` はサーバ採番。
@@ -498,7 +485,7 @@
 
 1. アプリ骨格を再構成する。
 2. Firestore 初期化と Emulator 切替を実装する。
-3. `rules`, `leagues`, `seasons`, `sessions`, `matches`, `users/stats` の型を定義する。
+3. `leagues`内のembedded `rule`、`seasons`、`sessions`、`matches`、`users/stats` の型を定義する。
 4. Repository を Firestore 専用で実装する。
 5. 読取 API を先に作る。
 6. `match` 作成と再集計処理を作る。
@@ -670,10 +657,6 @@
     "status": "active",
     "createdAt": "2026-01-01T00:00:00.000Z",
     "latestPlayedAt": "2026-03-10T12:00:00.000Z",
-    "rule": {
-      "id": "rule_001",
-      "name": "Mリーグ風ルール"
-    },
     "totalMatchCount": 242,
     "standings": [
       {
@@ -760,8 +743,9 @@
     "id": "league_001",
     "name": "Mリーグ",
     "rule": {
-      "id": "rule_001",
-      "name": "Mリーグ風ルール"
+      "gameType": "yonma",
+      "uma": { "first": 20, "second": 10, "third": -10, "fourth": -20 },
+      "oka": { "startingPoints": 25000, "returnPoints": 30000 }
     },
     "memberCount": 4,
     "totalMatchCount": 0,
@@ -772,7 +756,7 @@
 
 補足:
 
-- UI は現在「複数ルール追加」に見えるが、Firestore 正本は `league.rule_id` が単一なので、フロントは単一選択 UI に寄せる前提にする。
+- `rule`はLeague内の`game_type`、`uma`、`oka`を持つembedded objectであり、独立した`rules`コレクションや`rule_id`参照は使用しない。
 - メンバー検索は `memberQuery` 直入力よりサジェスト検索のほうが自然。
 
 ### 13.6 Season 作成ページ
@@ -886,10 +870,10 @@
 {
   "playedAt": "2026-03-14T10:15:00.000Z",
   "results": [
-    { "userId": "0001", "wind": "east", "rank": 1, "rawScore": 42000 },
-    { "userId": "0002", "wind": "south", "rank": 2, "rawScore": 31000 },
-    { "userId": "0003", "wind": "west", "rank": 3, "rawScore": 18000 },
-    { "userId": "0004", "wind": "north", "rank": 4, "rawScore": 9000 }
+    { "userId": "0001", "wind": "east", "rawScore": 42000 },
+    { "userId": "0002", "wind": "south", "rawScore": 31000 },
+    { "userId": "0003", "wind": "west", "rawScore": 18000 },
+    { "userId": "0004", "wind": "north", "rawScore": 9000 }
   ]
 }
 ```
@@ -919,7 +903,7 @@
 補足:
 
 - `point` はサーバ計算に固定する。
-- フロントが順位を送れない場合は `rawScore` からサーバで順位決定してもよいが、同点処理の責務が増えるため初期実装では `rank` も受けるほうが明快。
+- Match requestは`rank`を受け取らず、BEが`rawScore`から順位・pointを算出してresponseへ返す。
 
 ### 13.9 Personal Record ページ
 

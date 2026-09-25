@@ -5,19 +5,66 @@ import {
   Timestamp,
   WriteResult,
 } from "firebase-admin/firestore";
+import { asIsoDateString, type IsoDateString } from "@/domain/shared/types.js";
 
-export const toIsoString = (value: unknown): string => {
+const invalidField = (field: string) =>
+  new TypeError(`invalid or missing Firestore field: ${field}`);
+
+export const requiredString = (value: unknown, field: string): string => {
+  if (typeof value !== "string") {
+    throw invalidField(field);
+  }
+  return value;
+};
+
+export const requiredNumber = (value: unknown, field: string): number => {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    throw invalidField(field);
+  }
+  return value;
+};
+
+export const nullableNumber = (value: unknown, field: string): number | null =>
+  value === null ? null : requiredNumber(value, field);
+
+export const nullableString = (value: unknown, field: string): string | null =>
+  value === null ? null : requiredString(value, field);
+
+export const requiredObject = (
+  value: unknown,
+  field: string,
+): Record<string, unknown> => {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw invalidField(field);
+  }
+  return value as Record<string, unknown>;
+};
+
+export const nullableObject = (
+  value: unknown,
+  field: string,
+): Record<string, unknown> | null =>
+  value === null ? null : requiredObject(value, field);
+
+export const requiredArray = (value: unknown, field: string): unknown[] => {
+  if (!Array.isArray(value)) {
+    throw invalidField(field);
+  }
+  return value;
+};
+
+export const toIsoString = (value: unknown): IsoDateString => {
   if (value instanceof Timestamp) {
-    return value.toDate().toISOString();
+    return asIsoDateString(value.toDate().toISOString());
   }
   if (value instanceof Date) {
-    return value.toISOString();
+    return asIsoDateString(value.toISOString());
   }
   if (typeof value === "string") {
-    return new Date(value).toISOString();
+    return asIsoDateString(value);
   }
 
-  return new Date(0).toISOString();
+  throw new TypeError("expected a Firestore timestamp or ISO date string");
 };
 
 export const toTimestamp = (value: string | null | undefined) =>

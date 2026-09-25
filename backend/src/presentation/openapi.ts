@@ -79,16 +79,14 @@ export const openApiDocument = {
         tags: ["Auth"],
         summary: "create session cookie",
         security: [],
-        requestBody: {
-          required: true,
-          content: jsonContent({
-            type: "object",
-            properties: {
-              idToken: { type: "string" },
-            },
-            required: ["idToken"],
-          }),
-        },
+        parameters: [
+          {
+            in: "header",
+            name: "x-id-token",
+            required: true,
+            schema: { type: "string" },
+          },
+        ],
         responses: {
           "201": {
             description: "session created",
@@ -381,6 +379,8 @@ export const openApiDocument = {
             type: "object",
             properties: {
               name: { type: "string" },
+              rule: { $ref: "#/components/schemas/LeagueRule" },
+              memberUserIds: { type: "array", items: { type: "string" } },
             },
           }),
         },
@@ -394,18 +394,12 @@ export const openApiDocument = {
         },
       },
       delete: {
-        tags: ["Seasons"],
-        summary: "delete season",
+        tags: ["Leagues"],
+        summary: "delete league",
         parameters: [
           {
             in: "path",
             name: "leagueId",
-            required: true,
-            schema: { type: "string" },
-          },
-          {
-            in: "path",
-            name: "seasonId",
             required: true,
             schema: { type: "string" },
           },
@@ -539,7 +533,13 @@ export const openApiDocument = {
         ],
         requestBody: {
           required: true,
-          content: jsonContent({ type: "object" }),
+          content: jsonContent({
+            type: "object",
+            properties: {
+              name: { type: "string" },
+              status: { type: "string", enum: ["active", "archived"] },
+            },
+          }),
         },
         responses: {
           "200": {
@@ -551,8 +551,8 @@ export const openApiDocument = {
         },
       },
       delete: {
-        tags: ["Sessions"],
-        summary: "delete session",
+        tags: ["Seasons"],
+        summary: "delete season",
         parameters: [
           {
             in: "path",
@@ -563,12 +563,6 @@ export const openApiDocument = {
           {
             in: "path",
             name: "seasonId",
-            required: true,
-            schema: { type: "string" },
-          },
-          {
-            in: "path",
-            name: "sessionId",
             required: true,
             schema: { type: "string" },
           },
@@ -732,7 +726,17 @@ export const openApiDocument = {
         ],
         requestBody: {
           required: true,
-          content: jsonContent({ type: "object" }),
+          content: jsonContent({
+            type: "object",
+            properties: {
+              endedAt: {
+                type: "string",
+                format: "date-time",
+                nullable: true,
+              },
+              tableLabel: { type: "string", nullable: true },
+            },
+          }),
         },
         responses: {
           "200": {
@@ -740,6 +744,35 @@ export const openApiDocument = {
             content: jsonContent(
               dataResponse({ $ref: "#/components/schemas/Session" }),
             ),
+          },
+        },
+      },
+      delete: {
+        tags: ["Sessions"],
+        summary: "delete session",
+        parameters: [
+          {
+            in: "path",
+            name: "leagueId",
+            required: true,
+            schema: { type: "string" },
+          },
+          {
+            in: "path",
+            name: "seasonId",
+            required: true,
+            schema: { type: "string" },
+          },
+          {
+            in: "path",
+            name: "sessionId",
+            required: true,
+            schema: { type: "string" },
+          },
+        ],
+        responses: {
+          "204": {
+            description: "deleted",
           },
         },
       },
@@ -890,7 +923,27 @@ export const openApiDocument = {
           ],
           requestBody: {
             required: true,
-            content: jsonContent({ type: "object" }),
+            content: jsonContent({
+              type: "object",
+              properties: {
+                playedAt: { type: "string", format: "date-time" },
+                results: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      userId: { type: "string" },
+                      wind: {
+                        type: "string",
+                        enum: ["east", "south", "west", "north"],
+                      },
+                      rawScore: { type: "number" },
+                    },
+                    required: ["userId", "wind", "rawScore"],
+                  },
+                },
+              },
+            }),
           },
           responses: {
             "200": {
@@ -1167,9 +1220,8 @@ export const openApiDocument = {
           endedAt: { type: "string", format: "date-time", nullable: true },
           memberUserIds: { type: "array", items: { type: "string" } },
           tableLabel: { type: "string", nullable: true },
-          createdBy: { type: "string" },
         },
-        required: ["startedAt", "memberUserIds", "createdBy"],
+        required: ["startedAt", "memberUserIds"],
       },
       CreateMatchInput: {
         type: "object",
@@ -1185,10 +1237,9 @@ export const openApiDocument = {
                   type: "string",
                   enum: ["east", "south", "west", "north"],
                 },
-                rank: { type: "number" },
                 rawScore: { type: "number" },
               },
-              required: ["userId", "wind", "rank", "rawScore"],
+              required: ["userId", "wind", "rawScore"],
             },
           },
         },

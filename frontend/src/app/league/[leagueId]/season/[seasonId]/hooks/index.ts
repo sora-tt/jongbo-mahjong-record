@@ -70,9 +70,9 @@ const buildSeasonChartData = (season: SeasonDetail) => {
     })
   );
 
-  const progressionByUser = new Map(
+  const progressionByUser = new Map<string, Map<number, number>>(
     season.pointProgressions.map((progression) => [
-      progression.userId,
+      String(progression.userId),
       new Map(
         progression.points.map((point) => [point.matchIndex, point.totalPoints])
       ),
@@ -88,7 +88,7 @@ const buildSeasonChartData = (season: SeasonDetail) => {
       const row: SeasonChartData = { matchIndex };
 
       series.forEach((item) => {
-        const progression = progressionByUser.get(item.userId);
+        const progression = progressionByUser.get(String(item.userId));
         const currentPoint = progression?.get(matchIndex);
         if (typeof currentPoint === "number") {
           latestPointByUser.set(item.userId, currentPoint);

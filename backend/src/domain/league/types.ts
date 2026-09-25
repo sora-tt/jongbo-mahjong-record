@@ -1,57 +1,58 @@
-import type { RecordHolder } from "@/domain/shared/types.js";
+import type {
+  ActiveSeasonSummary,
+  GameType,
+  IsoDateString,
+  LeagueId,
+  Nullable,
+  OpaqueId,
+  RecordHolder,
+  UserReference,
+} from "@/domain/shared/types.js";
 
-export type LeagueMember = {
-  id: string;
-  userId: string;
-  userName: string;
+export type LeagueRule = {
+  gameType: GameType;
+  uma: {
+    first: number;
+    second: number;
+    third: number;
+    fourth: Nullable<number>;
+  };
+  oka: {
+    startingPoints: number;
+    returnPoints: number;
+  };
 };
 
+export type LeagueMember = UserReference & { id: OpaqueId };
+
 export type LeagueSummary = {
-  id: string;
+  id: LeagueId;
   name: string;
   memberCount: number;
   totalMatchCount: number;
-  activeSeason: {
-    id: string;
-    name: string;
-  } | null;
-  myStanding: {
+  activeSeason: Nullable<ActiveSeasonSummary>;
+  myStanding: Nullable<{
     rank: number | null;
     totalPoints: number | null;
-  } | null;
-  createdAt: string;
-  updatedAt: string;
+  }>;
+  createdAt: IsoDateString;
+  updatedAt: IsoDateString;
 };
 
 export type LeagueDetail = {
-  id: string;
+  id: LeagueId;
   name: string;
-  rule: {
-    gameType: "sanma" | "yonma";
-    uma: {
-      first: number;
-      second: number;
-      third: number;
-      fourth: number | null;
-    };
-    oka: {
-      startingPoints: number;
-      returnPoints: number;
-    };
-  };
+  rule: LeagueRule;
   memberCount: number;
   totalMatchCount: number;
-  activeSeason: {
-    id: string;
-    name: string;
-  } | null;
+  activeSeason: Nullable<ActiveSeasonSummary>;
   members: LeagueMember[];
-  leagueRecords: {
+  leagueRecords: Nullable<{
     winStreak: RecordHolder | null;
     loseStreak: RecordHolder | null;
     highestScore: RecordHolder | null;
     lowestScore: RecordHolder | null;
-  } | null;
-  createdAt: string;
-  updatedAt: string;
+  }>;
+  createdAt: IsoDateString;
+  updatedAt: IsoDateString;
 };

@@ -1,4 +1,3 @@
-import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import type { AppBindings } from "@/presentation/bindings.js";
 import { ok } from "@/presentation/response.js";
@@ -9,6 +8,7 @@ import {
 } from "@/presentation/schemas/user.js";
 import { AppError } from "@/domain/shared/errors.js";
 import type { Services } from "@/presentation/dependencies.js";
+import { validateJson, validateQuery } from "@/presentation/validation.js";
 
 export const buildUsersRouter = (services: Services) =>
   new Hono<AppBindings>()
@@ -16,7 +16,7 @@ export const buildUsersRouter = (services: Services) =>
       const query = c.req.query("query") ?? "";
       return ok(c, await services.userService.searchUsers(query));
     })
-    .post("/me", zValidator("json", createMeSchema), async (c) => {
+    .post("/me", validateJson(createMeSchema), async (c) => {
       const { name, username } = c.req.valid("json");
       const authUser = c.get("authUser");
 
@@ -42,7 +42,7 @@ export const buildUsersRouter = (services: Services) =>
         }),
       );
     })
-    .patch("/me", zValidator("json", updateMeSchema), async (c) => {
+    .patch("/me", validateJson(updateMeSchema), async (c) => {
       const input = c.req.valid("json");
       return ok(
         c,
@@ -72,7 +72,7 @@ export const buildUsersRouter = (services: Services) =>
     })
     .get(
       "/:userId/stats",
-      zValidator("query", getUserStatsQuerySchema),
+      validateQuery(getUserStatsQuerySchema),
       async (c) => {
         const authUser = c.get("authUser");
         const userId = c.req.param("userId");

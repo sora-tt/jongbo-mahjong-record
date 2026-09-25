@@ -10,10 +10,6 @@ export const updateMeSchema = z.object({
   username: z.string().min(1).optional(),
 });
 
-export const createSessionAuthSchema = z.object({
-  idToken: z.string().min(1),
-});
-
 export const getUserStatsQuerySchema = z
   .object({
     scopeType: z.enum(["overall", "league", "season"]),

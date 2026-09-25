@@ -1,6 +1,6 @@
 import type { MatchResult } from "@/domain/match/types.js";
 import { ValidationError } from "@/domain/shared/errors.js";
-import type { GameType, Wind } from "@/domain/shared/types.js";
+import { asOpaqueId, type GameType, type Wind } from "@/domain/shared/types.js";
 
 type MatchCalculationRule = {
   gameType: GameType;
@@ -39,7 +39,6 @@ export const calculateMatchPoints = (
     userId: string;
     userName: string;
     wind: Wind;
-    rank: number;
     rawScore: number;
   }>,
 ): MatchResult[] => {
@@ -72,7 +71,7 @@ export const calculateMatchPoints = (
   const sorted = [...results].sort(
     (left, right) => right.rawScore - left.rawScore,
   );
-  const ranked: Array<(typeof results)[number]> = [];
+  const ranked: Array<(typeof results)[number] & { rank: number }> = [];
 
   sorted.forEach((result, index) => {
     const previous = ranked[index - 1];
@@ -116,5 +115,8 @@ export const calculateMatchPoints = (
     });
   }
 
-  return withPoints;
+  return withPoints.map((result) => ({
+    ...result,
+    userId: asOpaqueId(result.userId),
+  }));
 };

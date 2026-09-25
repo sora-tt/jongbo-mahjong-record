@@ -181,9 +181,27 @@ leagues:
     id: string
     name: string
 
-    # 表示用に rule の要約を持つ
-    rule_id: string
-    rule_name: string
+    # リーグに埋め込む麻雀ルールの正本
+    rule:
+      type: object
+      fields:
+        game_type:
+          type: string
+          enum: [sanma, yonma]
+        uma:
+          type: object
+          fields:
+            first: number
+            second: number
+            third: number
+            fourth:
+              type: number
+              nullable: true
+        oka:
+          type: object
+          fields:
+            starting_points: number
+            return_points: number
 
     # league.members の件数キャッシュ
     member_count: number
