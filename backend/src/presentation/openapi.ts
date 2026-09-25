@@ -747,6 +747,35 @@ export const openApiDocument = {
           },
         },
       },
+      delete: {
+        tags: ["Sessions"],
+        summary: "delete session",
+        parameters: [
+          {
+            in: "path",
+            name: "leagueId",
+            required: true,
+            schema: { type: "string" },
+          },
+          {
+            in: "path",
+            name: "seasonId",
+            required: true,
+            schema: { type: "string" },
+          },
+          {
+            in: "path",
+            name: "sessionId",
+            required: true,
+            schema: { type: "string" },
+          },
+        ],
+        responses: {
+          "204": {
+            description: "deleted",
+          },
+        },
+      },
     },
     "/api/leagues/{leagueId}/seasons/{seasonId}/sessions/{sessionId}/matches": {
       get: {
@@ -1191,9 +1220,8 @@ export const openApiDocument = {
           endedAt: { type: "string", format: "date-time", nullable: true },
           memberUserIds: { type: "array", items: { type: "string" } },
           tableLabel: { type: "string", nullable: true },
-          createdBy: { type: "string" },
         },
-        required: ["startedAt", "memberUserIds", "createdBy"],
+        required: ["startedAt", "memberUserIds"],
       },
       CreateMatchInput: {
         type: "object",

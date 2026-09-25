@@ -89,6 +89,10 @@ test("OpenAPI publishes the canonical auth and match request contracts", async (
     components: {
       schemas: {
         CreateMatchInput: { properties: Record<string, unknown> };
+        CreateSessionInput: {
+          properties: Record<string, unknown>;
+          required?: string[];
+        };
         LeagueSummary: { properties: Record<string, unknown> };
       };
     };
@@ -107,6 +111,14 @@ test("OpenAPI publishes the canonical auth and match request contracts", async (
     "rule" in document.components.schemas.LeagueSummary.properties,
     false,
   );
+  assert.equal(
+    "createdBy" in document.components.schemas.CreateSessionInput.properties,
+    false,
+  );
+  assert.deepEqual(document.components.schemas.CreateSessionInput.required, [
+    "startedAt",
+    "memberUserIds",
+  ]);
   const leaguePath = document.paths["/api/leagues/{leagueId}"];
   assert.deepEqual(
     leaguePath.delete?.parameters?.map((parameter) => parameter.name),
@@ -136,10 +148,18 @@ test("OpenAPI publishes the canonical auth and match request contracts", async (
   );
   assert.deepEqual(seasonPath.delete?.tags, ["Seasons"]);
   assert.equal(seasonPath.delete?.summary, "delete season");
-  const sessionPatchSchema =
+  const sessionPath =
     document.paths[
       "/api/leagues/{leagueId}/seasons/{seasonId}/sessions/{sessionId}"
-    ].patch?.requestBody?.content?.["application/json"]?.schema;
+    ];
+  assert.deepEqual(
+    sessionPath.delete?.parameters?.map((parameter) => parameter.name),
+    ["leagueId", "seasonId", "sessionId"],
+  );
+  assert.deepEqual(sessionPath.delete?.tags, ["Sessions"]);
+  assert.equal(sessionPath.delete?.summary, "delete session");
+  const sessionPatchSchema =
+    sessionPath.patch?.requestBody?.content?.["application/json"]?.schema;
   assert.deepEqual(Object.keys(sessionPatchSchema?.properties ?? {}).sort(), [
     "endedAt",
     "tableLabel",
