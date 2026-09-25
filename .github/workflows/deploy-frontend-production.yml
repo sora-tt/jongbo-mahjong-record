@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      VERCEL_SCOPE: soratomitadevelop-4383s-projects
+      VERCEL_SCOPE: jongbo-mahjong-record-frontend
       VERCEL_PROJECT_NAME: jongbo-mahjong-record-frontend
       VERCEL_PROJECT_ID: prj_Kb9GjgAp01sRiSVUgVUcA7dyVBZH
       VERCEL_TOKEN: ${{ secrets.VERCEL_FRONTEND_TOKEN }}
