@@ -1,4 +1,3 @@
-import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import type { AppBindings } from "@/presentation/bindings.js";
 import { ok } from "@/presentation/response.js";
@@ -7,13 +6,14 @@ import {
   updateLeagueSchema,
 } from "@/presentation/schemas/league.js";
 import type { Services } from "@/presentation/dependencies.js";
+import { validateJson } from "@/presentation/validation.js";
 
 export const buildLeaguesRouter = (services: Services) =>
   new Hono<AppBindings>()
     .get("/", async (c) =>
       ok(c, await services.leagueService.listLeagues(c.get("authUser").uid)),
     )
-    .post("/", zValidator("json", createLeagueSchema), async (c) => {
+    .post("/", validateJson(createLeagueSchema), async (c) => {
       const input = c.req.valid("json");
       return ok(
         c,
@@ -30,7 +30,7 @@ export const buildLeaguesRouter = (services: Services) =>
         ),
       ),
     )
-    .patch("/:leagueId", zValidator("json", updateLeagueSchema), async (c) => {
+    .patch("/:leagueId", validateJson(updateLeagueSchema), async (c) => {
       const input = c.req.valid("json");
       return ok(
         c,

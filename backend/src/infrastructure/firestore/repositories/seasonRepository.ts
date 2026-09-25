@@ -11,9 +11,25 @@ import type {
   SeasonRepository,
   UpdateSeasonInput,
 } from "@/domain/season/repository.js";
-import { toIsoString } from "@/infrastructure/firestore/utils.js";
+import {
+  nullableNumber,
+  nullableObject,
+  requiredArray,
+  requiredNumber,
+  requiredObject,
+  requiredString,
+  toIsoString,
+} from "@/infrastructure/firestore/utils.js";
 import { NotFoundError } from "@/domain/shared/errors.js";
 import { asOpaqueId } from "@/domain/shared/types.js";
+
+const mapSeasonStatus = (value: unknown) => {
+  const status = requiredString(value, "seasons.status");
+  if (status !== "active" && status !== "archived") {
+    throw new TypeError("invalid or missing Firestore field: seasons.status");
+  }
+  return status;
+};
 
 export class FirestoreSeasonRepository implements SeasonRepository {
   constructor(private readonly db: Firestore) {}
@@ -209,10 +225,13 @@ export class FirestoreSeasonRepository implements SeasonRepository {
     return {
       id: asOpaqueId(seasonId),
       leagueId: asOpaqueId(leagueId),
-      name: String(data.name ?? ""),
-      status: data.status,
-      memberCount: Number(data.member_count ?? 0),
-      totalMatchCount: Number(data.total_match_count ?? 0),
+      name: requiredString(data.name, "seasons.name"),
+      status: mapSeasonStatus(data.status),
+      memberCount: requiredNumber(data.member_count, "seasons.member_count"),
+      totalMatchCount: requiredNumber(
+        data.total_match_count,
+        "seasons.total_match_count",
+      ),
       createdAt: toIsoString(data.created_at),
       updatedAt: toIsoString(data.updated_at),
     };
@@ -223,47 +242,109 @@ export class FirestoreSeasonRepository implements SeasonRepository {
     seasonId: string,
     data: FirebaseFirestore.DocumentData,
   ): SeasonDetail {
-    const standings = Array.isArray(data.standings)
-      ? data.standings.map((standing) => ({
-          rank: Number(standing.rank ?? 0),
-          userId: asOpaqueId(String(standing.user_id ?? "")),
-          userName: String(standing.user_name ?? ""),
-          totalPoints: Number(standing.total_points ?? 0),
-          matchCount: Number(standing.match_count ?? 0),
-          firstCount: Number(standing.first_count ?? 0),
-          secondCount: Number(standing.second_count ?? 0),
-          thirdCount: Number(standing.third_count ?? 0),
-          fourthCount: standing.fourth_count ?? null,
-        }))
-      : [];
-    const pointProgressions = Array.isArray(data.point_progressions)
-      ? data.point_progressions.map((progression) => ({
-          userId: asOpaqueId(String(progression.user_id ?? "")),
-          userName: String(progression.user_name ?? ""),
-          points: Array.isArray(progression.points)
-            ? progression.points.map(
-                (point: FirebaseFirestore.DocumentData) => ({
-                  matchIndex: Number(point.match_index ?? 0),
-                  totalPoints: Number(point.total_points ?? 0),
-                }),
-              )
-            : [],
-        }))
-      : [];
+    const standings = requiredArray(data.standings, "seasons.standings").map(
+      (value) => {
+        const standing = requiredObject(value, "seasons.standings[]");
+        return {
+          rank: requiredNumber(standing.rank, "seasons.standings[].rank"),
+          userId: asOpaqueId(
+            requiredString(standing.user_id, "seasons.standings[].user_id"),
+          ),
+          userName: requiredString(
+            standing.user_name,
+            "seasons.standings[].user_name",
+          ),
+          totalPoints: requiredNumber(
+            standing.total_points,
+            "seasons.standings[].total_points",
+          ),
+          matchCount: requiredNumber(
+            standing.match_count,
+            "seasons.standings[].match_count",
+          ),
+          firstCount: requiredNumber(
+            standing.first_count,
+            "seasons.standings[].first_count",
+          ),
+          secondCount: requiredNumber(
+            standing.second_count,
+            "seasons.standings[].second_count",
+          ),
+          thirdCount: requiredNumber(
+            standing.third_count,
+            "seasons.standings[].third_count",
+          ),
+          fourthCount: nullableNumber(
+            standing.fourth_count,
+            "seasons.standings[].fourth_count",
+          ),
+        };
+      },
+    );
+    const pointProgressions = requiredArray(
+      data.point_progressions,
+      "seasons.point_progressions",
+    ).map((value) => {
+      const progression = requiredObject(value, "seasons.point_progressions[]");
+      const points = requiredArray(
+        progression.points,
+        "seasons.point_progressions[].points",
+      ).map((pointValue) => {
+        const point = requiredObject(
+          pointValue,
+          "seasons.point_progressions[].points[]",
+        );
+        return {
+          matchIndex: requiredNumber(
+            point.match_index,
+            "seasons.point_progressions[].points[].match_index",
+          ),
+          totalPoints: requiredNumber(
+            point.total_points,
+            "seasons.point_progressions[].points[].total_points",
+          ),
+        };
+      });
+      return {
+        userId: asOpaqueId(
+          requiredString(
+            progression.user_id,
+            "seasons.point_progressions[].user_id",
+          ),
+        ),
+        userName: requiredString(
+          progression.user_name,
+          "seasons.point_progressions[].user_name",
+        ),
+        points,
+      };
+    });
+    const members = requiredArray(data.members, "seasons.members").map(
+      (value) => {
+        const member = requiredObject(value, "seasons.members[]");
+        return {
+          userId: asOpaqueId(
+            requiredString(member.user_id, "seasons.members[].user_id"),
+          ),
+          userName: requiredString(
+            member.user_name,
+            "seasons.members[].user_name",
+          ),
+        };
+      },
+    );
 
     return {
       id: asOpaqueId(seasonId),
       leagueId: asOpaqueId(leagueId),
-      name: String(data.name ?? ""),
-      status: data.status,
-      memberCount: Number(data.member_count ?? 0),
-      totalMatchCount: Number(data.total_match_count ?? 0),
-      members: Array.isArray(data.members)
-        ? data.members.map((member) => ({
-            userId: asOpaqueId(String(member.user_id ?? "")),
-            userName: String(member.user_name ?? ""),
-          }))
-        : [],
+      name: requiredString(data.name, "seasons.name"),
+      status: mapSeasonStatus(data.status),
+      memberCount: requiredNumber(data.member_count, "seasons.member_count"),
+      totalMatchCount: requiredNumber(
+        data.total_match_count,
+        "seasons.total_match_count",
+      ),
+      members,
       standings,
       pointProgressions,
       seasonRecords: data.season_records
@@ -286,14 +367,15 @@ export class FirestoreSeasonRepository implements SeasonRepository {
   private mapRecordHolder(
     value: FirebaseFirestore.DocumentData | null | undefined,
   ) {
-    if (!value) {
+    const record = nullableObject(value, "record");
+    if (!record) {
       return null;
     }
 
     return {
-      value: Number(value.value ?? 0),
-      userId: asOpaqueId(String(value.user_id ?? "")),
-      userName: String(value.user_name ?? ""),
+      value: requiredNumber(record.value, "record.value"),
+      userId: asOpaqueId(requiredString(record.user_id, "record.user_id")),
+      userName: requiredString(record.user_name, "record.user_name"),
     };
   }
 

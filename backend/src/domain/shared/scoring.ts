@@ -39,7 +39,6 @@ export const calculateMatchPoints = (
     userId: string;
     userName: string;
     wind: Wind;
-    rank: number;
     rawScore: number;
   }>,
 ): MatchResult[] => {
@@ -72,7 +71,7 @@ export const calculateMatchPoints = (
   const sorted = [...results].sort(
     (left, right) => right.rawScore - left.rawScore,
   );
-  const ranked: Array<(typeof results)[number]> = [];
+  const ranked: Array<(typeof results)[number] & { rank: number }> = [];
 
   sorted.forEach((result, index) => {
     const previous = ranked[index - 1];

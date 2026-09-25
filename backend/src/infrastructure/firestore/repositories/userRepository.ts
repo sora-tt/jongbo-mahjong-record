@@ -1,7 +1,10 @@
 import { Timestamp, type Firestore } from "firebase-admin/firestore";
 import type { JoiningSeason, User } from "@/domain/user/types.js";
 import type { UserRepository } from "@/domain/user/repository.js";
-import { toIsoString } from "@/infrastructure/firestore/utils.js";
+import {
+  requiredString,
+  toIsoString,
+} from "@/infrastructure/firestore/utils.js";
 import { NotFoundError } from "@/domain/shared/errors.js";
 import { asOpaqueId } from "@/domain/shared/types.js";
 
@@ -64,9 +67,9 @@ export class FirestoreUserRepository implements UserRepository {
         ) {
           result.push({
             leagueId: asOpaqueId(leagueDoc.id),
-            leagueName: String(leagueDoc.data().name ?? ""),
+            leagueName: requiredString(leagueDoc.data().name, "leagues.name"),
             seasonId: asOpaqueId(seasonDoc.id),
-            seasonName: String(seasonDoc.data().name ?? ""),
+            seasonName: requiredString(seasonDoc.data().name, "seasons.name"),
           });
         }
       });
@@ -137,9 +140,9 @@ export class FirestoreUserRepository implements UserRepository {
   private map(id: string, data: FirebaseFirestore.DocumentData): User {
     return {
       id: asOpaqueId(id),
-      username: String(data.username ?? ""),
-      email: String(data.email ?? ""),
-      name: String(data.name ?? ""),
+      username: requiredString(data.username, "users.username"),
+      email: requiredString(data.email, "users.email"),
+      name: requiredString(data.name, "users.name"),
       createdAt: toIsoString(data.created_at),
       updatedAt: toIsoString(data.updated_at),
     };

@@ -1,0 +1,24 @@
+{
+  "name": "frontend-session-match",
+  "displayName": "FEセッション・対局画面",
+  "description": "Player Selectで参加者を保持し、初回Match送信直前にSessionを作成する。Match作成失敗時は新規Sessionだけを削除してロールバックし、rankはリクエストから除外してBE算出結果を表示する。",
+  "version": "1.0.0",
+  "language": "ja",
+  "phase": "tasks-generated",
+  "created_at": "2026-09-25T00:00:00Z",
+  "updated_at": "2026-09-25T06:30:00Z",
+  "approvals": {
+    "requirements": {
+      "generated": true,
+      "approved": true
+    },
+    "design": {
+      "generated": true,
+      "approved": true
+    },
+    "tasks": {
+      "generated": true,
+      "approved": true
+    }
+  }
+}

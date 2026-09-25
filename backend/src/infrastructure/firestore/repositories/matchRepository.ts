@@ -1,7 +1,14 @@
 import { Timestamp, type Firestore } from "firebase-admin/firestore";
 import type { Match, MatchResult } from "@/domain/match/types.js";
 import type { MatchRepository } from "@/domain/match/repository.js";
-import { toIsoString, toTimestamp } from "@/infrastructure/firestore/utils.js";
+import {
+  requiredArray,
+  requiredNumber,
+  requiredObject,
+  requiredString,
+  toIsoString,
+  toTimestamp,
+} from "@/infrastructure/firestore/utils.js";
 import { NotFoundError } from "@/domain/shared/errors.js";
 import { asOpaqueId } from "@/domain/shared/types.js";
 
@@ -109,7 +116,10 @@ export class FirestoreMatchRepository implements MatchRepository {
       .get();
     const lastMatchIndex = existing.empty
       ? 0
-      : Number(existing.docs[0].data().match_index ?? 0);
+      : requiredNumber(
+          existing.docs[0].data().match_index,
+          "matches.match_index",
+        );
     const ref = collection.doc();
     const now = Timestamp.now();
 
@@ -212,23 +222,45 @@ export class FirestoreMatchRepository implements MatchRepository {
     matchId: string,
     data: FirebaseFirestore.DocumentData,
   ): Match {
+    const results = requiredArray(data.results, "matches.results").map(
+      (value) => {
+        const result = requiredObject(value, "matches.results[]");
+        const wind = requiredString(result.wind, "matches.results[].wind");
+        if (!["east", "south", "west", "north"].includes(wind)) {
+          throw new TypeError(
+            "invalid or missing Firestore field: matches.results[].wind",
+          );
+        }
+
+        const normalizedWind = wind as MatchResult["wind"];
+
+        return {
+          userId: asOpaqueId(
+            requiredString(result.user_id, "matches.results[].user_id"),
+          ),
+          userName: requiredString(
+            result.user_name,
+            "matches.results[].user_name",
+          ),
+          wind: normalizedWind,
+          rank: requiredNumber(result.rank, "matches.results[].rank"),
+          rawScore: requiredNumber(
+            result.raw_score,
+            "matches.results[].raw_score",
+          ),
+          point: requiredNumber(result.point, "matches.results[].point"),
+        } satisfies MatchResult;
+      },
+    );
+
     return {
       id: asOpaqueId(matchId),
       leagueId: asOpaqueId(leagueId),
       seasonId: asOpaqueId(seasonId),
       sessionId: asOpaqueId(sessionId),
-      matchIndex: Number(data.match_index ?? 0),
+      matchIndex: requiredNumber(data.match_index, "matches.match_index"),
       playedAt: toIsoString(data.played_at),
-      results: Array.isArray(data.results)
-        ? data.results.map((result) => ({
-            userId: asOpaqueId(String(result.user_id ?? "")),
-            userName: String(result.user_name ?? ""),
-            wind: result.wind,
-            rank: Number(result.rank ?? 0),
-            rawScore: Number(result.raw_score ?? 0),
-            point: Number(result.point ?? 0),
-          }))
-        : [],
+      results,
       createdAt: toIsoString(data.created_at),
       updatedAt: toIsoString(data.updated_at),
     };

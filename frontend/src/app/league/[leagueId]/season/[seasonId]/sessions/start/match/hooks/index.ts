@@ -176,14 +176,17 @@ export const useRecordMatchPage = () => {
         }
 
         const memberNameByUserId = new Map(
-          season.members.map((member) => [member.userId, member.userName])
+          season.members.map((member) => [
+            String(member.userId),
+            member.userName,
+          ])
         );
         const selectedPlayerIds =
           session?.members.map((member) => member.userId) ??
           recordingFlow.selectedPlayerIds;
         setOptions(
           selectedPlayerIds.map((userId) => ({
-            label: memberNameByUserId.get(userId) ?? "不明なユーザー",
+            label: memberNameByUserId.get(String(userId)) ?? "不明なユーザー",
             value: userId,
           }))
         );

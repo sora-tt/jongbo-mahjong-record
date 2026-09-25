@@ -11,7 +11,7 @@
 - frontend
   - Firebase Web SDK でログイン / 新規登録を行う
   - ログイン直後に Firebase ID Token を取得する
-  - `POST /api/auth/session` へ ID Token を送り、session cookie を発行する
+  - `POST /api/auth/session` の `x-id-token` ヘッダーへ ID Token を送り、session cookie を発行する
   - 以後の API 呼び出しは `credentials: "include"` で Cookie を送る
 
 - backend
@@ -30,6 +30,10 @@
 - Firebase ID Token
   - session cookie 作成時だけ使う
   - 通常 API 認証には使わない
+
+- session交換リクエスト
+  - JSON bodyは使用しない
+  - `x-id-token` ヘッダーを必須とする
 
 - session cookie
   - 名前: `jongbo_session`

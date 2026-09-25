@@ -16,13 +16,7 @@
 
 上記以外は `jongbo_session` Cookie が必要です。
 
-session 作成時だけ Firebase ID Token を使います。
-
-```json
-{
-  "idToken": "<ID_TOKEN>"
-}
-```
+session 作成時だけ Firebase ID Token を使います。JSON bodyは使用せず、`x-id-token`ヘッダーで送信します。
 
 通常の API 呼び出しでは Cookie が自動送信される前提です。`curl` では `-b cookie.txt` を使ってください。
 
@@ -36,10 +30,8 @@ session 作成時だけ Firebase ID Token を使います。
 
 リクエスト:
 
-```json
-{
-  "idToken": "<ID_TOKEN>"
-}
+```http
+x-id-token: <ID_TOKEN>
 ```
 
 レスポンス:
@@ -326,10 +318,6 @@ session 作成時だけ Firebase ID Token を使います。
     {
       "id": "000000",
       "name": "雀望リーグ",
-      "rule": {
-        "id": "0001",
-        "name": "Mリーグルール"
-      },
       "memberCount": 9,
       "totalMatchCount": 28,
       "activeSeason": {
@@ -431,8 +419,9 @@ session 作成時だけ Firebase ID Token を使います。
     "id": "000000",
     "name": "雀望リーグ",
     "rule": {
-      "id": "0001",
-      "name": "Mリーグルール"
+      "gameType": "yonma",
+      "uma": { "first": 20, "second": 10, "third": -10, "fourth": -20 },
+      "oka": { "startingPoints": 25000, "returnPoints": 30000 }
     },
     "memberCount": 9,
     "totalMatchCount": 28,
@@ -497,8 +486,9 @@ session 作成時だけ Firebase ID Token を使います。
     "id": "000000",
     "name": "雀望リーグ改",
     "rule": {
-      "id": "0001",
-      "name": "Mリーグルール"
+      "gameType": "yonma",
+      "uma": { "first": 20, "second": 10, "third": -10, "fourth": -20 },
+      "oka": { "startingPoints": 25000, "returnPoints": 30000 }
     },
     "memberCount": 9,
     "totalMatchCount": 28,
@@ -1019,25 +1009,21 @@ session 作成時だけ Firebase ID Token を使います。
     {
       "userId": "0001",
       "wind": "east",
-      "rank": 1,
       "rawScore": 42000
     },
     {
       "userId": "0002",
       "wind": "south",
-      "rank": 2,
       "rawScore": 31000
     },
     {
       "userId": "0003",
       "wind": "west",
-      "rank": 3,
       "rawScore": 18000
     },
     {
       "userId": "0004",
       "wind": "north",
-      "rank": 4,
       "rawScore": 9000
     }
   ]
@@ -1127,25 +1113,21 @@ session 作成時だけ Firebase ID Token を使います。
     {
       "userId": "0001",
       "wind": "east",
-      "rank": 1,
       "rawScore": 39000
     },
     {
       "userId": "0002",
       "wind": "south",
-      "rank": 2,
       "rawScore": 33000
     },
     {
       "userId": "0003",
       "wind": "west",
-      "rank": 3,
       "rawScore": 18000
     },
     {
       "userId": "0004",
       "wind": "north",
-      "rank": 4,
       "rawScore": 10000
     }
   ]

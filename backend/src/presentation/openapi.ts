@@ -79,16 +79,14 @@ export const openApiDocument = {
         tags: ["Auth"],
         summary: "create session cookie",
         security: [],
-        requestBody: {
-          required: true,
-          content: jsonContent({
-            type: "object",
-            properties: {
-              idToken: { type: "string" },
-            },
-            required: ["idToken"],
-          }),
-        },
+        parameters: [
+          {
+            in: "header",
+            name: "x-id-token",
+            required: true,
+            schema: { type: "string" },
+          },
+        ],
         responses: {
           "201": {
             description: "session created",
@@ -1185,10 +1183,9 @@ export const openApiDocument = {
                   type: "string",
                   enum: ["east", "south", "west", "north"],
                 },
-                rank: { type: "number" },
                 rawScore: { type: "number" },
               },
-              required: ["userId", "wind", "rank", "rawScore"],
+              required: ["userId", "wind", "rawScore"],
             },
           },
         },
