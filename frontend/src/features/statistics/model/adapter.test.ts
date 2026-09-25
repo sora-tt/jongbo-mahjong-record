@@ -129,13 +129,24 @@ test("toPointProgressionChart keeps missing points as null without filling value
 });
 
 test("toPointProgressionChart distinguishes uncomputed series from empty series", () => {
-  const uncomputed = toPointProgressionChart([
-    { userId: "user-1", userName: "一郎", points: [] },
-  ] as unknown as ApiSeason["pointProgressions"]);
+  const uncomputed = toPointProgressionChart(
+    [
+      { userId: "user-1", userName: "一郎", points: [] },
+    ] as unknown as ApiSeason["pointProgressions"],
+    1
+  );
+  const zeroMatch = toPointProgressionChart(
+    [
+      { userId: "user-1", userName: "一郎", points: [] },
+    ] as unknown as ApiSeason["pointProgressions"],
+    0
+  );
   const empty = toPointProgressionChart([]);
 
   strictEqual(uncomputed.isEmpty, true);
   strictEqual(uncomputed.isUncomputed, true);
+  strictEqual(zeroMatch.isEmpty, true);
+  strictEqual(zeroMatch.isUncomputed, false);
   strictEqual(empty.isEmpty, true);
   strictEqual(empty.isUncomputed, false);
 });

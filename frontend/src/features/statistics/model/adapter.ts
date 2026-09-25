@@ -29,7 +29,8 @@ export const toStandingRows = (standings: ApiSeason["standings"]) =>
   }));
 
 export const toPointProgressionChart = (
-  progressions: ApiSeason["pointProgressions"]
+  progressions: ApiSeason["pointProgressions"],
+  totalMatchCount?: number
 ) => {
   const series = progressions.map((progression) => ({
     userId: toId(progression.userId, "pointProgression.userId"),
@@ -62,6 +63,8 @@ export const toPointProgressionChart = (
     series,
     data,
     isEmpty: series.length === 0 || data.length === 0,
-    isUncomputed: series.length > 0 && data.length === 0,
+    isUncomputed:
+      data.length === 0 &&
+      (totalMatchCount === undefined ? series.length > 0 : totalMatchCount > 0),
   };
 };

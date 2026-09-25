@@ -151,12 +151,10 @@ export const useSeasonPage = () => {
       };
     }
 
-    const chart = toPointProgressionChart(season.pointProgressions);
-    return {
-      ...chart,
-      isUncomputed:
-        chart.isUncomputed || (season.totalMatchCount > 0 && chart.isEmpty),
-    };
+    return toPointProgressionChart(
+      season.pointProgressions,
+      season.totalMatchCount
+    );
   }, [season]);
 
   const chartSeries = React.useMemo(
