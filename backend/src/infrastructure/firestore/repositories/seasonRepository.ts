@@ -184,7 +184,7 @@ export class FirestoreSeasonRepository implements SeasonRepository {
       }
 
       transaction.update(seasonRef, patch);
-      if (input.status === "active") {
+      if (nextStatus === "active") {
         transaction.update(leagueRef, {
           active_season_id: seasonId,
           active_season_name: input.name ?? currentData.name,

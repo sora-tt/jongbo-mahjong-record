@@ -58,6 +58,19 @@ test(
       );
 
       await seasonRepository.update(league.id, activeSeason.id, {
+        name: "renamed active season",
+      });
+      const renamedLeague = await db.collection("leagues").doc(league.id).get();
+      assert.equal(
+        renamedLeague.data()?.active_season_name,
+        "renamed active season",
+      );
+      assert.equal(
+        (await seasonRepository.get(league.id, activeSeason.id)).name,
+        "renamed active season",
+      );
+
+      await seasonRepository.update(league.id, activeSeason.id, {
         status: "archived",
       });
       assert.equal(
