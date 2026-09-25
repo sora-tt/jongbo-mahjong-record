@@ -2,10 +2,10 @@ import * as React from "react";
 
 import { useRouter } from "next/navigation";
 
-import { ApiError } from "@/lib/api/core";
+import { ApiError, getApiErrorMessage } from "@/lib/api/core";
 import { fetchLeagues } from "@/lib/api/leagues";
 import { createMe, fetchMe } from "@/lib/api/users";
-import { getCurrentIdToken, getCurrentUser } from "@/lib/firebase/auth";
+import { getCurrentUser } from "@/lib/firebase/auth";
 
 const getFallbackUsername = (email: string) =>
   email
@@ -57,24 +57,19 @@ export const useHome = () => {
 
         if (loadError instanceof ApiError && loadError.status === 404) {
           try {
-            const idToken = await getCurrentIdToken();
             const fbUser = await getCurrentUser();
 
-            if (!idToken || !fbUser) {
+            if (!fbUser) {
               router.replace("/login");
               return;
             }
 
-            const profile = await createMe(
-              {
-                name:
-                  fbUser.displayName ?? fbUser.email?.split("@")[0] ?? "user",
-                username: getFallbackUsername(
-                  fbUser.email ?? fbUser.displayName ?? "user"
-                ),
-              },
-              idToken
-            );
+            const profile = await createMe({
+              name: fbUser.displayName ?? fbUser.email?.split("@")[0] ?? "user",
+              username: getFallbackUsername(
+                fbUser.email ?? fbUser.displayName ?? "user"
+              ),
+            });
             const joinedLeagues = await fetchLeagues();
 
             if (!isActive) {
@@ -90,18 +85,12 @@ export const useHome = () => {
               return;
             }
 
-            setError(
-              repairError instanceof Error
-                ? repairError.message
-                : DEFAULT_ERROR_MESSAGE
-            );
+            setError(getApiErrorMessage(repairError, DEFAULT_ERROR_MESSAGE));
             return;
           }
         }
 
-        setError(
-          loadError instanceof Error ? loadError.message : DEFAULT_ERROR_MESSAGE
-        );
+        setError(getApiErrorMessage(loadError, DEFAULT_ERROR_MESSAGE));
       } finally {
         if (isActive) {
           setIsLoading(false);

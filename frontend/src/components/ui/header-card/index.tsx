@@ -26,7 +26,7 @@ export const HeaderCard: React.FC<Props> = ({
   children,
 }) => {
   return (
-    <div className="rounded-lg border border-brand-500 bg-gradient-to-r from-brand-500 to-brand-400 shadow-sm px-4 py-4">
+    <div className="rounded-surface border border-brand-600 bg-brand-600 px-4 py-4 shadow-sm">
       <h1
         className={clsx(
           "text-2xl font-bold text-white mb-2",

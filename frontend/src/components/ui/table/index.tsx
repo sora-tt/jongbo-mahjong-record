@@ -4,21 +4,26 @@ import * as React from "react";
 import clsx from "clsx";
 
 type TableProps = React.TableHTMLAttributes<HTMLTableElement> & {
+  caption?: string;
   className?: string;
 };
 
 export const Table: React.FC<TableProps> = ({
+  caption,
   children,
   className = "",
   ...props
 }) => {
   return (
-    <table
-      className={clsx("min-w-full text-xs border-collapse", className)}
-      {...props}
-    >
-      {children}
-    </table>
+    <div className="overflow-x-auto">
+      <table
+        className={clsx("min-w-full border-collapse text-xs", className)}
+        {...props}
+      >
+        {caption ? <caption className="sr-only">{caption}</caption> : null}
+        {children}
+      </table>
+    </div>
   );
 };
 
@@ -32,7 +37,7 @@ export const TableHead: React.FC<SectionProps> = ({
   ...props
 }) => {
   return (
-    <thead className={clsx("bg-brand-50", className)} {...props}>
+    <thead className={clsx("bg-surface-muted", className)} {...props}>
       {children}
     </thead>
   );
@@ -62,7 +67,7 @@ export const TableRow: React.FC<RowProps> = ({
   return (
     <tr
       className={clsx(
-        "align-middle border-b border-brand-500 last:border-b-0",
+        "align-middle border-b border-border last:border-b-0",
         className
       )}
       {...props}
@@ -84,7 +89,7 @@ export const TableHeadCell: React.FC<HeadCellProps> = ({
   return (
     <th
       className={clsx(
-        "px-3 py-2 text-center font-semibold text-text-muted whitespace-nowrap border-b border-brand-500",
+        "whitespace-nowrap border-b border-border px-3 py-2 text-center font-semibold text-text-muted",
         className
       )}
       {...props}
