@@ -11,6 +11,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { Input } from "@/components/ui/input";
 import { LoadingState } from "@/components/ui/loading-state";
+import { Select } from "@/components/ui/select";
 
 import { useSeasonNew } from "./hooks";
 
@@ -21,11 +22,13 @@ const SeasonNewPage: React.FC = () => {
     leagueMembers,
     selectedMembers,
     seasonName,
+    status,
     loading,
     isSubmitting,
     error,
     handleMemberToggle,
     handleSeasonNameChange,
+    setStatus,
     handleSubmit,
   } = useSeasonNew();
 
@@ -58,6 +61,16 @@ const SeasonNewPage: React.FC = () => {
             onChange={handleSeasonNameChange}
             required
           />
+          <Select
+            label="状態"
+            value={status}
+            onChange={(event) =>
+              setStatus(event.target.value as "active" | "archived")
+            }
+          >
+            <option value="active">進行中</option>
+            <option value="archived">終了</option>
+          </Select>
 
           <section className="space-y-3">
             <div className="flex items-center justify-between gap-3">

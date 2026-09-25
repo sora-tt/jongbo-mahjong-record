@@ -115,6 +115,7 @@ export const useSeasonPage = () => {
   const [season, setSeason] = React.useState<SeasonDetail | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  const [retryCount, setRetryCount] = React.useState(0);
 
   React.useEffect(() => {
     let isActive = true;
@@ -163,7 +164,11 @@ export const useSeasonPage = () => {
     return () => {
       isActive = false;
     };
-  }, [params.leagueId, params.seasonId, router]);
+  }, [params.leagueId, params.seasonId, retryCount, router]);
+
+  const retry = React.useCallback(() => {
+    setRetryCount((count) => count + 1);
+  }, []);
 
   const titles: Title[] = React.useMemo(() => {
     if (!season) {
@@ -267,6 +272,7 @@ export const useSeasonPage = () => {
     visibleUserIds,
     loading,
     error,
+    retry,
     handleStartRecording,
     handleToggleChartSeries,
   };

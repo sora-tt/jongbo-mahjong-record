@@ -6,6 +6,7 @@ import Link from "next/link";
 
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { ErrorState } from "@/components/ui/error-state";
 import { Input } from "@/components/ui/input";
 import { LoadingState } from "@/components/ui/loading-state";
@@ -19,6 +20,7 @@ const SeasonEditPage: React.FC = () => {
     seasonId,
     seasonName,
     status,
+    members,
     isLoading,
     isSubmitting,
     error,
@@ -47,6 +49,25 @@ const SeasonEditPage: React.FC = () => {
             シーズン名と状態のみ変更できます。参加者は変更できません。
           </p>
         </div>
+
+        <Card
+          title="参加者"
+          meta="作成時のスナップショット"
+          bodyClassName="flex flex-wrap gap-2"
+        >
+          {members.length > 0 ? (
+            members.map((member) => (
+              <span
+                key={member.userId}
+                className="rounded-full bg-brand-50 px-3 py-1 text-sm text-brand-strong"
+              >
+                {member.userName}
+              </span>
+            ))
+          ) : (
+            <p className="text-sm text-text-muted">参加者情報がありません。</p>
+          )}
+        </Card>
 
         <section className="space-y-5 rounded-surface border border-border bg-white p-6 shadow-sm">
           <Input

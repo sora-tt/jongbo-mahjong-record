@@ -7,6 +7,7 @@ import { toSeasonDetail } from "@/features/season/model/adapter";
 import { ApiError, getApiErrorMessage } from "@/lib/api/core";
 
 type SeasonStatus = "active" | "archived";
+type SeasonMember = ReturnType<typeof toSeasonDetail>["members"][number];
 
 const DEFAULT_ERROR_MESSAGE =
   "シーズン情報の取得に失敗しました。時間をおいて再度お試しください。";
@@ -16,6 +17,7 @@ export const useSeasonEdit = () => {
   const params = useParams<{ leagueId: string; seasonId: string }>();
   const [seasonName, setSeasonName] = React.useState("");
   const [status, setStatus] = React.useState<SeasonStatus>("active");
+  const [members, setMembers] = React.useState<SeasonMember[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -45,6 +47,7 @@ export const useSeasonEdit = () => {
 
         setSeasonName(season.name);
         setStatus(season.status);
+        setMembers(season.members);
       } catch (loadError) {
         if (!isActive) {
           return;
@@ -110,6 +113,7 @@ export const useSeasonEdit = () => {
     seasonId: params.seasonId,
     seasonName,
     status,
+    members,
     isLoading,
     isSubmitting,
     error,

@@ -4,6 +4,10 @@ import { useParams, useRouter } from "next/navigation";
 
 import { fetchLeagueDetail, updateLeague } from "@/features/league/api";
 import { toLeagueDetail } from "@/features/league/model/adapter";
+import {
+  getUmaTotalError,
+  parseIntegerInput,
+} from "@/features/league/model/validation";
 import { ApiError, getApiErrorMessage } from "@/lib/api/core";
 import { searchUsers } from "@/lib/api/users";
 
@@ -231,32 +235,19 @@ export const useLeagueEdit = () => {
       return null;
     }
 
-    const total = umaValues.reduce(
-      (sum, value) => sum + parseInt(value, 10),
-      0
-    );
-
-    if (Number.isNaN(total) || total === 0) {
-      return null;
-    }
-
-    return `ウマの合計が0になるように入力してください（現在: ${total}）`;
+    return getUmaTotalError(umaValues);
   }, [ruleSettings]);
 
   const handleSubmit = React.useCallback(async () => {
     setError(null);
 
-    const okaStartPoints = ruleSettings.okaStartPoints.trim()
-      ? parseInt(ruleSettings.okaStartPoints, 10)
-      : null;
-    const okaReturnPoints = ruleSettings.okaReturnPoints.trim()
-      ? parseInt(ruleSettings.okaReturnPoints, 10)
-      : null;
+    const okaStartPoints = parseIntegerInput(ruleSettings.okaStartPoints);
+    const okaReturnPoints = parseIntegerInput(ruleSettings.okaReturnPoints);
     const uma = {
-      1: ruleSettings.uma1.trim() ? parseInt(ruleSettings.uma1, 10) : null,
-      2: ruleSettings.uma2.trim() ? parseInt(ruleSettings.uma2, 10) : null,
-      3: ruleSettings.uma3.trim() ? parseInt(ruleSettings.uma3, 10) : null,
-      4: ruleSettings.uma4.trim() ? parseInt(ruleSettings.uma4, 10) : null,
+      1: parseIntegerInput(ruleSettings.uma1),
+      2: parseIntegerInput(ruleSettings.uma2),
+      3: parseIntegerInput(ruleSettings.uma3),
+      4: parseIntegerInput(ruleSettings.uma4),
     };
 
     if (!leagueId) {

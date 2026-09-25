@@ -27,6 +27,7 @@ export const useHome = () => {
   const [leagues, setLeagues] = React.useState<LeagueSummary[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  const [retryCount, setRetryCount] = React.useState(0);
 
   React.useEffect(() => {
     let isActive = true;
@@ -104,7 +105,11 @@ export const useHome = () => {
     return () => {
       isActive = false;
     };
-  }, [router]);
+  }, [retryCount, router]);
+
+  const retry = React.useCallback(() => {
+    setRetryCount((count) => count + 1);
+  }, []);
 
   const hasLeagues = leagues.length > 0;
 
@@ -115,5 +120,6 @@ export const useHome = () => {
     hasLeagues,
     isLoading,
     error,
+    retry,
   };
 };

@@ -26,6 +26,7 @@ const LeaguePage: React.FC = () => {
     leagueSeasons,
     loading,
     error,
+    retry,
   } = useLeaguePage();
 
   if (loading) {
@@ -43,7 +44,7 @@ const LeaguePage: React.FC = () => {
     return (
       <AppShell mainClassName="min-h-screen bg-background font-jp">
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-          <ErrorState message={error} />
+          <ErrorState message={error} onRetry={retry} />
         </div>
       </AppShell>
     );
@@ -83,6 +84,12 @@ const LeaguePage: React.FC = () => {
         : "データなし",
     },
   ];
+  const umaValues = [
+    league.rule.uma.first,
+    league.rule.uma.second,
+    league.rule.uma.third,
+    league.rule.uma.fourth,
+  ].filter((value): value is number => value !== null);
 
   return (
     <AppShell mainClassName="min-h-screen bg-background font-jp">
@@ -101,6 +108,40 @@ const LeaguePage: React.FC = () => {
             </Button>
           </Link>
         </header>
+
+        <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <Card title="現在のシーズン">
+            {league.activeSeason ? (
+              <Link
+                href={`/league/${league.id}/season/${league.activeSeason.id}`}
+                className="font-medium text-brand-strong underline-offset-4 hover:underline"
+              >
+                {league.activeSeason.name}
+              </Link>
+            ) : (
+              <p className="text-sm text-text-muted">
+                現在進行中のシーズンはありません。
+              </p>
+            )}
+          </Card>
+          <Card title="ルール">
+            <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+              <dt className="text-text-muted">ゲーム種別</dt>
+              <dd className="text-right text-foreground">
+                {league.rule.gameType === "sanma" ? "三麻" : "四麻"}
+              </dd>
+              <dt className="text-text-muted">持ち点 / 返し点</dt>
+              <dd className="text-right text-foreground">
+                {league.rule.oka.startingPoints.toLocaleString("ja-JP")} /{" "}
+                {league.rule.oka.returnPoints.toLocaleString("ja-JP")}
+              </dd>
+              <dt className="text-text-muted">ウマ</dt>
+              <dd className="text-right text-foreground">
+                {umaValues.join(" / ")}
+              </dd>
+            </dl>
+          </Card>
+        </section>
 
         <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {records.map(({ label, record, value }) => (

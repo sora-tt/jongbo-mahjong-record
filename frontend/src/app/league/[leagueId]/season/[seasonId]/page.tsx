@@ -42,6 +42,7 @@ const SeasonPage: React.FC = () => {
     visibleUserIds,
     loading,
     error,
+    retry,
     handleStartRecording,
     handleToggleChartSeries,
   } = useSeasonPage();
@@ -61,7 +62,7 @@ const SeasonPage: React.FC = () => {
     return (
       <AppShell mainClassName="min-h-screen bg-background font-jp">
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-          <ErrorState message={error} />
+          <ErrorState message={error} onRetry={retry} />
         </div>
       </AppShell>
     );
@@ -87,6 +88,14 @@ const SeasonPage: React.FC = () => {
                 {formatDate(season.latestPlayedAt)}
               </span>
             </p>
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+              <span className="rounded-full bg-brand-50 px-3 py-1 font-medium text-brand-strong">
+                {season.status === "active" ? "進行中" : "終了"}
+              </span>
+              <span className="text-text-muted">
+                参加者：{season.memberCount}人
+              </span>
+            </div>
           </div>
           <div className="flex flex-wrap gap-3">
             <Link href={`/league/${leagueId}/season/${seasonId}/edit`}>

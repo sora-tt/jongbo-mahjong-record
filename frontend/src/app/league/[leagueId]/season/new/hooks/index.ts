@@ -14,6 +14,8 @@ type SelectableMember = {
   userName: string;
 };
 
+type SeasonStatus = "active" | "archived";
+
 export const useSeasonNew = () => {
   const router = useRouter();
   const params = useParams<{ leagueId: string }>();
@@ -27,6 +29,7 @@ export const useSeasonNew = () => {
     Record<string, SelectableMember>
   >({});
   const [seasonName, setSeasonName] = React.useState("");
+  const [status, setStatus] = React.useState<SeasonStatus>("active");
   const [loading, setLoading] = React.useState(true);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -147,6 +150,7 @@ export const useSeasonNew = () => {
       const season = await createSeason(leagueId, {
         name: seasonName.trim(),
         memberUserIds: Object.keys(selectedMembers),
+        status,
       });
 
       router.push(`/league/${leagueId}/season/${season.id}`);
@@ -160,7 +164,7 @@ export const useSeasonNew = () => {
     } finally {
       setIsSubmitting(false);
     }
-  }, [leagueId, router, seasonName, selectedMembers]);
+  }, [leagueId, router, seasonName, selectedMembers, status]);
 
   return {
     leagueId,
@@ -168,11 +172,13 @@ export const useSeasonNew = () => {
     leagueMembers,
     selectedMembers,
     seasonName,
+    status,
     loading,
     isSubmitting,
     error,
     handleMemberToggle,
     handleSeasonNameChange,
+    setStatus,
     handleSubmit,
   };
 };

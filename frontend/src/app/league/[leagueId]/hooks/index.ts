@@ -22,6 +22,7 @@ export const useLeaguePage = () => {
   >([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  const [retryCount, setRetryCount] = React.useState(0);
 
   React.useEffect(() => {
     let isActive = true;
@@ -73,7 +74,11 @@ export const useLeaguePage = () => {
     return () => {
       isActive = false;
     };
-  }, [params.leagueId, router]);
+  }, [params.leagueId, retryCount, router]);
+
+  const retry = React.useCallback(() => {
+    setRetryCount((count) => count + 1);
+  }, []);
 
   const longestWinStreak = league?.leagueRecords?.winStreak ?? null;
   const longestLoseStreak = league?.leagueRecords?.loseStreak ?? null;
@@ -89,5 +94,6 @@ export const useLeaguePage = () => {
     loading,
     error,
     leagueSeasons,
+    retry,
   };
 };
