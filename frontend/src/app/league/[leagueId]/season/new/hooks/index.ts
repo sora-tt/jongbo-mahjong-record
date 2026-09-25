@@ -2,9 +2,9 @@ import * as React from "react";
 
 import { useParams, useRouter } from "next/navigation";
 
-import { ApiError } from "@/lib/api/core";
-import { fetchLeagueDetail } from "@/lib/api/leagues";
-import { createSeason } from "@/lib/api/seasons";
+import { fetchLeagueDetail, fetchLeagueMembers } from "@/features/league/api";
+import { createSeason } from "@/features/season/api";
+import { ApiError, getApiErrorMessage } from "@/lib/api/core";
 
 const DEFAULT_ERROR_MESSAGE =
   "シーズン作成画面の取得に失敗しました。時間をおいて再度お試しください。";
@@ -45,21 +45,24 @@ export const useSeasonNew = () => {
       setError(null);
 
       try {
-        const league = await fetchLeagueDetail(leagueId);
+        const [league, members] = await Promise.all([
+          fetchLeagueDetail(leagueId),
+          fetchLeagueMembers(leagueId),
+        ]);
 
         if (!isActive) {
           return;
         }
 
-        const members = league.members.map((member) => ({
+        const selectableMembers = members.map((member) => ({
           userId: member.userId,
           userName: member.userName,
         }));
 
         setLeagueName(league.name);
-        setLeagueMembers(members);
+        setLeagueMembers(selectableMembers);
         setSelectedMembers(
-          members.reduce(
+          selectableMembers.reduce(
             (acc, member) => {
               acc[member.userId] = member;
               return acc;
@@ -77,9 +80,7 @@ export const useSeasonNew = () => {
           return;
         }
 
-        setError(
-          loadError instanceof Error ? loadError.message : DEFAULT_ERROR_MESSAGE
-        );
+        setError(getApiErrorMessage(loadError, DEFAULT_ERROR_MESSAGE));
       } finally {
         if (isActive) {
           setLoading(false);
@@ -155,11 +156,7 @@ export const useSeasonNew = () => {
         return;
       }
 
-      setError(
-        submitError instanceof Error
-          ? submitError.message
-          : "シーズン作成に失敗しました"
-      );
+      setError(getApiErrorMessage(submitError, "シーズン作成に失敗しました"));
     } finally {
       setIsSubmitting(false);
     }

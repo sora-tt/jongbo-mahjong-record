@@ -2,8 +2,9 @@ import * as React from "react";
 
 import { useParams, useRouter } from "next/navigation";
 
-import { ApiError } from "@/lib/api/core";
-import { fetchLeagueDetail, updateLeague } from "@/lib/api/leagues";
+import { fetchLeagueDetail, updateLeague } from "@/features/league/api";
+import { toLeagueDetail } from "@/features/league/model/adapter";
+import { ApiError, getApiErrorMessage } from "@/lib/api/core";
 import { searchUsers } from "@/lib/api/users";
 
 import type { UserIdType } from "@/types/domain/user";
@@ -68,7 +69,7 @@ export const useLeagueEdit = () => {
       setError(null);
 
       try {
-        const league = await fetchLeagueDetail(leagueId);
+        const league = toLeagueDetail(await fetchLeagueDetail(leagueId));
 
         if (!isActive) {
           return;
@@ -107,9 +108,7 @@ export const useLeagueEdit = () => {
           return;
         }
 
-        setError(
-          loadError instanceof Error ? loadError.message : DEFAULT_ERROR_MESSAGE
-        );
+        setError(getApiErrorMessage(loadError, DEFAULT_ERROR_MESSAGE));
       } finally {
         if (isActive) {
           setLoading(false);
@@ -171,11 +170,7 @@ export const useLeagueEdit = () => {
         }
 
         setMemberCandidates([]);
-        setError(
-          searchError instanceof Error
-            ? searchError.message
-            : "メンバー検索に失敗しました"
-        );
+        setError(getApiErrorMessage(searchError, "メンバー検索に失敗しました"));
       } finally {
         if (isActive) {
           setIsSearchingMembers(false);
@@ -319,9 +314,7 @@ export const useLeagueEdit = () => {
       }
 
       setError(
-        submitError instanceof Error
-          ? submitError.message
-          : "リーグ情報の更新に失敗しました"
+        getApiErrorMessage(submitError, "リーグ情報の更新に失敗しました")
       );
     } finally {
       setIsSubmitting(false);

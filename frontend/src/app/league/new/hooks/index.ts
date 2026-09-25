@@ -4,8 +4,8 @@ import * as React from "react";
 
 import { useRouter } from "next/navigation";
 
-import { ApiError } from "@/lib/api/core";
-import { createLeague } from "@/lib/api/leagues";
+import { createLeague } from "@/features/league/api";
+import { ApiError, getApiErrorMessage } from "@/lib/api/core";
 import { searchUsers } from "@/lib/api/users";
 import { UserIdType } from "@/types/domain/user";
 
@@ -98,11 +98,7 @@ export const useLeagueNew = () => {
         }
 
         setMemberCandidates([]);
-        setError(
-          searchError instanceof Error
-            ? searchError.message
-            : "メンバー検索に失敗しました"
-        );
+        setError(getApiErrorMessage(searchError, "メンバー検索に失敗しました"));
       } finally {
         if (isActive) {
           setIsSearchingMembers(false);
@@ -151,6 +147,27 @@ export const useLeagueNew = () => {
     []
   );
 
+  const umaTotalError = React.useMemo(() => {
+    const values =
+      ruleSettings.gameType === "sanma"
+        ? [ruleSettings.uma1, ruleSettings.uma2, ruleSettings.uma3]
+        : [
+            ruleSettings.uma1,
+            ruleSettings.uma2,
+            ruleSettings.uma3,
+            ruleSettings.uma4,
+          ];
+
+    if (values.some((value) => !value.trim())) {
+      return null;
+    }
+
+    const total = values.reduce((sum, value) => sum + Number(value), 0);
+    return Number.isFinite(total) && total !== 0
+      ? `ウマの合計が0になるように入力してください（現在: ${total}）`
+      : null;
+  }, [ruleSettings]);
+
   const handleSubmit = React.useCallback(async () => {
     setError(null);
 
@@ -184,6 +201,10 @@ export const useLeagueNew = () => {
       return;
     }
 
+    if (umaTotalError) {
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -212,15 +233,11 @@ export const useLeagueNew = () => {
         return;
       }
 
-      setError(
-        submitError instanceof Error
-          ? submitError.message
-          : "リーグ作成に失敗しました"
-      );
+      setError(getApiErrorMessage(submitError, "リーグ作成に失敗しました"));
     } finally {
       setIsSubmitting(false);
     }
-  }, [leagueName, addedMembers, ruleSettings, router]);
+  }, [leagueName, addedMembers, ruleSettings, router, umaTotalError]);
 
   return {
     leagueName,
@@ -230,6 +247,7 @@ export const useLeagueNew = () => {
     isSearchingMembers,
     isSubmitting,
     error,
+    umaTotalError,
     ruleSettings,
 
     handleLeagueNameChange,
