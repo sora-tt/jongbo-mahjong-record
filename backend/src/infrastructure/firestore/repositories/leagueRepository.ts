@@ -13,6 +13,7 @@ import type {
 import type { UserRepository } from "@/domain/user/repository.js";
 import { toIsoString } from "@/infrastructure/firestore/utils.js";
 import { NotFoundError } from "@/domain/shared/errors.js";
+import { asOpaqueId } from "@/domain/shared/types.js";
 
 export class FirestoreLeagueRepository implements LeagueRepository {
   constructor(
@@ -43,14 +44,14 @@ export class FirestoreLeagueRepository implements LeagueRepository {
           : null;
 
         return {
-          id: doc.id,
+          id: asOpaqueId(doc.id),
           name: String(data.name ?? ""),
           memberCount: Number(data.member_count ?? 0),
           totalMatchCount: Number(data.total_match_count ?? 0),
           activeSeason:
             data.active_season_id && data.active_season_name
               ? {
-                  id: String(data.active_season_id),
+                  id: asOpaqueId(String(data.active_season_id)),
                   name: String(data.active_season_name),
                 }
               : null,
@@ -72,7 +73,7 @@ export class FirestoreLeagueRepository implements LeagueRepository {
     const data = snapshot.data() ?? {};
 
     return {
-      id: snapshot.id,
+      id: asOpaqueId(snapshot.id),
       name: String(data.name ?? ""),
       rule: this.mapLeagueRule(data.rule),
       memberCount: Number(data.member_count ?? 0),
@@ -80,7 +81,7 @@ export class FirestoreLeagueRepository implements LeagueRepository {
       activeSeason:
         data.active_season_id && data.active_season_name
           ? {
-              id: String(data.active_season_id),
+              id: asOpaqueId(String(data.active_season_id)),
               name: String(data.active_season_name),
             }
           : null,
@@ -210,8 +211,8 @@ export class FirestoreLeagueRepository implements LeagueRepository {
 
     const snapshot = await leagueSnapshot.ref.collection("members").get();
     return snapshot.docs.map((doc) => ({
-      id: doc.id,
-      userId: String(doc.data().user_id ?? ""),
+      id: asOpaqueId(doc.id),
+      userId: asOpaqueId(String(doc.data().user_id ?? "")),
       userName: String(doc.data().user_name ?? ""),
     }));
   }
@@ -365,7 +366,7 @@ export class FirestoreLeagueRepository implements LeagueRepository {
 
     return {
       value: Number(value.value ?? 0),
-      userId: String(value.user_id ?? ""),
+      userId: asOpaqueId(String(value.user_id ?? "")),
       userName: String(value.user_name ?? ""),
     };
   }

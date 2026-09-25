@@ -7,6 +7,7 @@ import type {
 } from "@/domain/session/repository.js";
 import { toIsoString, toTimestamp } from "@/infrastructure/firestore/utils.js";
 import { NotFoundError } from "@/domain/shared/errors.js";
+import { asOpaqueId } from "@/domain/shared/types.js";
 
 export class FirestoreSessionRepository implements SessionRepository {
   constructor(private readonly db: Firestore) {}
@@ -140,21 +141,21 @@ export class FirestoreSessionRepository implements SessionRepository {
     data: FirebaseFirestore.DocumentData,
   ): Session {
     return {
-      id: sessionId,
-      leagueId,
-      seasonId,
+      id: asOpaqueId(sessionId),
+      leagueId: asOpaqueId(leagueId),
+      seasonId: asOpaqueId(seasonId),
       startedAt: toIsoString(data.started_at),
       endedAt: data.ended_at ? toIsoString(data.ended_at) : null,
       members: Array.isArray(data.members)
         ? data.members.map((member) => ({
-            userId: String(member.user_id ?? ""),
+            userId: asOpaqueId(String(member.user_id ?? "")),
             userName: String(member.user_name ?? ""),
           }))
         : [],
       memberCount: Number(data.member_count ?? 0),
       totalMatchCount: Number(data.total_match_count ?? 0),
       tableLabel: data.table_label ?? null,
-      createdBy: String(data.created_by ?? ""),
+      createdBy: asOpaqueId(String(data.created_by ?? "")),
       createdAt: toIsoString(data.created_at),
       updatedAt: toIsoString(data.updated_at),
     };

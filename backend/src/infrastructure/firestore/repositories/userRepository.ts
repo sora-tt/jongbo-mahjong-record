@@ -3,6 +3,7 @@ import type { JoiningSeason, User } from "@/domain/user/types.js";
 import type { UserRepository } from "@/domain/user/repository.js";
 import { toIsoString } from "@/infrastructure/firestore/utils.js";
 import { NotFoundError } from "@/domain/shared/errors.js";
+import { asOpaqueId } from "@/domain/shared/types.js";
 
 export class FirestoreUserRepository implements UserRepository {
   constructor(private readonly db: Firestore) {}
@@ -62,9 +63,9 @@ export class FirestoreUserRepository implements UserRepository {
           members.some((member) => member.user_id === userId)
         ) {
           result.push({
-            leagueId: leagueDoc.id,
+            leagueId: asOpaqueId(leagueDoc.id),
             leagueName: String(leagueDoc.data().name ?? ""),
-            seasonId: seasonDoc.id,
+            seasonId: asOpaqueId(seasonDoc.id),
             seasonName: String(seasonDoc.data().name ?? ""),
           });
         }
@@ -135,7 +136,7 @@ export class FirestoreUserRepository implements UserRepository {
 
   private map(id: string, data: FirebaseFirestore.DocumentData): User {
     return {
-      id,
+      id: asOpaqueId(id),
       username: String(data.username ?? ""),
       email: String(data.email ?? ""),
       name: String(data.name ?? ""),

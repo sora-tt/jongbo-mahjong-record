@@ -1,47 +1,55 @@
-import type { ScopeType } from "@/domain/shared/types.js";
+import type {
+  IsoDateString,
+  LeagueId,
+  Nullable,
+  ScopeType,
+  SeasonId,
+  UserId,
+  UserStatsId,
+} from "@/domain/shared/types.js";
 
 export type User = {
-  id: string;
+  id: UserId;
   username: string;
   email: string;
   name: string;
-  createdAt: string;
-  updatedAt: string;
+  createdAt: IsoDateString;
+  updatedAt: IsoDateString;
 };
 
 export type UserStats = {
-  id: string;
-  userId: string;
+  id: UserStatsId;
+  userId: UserId;
   userName: string;
   scopeType: ScopeType;
-  leagueId: string | null;
-  seasonId: string | null;
-  leagueName: string | null;
-  seasonName: string | null;
+  leagueId: Nullable<LeagueId>;
+  seasonId: Nullable<SeasonId>;
+  leagueName: Nullable<string>;
+  seasonName: Nullable<string>;
   totalPoints: number;
   totalMatchCount: number;
   averageRank: number;
-  currentRank: number | null;
+  currentRank: Nullable<number>;
   firstCount: number;
   secondCount: number;
   thirdCount: number;
-  fourthCount: number | null;
+  fourthCount: Nullable<number>;
   firstRate: number;
   secondRate: number;
   thirdRate: number;
-  fourthRate: number | null;
-  highestScore: number | null;
-  lowestScore: number | null;
-  averageScore: number | null;
-  winStreak: number | null;
-  loseStreak: number | null;
-  createdAt: string;
-  updatedAt: string;
+  fourthRate: Nullable<number>;
+  highestScore: Nullable<number>;
+  lowestScore: Nullable<number>;
+  averageScore: Nullable<number>;
+  winStreak: Nullable<number>;
+  loseStreak: Nullable<number>;
+  createdAt: IsoDateString;
+  updatedAt: IsoDateString;
 };
 
 export type JoiningSeason = {
-  leagueId: string;
+  leagueId: LeagueId;
   leagueName: string;
-  seasonId: string;
+  seasonId: SeasonId;
   seasonName: string;
 };

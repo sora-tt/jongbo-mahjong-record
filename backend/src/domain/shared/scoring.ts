@@ -1,6 +1,6 @@
 import type { MatchResult } from "@/domain/match/types.js";
 import { ValidationError } from "@/domain/shared/errors.js";
-import type { GameType, Wind } from "@/domain/shared/types.js";
+import { asOpaqueId, type GameType, type Wind } from "@/domain/shared/types.js";
 
 type MatchCalculationRule = {
   gameType: GameType;
@@ -116,5 +116,8 @@ export const calculateMatchPoints = (
     });
   }
 
-  return withPoints;
+  return withPoints.map((result) => ({
+    ...result,
+    userId: asOpaqueId(result.userId),
+  }));
 };

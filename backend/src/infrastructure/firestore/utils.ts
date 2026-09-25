@@ -5,19 +5,20 @@ import {
   Timestamp,
   WriteResult,
 } from "firebase-admin/firestore";
+import { asIsoDateString, type IsoDateString } from "@/domain/shared/types.js";
 
-export const toIsoString = (value: unknown): string => {
+export const toIsoString = (value: unknown): IsoDateString => {
   if (value instanceof Timestamp) {
-    return value.toDate().toISOString();
+    return asIsoDateString(value.toDate().toISOString());
   }
   if (value instanceof Date) {
-    return value.toISOString();
+    return asIsoDateString(value.toISOString());
   }
   if (typeof value === "string") {
-    return new Date(value).toISOString();
+    return asIsoDateString(value);
   }
 
-  return new Date(0).toISOString();
+  throw new TypeError("expected a Firestore timestamp or ISO date string");
 };
 
 export const toTimestamp = (value: string | null | undefined) =>

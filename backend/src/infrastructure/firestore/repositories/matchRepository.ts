@@ -3,6 +3,7 @@ import type { Match, MatchResult } from "@/domain/match/types.js";
 import type { MatchRepository } from "@/domain/match/repository.js";
 import { toIsoString, toTimestamp } from "@/infrastructure/firestore/utils.js";
 import { NotFoundError } from "@/domain/shared/errors.js";
+import { asOpaqueId } from "@/domain/shared/types.js";
 
 export class FirestoreMatchRepository implements MatchRepository {
   constructor(private readonly db: Firestore) {}
@@ -212,15 +213,15 @@ export class FirestoreMatchRepository implements MatchRepository {
     data: FirebaseFirestore.DocumentData,
   ): Match {
     return {
-      id: matchId,
-      leagueId,
-      seasonId,
-      sessionId,
+      id: asOpaqueId(matchId),
+      leagueId: asOpaqueId(leagueId),
+      seasonId: asOpaqueId(seasonId),
+      sessionId: asOpaqueId(sessionId),
       matchIndex: Number(data.match_index ?? 0),
       playedAt: toIsoString(data.played_at),
       results: Array.isArray(data.results)
         ? data.results.map((result) => ({
-            userId: String(result.user_id ?? ""),
+            userId: asOpaqueId(String(result.user_id ?? "")),
             userName: String(result.user_name ?? ""),
             wind: result.wind,
             rank: Number(result.rank ?? 0),

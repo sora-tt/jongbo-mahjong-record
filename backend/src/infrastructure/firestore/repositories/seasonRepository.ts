@@ -13,6 +13,7 @@ import type {
 } from "@/domain/season/repository.js";
 import { toIsoString } from "@/infrastructure/firestore/utils.js";
 import { NotFoundError } from "@/domain/shared/errors.js";
+import { asOpaqueId } from "@/domain/shared/types.js";
 
 export class FirestoreSeasonRepository implements SeasonRepository {
   constructor(private readonly db: Firestore) {}
@@ -206,8 +207,8 @@ export class FirestoreSeasonRepository implements SeasonRepository {
     data: FirebaseFirestore.DocumentData,
   ): SeasonSummary {
     return {
-      id: seasonId,
-      leagueId,
+      id: asOpaqueId(seasonId),
+      leagueId: asOpaqueId(leagueId),
       name: String(data.name ?? ""),
       status: data.status,
       memberCount: Number(data.member_count ?? 0),
@@ -225,7 +226,7 @@ export class FirestoreSeasonRepository implements SeasonRepository {
     const standings = Array.isArray(data.standings)
       ? data.standings.map((standing) => ({
           rank: Number(standing.rank ?? 0),
-          userId: String(standing.user_id ?? ""),
+          userId: asOpaqueId(String(standing.user_id ?? "")),
           userName: String(standing.user_name ?? ""),
           totalPoints: Number(standing.total_points ?? 0),
           matchCount: Number(standing.match_count ?? 0),
@@ -237,7 +238,7 @@ export class FirestoreSeasonRepository implements SeasonRepository {
       : [];
     const pointProgressions = Array.isArray(data.point_progressions)
       ? data.point_progressions.map((progression) => ({
-          userId: String(progression.user_id ?? ""),
+          userId: asOpaqueId(String(progression.user_id ?? "")),
           userName: String(progression.user_name ?? ""),
           points: Array.isArray(progression.points)
             ? progression.points.map(
@@ -251,15 +252,15 @@ export class FirestoreSeasonRepository implements SeasonRepository {
       : [];
 
     return {
-      id: seasonId,
-      leagueId,
+      id: asOpaqueId(seasonId),
+      leagueId: asOpaqueId(leagueId),
       name: String(data.name ?? ""),
       status: data.status,
       memberCount: Number(data.member_count ?? 0),
       totalMatchCount: Number(data.total_match_count ?? 0),
       members: Array.isArray(data.members)
         ? data.members.map((member) => ({
-            userId: String(member.user_id ?? ""),
+            userId: asOpaqueId(String(member.user_id ?? "")),
             userName: String(member.user_name ?? ""),
           }))
         : [],
@@ -291,7 +292,7 @@ export class FirestoreSeasonRepository implements SeasonRepository {
 
     return {
       value: Number(value.value ?? 0),
-      userId: String(value.user_id ?? ""),
+      userId: asOpaqueId(String(value.user_id ?? "")),
       userName: String(value.user_name ?? ""),
     };
   }

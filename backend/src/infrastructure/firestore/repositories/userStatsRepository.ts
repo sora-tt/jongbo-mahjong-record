@@ -3,6 +3,7 @@ import type { UserStats } from "@/domain/user/types.js";
 import type { UserStatsRepository } from "@/domain/user/repository.js";
 import type { ScopeType } from "@/domain/shared/types.js";
 import { toIsoString } from "@/infrastructure/firestore/utils.js";
+import { asOpaqueId } from "@/domain/shared/types.js";
 
 export class FirestoreUserStatsRepository implements UserStatsRepository {
   constructor(private readonly db: Firestore) {}
@@ -120,12 +121,12 @@ export class FirestoreUserStatsRepository implements UserStatsRepository {
 
   private map(id: string, data: FirebaseFirestore.DocumentData): UserStats {
     return {
-      id,
-      userId: String(data.user_id ?? ""),
+      id: asOpaqueId(id),
+      userId: asOpaqueId(String(data.user_id ?? "")),
       userName: String(data.user_name ?? ""),
       scopeType: data.scope_type,
-      leagueId: data.league_id ?? null,
-      seasonId: data.season_id ?? null,
+      leagueId: data.league_id ? asOpaqueId(String(data.league_id)) : null,
+      seasonId: data.season_id ? asOpaqueId(String(data.season_id)) : null,
       leagueName: data.league_name ?? null,
       seasonName: data.season_name ?? null,
       totalPoints: Number(data.total_points ?? 0),

@@ -9,6 +9,7 @@ import type {
   RecordHolder,
   ScopeType,
 } from "@/domain/shared/types.js";
+import { asOpaqueId } from "@/domain/shared/types.js";
 import type { UserStats } from "@/domain/user/types.js";
 
 type Aggregate = {
@@ -146,7 +147,7 @@ export const buildStandings = (
 ): Standing[] =>
   buildSeasonAggregates(members, matches).map((aggregate, index) => ({
     rank: index + 1,
-    userId: aggregate.userId,
+    userId: asOpaqueId(aggregate.userId),
     userName: aggregate.userName,
     totalPoints: Number(aggregate.totalPoints.toFixed(1)),
     matchCount: aggregate.totalMatchCount,
@@ -161,7 +162,7 @@ export const buildPointProgressions = (
   matches: Match[],
 ): PointProgression[] =>
   buildSeasonAggregates(members, matches).map((aggregate) => ({
-    userId: aggregate.userId,
+    userId: asOpaqueId(aggregate.userId),
     userName: aggregate.userName,
     points: aggregate.progression,
   }));
@@ -172,7 +173,7 @@ const createRateRecord = (
 ): RecordHolder | null => {
   const candidates = entries
     .map((entry) => ({
-      userId: entry.userId,
+      userId: asOpaqueId(entry.userId),
       userName: entry.userName,
       value: getValue(entry),
     }))
@@ -366,11 +367,11 @@ export const buildUserStats = (params: {
     matchCount === 0 ? 0 : Number((totalRank / matchCount).toFixed(2));
 
   return {
-    userId,
+    userId: asOpaqueId(userId),
     userName,
     scopeType,
-    leagueId,
-    seasonId,
+    leagueId: leagueId === null ? null : asOpaqueId(leagueId),
+    seasonId: seasonId === null ? null : asOpaqueId(seasonId),
     leagueName,
     seasonName,
     totalPoints: Number(totalPoints.toFixed(1)),
