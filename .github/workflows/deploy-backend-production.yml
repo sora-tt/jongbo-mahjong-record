@@ -18,7 +18,8 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      VERCEL_ORG_ID: team_9AtJbuzRPHtbHvJqPB4t3thz
+      VERCEL_SCOPE: soratomitadevelop-4383s-projects
+      VERCEL_PROJECT_NAME: jongbo-mahjong-record-backend
       VERCEL_PROJECT_ID: prj_2nEnbT6fImuzHiJkEn8IhsA20RKy
       VERCEL_TOKEN: ${{ secrets.VERCEL_BACKEND_TOKEN }}
 
@@ -41,14 +42,18 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Link to Vercel project
+        working-directory: backend
+        run: pnpm dlx vercel link --yes --scope="$VERCEL_SCOPE" --project="$VERCEL_PROJECT_NAME" --token="$VERCEL_TOKEN"
+
       - name: Pull Vercel project settings
         working-directory: backend
-        run: pnpm dlx vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+        run: pnpm dlx vercel pull --yes --environment=production --scope="$VERCEL_SCOPE" --project="$VERCEL_PROJECT_NAME" --token="$VERCEL_TOKEN"
 
       - name: Build for production
         working-directory: backend
-        run: pnpm dlx vercel build --prod --token="$VERCEL_TOKEN"
+        run: pnpm dlx vercel build --prod --scope="$VERCEL_SCOPE" --project="$VERCEL_PROJECT_NAME" --token="$VERCEL_TOKEN"
 
       - name: Deploy to Vercel
         working-directory: backend
-        run: pnpm dlx vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN"
+        run: pnpm dlx vercel deploy --prebuilt --prod --scope="$VERCEL_SCOPE" --project="$VERCEL_PROJECT_NAME" --token="$VERCEL_TOKEN"
