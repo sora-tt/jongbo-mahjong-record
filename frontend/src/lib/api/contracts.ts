@@ -56,7 +56,6 @@ export type UpdateSessionInput = InferRequestType<SessionPatchRequest>["json"];
 export type MatchResultInput = Array<{
   userId: string;
   wind: "east" | "south" | "west" | "north";
-  rank: number;
   rawScore: number;
 }>;
 

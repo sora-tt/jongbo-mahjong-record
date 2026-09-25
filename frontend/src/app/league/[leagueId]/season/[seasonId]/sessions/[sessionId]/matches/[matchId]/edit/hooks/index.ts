@@ -60,26 +60,6 @@ const parseScore = (value: string) => {
   return parsed * 100;
 };
 
-const buildRanks = (
-  rows: Array<{ position: ScorePosition; rawScore: number }>
-) => {
-  const sorted = [...rows].sort(
-    (left, right) => right.rawScore - left.rawScore
-  );
-
-  return sorted.reduce(
-    (acc, row, index) => {
-      const previous = sorted[index - 1];
-      acc[row.position] =
-        index === 0 || previous.rawScore !== row.rawScore
-          ? index + 1
-          : acc[previous.position];
-      return acc;
-    },
-    {} as Record<ScorePosition, number>
-  );
-};
-
 export const useEditMatchPage = () => {
   const router = useRouter();
   const params = useParams<{
@@ -275,13 +255,6 @@ export const useEditMatchPage = () => {
       return;
     }
 
-    const ranks = buildRanks(
-      rowsWithScores.map((row) => ({
-        position: row.position,
-        rawScore: row.rawScore,
-      }))
-    );
-
     setIsSubmitting(true);
     setError(null);
 
@@ -294,7 +267,6 @@ export const useEditMatchPage = () => {
         results: rowsWithScores.map((row) => ({
           userId: row.userId,
           wind: row.wind,
-          rank: ranks[row.position],
           rawScore: row.rawScore,
         })),
       });
