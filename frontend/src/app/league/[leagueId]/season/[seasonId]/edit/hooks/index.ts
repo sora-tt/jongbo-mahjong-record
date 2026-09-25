@@ -15,16 +15,18 @@ const DEFAULT_ERROR_MESSAGE =
 export const useSeasonEdit = () => {
   const router = useRouter();
   const params = useParams<{ leagueId: string; seasonId: string }>();
+  const { leagueId, seasonId } = params;
   const [seasonName, setSeasonName] = React.useState("");
   const [status, setStatus] = React.useState<SeasonStatus>("active");
   const [members, setMembers] = React.useState<SeasonMember[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
+  const [isLoaded, setIsLoaded] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [retryCount, setRetryCount] = React.useState(0);
 
   React.useEffect(() => {
     let isActive = true;
-    const { leagueId, seasonId } = params;
 
     if (!leagueId || !seasonId) {
       setError("leagueId または seasonId が指定されていません");
@@ -34,6 +36,7 @@ export const useSeasonEdit = () => {
 
     const load = async () => {
       setIsLoading(true);
+      setIsLoaded(false);
       setError(null);
 
       try {
@@ -48,6 +51,7 @@ export const useSeasonEdit = () => {
         setSeasonName(season.name);
         setStatus(season.status);
         setMembers(season.members);
+        setIsLoaded(true);
       } catch (loadError) {
         if (!isActive) {
           return;
@@ -71,11 +75,9 @@ export const useSeasonEdit = () => {
     return () => {
       isActive = false;
     };
-  }, [params, router]);
+  }, [leagueId, retryCount, router, seasonId]);
 
   const handleSubmit = React.useCallback(async () => {
-    const { leagueId, seasonId } = params;
-
     if (!leagueId || !seasonId) {
       setError("leagueId または seasonId が指定されていません");
       return;
@@ -106,19 +108,25 @@ export const useSeasonEdit = () => {
     } finally {
       setIsSubmitting(false);
     }
-  }, [params, router, seasonName, status]);
+  }, [leagueId, router, seasonName, seasonId, status]);
+
+  const retry = React.useCallback(() => {
+    setRetryCount((count) => count + 1);
+  }, []);
 
   return {
-    leagueId: params.leagueId,
-    seasonId: params.seasonId,
+    leagueId,
+    seasonId,
     seasonName,
     status,
     members,
     isLoading,
+    isLoaded,
     isSubmitting,
     error,
     setSeasonName,
     setStatus,
     handleSubmit,
+    retry,
   };
 };

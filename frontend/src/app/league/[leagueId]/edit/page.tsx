@@ -22,8 +22,10 @@ const EditLeaguePage: React.FC = () => {
     memberCandidates,
     isSearchingMembers,
     loading,
+    isLoaded,
     isSubmitting,
     error,
+    isRuleLocked,
     umaTotalError,
     ruleSettings,
     handleLeagueNameChange,
@@ -32,6 +34,7 @@ const EditLeaguePage: React.FC = () => {
     handleRemoveMember,
     handleRuleSettingChange,
     handleSubmit,
+    retry,
   } = useLeagueEdit();
 
   const umaFields =
@@ -55,6 +58,16 @@ const EditLeaguePage: React.FC = () => {
           label="リーグ情報を読み込んでいます…"
           className="min-h-[calc(100vh-4rem)]"
         />
+      </AppShell>
+    );
+  }
+
+  if (error && !isLoaded) {
+    return (
+      <AppShell mainClassName="min-h-screen bg-background font-jp">
+        <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
+          <ErrorState message={error} onRetry={retry} />
+        </div>
       </AppShell>
     );
   }
@@ -147,9 +160,15 @@ const EditLeaguePage: React.FC = () => {
 
           <section className="space-y-4">
             <h2 className="font-semibold text-foreground">ルール設定</h2>
+            {isRuleLocked ? (
+              <p className="text-sm text-text-muted">
+                対局が記録されているため、ルールは変更できません。
+              </p>
+            ) : null}
             <Select
               label="ゲーム種別"
               value={ruleSettings.gameType}
+              disabled={isRuleLocked}
               onChange={(event) =>
                 handleRuleSettingChange(
                   "gameType",
@@ -165,6 +184,7 @@ const EditLeaguePage: React.FC = () => {
                 label="持ち点"
                 type="number"
                 value={ruleSettings.okaStartPoints}
+                disabled={isRuleLocked}
                 onChange={(event) =>
                   handleRuleSettingChange("okaStartPoints", event.target.value)
                 }
@@ -174,6 +194,7 @@ const EditLeaguePage: React.FC = () => {
                 label="返し点"
                 type="number"
                 value={ruleSettings.okaReturnPoints}
+                disabled={isRuleLocked}
                 onChange={(event) =>
                   handleRuleSettingChange("okaReturnPoints", event.target.value)
                 }
@@ -185,6 +206,7 @@ const EditLeaguePage: React.FC = () => {
                   label={`${label}ウマ`}
                   type="number"
                   value={ruleSettings[field]}
+                  disabled={isRuleLocked}
                   onChange={(event) =>
                     handleRuleSettingChange(field, event.target.value)
                   }

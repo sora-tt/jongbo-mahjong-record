@@ -47,8 +47,11 @@ export const useLeagueEdit = () => {
   >([]);
   const [isSearchingMembers, setIsSearchingMembers] = React.useState(false);
   const [loading, setLoading] = React.useState(true);
+  const [isLoaded, setIsLoaded] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [retryCount, setRetryCount] = React.useState(0);
+  const [isRuleLocked, setIsRuleLocked] = React.useState(false);
   const [ruleSettings, setRuleSettings] = React.useState<RuleSettings>({
     gameType: "yonma",
     okaStartPoints: "",
@@ -70,6 +73,7 @@ export const useLeagueEdit = () => {
 
     const load = async () => {
       setLoading(true);
+      setIsLoaded(false);
       setError(null);
 
       try {
@@ -80,6 +84,7 @@ export const useLeagueEdit = () => {
         }
 
         setLeagueName(league.name);
+        setIsRuleLocked(league.totalMatchCount > 0);
         setAddedMembers(
           league.members.reduce(
             (acc, member) => ({
@@ -102,6 +107,7 @@ export const useLeagueEdit = () => {
           uma3: league.rule.uma.third.toString(),
           uma4: league.rule.uma.fourth?.toString() ?? "",
         });
+        setIsLoaded(true);
       } catch (loadError) {
         if (!isActive) {
           return;
@@ -125,7 +131,7 @@ export const useLeagueEdit = () => {
     return () => {
       isActive = false;
     };
-  }, [leagueId, router]);
+  }, [leagueId, retryCount, router]);
 
   const handleLeagueNameChange = React.useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -279,23 +285,29 @@ export const useLeagueEdit = () => {
     setIsSubmitting(true);
 
     try {
-      const updatedLeague = await updateLeague(leagueId, {
+      const updateInput = {
         name: leagueName.trim(),
         memberUserIds: Object.keys(addedMembers),
-        rule: {
-          gameType: ruleSettings.gameType,
-          oka: {
-            startingPoints: okaStartPoints,
-            returnPoints: okaReturnPoints,
-          },
-          uma: {
-            first: uma[1],
-            second: uma[2],
-            third: uma[3],
-            fourth: ruleSettings.gameType === "sanma" ? null : uma[4],
-          },
-        },
-      });
+        ...(isRuleLocked
+          ? {}
+          : {
+              rule: {
+                gameType: ruleSettings.gameType,
+                oka: {
+                  startingPoints: okaStartPoints,
+                  returnPoints: okaReturnPoints,
+                },
+                uma: {
+                  first: uma[1],
+                  second: uma[2],
+                  third: uma[3],
+                  fourth: ruleSettings.gameType === "sanma" ? null : uma[4],
+                },
+              },
+            }),
+      };
+
+      const updatedLeague = await updateLeague(leagueId, updateInput);
 
       router.push(`/league/${updatedLeague.id}`);
     } catch (submitError) {
@@ -310,7 +322,19 @@ export const useLeagueEdit = () => {
     } finally {
       setIsSubmitting(false);
     }
-  }, [leagueId, leagueName, addedMembers, ruleSettings, umaTotalError, router]);
+  }, [
+    leagueId,
+    leagueName,
+    addedMembers,
+    ruleSettings,
+    umaTotalError,
+    isRuleLocked,
+    router,
+  ]);
+
+  const retry = React.useCallback(() => {
+    setRetryCount((count) => count + 1);
+  }, []);
 
   return {
     leagueName,
@@ -319,8 +343,10 @@ export const useLeagueEdit = () => {
     memberCandidates,
     isSearchingMembers,
     loading,
+    isLoaded,
     isSubmitting,
     error,
+    isRuleLocked,
     umaTotalError,
     ruleSettings,
     handleLeagueNameChange,
@@ -329,5 +355,6 @@ export const useLeagueEdit = () => {
     handleRemoveMember,
     handleRuleSettingChange,
     handleSubmit,
+    retry,
   };
 };

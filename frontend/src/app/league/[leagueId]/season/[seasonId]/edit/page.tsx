@@ -22,11 +22,13 @@ const SeasonEditPage: React.FC = () => {
     status,
     members,
     isLoading,
+    isLoaded,
     isSubmitting,
     error,
     setSeasonName,
     setStatus,
     handleSubmit,
+    retry,
   } = useSeasonEdit();
 
   if (isLoading) {
@@ -36,6 +38,16 @@ const SeasonEditPage: React.FC = () => {
           label="シーズン情報を読み込んでいます…"
           className="min-h-[calc(100vh-4rem)]"
         />
+      </AppShell>
+    );
+  }
+
+  if (error && !isLoaded) {
+    return (
+      <AppShell mainClassName="min-h-screen bg-background font-jp">
+        <div className="mx-auto max-w-2xl px-4 py-8 sm:px-6 lg:px-8">
+          <ErrorState message={error} onRetry={retry} />
+        </div>
       </AppShell>
     );
   }
