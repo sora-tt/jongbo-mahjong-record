@@ -20,7 +20,7 @@ import {
   requiredString,
   toIsoString,
 } from "@/infrastructure/firestore/utils.js";
-import { NotFoundError } from "@/domain/shared/errors.js";
+import { ConflictError, NotFoundError } from "@/domain/shared/errors.js";
 import { asOpaqueId } from "@/domain/shared/types.js";
 
 const mapSeasonStatus = (value: unknown) => {
@@ -73,27 +73,59 @@ export class FirestoreSeasonRepository implements SeasonRepository {
     input: CreateSeasonInput,
     members: SeasonMember[],
   ): Promise<SeasonDetail> {
-    const seasonRef = this.db
-      .collection("leagues")
-      .doc(leagueId)
-      .collection("seasons")
-      .doc();
-    const now = Timestamp.now();
-    await seasonRef.set({
-      id: seasonRef.id,
-      name: input.name,
-      status: input.status ?? "active",
-      members: members.map((member) => ({
-        user_id: member.userId,
-        user_name: member.userName,
-      })),
-      member_count: members.length,
-      total_match_count: 0,
-      standings: [],
-      point_progressions: [],
-      season_records: null,
-      created_at: now,
-      updated_at: now,
+    const leagueRef = this.db.collection("leagues").doc(leagueId);
+    const seasonRef = leagueRef.collection("seasons").doc();
+    const status = input.status ?? "active";
+
+    await this.db.runTransaction(async (transaction) => {
+      const leagueSnapshot = await transaction.get(leagueRef);
+      if (!leagueSnapshot.exists) {
+        throw new NotFoundError("league not found", { leagueId });
+      }
+
+      if (status === "active") {
+        const activeSeasonSnapshot = await transaction.get(
+          leagueRef
+            .collection("seasons")
+            .where("status", "==", "active")
+            .limit(1),
+        );
+        const activeSeasonId = leagueSnapshot.data()?.active_season_id;
+        if (
+          !activeSeasonSnapshot.empty ||
+          (activeSeasonId !== null && activeSeasonId !== undefined)
+        ) {
+          throw new ConflictError("active season already exists", {
+            activeSeasonId:
+              activeSeasonId ?? activeSeasonSnapshot.docs[0]?.id ?? null,
+          });
+        }
+      }
+
+      const now = Timestamp.now();
+      transaction.set(seasonRef, {
+        id: seasonRef.id,
+        name: input.name,
+        status,
+        members: members.map((member) => ({
+          user_id: member.userId,
+          user_name: member.userName,
+        })),
+        member_count: members.length,
+        total_match_count: 0,
+        standings: [],
+        point_progressions: [],
+        season_records: null,
+        created_at: now,
+        updated_at: now,
+      });
+      if (status === "active") {
+        transaction.update(leagueRef, {
+          active_season_id: seasonRef.id,
+          active_season_name: input.name,
+          updated_at: now,
+        });
+      }
     });
 
     return this.get(leagueId, seasonRef.id);
@@ -104,39 +136,92 @@ export class FirestoreSeasonRepository implements SeasonRepository {
     seasonId: string,
     input: UpdateSeasonInput,
   ): Promise<SeasonDetail> {
-    const seasonRef = this.db
-      .collection("leagues")
-      .doc(leagueId)
-      .collection("seasons")
-      .doc(seasonId);
-    const snapshot = await seasonRef.get();
-    if (!snapshot.exists) {
-      throw new NotFoundError("season not found", { leagueId, seasonId });
-    }
+    const leagueRef = this.db.collection("leagues").doc(leagueId);
+    const seasonRef = leagueRef.collection("seasons").doc(seasonId);
 
-    const patch: Record<string, unknown> = { updated_at: Timestamp.now() };
-    if (input.name !== undefined) {
-      patch.name = input.name;
-    }
-    if (input.status !== undefined) {
-      patch.status = input.status;
-    }
+    await this.db.runTransaction(async (transaction) => {
+      const leagueSnapshot = await transaction.get(leagueRef);
+      const seasonSnapshot = await transaction.get(seasonRef);
+      const activeSeasonSnapshot =
+        input.status === "active"
+          ? await transaction.get(
+              leagueRef
+                .collection("seasons")
+                .where("status", "==", "active")
+                .limit(1),
+            )
+          : null;
+      if (!leagueSnapshot.exists) {
+        throw new NotFoundError("league not found", { leagueId });
+      }
+      if (!seasonSnapshot.exists) {
+        throw new NotFoundError("season not found", { leagueId, seasonId });
+      }
 
-    await seasonRef.update(patch);
+      const currentData = seasonSnapshot.data() ?? {};
+      const nextStatus = input.status ?? currentData.status;
+      const activeSeasonId = leagueSnapshot.data()?.active_season_id;
+      if (
+        nextStatus === "active" &&
+        ((activeSeasonId !== null &&
+          activeSeasonId !== undefined &&
+          activeSeasonId !== seasonId) ||
+          activeSeasonSnapshot?.docs.some((doc) => doc.id !== seasonId))
+      ) {
+        throw new ConflictError("active season already exists", {
+          activeSeasonId,
+        });
+      }
+
+      const patch: Record<string, unknown> = {
+        updated_at: Timestamp.now(),
+      };
+      if (input.name !== undefined) {
+        patch.name = input.name;
+      }
+      if (input.status !== undefined) {
+        patch.status = input.status;
+      }
+
+      transaction.update(seasonRef, patch);
+      if (input.status === "active") {
+        transaction.update(leagueRef, {
+          active_season_id: seasonId,
+          active_season_name: input.name ?? currentData.name,
+          updated_at: patch.updated_at,
+        });
+      } else if (input.status === "archived" && activeSeasonId === seasonId) {
+        transaction.update(leagueRef, {
+          active_season_id: null,
+          active_season_name: null,
+          updated_at: patch.updated_at,
+        });
+      }
+    });
+
     return this.get(leagueId, seasonId);
   }
 
   async delete(leagueId: string, seasonId: string): Promise<void> {
-    const ref = this.db
-      .collection("leagues")
-      .doc(leagueId)
-      .collection("seasons")
-      .doc(seasonId);
-    const snapshot = await ref.get();
-    if (!snapshot.exists) {
-      throw new NotFoundError("season not found", { leagueId, seasonId });
-    }
-
+    const leagueRef = this.db.collection("leagues").doc(leagueId);
+    const ref = leagueRef.collection("seasons").doc(seasonId);
+    await this.db.runTransaction(async (transaction) => {
+      const leagueSnapshot = await transaction.get(leagueRef);
+      const seasonSnapshot = await transaction.get(ref);
+      if (!leagueSnapshot.exists) {
+        throw new NotFoundError("league not found", { leagueId });
+      }
+      if (!seasonSnapshot.exists) {
+        throw new NotFoundError("season not found", { leagueId, seasonId });
+      }
+      if (leagueSnapshot.data()?.active_season_id === seasonId) {
+        transaction.update(leagueRef, {
+          active_season_id: null,
+          active_season_name: null,
+          updated_at: Timestamp.now(),
+        });
+      }
+    });
     await this.db.recursiveDelete(ref);
   }
 

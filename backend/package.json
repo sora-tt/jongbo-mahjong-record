@@ -13,6 +13,7 @@
     "lint": "eslint '**/*.{js,jsx,ts,tsx,mjs,cjs}'",
     "lint:fix": "eslint '**/*.{js,jsx,ts,tsx,mjs,cjs}' --fix",
     "test:contract": "tsx --test src/domain/league/rule.test.ts src/domain/user/statsKey.test.ts src/domain/shared/scoring.test.ts src/application/services/sessionService.test.ts src/application/services/matchService.test.ts src/infrastructure/firestore/utils.test.ts src/presentation/app.test.ts src/presentation/session.test.ts test/contracts/data-contract.test.ts",
+    "test:emulator": "USE_FIRESTORE_EMULATOR=true FIRESTORE_EMULATOR_HOST=127.0.0.1:8081 FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099 GOOGLE_CLOUD_PROJECT=jongbo-local tsx --test src/infrastructure/firestore/repositories/matchRepository.emulator.test.ts src/infrastructure/firestore/repositories/lifecycle.emulator.test.ts",
     "emulator": "NODE_NO_WARNINGS=1 firebase emulators:start --project jongbo-local",
     "dev:emulator": "USE_FIRESTORE_EMULATOR=true FIRESTORE_EMULATOR_HOST=127.0.0.1:8081 FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099 GOOGLE_CLOUD_PROJECT=jongbo-local tsx watch src/presentation/server.ts",
     "seed": "USE_FIRESTORE_EMULATOR=true FIRESTORE_EMULATOR_HOST=127.0.0.1:8081 FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099 GOOGLE_CLOUD_PROJECT=jongbo-local tsx src/scripts/seedFirestore.ts"

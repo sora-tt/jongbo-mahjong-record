@@ -19,7 +19,7 @@
 
 ## 2. Canonical lifecycleと競合制御
 
-- [ ] 2.1 Session transactionを競合点にしたMatch index allocationを実装する
+- [x] 2.1 Session transactionを競合点にしたMatch index allocationを実装する
   - Match createをtransaction境界へ移し、Session内で重複しない正のmatchIndex、canonical Match、Session totalMatchCountを同じ正本操作として確定する。
   - Match updateはmatchIndexを変更せず、deleteは既存indexを詰めず、Match createの同時実行が同じindexを返さない。
   - 完了時、並行createとdelete後createのEmulator testで重複indexがなく、既存Matchのindexが変化しない。
@@ -27,7 +27,7 @@
   - _Requirements: 3.3, 3.4, 4.1_
   - _Boundary: Canonical Lifecycle_
 
-- [ ] 2.2 (P) Rule lockとactive seasonの遷移をtransactionalにする
+- [x] 2.2 (P) Rule lockとactive seasonの遷移をtransactionalにする
   - 最初のMatch createと同時にLeagueの非公開rule lockを設定し、以後のrule updateをconflictで拒否する。delete後もlockを解除しない。
   - active Seasonのcreate/promote/archive/deleteでLeagueごとの最大1件とactiveSeason cacheを保ち、別activeがある場合は変更をcommitしない。
   - 完了時、rule update race、二重active race、active削除後のcache null、archived自動昇格なしを検証できる。
