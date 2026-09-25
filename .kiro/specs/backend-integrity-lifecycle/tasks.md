@@ -2,7 +2,7 @@
 
 ## 1. Session/Matchの正本入力と計算
 
-- [ ] 1.1 (P) Sessionの固定参加者とgameType制約を実装する
+- [x] 1.1 (P) Sessionの固定参加者とgameType制約を実装する
   - 三麻を3人かつeast/south/west、四麻を4人かつeast/south/west/northとして検証する。
   - Season membership外のユーザー、重複userId、Sessionと異なるMatch参加者を正本write前にvalidation errorへ変換する。
   - 既存のSession DTO、ErrorEnvelope、認証境界を変更せず、Session members snapshotが作成後に変化しない。
@@ -10,7 +10,7 @@
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 6.3_
   - _Boundary: Session Integrity_
 
-- [ ] 1.2 (P) raw scoreからrank/pointを決定する計算契約を固定する
+- [x] 1.2 (P) raw scoreからrank/pointを決定する計算契約を固定する
   - raw score合計、allowed wind、request rank非依存、competition ranking、同点uma平均、oka、point丸め、zero-sumを既存scoring境界に実装する。
   - 同一ruleと入力で同一のcomputed rank/pointを返し、sanmaのfourth値を生成しない。
   - 完了時、三麻/四麻、同点、合計不一致、wind重複、point total違反のunit testが通る。
