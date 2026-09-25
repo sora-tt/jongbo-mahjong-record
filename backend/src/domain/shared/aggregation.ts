@@ -52,7 +52,7 @@ const createAggregate = (member: SeasonMember): Aggregate => ({
   progression: [],
 });
 
-const sortMatches = (matches: Match[]) =>
+export const sortMatches = (matches: Match[]) =>
   [...matches].sort((left, right) => {
     const timeDiff =
       new Date(left.playedAt).getTime() - new Date(right.playedAt).getTime();
@@ -60,7 +60,15 @@ const sortMatches = (matches: Match[]) =>
       return timeDiff;
     }
 
-    return left.matchIndex - right.matchIndex;
+    if (left.sessionId !== right.sessionId) {
+      return left.sessionId.localeCompare(right.sessionId);
+    }
+
+    if (left.matchIndex !== right.matchIndex) {
+      return left.matchIndex - right.matchIndex;
+    }
+
+    return left.id.localeCompare(right.id);
   });
 
 export const buildSeasonAggregates = (
@@ -137,7 +145,8 @@ const sortAggregateEntries = (entries: Aggregate[]) =>
       return right.totalPoints - left.totalPoints;
     }
 
-    return left.userName.localeCompare(right.userName, "ja");
+    const nameDiff = left.userName.localeCompare(right.userName, "ja");
+    return nameDiff !== 0 ? nameDiff : left.userId.localeCompare(right.userId);
   });
 
 export const buildStandings = (
@@ -183,19 +192,30 @@ const createRateRecord = (
     return null;
   }
 
-  return candidates.sort((left, right) => right.value - left.value)[0] ?? null;
+  return (
+    candidates.sort((left, right) => {
+      if (right.value !== left.value) {
+        return right.value - left.value;
+      }
+      const nameDiff = left.userName.localeCompare(right.userName, "ja");
+      return nameDiff !== 0
+        ? nameDiff
+        : left.userId.localeCompare(right.userId);
+    })[0] ?? null
+  );
 };
 
 export const buildSeasonRecords = (
   members: SeasonMember[],
   matches: Match[],
+  gameType: GameType,
 ) => {
   const entries = buildSeasonAggregates(members, matches);
 
   return {
     highestScore: createRateRecord(entries, (entry) => entry.highestScore),
     avoidLastRate: createRateRecord(entries, (entry) => {
-      if (entry.totalMatchCount === 0) {
+      if (gameType === "sanma" || entry.totalMatchCount === 0) {
         return null;
       }
 
@@ -282,7 +302,18 @@ export const buildLeagueRecords = (matches: Match[]) => {
               value: entry.lowestScore,
             }))
             .filter((entry): entry is RecordHolder => entry.value !== null)
-            .sort((left, right) => left.value - right.value)[0] ?? null),
+            .sort((left, right) => {
+              if (left.value !== right.value) {
+                return left.value - right.value;
+              }
+              const nameDiff = left.userName.localeCompare(
+                right.userName,
+                "ja",
+              );
+              return nameDiff !== 0
+                ? nameDiff
+                : left.userId.localeCompare(right.userId);
+            })[0] ?? null),
   };
 };
 

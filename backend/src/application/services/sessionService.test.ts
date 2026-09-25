@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { SessionService } from "@/application/services/sessionService.js";
+import type { StatsRebuilder } from "@/application/services/statsRebuilder.js";
 import type { LeagueRepository } from "@/domain/league/repository.js";
 import type { SeasonRepository } from "@/domain/season/repository.js";
 import type { SessionRepository } from "@/domain/session/repository.js";
@@ -49,6 +50,7 @@ const makeService = (gameType: "sanma" | "yonma") => {
       leagueRepository,
       seasonRepository,
       sessionRepository,
+      { rebuildSeason: async () => ({}) } as unknown as StatsRebuilder,
     ),
     getCreatedMemberIds: () => createdMemberIds,
   };

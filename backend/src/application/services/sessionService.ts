@@ -7,12 +7,14 @@ import type {
 } from "@/domain/session/repository.js";
 import { AppError, ValidationError } from "@/domain/shared/errors.js";
 import { asOpaqueId } from "@/domain/shared/types.js";
+import type { StatsRebuilder } from "@/application/services/statsRebuilder.js";
 
 export class SessionService {
   constructor(
     private readonly leagueRepository: LeagueRepository,
     private readonly seasonRepository: SeasonRepository,
     private readonly sessionRepository: SessionRepository,
+    private readonly statsRebuilder: StatsRebuilder,
   ) {}
 
   async listSessions(userId: string, leagueId: string, seasonId: string) {
@@ -94,6 +96,7 @@ export class SessionService {
   ) {
     await this.assertSeasonMembership(userId, leagueId, seasonId);
     await this.sessionRepository.delete(leagueId, seasonId, sessionId);
+    await this.statsRebuilder.rebuildSeason(leagueId, seasonId);
   }
 
   private async assertSeasonMembership(

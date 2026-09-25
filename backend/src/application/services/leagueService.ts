@@ -6,11 +6,13 @@ import type {
 import { AppError, ValidationError } from "@/domain/shared/errors.js";
 import { validateLeagueRule } from "@/domain/league/rule.js";
 import type { UserRepository } from "@/domain/user/repository.js";
+import type { StatsRebuilder } from "@/application/services/statsRebuilder.js";
 
 export class LeagueService {
   constructor(
     private readonly leagueRepository: LeagueRepository,
     private readonly userRepository: UserRepository,
+    private readonly statsRebuilder: StatsRebuilder,
   ) {}
 
   listLeagues(memberUserId: string) {
@@ -72,6 +74,8 @@ export class LeagueService {
   async deleteLeague(userId: string, leagueId: string) {
     await this.assertLeagueMembership(userId, leagueId);
     await this.leagueRepository.delete(leagueId);
+    await this.statsRebuilder.clearLeagueStats(leagueId);
+    await this.statsRebuilder.rebuildOverall();
   }
 
   async assertLeagueMembership(userId: string, leagueId: string) {

@@ -23,6 +23,7 @@ import {
 } from "@/infrastructure/firestore/utils.js";
 import { ConflictError, NotFoundError } from "@/domain/shared/errors.js";
 import { asOpaqueId } from "@/domain/shared/types.js";
+import type { UserReference } from "@/domain/shared/types.js";
 
 export class FirestoreLeagueRepository implements LeagueRepository {
   constructor(
@@ -261,6 +262,21 @@ export class FirestoreLeagueRepository implements LeagueRepository {
         "leagues.members.user_name",
       ),
     }));
+  }
+
+  async listAllMembers(): Promise<UserReference[]> {
+    const leaguesSnapshot = await this.db.collection("leagues").get();
+    const members = await Promise.all(
+      leaguesSnapshot.docs.map((leagueDoc) => this.listMembers(leagueDoc.id)),
+    );
+    const byUserId = new Map<string, UserReference>();
+    members.flat().forEach((member) => {
+      byUserId.set(member.userId, {
+        userId: member.userId,
+        userName: member.userName,
+      });
+    });
+    return [...byUserId.values()];
   }
 
   async setActiveSeason(
