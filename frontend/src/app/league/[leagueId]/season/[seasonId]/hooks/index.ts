@@ -5,12 +5,15 @@ import { useParams, useRouter } from "next/navigation";
 import { COLOR_MAP } from "@/constants/color-map";
 import { fetchSeasonDetail } from "@/features/season/api";
 import { toSeasonDetail } from "@/features/season/model/adapter";
+import { listSessions } from "@/features/session/api";
+import { toSessionList } from "@/features/session/model/adapter";
 import { ApiError, getApiErrorMessage } from "@/lib/api/core";
 
 const DEFAULT_ERROR_MESSAGE =
   "シーズン詳細の取得に失敗しました。時間をおいて再度お試しください。";
 
 type SeasonDetail = ReturnType<typeof toSeasonDetail>;
+type SessionSummary = ReturnType<typeof toSessionList>[number];
 
 type Title = {
   label: string;
@@ -113,7 +116,10 @@ export const useSeasonPage = () => {
   const router = useRouter();
   const params = useParams<{ leagueId: string; seasonId: string }>();
   const [season, setSeason] = React.useState<SeasonDetail | null>(null);
+  const [sessions, setSessions] = React.useState<SessionSummary[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [sessionsLoading, setSessionsLoading] = React.useState(true);
+  const [sessionsError, setSessionsError] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [retryCount, setRetryCount] = React.useState(0);
 
@@ -133,30 +139,47 @@ export const useSeasonPage = () => {
       setLoading(true);
       setError(null);
 
-      try {
-        const seasonDetail = await fetchSeasonDetail(leagueId, seasonId);
+      setSessionsLoading(true);
+      setSessionsError(null);
 
-        if (!isActive) {
-          return;
-        }
+      const [seasonResult, sessionsResult] = await Promise.allSettled([
+        fetchSeasonDetail(leagueId, seasonId),
+        listSessions(leagueId, seasonId),
+      ]);
 
-        setSeason(toSeasonDetail(seasonDetail));
-      } catch (loadError) {
-        if (!isActive) {
-          return;
-        }
+      if (!isActive) return;
 
-        if (loadError instanceof ApiError && loadError.status === 401) {
-          router.replace("/login");
-          return;
-        }
-
-        setError(getApiErrorMessage(loadError, DEFAULT_ERROR_MESSAGE));
-      } finally {
-        if (isActive) {
-          setLoading(false);
-        }
+      if (seasonResult.status === "fulfilled") {
+        setSeason(toSeasonDetail(seasonResult.value));
+        setError(null);
+      } else if (
+        seasonResult.reason instanceof ApiError &&
+        seasonResult.reason.status === 401
+      ) {
+        router.replace("/login");
+      } else {
+        setError(
+          getApiErrorMessage(seasonResult.reason, DEFAULT_ERROR_MESSAGE)
+        );
       }
+      setLoading(false);
+
+      if (sessionsResult.status === "fulfilled") {
+        setSessions(toSessionList(sessionsResult.value));
+      } else if (
+        sessionsResult.reason instanceof ApiError &&
+        sessionsResult.reason.status === 401
+      ) {
+        router.replace("/login");
+      } else {
+        setSessionsError(
+          getApiErrorMessage(
+            sessionsResult.reason,
+            "Session一覧の取得に失敗しました。"
+          )
+        );
+      }
+      setSessionsLoading(false);
     };
 
     void load();
@@ -265,14 +288,18 @@ export const useSeasonPage = () => {
     leagueId: params.leagueId,
     seasonId: params.seasonId,
     season,
+    sessions,
     titles,
     pointProgressionChart,
     chartSeries,
     visibleSeries,
     visibleUserIds,
     loading,
+    sessionsLoading,
+    sessionsError,
     error,
     retry,
+    retrySessions: retry,
     handleStartRecording,
     handleToggleChartSeries,
   };

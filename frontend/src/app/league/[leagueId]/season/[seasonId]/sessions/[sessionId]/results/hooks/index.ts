@@ -2,98 +2,46 @@ import * as React from "react";
 
 import { useParams, useRouter } from "next/navigation";
 
-import { ApiError } from "@/lib/api/core";
-import { fetchLeagueDetail } from "@/lib/api/leagues";
+import { toMatchList } from "@/features/match/model/adapter";
+import { toSession } from "@/features/session/model/adapter";
+import { ApiError, getApiErrorMessage } from "@/lib/api/core";
 import { deleteMatch, fetchMatches } from "@/lib/api/matches";
 import { fetchSessionDetail, updateSession } from "@/lib/api/sessions";
 import { useAppDispatch } from "@/store/hooks";
 import { clearRecordingFlow } from "@/store/slices/recording-flow-slice";
 
-import type {
-  DailyRecordTableMatch,
-  DailyRecordTablePlayer,
-} from "@/components/pages/daily-record/daily-record-table";
-
 const DEFAULT_ERROR_MESSAGE =
-  "本日の成績の取得に失敗しました。時間をおいて再度お試しください。";
+  "Sessionの結果取得に失敗しました。時間をおいて再度お試しください。";
 const DEFAULT_DELETE_ERROR_MESSAGE =
   "対局結果の削除に失敗しました。時間をおいて再度お試しください。";
 const DEFAULT_END_ERROR_MESSAGE =
-  "記録の終了に失敗しました。時間をおいて再度お試しください。";
+  "Sessionの終了に失敗しました。時間をおいて再度お試しください。";
 
-const WIND_MAP = {
-  east: "EAST",
-  south: "SOUTH",
-  west: "WEST",
-  north: "NORTH",
-} as const;
-
-type ApiMatch = Awaited<ReturnType<typeof fetchMatches>>[number];
-
-const formatDate = (value: string) =>
-  new Intl.DateTimeFormat("ja-JP", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date(value));
-
-const formatRule = (rule: {
-  gameType: "sanma" | "yonma";
-  oka: {
-    startingPoints: number;
-    returnPoints: number;
-  };
-}) => {
-  const gameTypeLabel = rule.gameType === "yonma" ? "四麻" : "三麻";
-  const starting = rule.oka.startingPoints.toLocaleString();
-  const returns = rule.oka.returnPoints.toLocaleString();
-  return `${gameTypeLabel} ${starting}点持ち ${returns}点返し`;
-};
-
-const toTableMatch = (match: ApiMatch): DailyRecordTableMatch => {
-  const matchResultInput: DailyRecordTableMatch["results"]["matchResultInput"] =
-    {
-      EAST: null,
-      SOUTH: null,
-      WEST: null,
-      NORTH: null,
-    };
-
-  match.results.forEach((result) => {
-    matchResultInput[WIND_MAP[result.wind]] = {
-      player: {
-        userId: result.userId,
-        name: result.userName,
-      },
-      score: result.point,
-      rank: result.rank,
-    };
-  });
-
-  return {
-    matchId: match.id,
-    results: {
-      matchResultInput,
-    },
-  };
-};
+const formatDate = (value: string | null) =>
+  value
+    ? new Intl.DateTimeFormat("ja-JP", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      }).format(new Date(value))
+    : "未終了";
 
 export const useSessionResultsPage = () => {
-  const dispatch = useAppDispatch();
   const router = useRouter();
+  const dispatch = useAppDispatch();
   const params = useParams<{
     leagueId: string;
     seasonId: string;
     sessionId: string;
   }>();
-  const leagueId = params.leagueId;
-  const seasonId = params.seasonId;
-  const sessionId = params.sessionId;
-  const [date, setDate] = React.useState("");
-  const [rule, setRule] = React.useState("");
-  const [players, setPlayers] = React.useState<DailyRecordTablePlayer[]>([]);
-  const [matches, setMatches] = React.useState<DailyRecordTableMatch[]>([]);
-  const [totals, setTotals] = React.useState<Record<string, number>>({});
+  const [session, setSession] = React.useState<ReturnType<
+    typeof toSession
+  > | null>(null);
+  const [matches, setMatches] = React.useState<ReturnType<typeof toMatchList>>(
+    []
+  );
   const [isLoading, setIsLoading] = React.useState(true);
   const [isEnding, setIsEnding] = React.useState(false);
   const [deletingMatchId, setDeletingMatchId] = React.useState<string | null>(
@@ -102,98 +50,55 @@ export const useSessionResultsPage = () => {
   const [deleteTargetMatchId, setDeleteTargetMatchId] = React.useState<
     string | null
   >(null);
+  const [expandedMatchId, setExpandedMatchId] = React.useState<string | null>(
+    null
+  );
   const [error, setError] = React.useState<string | null>(null);
+  const [retryCount, setRetryCount] = React.useState(0);
 
   const load = React.useCallback(
     async (options?: { showLoading?: boolean }) => {
+      const { leagueId, seasonId, sessionId } = params;
       if (!leagueId || !seasonId || !sessionId) {
-        setError(
-          "leagueId、seasonId、sessionId のいずれかが指定されていません"
-        );
+        setError("必要なIDが指定されていません");
         setIsLoading(false);
         return;
       }
 
-      if (options?.showLoading ?? true) {
-        setIsLoading(true);
-      }
+      if (options?.showLoading ?? true) setIsLoading(true);
       setError(null);
-
       try {
-        const [league, session, fetchedMatches] = await Promise.all([
-          fetchLeagueDetail(leagueId),
+        const [sessionDto, matchesDto] = await Promise.all([
           fetchSessionDetail({ leagueId, seasonId, sessionId }),
           fetchMatches({ leagueId, seasonId, sessionId }),
         ]);
-
-        setDate(formatDate(session.startedAt));
-        setRule(formatRule(league.rule));
-        setPlayers(
-          session.members.map((member) => ({
-            userId: member.userId,
-            name: member.userName,
-          }))
-        );
-        setMatches(fetchedMatches.map(toTableMatch));
-        setTotals(
-          fetchedMatches.reduce<Record<string, number>>((acc, match) => {
-            match.results.forEach((result) => {
-              acc[result.userId] = (acc[result.userId] ?? 0) + result.point;
-            });
-            return acc;
-          }, {})
-        );
+        setSession(toSession(sessionDto));
+        setMatches(toMatchList(matchesDto));
       } catch (loadError) {
         if (loadError instanceof ApiError && loadError.status === 401) {
           router.replace("/login");
           return;
         }
-
-        setError(
-          loadError instanceof Error ? loadError.message : DEFAULT_ERROR_MESSAGE
-        );
+        setError(getApiErrorMessage(loadError, DEFAULT_ERROR_MESSAGE));
       } finally {
         setIsLoading(false);
       }
     },
-    [leagueId, router, seasonId, sessionId]
+    [params, router]
   );
 
   React.useEffect(() => {
     void load();
-  }, [load]);
-
-  const handleAddRecord = React.useCallback(() => {
-    if (!leagueId || !seasonId || !sessionId) {
-      return;
-    }
-
-    router.push(
-      `/league/${leagueId}/season/${seasonId}/sessions/${sessionId}/matches/new`
-    );
-  }, [leagueId, router, seasonId, sessionId]);
-
-  const handleEditMatch = React.useCallback(
-    (matchId: string) => {
-      if (!leagueId || !seasonId || !sessionId) {
-        return;
-      }
-
-      router.push(
-        `/league/${leagueId}/season/${seasonId}/sessions/${sessionId}/matches/${matchId}/edit`
-      );
-    },
-    [leagueId, router, seasonId, sessionId]
-  );
+  }, [load, retryCount]);
 
   const handleEndRecord = React.useCallback(async () => {
-    if (!leagueId || !seasonId || !sessionId) {
+    const { leagueId, seasonId, sessionId } = params;
+    if (!leagueId || !seasonId || !sessionId || !session || session.endedAt) {
       return;
     }
 
     setIsEnding(true);
     setError(null);
-
     try {
       await updateSession({
         leagueId,
@@ -202,76 +107,97 @@ export const useSessionResultsPage = () => {
         endedAt: new Date().toISOString(),
       });
       dispatch(clearRecordingFlow());
-      router.push(`/league/${leagueId}/season/${seasonId}`);
+      await load({ showLoading: false });
     } catch (endError) {
       if (endError instanceof ApiError && endError.status === 401) {
         router.replace("/login");
         return;
       }
-
-      setError(
-        endError instanceof Error ? endError.message : DEFAULT_END_ERROR_MESSAGE
-      );
+      setError(getApiErrorMessage(endError, DEFAULT_END_ERROR_MESSAGE));
     } finally {
       setIsEnding(false);
     }
-  }, [dispatch, leagueId, router, seasonId, sessionId]);
+  }, [dispatch, load, params, router, session]);
 
-  const handleRequestDeleteMatch = React.useCallback((matchId: string) => {
-    setDeleteTargetMatchId(matchId);
-  }, []);
+  const handleConfirmDeleteMatch = React.useCallback(async () => {
+    const { leagueId, seasonId, sessionId } = params;
+    if (!leagueId || !seasonId || !sessionId || !deleteTargetMatchId) return;
 
-  const handleCancelDeleteMatch = React.useCallback(() => {
-    setDeleteTargetMatchId(null);
-  }, []);
-
-  const handleConfirmDeleteMatch = React.useCallback(
-    async (matchId: string) => {
-      if (!leagueId || !seasonId || !sessionId) {
+    setDeletingMatchId(deleteTargetMatchId);
+    setError(null);
+    try {
+      await deleteMatch({
+        leagueId,
+        seasonId,
+        sessionId,
+        matchId: deleteTargetMatchId,
+      });
+      setDeleteTargetMatchId(null);
+      await load({ showLoading: false });
+    } catch (deleteError) {
+      if (deleteError instanceof ApiError && deleteError.status === 401) {
+        router.replace("/login");
         return;
       }
+      setError(getApiErrorMessage(deleteError, DEFAULT_DELETE_ERROR_MESSAGE));
+    } finally {
+      setDeletingMatchId(null);
+    }
+  }, [deleteTargetMatchId, load, params, router]);
 
-      setDeletingMatchId(matchId);
-      setError(null);
+  const goToResults = React.useCallback(() => {
+    const { leagueId, seasonId, sessionId } = params;
+    if (leagueId && seasonId && sessionId) {
+      router.push(
+        `/league/${leagueId}/season/${seasonId}/sessions/${sessionId}/results`
+      );
+    }
+  }, [params, router]);
 
-      try {
-        await deleteMatch({ leagueId, seasonId, sessionId, matchId });
-        setDeleteTargetMatchId(null);
-        await load({ showLoading: false });
-      } catch (deleteError) {
-        if (deleteError instanceof ApiError && deleteError.status === 401) {
-          router.replace("/login");
-          return;
-        }
-
-        setError(
-          deleteError instanceof Error
-            ? deleteError.message
-            : DEFAULT_DELETE_ERROR_MESSAGE
-        );
-      } finally {
-        setDeletingMatchId(null);
-      }
-    },
-    [leagueId, load, router, seasonId, sessionId]
-  );
+  const goToSeason = React.useCallback(() => {
+    if (params.leagueId && params.seasonId) {
+      router.push(`/league/${params.leagueId}/season/${params.seasonId}`);
+    }
+  }, [params.leagueId, params.seasonId, router]);
 
   return {
-    date,
-    rule,
-    players,
+    session,
     matches,
-    totals,
     isLoading,
     isEnding,
     deletingMatchId,
     deleteTargetMatchId,
+    expandedMatchId,
     error,
-    handleAddRecord,
-    handleEditMatch,
+    retry: () => setRetryCount((count) => count + 1),
+    isEnded: Boolean(session?.endedAt),
+    formatDate,
+    handleAddRecord: () => {
+      if (
+        session?.endedAt ||
+        !params.leagueId ||
+        !params.seasonId ||
+        !params.sessionId
+      )
+        return;
+      router.push(
+        `/league/${params.leagueId}/season/${params.seasonId}/sessions/${params.sessionId}/matches/new`
+      );
+    },
+    handleEditMatch: (matchId: string) => {
+      if (!params.leagueId || !params.seasonId || !params.sessionId) return;
+      router.push(
+        `/league/${params.leagueId}/season/${params.seasonId}/sessions/${params.sessionId}/matches/${matchId}/edit`
+      );
+    },
     handleEndRecord,
-    handleRequestDeleteMatch,
-    handleCancelDeleteMatch,
+    handleToggleMatch: (matchId: string) =>
+      setExpandedMatchId((current) => (current === matchId ? null : matchId)),
+    handleRequestDeleteMatch: (matchId: string) =>
+      setDeleteTargetMatchId(matchId),
+    handleCancelDeleteMatch: () => setDeleteTargetMatchId(null),
     handleConfirmDeleteMatch,
+    goToResults,
+    goToSeason,
   };
 };

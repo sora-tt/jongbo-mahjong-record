@@ -2,99 +2,109 @@
 
 import * as React from "react";
 
-import { Button } from "@/components/ui/button/index";
-import { Dropdown } from "@/components/ui/dropdown/index";
+import { AppShell } from "@/components/layout/app-shell";
+import { Button } from "@/components/ui/button";
+import { Dropdown } from "@/components/ui/dropdown";
+import { EmptyState } from "@/components/ui/empty-state";
+import { ErrorState } from "@/components/ui/error-state";
+import { LoadingState } from "@/components/ui/loading-state";
 
 import { usePlayerSelect } from "./hooks";
 
-const SELECT_PLAYER_DEFAULT_TEXT = "プレイヤーを選択";
+const WIND_LABELS = {
+  east: "東",
+  south: "南",
+  west: "西",
+  north: "北",
+} as const;
 
 const PlayerSelectPage: React.FC = () => {
   const {
+    seasonName,
+    gameType,
+    requiredWinds,
     players,
     isLoading,
     isSubmitting,
     error,
     canSubmit,
+    retry,
+    getPositionOptions,
+    onPlayerChange,
     handleSubmit,
     handleBack,
-    onFirstPlayerChange,
-    onSecondPlayerChange,
-    onThirdPlayerChange,
-    onFourthPlayerChange,
-    firstOptions,
-    secondOptions,
-    thirdOptions,
-    fourthOptions,
+    hasCandidates,
   } = usePlayerSelect();
 
-  if (isLoading) {
-    return (
-      <div className="flex-1 bg-white min-h-screen font-jp">
-        <div className="flex flex-col items-center justify-center min-h-screen px-4 text-center text-text-muted">
-          プレイヤー候補を読み込んでいます...
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="flex-1 bg-white min-h-screen font-jp">
-      <div className="flex flex-col items-center justify-center min-h-screen">
-        <h1 className="text-2xl font-bold text-text-dark mb-24">
-          プレイヤー選択
-        </h1>
-        <div className="flex flex-col text-text-dark gap-4 mb-36">
-          <div className="mb-2">
-            <Dropdown
-              defaultOption={SELECT_PLAYER_DEFAULT_TEXT}
-              options={firstOptions}
-              value={players.east}
-              onChange={onFirstPlayerChange}
-            />
+    <AppShell mainClassName="min-h-screen bg-background font-jp">
+      <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-xl flex-col justify-center px-4 py-8">
+        {isLoading ? (
+          <LoadingState label="プレイヤー候補を読み込んでいます…" />
+        ) : null}
+        {!isLoading && error ? (
+          <ErrorState message={error} onRetry={retry} />
+        ) : null}
+        {!isLoading && !error && !hasCandidates ? (
+          <EmptyState
+            title="選択できる参加者が不足しています"
+            description="Sessionには三麻で3人、四麻で4人の参加者が必要です。"
+            action={
+              <Button variant="secondary" onClick={handleBack}>
+                戻る
+              </Button>
+            }
+          />
+        ) : null}
+        {!isLoading && !error && hasCandidates ? (
+          <div className="rounded-surface border border-border bg-white p-6 shadow-sm">
+            <p className="text-sm text-text-muted">{seasonName}</p>
+            <h1 className="mt-1 text-2xl font-bold text-foreground">
+              参加者を選択
+            </h1>
+            <p className="mt-2 text-sm text-text-muted">
+              {gameType === "sanma" ? "三麻（3人）" : "四麻（4人）"}
+              。Session内では参加者が固定されます。
+            </p>
+            <div className="mt-6 space-y-4">
+              {requiredWinds.map((wind) => (
+                <label
+                  key={wind}
+                  className="block text-sm font-medium text-foreground"
+                >
+                  {WIND_LABELS[wind]}
+                  <div className="mt-1">
+                    <Dropdown
+                      defaultOption="プレイヤーを選択"
+                      options={getPositionOptions(wind)}
+                      value={players[wind]}
+                      onChange={onPlayerChange(wind)}
+                      disabled={isSubmitting}
+                    />
+                  </div>
+                </label>
+              ))}
+            </div>
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+              <Button
+                onClick={handleSubmit}
+                disabled={!canSubmit || isSubmitting}
+                loading={isSubmitting}
+              >
+                {isSubmitting ? "準備中…" : "決定"}
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={handleBack}
+                disabled={isSubmitting}
+              >
+                戻る
+              </Button>
+            </div>
           </div>
-          <div className="mb-2">
-            <Dropdown
-              defaultOption={SELECT_PLAYER_DEFAULT_TEXT}
-              options={secondOptions}
-              value={players.south}
-              onChange={onSecondPlayerChange}
-            />
-          </div>
-          <div className="mb-2">
-            <Dropdown
-              defaultOption={SELECT_PLAYER_DEFAULT_TEXT}
-              options={thirdOptions}
-              value={players.west}
-              onChange={onThirdPlayerChange}
-            />
-          </div>
-          <div className="mb-2">
-            <Dropdown
-              defaultOption={SELECT_PLAYER_DEFAULT_TEXT}
-              options={fourthOptions}
-              value={players.north}
-              onChange={onFourthPlayerChange}
-            />
-          </div>
-          {error && (
-            <p className="text-sm text-error-text text-center">{error}</p>
-          )}
-        </div>
-        <div className="flex flex-col px-24 gap-4">
-          <Button
-            variant="brand-primary"
-            onClick={handleSubmit}
-            disabled={!canSubmit || isSubmitting}
-          >
-            {isSubmitting ? "準備中..." : "決定"}
-          </Button>
-          <Button variant="brand-secondary" onClick={handleBack}>
-            戻る
-          </Button>
-        </div>
+        ) : null}
       </div>
-    </div>
+    </AppShell>
   );
 };
 
