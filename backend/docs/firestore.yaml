@@ -203,6 +203,9 @@ leagues:
             starting_points: number
             return_points: number
 
+    # 最初の正本Match登録後にルール変更を防ぐ内部ライフサイクルフラグ
+    rule_locked: boolean
+
     # league.members の件数キャッシュ
     member_count: number
 

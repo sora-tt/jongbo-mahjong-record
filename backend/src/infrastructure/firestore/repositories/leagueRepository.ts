@@ -21,8 +21,9 @@ import {
   requiredString,
   toIsoString,
 } from "@/infrastructure/firestore/utils.js";
-import { NotFoundError } from "@/domain/shared/errors.js";
+import { ConflictError, NotFoundError } from "@/domain/shared/errors.js";
 import { asOpaqueId } from "@/domain/shared/types.js";
+import type { UserReference } from "@/domain/shared/types.js";
 
 export class FirestoreLeagueRepository implements LeagueRepository {
   constructor(
@@ -154,6 +155,7 @@ export class FirestoreLeagueRepository implements LeagueRepository {
       total_match_count: 0,
       active_season_id: null,
       active_season_name: null,
+      rule_locked: false,
       league_records: null,
       created_at: now,
       updated_at: now,
@@ -177,46 +179,56 @@ export class FirestoreLeagueRepository implements LeagueRepository {
     input: UpdateLeagueInput,
   ): Promise<LeagueDetail> {
     const leagueRef = this.db.collection("leagues").doc(leagueId);
-    const snapshot = await leagueRef.get();
-    if (!snapshot.exists) {
-      throw new NotFoundError("league not found", { leagueId });
-    }
+    const users =
+      input.memberUserIds === undefined
+        ? null
+        : await this.userRepository.getByIds(input.memberUserIds);
 
-    const patch: Record<string, unknown> = {
-      updated_at: Timestamp.now(),
-    };
-    if (input.name !== undefined) {
-      patch.name = input.name;
-    }
-    if (input.rule !== undefined) {
-      patch.rule = this.toLeagueRuleDoc(input.rule);
-    }
-    if (input.memberUserIds !== undefined) {
-      patch.member_count = input.memberUserIds.length;
-    }
+    await this.db.runTransaction(async (transaction) => {
+      const snapshot = await transaction.get(leagueRef);
+      if (!snapshot.exists) {
+        throw new NotFoundError("league not found", { leagueId });
+      }
 
-    const batch = this.db.batch();
-    batch.update(leagueRef, patch);
+      const membersSnapshot =
+        input.memberUserIds === undefined
+          ? null
+          : await transaction.get(leagueRef.collection("members"));
+      if (input.rule !== undefined && snapshot.data()?.rule_locked === true) {
+        throw new ConflictError("league rule is locked after the first match", {
+          leagueId,
+        });
+      }
 
-    if (input.memberUserIds !== undefined) {
-      const users = await this.userRepository.getByIds(input.memberUserIds);
-      const membersSnapshot = await leagueRef.collection("members").get();
+      const patch: Record<string, unknown> = {
+        updated_at: Timestamp.now(),
+      };
+      if (input.name !== undefined) {
+        patch.name = input.name;
+      }
+      if (input.rule !== undefined) {
+        patch.rule = this.toLeagueRuleDoc(input.rule);
+      }
+      if (input.memberUserIds !== undefined) {
+        patch.member_count = input.memberUserIds.length;
+      }
 
-      membersSnapshot.docs.forEach((doc) => {
-        batch.delete(doc.ref);
+      transaction.update(leagueRef, patch);
+
+      membersSnapshot?.docs.forEach((doc) => {
+        transaction.delete(doc.ref);
       });
 
-      users.forEach((user) => {
+      users?.forEach((user) => {
         const memberRef = leagueRef.collection("members").doc();
-        batch.set(memberRef, {
+        transaction.set(memberRef, {
           id: memberRef.id,
           user_id: user.id,
           user_name: user.name,
         });
       });
-    }
+    });
 
-    await batch.commit();
     return this.get(leagueId);
   }
 
@@ -250,6 +262,21 @@ export class FirestoreLeagueRepository implements LeagueRepository {
         "leagues.members.user_name",
       ),
     }));
+  }
+
+  async listAllMembers(): Promise<UserReference[]> {
+    const leaguesSnapshot = await this.db.collection("leagues").get();
+    const members = await Promise.all(
+      leaguesSnapshot.docs.map((leagueDoc) => this.listMembers(leagueDoc.id)),
+    );
+    const byUserId = new Map<string, UserReference>();
+    members.flat().forEach((member) => {
+      byUserId.set(member.userId, {
+        userId: member.userId,
+        userName: member.userName,
+      });
+    });
+    return [...byUserId.values()];
   }
 
   async setActiveSeason(

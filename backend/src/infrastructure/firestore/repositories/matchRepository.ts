@@ -110,33 +110,64 @@ export class FirestoreMatchRepository implements MatchRepository {
       params.seasonId,
       params.sessionId,
     );
-    const existing = await collection
-      .orderBy("match_index", "desc")
-      .limit(1)
-      .get();
-    const lastMatchIndex = existing.empty
-      ? 0
-      : requiredNumber(
-          existing.docs[0].data().match_index,
-          "matches.match_index",
-        );
     const ref = collection.doc();
-    const now = Timestamp.now();
+    const sessionRef = this.db
+      .collection("leagues")
+      .doc(params.leagueId)
+      .collection("seasons")
+      .doc(params.seasonId)
+      .collection("sessions")
+      .doc(params.sessionId);
+    const leagueRef = this.db.collection("leagues").doc(params.leagueId);
 
-    await ref.set({
-      id: ref.id,
-      match_index: lastMatchIndex + 1,
-      played_at: toTimestamp(params.playedAt),
-      results: params.results.map((result) => ({
-        user_id: result.userId,
-        user_name: result.userName,
-        wind: result.wind,
-        rank: result.rank,
-        raw_score: result.rawScore,
-        point: result.point,
-      })),
-      created_at: now,
-      updated_at: now,
+    await this.db.runTransaction(async (transaction) => {
+      const sessionSnapshot = await transaction.get(sessionRef);
+      const leagueSnapshot = await transaction.get(leagueRef);
+      if (!sessionSnapshot.exists) {
+        throw new NotFoundError("session not found", {
+          leagueId: params.leagueId,
+          seasonId: params.seasonId,
+          sessionId: params.sessionId,
+        });
+      }
+      if (!leagueSnapshot.exists) {
+        throw new NotFoundError("league not found", {
+          leagueId: params.leagueId,
+        });
+      }
+
+      const existing = await transaction.get(
+        collection.orderBy("match_index", "desc").limit(1),
+      );
+      const lastMatchIndex = existing.empty
+        ? 0
+        : requiredNumber(
+            existing.docs[0].data().match_index,
+            "matches.match_index",
+          );
+      const sessionData = sessionSnapshot.data() ?? {};
+      const totalMatchCount = requiredNumber(
+        sessionData.total_match_count,
+        "sessions.total_match_count",
+      );
+      const now = Timestamp.now();
+
+      transaction.set(ref, {
+        id: ref.id,
+        match_index: lastMatchIndex + 1,
+        played_at: toTimestamp(params.playedAt),
+        results: this.toResultsDoc(params.results),
+        created_at: now,
+        updated_at: now,
+      });
+      transaction.update(sessionRef, {
+        total_match_count: totalMatchCount + 1,
+        updated_at: now,
+      });
+      transaction.update(leagueRef, {
+        rule_locked: true,
+        updated_at: now,
+      });
     });
 
     return this.get(params.leagueId, params.seasonId, params.sessionId, ref.id);
@@ -191,17 +222,43 @@ export class FirestoreMatchRepository implements MatchRepository {
     matchId: string,
   ): Promise<void> {
     const ref = this.collection(leagueId, seasonId, sessionId).doc(matchId);
-    const snapshot = await ref.get();
-    if (!snapshot.exists) {
-      throw new NotFoundError("match not found", {
-        leagueId,
-        seasonId,
-        sessionId,
-        matchId,
-      });
-    }
+    const sessionRef = this.db
+      .collection("leagues")
+      .doc(leagueId)
+      .collection("seasons")
+      .doc(seasonId)
+      .collection("sessions")
+      .doc(sessionId);
 
-    await ref.delete();
+    await this.db.runTransaction(async (transaction) => {
+      const sessionSnapshot = await transaction.get(sessionRef);
+      const matchSnapshot = await transaction.get(ref);
+      if (!matchSnapshot.exists) {
+        throw new NotFoundError("match not found", {
+          leagueId,
+          seasonId,
+          sessionId,
+          matchId,
+        });
+      }
+      if (!sessionSnapshot.exists) {
+        throw new NotFoundError("session not found", {
+          leagueId,
+          seasonId,
+          sessionId,
+        });
+      }
+
+      const remainingMatches = await transaction.get(
+        this.collection(leagueId, seasonId, sessionId),
+      );
+      const now = Timestamp.now();
+      transaction.delete(ref);
+      transaction.update(sessionRef, {
+        total_match_count: Math.max(0, remainingMatches.size - 1),
+        updated_at: now,
+      });
+    });
   }
 
   private collection(leagueId: string, seasonId: string, sessionId: string) {
@@ -213,6 +270,17 @@ export class FirestoreMatchRepository implements MatchRepository {
       .collection("sessions")
       .doc(sessionId)
       .collection("matches");
+  }
+
+  private toResultsDoc(results: MatchResult[]) {
+    return results.map((result) => ({
+      user_id: result.userId,
+      user_name: result.userName,
+      wind: result.wind,
+      rank: result.rank,
+      raw_score: result.rawScore,
+      point: result.point,
+    }));
   }
 
   private map(

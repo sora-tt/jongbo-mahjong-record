@@ -498,6 +498,7 @@ const seedLeagues = async () => {
       total_match_count: totalMatchCount,
       active_season_id: league.activeSeasonId,
       active_season_name: league.activeSeasonName,
+      rule_locked: false,
       league_records: league.leagueRecords
         ? {
             win_streak: toRecordHolder(league.leagueRecords.winStreak),

@@ -35,6 +35,13 @@ export interface UserStatsRepository {
     },
     data: Omit<UserStats, "id" | "createdAt" | "updatedAt">,
   ): Promise<string>;
+  deleteMissingScopeStats(params: {
+    scopeType: ScopeType;
+    leagueId: string | null;
+    seasonId: string | null;
+    keepUserIds: string[];
+  }): Promise<void>;
+  deleteStatsForLeague(leagueId: string): Promise<void>;
   deleteMissingSeasonStats(
     leagueId: string,
     seasonId: string,
