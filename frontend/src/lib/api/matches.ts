@@ -1,6 +1,12 @@
 import { type InferResponseType } from "hono/client";
 
-import { apiClient, ensureOk, parseDataResponse } from "@/lib/api/core";
+import {
+  apiClient,
+  executeApiRequest,
+  executeNoContentRequest,
+} from "@/lib/api/core";
+
+import type { MatchResultInput } from "@/lib/api/contracts";
 
 const fetchMatchesRequest =
   apiClient.api.leagues[":leagueId"].seasons[":seasonId"].sessions[":sessionId"]
@@ -24,23 +30,16 @@ type CreateMatchResponse = InferResponseType<
 >["data"];
 type UpdateMatchResponse = InferResponseType<typeof updateMatchRequest>["data"];
 
-type MatchResultInput = Array<{
-  userId: string;
-  wind: "east" | "south" | "west" | "north";
-  rank: number;
-  rawScore: number;
-}>;
+export type { MatchResultInput };
 
 export const fetchMatches = async (input: {
   leagueId: string;
   seasonId: string;
   sessionId: string;
 }) => {
-  const response = await fetchMatchesRequest({
-    param: input,
-  });
-
-  return parseDataResponse<FetchMatchesResponse>(response);
+  return executeApiRequest<FetchMatchesResponse>(() =>
+    fetchMatchesRequest({ param: input })
+  );
 };
 
 export const createMatch = async (input: {
@@ -50,19 +49,16 @@ export const createMatch = async (input: {
   playedAt: string;
   results: MatchResultInput;
 }) => {
-  const response = await createMatchRequest({
-    param: {
-      leagueId: input.leagueId,
-      seasonId: input.seasonId,
-      sessionId: input.sessionId,
-    },
-    json: {
-      playedAt: input.playedAt,
-      results: input.results,
-    },
-  });
-
-  return parseDataResponse<CreateMatchResponse>(response);
+  return executeApiRequest<CreateMatchResponse>(() =>
+    createMatchRequest({
+      param: {
+        leagueId: input.leagueId,
+        seasonId: input.seasonId,
+        sessionId: input.sessionId,
+      },
+      json: { playedAt: input.playedAt, results: input.results },
+    })
+  );
 };
 
 export const updateMatch = async (input: {
@@ -73,20 +69,17 @@ export const updateMatch = async (input: {
   playedAt?: string;
   results?: MatchResultInput;
 }) => {
-  const response = await updateMatchRequest({
-    param: {
-      leagueId: input.leagueId,
-      seasonId: input.seasonId,
-      sessionId: input.sessionId,
-      matchId: input.matchId,
-    },
-    json: {
-      playedAt: input.playedAt,
-      results: input.results,
-    },
-  });
-
-  return parseDataResponse<UpdateMatchResponse>(response);
+  return executeApiRequest<UpdateMatchResponse>(() =>
+    updateMatchRequest({
+      param: {
+        leagueId: input.leagueId,
+        seasonId: input.seasonId,
+        sessionId: input.sessionId,
+        matchId: input.matchId,
+      },
+      json: { playedAt: input.playedAt, results: input.results },
+    })
+  );
 };
 
 export const deleteMatch = async (input: {
@@ -95,9 +88,5 @@ export const deleteMatch = async (input: {
   sessionId: string;
   matchId: string;
 }) => {
-  const response = await deleteMatchRequest({
-    param: input,
-  });
-
-  await ensureOk(response);
+  await executeNoContentRequest(() => deleteMatchRequest({ param: input }));
 };

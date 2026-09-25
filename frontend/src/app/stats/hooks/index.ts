@@ -2,7 +2,7 @@ import * as React from "react";
 
 import { useRouter } from "next/navigation";
 
-import { ApiError } from "@/lib/api/core";
+import { ApiError, getApiErrorMessage } from "@/lib/api/core";
 import { fetchJoiningSeasons, fetchMe, fetchUserStats } from "@/lib/api/users";
 
 import type {
@@ -100,11 +100,7 @@ export const usePersonalRecord = () => {
           return;
         }
 
-        setError(
-          loadError instanceof Error
-            ? loadError.message
-            : DEFAULT_INITIAL_ERROR_MESSAGE
-        );
+        setError(getApiErrorMessage(loadError, DEFAULT_INITIAL_ERROR_MESSAGE));
       } finally {
         if (isActive) {
           setIsLoading(false);
@@ -161,11 +157,7 @@ export const usePersonalRecord = () => {
       }
 
       setSelectedStats(null);
-      setError(
-        loadError instanceof Error
-          ? loadError.message
-          : DEFAULT_STATS_ERROR_MESSAGE
-      );
+      setError(getApiErrorMessage(loadError, DEFAULT_STATS_ERROR_MESSAGE));
     } finally {
       setIsStatsLoading(false);
     }
