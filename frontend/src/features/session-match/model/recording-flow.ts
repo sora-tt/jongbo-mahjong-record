@@ -1,6 +1,4 @@
-import type { Wind } from "./match";
-
-export type PlayerSeat = Lowercase<Wind>;
+export type PlayerSeat = "east" | "south" | "west" | "north";
 
 export type PlayerSelectOption = {
   label: string;

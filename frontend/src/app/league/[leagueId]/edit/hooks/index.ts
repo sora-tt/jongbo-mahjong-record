@@ -11,10 +11,8 @@ import {
 import { ApiError, getApiErrorMessage } from "@/lib/api/core";
 import { searchUsers } from "@/lib/api/users";
 
-import type { UserIdType } from "@/types/domain/user";
-
 type MemberCandidate = {
-  userId: UserIdType;
+  userId: string;
   name: string;
   username: string;
 };
@@ -40,7 +38,7 @@ export const useLeagueEdit = () => {
   const [leagueName, setLeagueName] = React.useState("");
   const [memberQuery, setMemberQuery] = React.useState("");
   const [addedMembers, setAddedMembers] = React.useState<
-    Record<UserIdType, MemberCandidate>
+    Record<string, MemberCandidate>
   >({});
   const [memberCandidates, setMemberCandidates] = React.useState<
     MemberCandidate[]
@@ -95,7 +93,7 @@ export const useLeagueEdit = () => {
                 username: member.userId,
               },
             }),
-            {} as Record<UserIdType, MemberCandidate>
+            {} as Record<string, MemberCandidate>
           )
         );
         setRuleSettings({
@@ -211,7 +209,7 @@ export const useLeagueEdit = () => {
     setError(null);
   }, []);
 
-  const handleRemoveMember = React.useCallback((id: UserIdType) => {
+  const handleRemoveMember = React.useCallback((id: string) => {
     setAddedMembers((prev) => {
       const newMembers = { ...prev };
       delete newMembers[id];

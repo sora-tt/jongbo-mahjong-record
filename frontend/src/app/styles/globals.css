@@ -13,6 +13,14 @@
   --color-success: #247a55;
   --color-warning: #9a6700;
   --color-danger: #c9424a;
+  --chart-series-1: #d95f59;
+  --chart-series-2: #2563eb;
+  --chart-series-3: #16a34a;
+  --chart-series-4: #ca8a04;
+  --chart-series-5: #9333ea;
+  --chart-series-6: #db2777;
+  --chart-series-7: #ea580c;
+  --chart-series-8: #0891b2;
 }
 
 @theme inline {
@@ -33,6 +41,14 @@
   --color-success: var(--color-success);
   --color-warning: var(--color-warning);
   --color-danger: var(--color-danger);
+  --color-chart-series-1: var(--chart-series-1);
+  --color-chart-series-2: var(--chart-series-2);
+  --color-chart-series-3: var(--chart-series-3);
+  --color-chart-series-4: var(--chart-series-4);
+  --color-chart-series-5: var(--chart-series-5);
+  --color-chart-series-6: var(--chart-series-6);
+  --color-chart-series-7: var(--chart-series-7);
+  --color-chart-series-8: var(--chart-series-8);
   --color-error-bg: #ffe5e5;
   --color-error-border: var(--color-danger);
   --color-error-text: var(--color-danger);
