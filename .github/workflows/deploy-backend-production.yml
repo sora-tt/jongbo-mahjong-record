@@ -1,0 +1,59 @@
+name: Deploy Backend Production
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    env:
+      VERCEL_SCOPE: soratomitadevelop-4383s-projects
+      VERCEL_PROJECT_NAME: jongbo-mahjong-record-backend
+      VERCEL_PROJECT_ID: prj_2nEnbT6fImuzHiJkEn8IhsA20RKy
+      VERCEL_TOKEN: ${{ secrets.VERCEL_BACKEND_TOKEN }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Link to Vercel project
+        working-directory: backend
+        run: pnpm dlx vercel link --yes --scope="$VERCEL_SCOPE" --project="$VERCEL_PROJECT_NAME" --token="$VERCEL_TOKEN"
+
+      - name: Pull Vercel project settings
+        working-directory: backend
+        run: pnpm dlx vercel pull --yes --environment=production --scope="$VERCEL_SCOPE" --project="$VERCEL_PROJECT_NAME" --token="$VERCEL_TOKEN"
+
+      - name: Build for production
+        working-directory: backend
+        run: pnpm dlx vercel build --prod --scope="$VERCEL_SCOPE" --project="$VERCEL_PROJECT_NAME" --token="$VERCEL_TOKEN"
+
+      - name: Deploy to Vercel
+        working-directory: backend
+        run: pnpm dlx vercel deploy --prebuilt --prod --scope="$VERCEL_SCOPE" --project="$VERCEL_PROJECT_NAME" --token="$VERCEL_TOKEN"
