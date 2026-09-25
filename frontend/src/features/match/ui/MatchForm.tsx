@@ -68,9 +68,23 @@ export const MatchForm: React.FC<Props> = ({
         : "対局記録";
 
   const updateWind = (wind: Wind, value: string) => {
+    const selectedValue = value || null;
+    const duplicateWind = constraint.requiredWinds.find(
+      (currentWind) =>
+        currentWind !== wind &&
+        values.userIdByWind[currentWind] === selectedValue &&
+        selectedValue !== null
+    );
+
     onChange({
       ...values,
-      userIdByWind: { ...values.userIdByWind, [wind]: value || null },
+      userIdByWind: {
+        ...values.userIdByWind,
+        [wind]: selectedValue,
+        ...(duplicateWind
+          ? { [duplicateWind]: values.userIdByWind[wind] }
+          : {}),
+      },
     });
   };
 
@@ -118,7 +132,7 @@ export const MatchForm: React.FC<Props> = ({
               options={options}
               value={values.userIdByWind[wind] ?? ""}
               onChange={(_, value) => updateWind(wind, value)}
-              disabled
+              disabled={isSubmitting || mode === "edit"}
             />
             <TextBox
               variant="number"
