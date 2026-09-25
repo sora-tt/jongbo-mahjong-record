@@ -15,14 +15,14 @@ test(
     const leagueId = "000000";
     const seasonId = "0001";
     const sessionId = "transaction-test-session";
-    const sessionRef = db
-      .collection("leagues")
-      .doc(leagueId)
+    const leagueRef = db.collection("leagues").doc(leagueId);
+    const sessionRef = leagueRef
       .collection("seasons")
       .doc(seasonId)
       .collection("sessions")
       .doc(sessionId);
 
+    await leagueRef.set({ rule_locked: false });
     await sessionRef.set({ total_match_count: 0 });
     const results = [
       {
@@ -74,10 +74,7 @@ test(
       assert.equal(third.matchIndex, 3);
       assert.equal((await sessionRef.get()).data()?.total_match_count, 2);
     } finally {
-      await db.recursiveDelete(sessionRef);
-      await db.collection("leagues").doc(leagueId).update({
-        rule_locked: false,
-      });
+      await db.recursiveDelete(leagueRef);
     }
   },
 );
