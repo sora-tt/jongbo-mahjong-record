@@ -11,10 +11,9 @@ import {
 } from "@/features/league/model/validation";
 import { ApiError, getApiErrorMessage } from "@/lib/api/core";
 import { searchUsers } from "@/lib/api/users";
-import { UserIdType } from "@/types/domain/user";
 
 type MemberCandidate = {
-  userId: UserIdType;
+  userId: string;
   name: string;
   username: string;
 };
@@ -35,7 +34,7 @@ export const useLeagueNew = () => {
   const [leagueName, setLeagueName] = React.useState("");
   const [memberQuery, setMemberQuery] = React.useState("");
   const [addedMembers, setAddedMembers] = React.useState<
-    Record<UserIdType, MemberCandidate>
+    Record<string, MemberCandidate>
   >({});
   const [memberCandidates, setMemberCandidates] = React.useState<
     MemberCandidate[]
@@ -133,7 +132,7 @@ export const useLeagueNew = () => {
     setError(null);
   }, []);
 
-  const handleRemoveMember = React.useCallback((memberId: UserIdType) => {
+  const handleRemoveMember = React.useCallback((memberId: string) => {
     setAddedMembers((prev) => {
       const rest = { ...prev };
       delete rest[memberId];
@@ -207,7 +206,7 @@ export const useLeagueNew = () => {
     try {
       const createdLeague = await createLeague({
         name: leagueName.trim(),
-        memberUserIds: Object.keys(addedMembers) as UserIdType[],
+        memberUserIds: Object.keys(addedMembers),
         rule: {
           gameType: ruleSettings.gameType,
           oka: {

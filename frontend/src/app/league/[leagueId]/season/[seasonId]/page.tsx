@@ -7,9 +7,10 @@ import { Calendar, Crown } from "lucide-react";
 
 import Link from "next/link";
 
+import { PointProgressionChart } from "@/features/statistics/ui/PointProgressionChart";
+import { StandingsTable } from "@/features/statistics/ui/StandingsTable";
+
 import { AppShell } from "@/components/layout/app-shell";
-import { LeagueRankingTable } from "@/components/pages/league/league-ranking-table";
-import { SeasonPointProgressionChart } from "@/components/pages/league/season-point-progression-chart";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -178,21 +179,26 @@ const SeasonPage: React.FC = () => {
           bodyClassName="overflow-x-auto"
         >
           {season.standings.length > 0 ? (
-            <LeagueRankingTable members={season.standings} />
+            <StandingsTable rows={season.standings} />
           ) : (
             <EmptyState title="まだ順位データがありません" />
           )}
         </Card>
 
         <Card title="総合pt推移" bodyClassName="space-y-3">
-          {pointProgressionChart.isChartEmpty ? (
+          {pointProgressionChart.isUncomputed ? (
+            <EmptyState
+              title="グラフは未計算です"
+              description="集計が完了するとポイント推移が表示されます。"
+            />
+          ) : pointProgressionChart.isEmpty ? (
             <EmptyState
               title="グラフを表示できません"
               description="まだ対局データがありません。"
             />
           ) : visibleSeries.length > 0 ? (
-            <SeasonPointProgressionChart
-              data={pointProgressionChart.chartData}
+            <PointProgressionChart
+              data={pointProgressionChart.data}
               series={visibleSeries}
             />
           ) : (
@@ -218,7 +224,7 @@ const SeasonPage: React.FC = () => {
                 <span
                   className={clsx(
                     "inline-block h-2 w-2 rounded-full",
-                    item.strokeColor
+                    item.colorClassName
                   )}
                 />
                 <span className="text-text-muted">{item.userName}</span>
