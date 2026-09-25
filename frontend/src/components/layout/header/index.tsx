@@ -143,6 +143,7 @@ export const Header: React.FC = () => {
         id="mobile-navigation"
         className={`fixed inset-y-0 right-0 z-50 flex w-80 max-w-[88vw] flex-col border-l border-border bg-white shadow-xl transition-transform duration-200 lg:hidden ${isMenuOpen ? "translate-x-0" : "translate-x-full"}`}
         aria-hidden={!isMenuOpen}
+        inert={!isMenuOpen}
       >
         <div className="flex items-center justify-between border-b border-border px-4 py-4">
           <span className="font-semibold text-foreground">メニュー</span>
