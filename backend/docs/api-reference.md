@@ -468,13 +468,19 @@ x-id-token: <ID_TOKEN>
 
 概要:
 
-- リーグ名を更新する。
+- リーグ名、ルール、メンバーを更新する。指定した項目のみ更新する。
 
 リクエスト:
 
 ```json
 {
-  "name": "雀望リーグ改"
+  "name": "雀望リーグ改",
+  "rule": {
+    "gameType": "yonma",
+    "uma": { "first": 20, "second": 10, "third": -10, "fourth": -20 },
+    "oka": { "startingPoints": 25000, "returnPoints": 30000 }
+  },
+  "memberUserIds": ["0001", "0002", "0003", "0004"]
 }
 ```
 

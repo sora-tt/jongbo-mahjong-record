@@ -68,7 +68,23 @@ test("OpenAPI publishes the canonical auth and match request contracts", async (
   const document = (await response.json()) as {
     paths: Record<
       string,
-      Record<string, { parameters?: Array<{ name?: string }> }>
+      Record<
+        string,
+        {
+          parameters?: Array<{ name?: string }>;
+          requestBody?: {
+            content?: {
+              "application/json"?: {
+                schema?: {
+                  properties?: Record<string, unknown>;
+                };
+              };
+            };
+          };
+          tags?: string[];
+          summary?: string;
+        }
+      >
     >;
     components: {
       schemas: {
@@ -90,5 +106,26 @@ test("OpenAPI publishes the canonical auth and match request contracts", async (
   assert.equal(
     "rule" in document.components.schemas.LeagueSummary.properties,
     false,
+  );
+  const leaguePath = document.paths["/api/leagues/{leagueId}"];
+  assert.deepEqual(
+    leaguePath.delete?.parameters?.map((parameter) => parameter.name),
+    ["leagueId"],
+  );
+  assert.deepEqual(leaguePath.delete?.tags, ["Leagues"]);
+  assert.equal(leaguePath.delete?.summary, "delete league");
+  assert.deepEqual(
+    Object.keys(
+      leaguePath.patch?.requestBody?.content?.["application/json"]?.schema
+        ?.properties ?? {},
+    ).sort(),
+    ["memberUserIds", "name", "rule"],
+  );
+  assert.deepEqual(
+    Object.keys(
+      document.paths["/api/leagues/{leagueId}/seasons/{seasonId}"].patch
+        ?.requestBody?.content?.["application/json"]?.schema?.properties ?? {},
+    ).sort(),
+    ["name", "status"],
   );
 });

@@ -379,6 +379,8 @@ export const openApiDocument = {
             type: "object",
             properties: {
               name: { type: "string" },
+              rule: { $ref: "#/components/schemas/LeagueRule" },
+              memberUserIds: { type: "array", items: { type: "string" } },
             },
           }),
         },
@@ -392,18 +394,12 @@ export const openApiDocument = {
         },
       },
       delete: {
-        tags: ["Seasons"],
-        summary: "delete season",
+        tags: ["Leagues"],
+        summary: "delete league",
         parameters: [
           {
             in: "path",
             name: "leagueId",
-            required: true,
-            schema: { type: "string" },
-          },
-          {
-            in: "path",
-            name: "seasonId",
             required: true,
             schema: { type: "string" },
           },
@@ -537,7 +533,13 @@ export const openApiDocument = {
         ],
         requestBody: {
           required: true,
-          content: jsonContent({ type: "object" }),
+          content: jsonContent({
+            type: "object",
+            properties: {
+              name: { type: "string" },
+              status: { type: "string", enum: ["active", "archived"] },
+            },
+          }),
         },
         responses: {
           "200": {
