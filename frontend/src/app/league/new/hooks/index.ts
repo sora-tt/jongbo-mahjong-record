@@ -4,8 +4,12 @@ import * as React from "react";
 
 import { useRouter } from "next/navigation";
 
-import { ApiError } from "@/lib/api/core";
-import { createLeague } from "@/lib/api/leagues";
+import { createLeague } from "@/features/league/api";
+import {
+  getUmaTotalError,
+  parseIntegerInput,
+} from "@/features/league/model/validation";
+import { ApiError, getApiErrorMessage } from "@/lib/api/core";
 import { searchUsers } from "@/lib/api/users";
 import { UserIdType } from "@/types/domain/user";
 
@@ -98,11 +102,7 @@ export const useLeagueNew = () => {
         }
 
         setMemberCandidates([]);
-        setError(
-          searchError instanceof Error
-            ? searchError.message
-            : "メンバー検索に失敗しました"
-        );
+        setError(getApiErrorMessage(searchError, "メンバー検索に失敗しました"));
       } finally {
         if (isActive) {
           setIsSearchingMembers(false);
@@ -151,20 +151,34 @@ export const useLeagueNew = () => {
     []
   );
 
+  const umaTotalError = React.useMemo(() => {
+    const values =
+      ruleSettings.gameType === "sanma"
+        ? [ruleSettings.uma1, ruleSettings.uma2, ruleSettings.uma3]
+        : [
+            ruleSettings.uma1,
+            ruleSettings.uma2,
+            ruleSettings.uma3,
+            ruleSettings.uma4,
+          ];
+
+    if (values.some((value) => !value.trim())) {
+      return null;
+    }
+
+    return getUmaTotalError(values);
+  }, [ruleSettings]);
+
   const handleSubmit = React.useCallback(async () => {
     setError(null);
 
-    const okaStartPoints = ruleSettings.okaStartPoints.trim()
-      ? parseInt(ruleSettings.okaStartPoints, 10)
-      : null;
-    const okaReturnPoints = ruleSettings.okaReturnPoints.trim()
-      ? parseInt(ruleSettings.okaReturnPoints, 10)
-      : null;
+    const okaStartPoints = parseIntegerInput(ruleSettings.okaStartPoints);
+    const okaReturnPoints = parseIntegerInput(ruleSettings.okaReturnPoints);
     const uma = {
-      1: ruleSettings.uma1.trim() ? parseInt(ruleSettings.uma1, 10) : null,
-      2: ruleSettings.uma2.trim() ? parseInt(ruleSettings.uma2, 10) : null,
-      3: ruleSettings.uma3.trim() ? parseInt(ruleSettings.uma3, 10) : null,
-      4: ruleSettings.uma4.trim() ? parseInt(ruleSettings.uma4, 10) : null,
+      1: parseIntegerInput(ruleSettings.uma1),
+      2: parseIntegerInput(ruleSettings.uma2),
+      3: parseIntegerInput(ruleSettings.uma3),
+      4: parseIntegerInput(ruleSettings.uma4),
     };
 
     if (!leagueName.trim()) {
@@ -181,6 +195,10 @@ export const useLeagueNew = () => {
       (ruleSettings.gameType === "yonma" && uma[4] === null)
     ) {
       setError("モードに応じたオカとウマをすべて入力してください");
+      return;
+    }
+
+    if (umaTotalError) {
       return;
     }
 
@@ -212,15 +230,11 @@ export const useLeagueNew = () => {
         return;
       }
 
-      setError(
-        submitError instanceof Error
-          ? submitError.message
-          : "リーグ作成に失敗しました"
-      );
+      setError(getApiErrorMessage(submitError, "リーグ作成に失敗しました"));
     } finally {
       setIsSubmitting(false);
     }
-  }, [leagueName, addedMembers, ruleSettings, router]);
+  }, [leagueName, addedMembers, ruleSettings, router, umaTotalError]);
 
   return {
     leagueName,
@@ -230,6 +244,7 @@ export const useLeagueNew = () => {
     isSearchingMembers,
     isSubmitting,
     error,
+    umaTotalError,
     ruleSettings,
 
     handleLeagueNameChange,

@@ -2,9 +2,11 @@ import * as React from "react";
 
 import { useParams, useRouter } from "next/navigation";
 
-import { ApiError } from "@/lib/api/core";
-import { fetchLeagueDetail } from "@/lib/api/leagues";
-import { fetchLeagueSeasons } from "@/lib/api/seasons";
+import { fetchLeagueDetail } from "@/features/league/api";
+import { toLeagueDetail } from "@/features/league/model/adapter";
+import { fetchLeagueSeasons } from "@/features/season/api";
+import { toSeasonSummary } from "@/features/season/model/adapter";
+import { ApiError, getApiErrorMessage } from "@/lib/api/core";
 
 const DEFAULT_ERROR_MESSAGE =
   "リーグ詳細の取得に失敗しました。時間をおいて再度お試しください。";
@@ -12,14 +14,15 @@ const DEFAULT_ERROR_MESSAGE =
 export const useLeaguePage = () => {
   const router = useRouter();
   const params = useParams<{ leagueId: string }>();
-  const [league, setLeague] = React.useState<Awaited<
-    ReturnType<typeof fetchLeagueDetail>
+  const [league, setLeague] = React.useState<ReturnType<
+    typeof toLeagueDetail
   > | null>(null);
   const [leagueSeasons, setLeagueSeasons] = React.useState<
-    Awaited<ReturnType<typeof fetchLeagueSeasons>>
+    Array<ReturnType<typeof toSeasonSummary>>
   >([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  const [retryCount, setRetryCount] = React.useState(0);
 
   React.useEffect(() => {
     let isActive = true;
@@ -46,8 +49,8 @@ export const useLeaguePage = () => {
           return;
         }
 
-        setLeague(leagueDetail);
-        setLeagueSeasons(seasons);
+        setLeague(toLeagueDetail(leagueDetail));
+        setLeagueSeasons(seasons.map(toSeasonSummary));
       } catch (loadError) {
         if (!isActive) {
           return;
@@ -58,9 +61,7 @@ export const useLeaguePage = () => {
           return;
         }
 
-        setError(
-          loadError instanceof Error ? loadError.message : DEFAULT_ERROR_MESSAGE
-        );
+        setError(getApiErrorMessage(loadError, DEFAULT_ERROR_MESSAGE));
       } finally {
         if (isActive) {
           setLoading(false);
@@ -73,7 +74,11 @@ export const useLeaguePage = () => {
     return () => {
       isActive = false;
     };
-  }, [params.leagueId, router]);
+  }, [params.leagueId, retryCount, router]);
+
+  const retry = React.useCallback(() => {
+    setRetryCount((count) => count + 1);
+  }, []);
 
   const longestWinStreak = league?.leagueRecords?.winStreak ?? null;
   const longestLoseStreak = league?.leagueRecords?.loseStreak ?? null;
@@ -89,5 +94,6 @@ export const useLeaguePage = () => {
     loading,
     error,
     leagueSeasons,
+    retry,
   };
 };

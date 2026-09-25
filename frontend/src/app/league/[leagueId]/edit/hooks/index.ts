@@ -2,8 +2,13 @@ import * as React from "react";
 
 import { useParams, useRouter } from "next/navigation";
 
-import { ApiError } from "@/lib/api/core";
-import { fetchLeagueDetail, updateLeague } from "@/lib/api/leagues";
+import { fetchLeagueDetail, updateLeague } from "@/features/league/api";
+import { toLeagueDetail } from "@/features/league/model/adapter";
+import {
+  getUmaTotalError,
+  parseIntegerInput,
+} from "@/features/league/model/validation";
+import { ApiError, getApiErrorMessage } from "@/lib/api/core";
 import { searchUsers } from "@/lib/api/users";
 
 import type { UserIdType } from "@/types/domain/user";
@@ -42,8 +47,11 @@ export const useLeagueEdit = () => {
   >([]);
   const [isSearchingMembers, setIsSearchingMembers] = React.useState(false);
   const [loading, setLoading] = React.useState(true);
+  const [isLoaded, setIsLoaded] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [retryCount, setRetryCount] = React.useState(0);
+  const [isRuleLocked, setIsRuleLocked] = React.useState(false);
   const [ruleSettings, setRuleSettings] = React.useState<RuleSettings>({
     gameType: "yonma",
     okaStartPoints: "",
@@ -65,16 +73,18 @@ export const useLeagueEdit = () => {
 
     const load = async () => {
       setLoading(true);
+      setIsLoaded(false);
       setError(null);
 
       try {
-        const league = await fetchLeagueDetail(leagueId);
+        const league = toLeagueDetail(await fetchLeagueDetail(leagueId));
 
         if (!isActive) {
           return;
         }
 
         setLeagueName(league.name);
+        setIsRuleLocked(league.totalMatchCount > 0);
         setAddedMembers(
           league.members.reduce(
             (acc, member) => ({
@@ -97,6 +107,7 @@ export const useLeagueEdit = () => {
           uma3: league.rule.uma.third.toString(),
           uma4: league.rule.uma.fourth?.toString() ?? "",
         });
+        setIsLoaded(true);
       } catch (loadError) {
         if (!isActive) {
           return;
@@ -107,9 +118,7 @@ export const useLeagueEdit = () => {
           return;
         }
 
-        setError(
-          loadError instanceof Error ? loadError.message : DEFAULT_ERROR_MESSAGE
-        );
+        setError(getApiErrorMessage(loadError, DEFAULT_ERROR_MESSAGE));
       } finally {
         if (isActive) {
           setLoading(false);
@@ -122,7 +131,7 @@ export const useLeagueEdit = () => {
     return () => {
       isActive = false;
     };
-  }, [leagueId, router]);
+  }, [leagueId, retryCount, router]);
 
   const handleLeagueNameChange = React.useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -171,11 +180,7 @@ export const useLeagueEdit = () => {
         }
 
         setMemberCandidates([]);
-        setError(
-          searchError instanceof Error
-            ? searchError.message
-            : "メンバー検索に失敗しました"
-        );
+        setError(getApiErrorMessage(searchError, "メンバー検索に失敗しました"));
       } finally {
         if (isActive) {
           setIsSearchingMembers(false);
@@ -236,32 +241,19 @@ export const useLeagueEdit = () => {
       return null;
     }
 
-    const total = umaValues.reduce(
-      (sum, value) => sum + parseInt(value, 10),
-      0
-    );
-
-    if (Number.isNaN(total) || total === 0) {
-      return null;
-    }
-
-    return `ウマの合計が0になるように入力してください（現在: ${total}）`;
+    return getUmaTotalError(umaValues);
   }, [ruleSettings]);
 
   const handleSubmit = React.useCallback(async () => {
     setError(null);
 
-    const okaStartPoints = ruleSettings.okaStartPoints.trim()
-      ? parseInt(ruleSettings.okaStartPoints, 10)
-      : null;
-    const okaReturnPoints = ruleSettings.okaReturnPoints.trim()
-      ? parseInt(ruleSettings.okaReturnPoints, 10)
-      : null;
+    const okaStartPoints = parseIntegerInput(ruleSettings.okaStartPoints);
+    const okaReturnPoints = parseIntegerInput(ruleSettings.okaReturnPoints);
     const uma = {
-      1: ruleSettings.uma1.trim() ? parseInt(ruleSettings.uma1, 10) : null,
-      2: ruleSettings.uma2.trim() ? parseInt(ruleSettings.uma2, 10) : null,
-      3: ruleSettings.uma3.trim() ? parseInt(ruleSettings.uma3, 10) : null,
-      4: ruleSettings.uma4.trim() ? parseInt(ruleSettings.uma4, 10) : null,
+      1: parseIntegerInput(ruleSettings.uma1),
+      2: parseIntegerInput(ruleSettings.uma2),
+      3: parseIntegerInput(ruleSettings.uma3),
+      4: parseIntegerInput(ruleSettings.uma4),
     };
 
     if (!leagueId) {
@@ -293,23 +285,29 @@ export const useLeagueEdit = () => {
     setIsSubmitting(true);
 
     try {
-      const updatedLeague = await updateLeague(leagueId, {
+      const updateInput = {
         name: leagueName.trim(),
         memberUserIds: Object.keys(addedMembers),
-        rule: {
-          gameType: ruleSettings.gameType,
-          oka: {
-            startingPoints: okaStartPoints,
-            returnPoints: okaReturnPoints,
-          },
-          uma: {
-            first: uma[1],
-            second: uma[2],
-            third: uma[3],
-            fourth: ruleSettings.gameType === "sanma" ? null : uma[4],
-          },
-        },
-      });
+        ...(isRuleLocked
+          ? {}
+          : {
+              rule: {
+                gameType: ruleSettings.gameType,
+                oka: {
+                  startingPoints: okaStartPoints,
+                  returnPoints: okaReturnPoints,
+                },
+                uma: {
+                  first: uma[1],
+                  second: uma[2],
+                  third: uma[3],
+                  fourth: ruleSettings.gameType === "sanma" ? null : uma[4],
+                },
+              },
+            }),
+      };
+
+      const updatedLeague = await updateLeague(leagueId, updateInput);
 
       router.push(`/league/${updatedLeague.id}`);
     } catch (submitError) {
@@ -319,14 +317,24 @@ export const useLeagueEdit = () => {
       }
 
       setError(
-        submitError instanceof Error
-          ? submitError.message
-          : "リーグ情報の更新に失敗しました"
+        getApiErrorMessage(submitError, "リーグ情報の更新に失敗しました")
       );
     } finally {
       setIsSubmitting(false);
     }
-  }, [leagueId, leagueName, addedMembers, ruleSettings, umaTotalError, router]);
+  }, [
+    leagueId,
+    leagueName,
+    addedMembers,
+    ruleSettings,
+    umaTotalError,
+    isRuleLocked,
+    router,
+  ]);
+
+  const retry = React.useCallback(() => {
+    setRetryCount((count) => count + 1);
+  }, []);
 
   return {
     leagueName,
@@ -335,8 +343,10 @@ export const useLeagueEdit = () => {
     memberCandidates,
     isSearchingMembers,
     loading,
+    isLoaded,
     isSubmitting,
     error,
+    isRuleLocked,
     umaTotalError,
     ruleSettings,
     handleLeagueNameChange,
@@ -345,5 +355,6 @@ export const useLeagueEdit = () => {
     handleRemoveMember,
     handleRuleSettingChange,
     handleSubmit,
+    retry,
   };
 };
