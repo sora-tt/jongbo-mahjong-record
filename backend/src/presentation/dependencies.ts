@@ -33,19 +33,26 @@ export const createDependencies = () => {
   );
 
   return {
+    statsRebuilder,
     services: {
       authService: new AuthService(userRepository),
       userService: new UserService(userRepository, userStatsRepository),
-      leagueService: new LeagueService(leagueRepository, userRepository),
+      leagueService: new LeagueService(
+        leagueRepository,
+        userRepository,
+        statsRebuilder,
+      ),
       seasonService: new SeasonService(
         leagueRepository,
         seasonRepository,
         matchRepository,
+        statsRebuilder,
       ),
       sessionService: new SessionService(
         leagueRepository,
         seasonRepository,
         sessionRepository,
+        statsRebuilder,
       ),
       matchService: new MatchService(
         leagueRepository,

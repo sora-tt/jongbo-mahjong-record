@@ -16,6 +16,11 @@ type MatchCalculationRule = {
   };
 };
 
+const expectedWindsByGameType: Record<GameType, readonly Wind[]> = {
+  sanma: ["east", "south", "west"],
+  yonma: ["east", "south", "west", "north"],
+};
+
 const getUmaByRank = (rule: MatchCalculationRule, rank: number) => {
   const playerCount = rule.gameType === "sanma" ? 3 : 4;
   const oka =
@@ -56,6 +61,18 @@ export const calculateMatchPoints = (
   }
   if (uniqueWinds.size !== results.length) {
     throw new ValidationError("results must not contain duplicate wind");
+  }
+
+  const expectedWinds = expectedWindsByGameType[rule.gameType];
+  if (
+    results.some((result) => !expectedWinds.includes(result.wind)) ||
+    expectedWinds.some((wind) => !uniqueWinds.has(wind))
+  ) {
+    throw new ValidationError(`wind is not allowed for ${rule.gameType}`, {
+      field: "results.wind",
+      gameType: rule.gameType,
+      expectedWinds,
+    });
   }
 
   const rawTotal = results.reduce((sum, result) => sum + result.rawScore, 0);
