@@ -1,6 +1,8 @@
 import { type InferResponseType } from "hono/client";
 
-import { apiClient, parseDataResponse } from "@/lib/api/core";
+import { apiClient, executeApiRequest } from "@/lib/api/core";
+
+import type { CreateSeasonInput } from "@/lib/api/contracts";
 
 const fetchLeagueSeasonsRequest =
   apiClient.api.leagues[":leagueId"].seasons.$get;
@@ -20,36 +22,25 @@ type FetchSeasonDetailResponse = InferResponseType<
   typeof fetchSeasonDetailRequest
 >["data"];
 
-export type CreateSeasonInput = {
-  name: string;
-  memberUserIds: string[];
-  status?: "active" | "archived";
-};
+export type { CreateSeasonInput };
 
 export const fetchLeagueSeasons = async (leagueId: string) => {
-  const response = await fetchLeagueSeasonsRequest({
-    param: { leagueId },
-  });
-
-  return parseDataResponse<FetchLeagueSeasonsResponse>(response);
+  return executeApiRequest<FetchLeagueSeasonsResponse>(() =>
+    fetchLeagueSeasonsRequest({ param: { leagueId } })
+  );
 };
 
 export const createSeason = async (
   leagueId: string,
   input: CreateSeasonInput
 ) => {
-  const response = await createSeasonRequest({
-    param: { leagueId },
-    json: input,
-  });
-
-  return parseDataResponse<CreateSeasonResponse>(response);
+  return executeApiRequest<CreateSeasonResponse>(() =>
+    createSeasonRequest({ param: { leagueId }, json: input })
+  );
 };
 
 export const fetchSeasonDetail = async (leagueId: string, seasonId: string) => {
-  const response = await fetchSeasonDetailRequest({
-    param: { leagueId, seasonId },
-  });
-
-  return parseDataResponse<FetchSeasonDetailResponse>(response);
+  return executeApiRequest<FetchSeasonDetailResponse>(() =>
+    fetchSeasonDetailRequest({ param: { leagueId, seasonId } })
+  );
 };
