@@ -10,6 +10,26 @@ import type { SeasonRepository } from "@/domain/season/repository.js";
 import type { SessionRepository } from "@/domain/session/repository.js";
 import { StatsRebuilder } from "@/application/services/statsRebuilder.js";
 
+export const validateMatchParticipants = (
+  results: Array<{ userId: string }>,
+  members: Array<{ userId: string }>,
+) => {
+  const memberUserIds = new Set(members.map((member) => member.userId));
+  const resultUserIds = new Set(results.map((result) => result.userId));
+  if (
+    resultUserIds.size !== results.length ||
+    members.length !== results.length ||
+    resultUserIds.size !== memberUserIds.size ||
+    results.some((result) => !memberUserIds.has(result.userId))
+  ) {
+    throw new ValidationError("match participants must match session members", {
+      field: "results.userId",
+      expectedUserIds: [...memberUserIds],
+      actualUserIds: [...resultUserIds],
+    });
+  }
+};
+
 export class MatchService {
   constructor(
     private readonly leagueRepository: LeagueRepository,
@@ -118,6 +138,7 @@ export class MatchService {
     members: Array<{ userId: string; userName: string }>,
     rule: Awaited<ReturnType<LeagueRepository["getRule"]>>,
   ) {
+    validateMatchParticipants(results, members);
     const memberNameByUserId = new Map(
       members.map((member) => [member.userId, member.userName]),
     );
