@@ -7,12 +7,14 @@ import type {
 } from "@/domain/session/repository.js";
 import { AppError, ValidationError } from "@/domain/shared/errors.js";
 import { asOpaqueId } from "@/domain/shared/types.js";
+import type { StatsRebuilder } from "@/application/services/statsRebuilder.js";
 
 export class SessionService {
   constructor(
     private readonly leagueRepository: LeagueRepository,
     private readonly seasonRepository: SeasonRepository,
     private readonly sessionRepository: SessionRepository,
+    private readonly statsRebuilder: StatsRebuilder,
   ) {}
 
   async listSessions(userId: string, leagueId: string, seasonId: string) {
@@ -37,12 +39,26 @@ export class SessionService {
     input: CreateSessionInput,
   ) {
     await this.assertSeasonMembership(userId, leagueId, seasonId);
-    const seasonMembers = await this.seasonRepository.listMembers(
-      leagueId,
-      seasonId,
-    );
-    if (input.memberUserIds.length < 3 || input.memberUserIds.length > 4) {
-      throw new ValidationError("sessions must have 3 or 4 members");
+    const [seasonMembers, rule] = await Promise.all([
+      this.seasonRepository.listMembers(leagueId, seasonId),
+      this.leagueRepository.getRule(leagueId),
+    ]);
+    const expectedMemberCount = rule.gameType === "sanma" ? 3 : 4;
+    if (input.memberUserIds.length !== expectedMemberCount) {
+      throw new ValidationError(
+        `${rule.gameType} sessions must have exactly ${expectedMemberCount} members`,
+        {
+          field: "memberUserIds",
+          gameType: rule.gameType,
+          expectedMemberCount,
+          actualMemberCount: input.memberUserIds.length,
+        },
+      );
+    }
+    if (new Set(input.memberUserIds).size !== input.memberUserIds.length) {
+      throw new ValidationError("session members must be unique", {
+        field: "memberUserIds",
+      });
     }
 
     const memberMap = new Map(
@@ -80,6 +96,7 @@ export class SessionService {
   ) {
     await this.assertSeasonMembership(userId, leagueId, seasonId);
     await this.sessionRepository.delete(leagueId, seasonId, sessionId);
+    await this.statsRebuilder.rebuildSeason(leagueId, seasonId);
   }
 
   private async assertSeasonMembership(
