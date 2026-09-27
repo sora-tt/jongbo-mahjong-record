@@ -2,11 +2,12 @@ import * as React from "react";
 
 import { useParams, useRouter } from "next/navigation";
 
-import { COLOR_MAP } from "@/constants/color-map";
 import { fetchSeasonDetail } from "@/features/season/api";
 import { toSeasonDetail } from "@/features/season/model/adapter";
 import { listSessions } from "@/features/session/api";
 import { toSessionList } from "@/features/session/model/adapter";
+import { toPointProgressionChart } from "@/features/statistics/model/adapter";
+import { CHART_SERIES } from "@/features/statistics/model/chart";
 import { ApiError, getApiErrorMessage } from "@/lib/api/core";
 
 const DEFAULT_ERROR_MESSAGE =
@@ -14,6 +15,12 @@ const DEFAULT_ERROR_MESSAGE =
 
 type SeasonDetail = ReturnType<typeof toSeasonDetail>;
 type SessionSummary = ReturnType<typeof toSessionList>[number];
+type ChartSeriesItem = ReturnType<
+  typeof toPointProgressionChart
+>["series"][number] & {
+  colorClassName: string;
+  strokeColor: string;
+};
 
 type Title = {
   label: string;
@@ -21,96 +28,7 @@ type Title = {
   value: string;
 };
 
-type SeasonChartSeries = {
-  userId: string;
-  userName: string;
-  colorClassName: string;
-};
-
-type SeasonChartViewSeries = SeasonChartSeries & {
-  strokeColor: string;
-};
-
-type SeasonChartData = {
-  matchIndex: number;
-  [userId: string]: number;
-};
-
 const formatPercent = (value: number) => `${value.toFixed(2)}%`;
-
-const CHART_STROKE_COLORS = [
-  "#ef4444",
-  "#3b82f6",
-  "#22c55e",
-  "#eab308",
-  "#a855f7",
-  "#ec4899",
-  "#f97316",
-  "#0ea5e9",
-  "#10b981",
-  "#f59e0b",
-  "#84cc16",
-  "#14b8a6",
-  "#06b6d4",
-  "#6366f1",
-  "#8b5cf6",
-  "#d946ef",
-  "#f43f5e",
-  "#db2777",
-  "#a16207",
-  "#78716c",
-  "#6b7280",
-  "#111827",
-];
-
-const colorClassNames = Object.values(COLOR_MAP);
-
-const buildSeasonChartData = (season: SeasonDetail) => {
-  const series: SeasonChartSeries[] = season.pointProgressions.map(
-    (progression, index) => ({
-      userId: progression.userId,
-      userName: progression.userName,
-      colorClassName: colorClassNames[index % colorClassNames.length],
-    })
-  );
-
-  const progressionByUser = new Map<string, Map<number, number>>(
-    season.pointProgressions.map((progression) => [
-      String(progression.userId),
-      new Map(
-        progression.points.map((point) => [point.matchIndex, point.totalPoints])
-      ),
-    ])
-  );
-
-  const latestPointByUser = new Map<string, number>();
-
-  const chartData: SeasonChartData[] = Array.from(
-    { length: season.totalMatchCount },
-    (_, index) => {
-      const matchIndex = index + 1;
-      const row: SeasonChartData = { matchIndex };
-
-      series.forEach((item) => {
-        const progression = progressionByUser.get(String(item.userId));
-        const currentPoint = progression?.get(matchIndex);
-        if (typeof currentPoint === "number") {
-          latestPointByUser.set(item.userId, currentPoint);
-        }
-
-        row[item.userId] = latestPointByUser.get(item.userId) ?? 0;
-      });
-
-      return row;
-    }
-  );
-
-  return {
-    series,
-    chartData,
-    isChartEmpty: season.totalMatchCount === 0 || series.length === 0,
-  };
-};
 
 export const useSeasonPage = () => {
   const router = useRouter();
@@ -226,23 +144,26 @@ export const useSeasonPage = () => {
   const pointProgressionChart = React.useMemo(() => {
     if (!season) {
       return {
-        series: [] as SeasonChartSeries[],
-        chartData: [] as SeasonChartData[],
-        isChartEmpty: true,
+        series: [],
+        data: [],
+        isEmpty: true,
+        isUncomputed: false,
       };
     }
 
-    return buildSeasonChartData(season);
+    return toPointProgressionChart(
+      season.pointProgressions,
+      season.totalMatchCount
+    );
   }, [season]);
 
-  const chartSeries: SeasonChartViewSeries[] = React.useMemo(
+  const chartSeries = React.useMemo(
     () =>
       pointProgressionChart.series.map((item, index) => ({
         userId: item.userId,
         userName: item.userName,
-        colorClassName: item.colorClassName,
-        strokeColor:
-          CHART_STROKE_COLORS[index % CHART_STROKE_COLORS.length] ?? "#111827",
+        colorClassName: CHART_SERIES[index % CHART_SERIES.length].className,
+        strokeColor: CHART_SERIES[index % CHART_SERIES.length].stroke,
       })),
     [pointProgressionChart.series]
   );
@@ -253,7 +174,7 @@ export const useSeasonPage = () => {
     setVisibleUserIds(chartSeries.map((item) => item.userId));
   }, [chartSeries]);
 
-  const visibleSeries: SeasonChartViewSeries[] = React.useMemo(
+  const visibleSeries: ChartSeriesItem[] = React.useMemo(
     () =>
       chartSeries.filter((item) =>
         visibleUserIds.some((userId) => userId === item.userId)

@@ -2,109 +2,97 @@ import * as React from "react";
 
 import { useRouter } from "next/navigation";
 
+import {
+  getCurrentUser,
+  getUserStats,
+  listJoiningSeasons,
+} from "@/features/statistics/api";
+import {
+  toJoiningSeason,
+  toUserStats,
+} from "@/features/statistics/model/adapter";
 import { ApiError, getApiErrorMessage } from "@/lib/api/core";
-import { fetchJoiningSeasons, fetchMe, fetchUserStats } from "@/lib/api/users";
-
-import type {
-  PersonalRecordSeasonOption,
-  PersonalRecordStats,
-} from "@/types/domain/personal-record";
 
 const DEFAULT_INITIAL_ERROR_MESSAGE =
   "個人成績画面の取得に失敗しました。時間をおいて再度お試しください。";
 const DEFAULT_STATS_ERROR_MESSAGE =
   "個人成績の取得に失敗しました。時間をおいて再度お試しください。";
 
-const buildSeasonOptionId = (leagueId: string, seasonId: string) =>
-  `${leagueId}:${seasonId}`;
+export type StatsStatus =
+  | "idle"
+  | "loading"
+  | "success"
+  | "uncomputed"
+  | "error";
 
-const calculateTop2Rate = (
-  firstCount: number,
-  secondCount: number,
-  total: number
-) => {
-  if (total === 0) {
-    return 0;
-  }
-
-  return ((firstCount + secondCount) / total) * 100;
+type JoiningSeasonOption = ReturnType<typeof toJoiningSeason> & {
+  id: string;
 };
 
-const toPersonalRecordStats = (
-  stats: Awaited<ReturnType<typeof fetchUserStats>>
-): PersonalRecordStats => ({
-  totalPoints: stats.totalPoints,
-  totalMatchCount: stats.totalMatchCount,
-  rank: stats.currentRank,
-  averageRank: stats.averageRank,
-  top2Rate: calculateTop2Rate(
-    stats.firstCount,
-    stats.secondCount,
-    stats.totalMatchCount
-  ),
-  numberOfEachOrder: {
-    first: stats.firstCount,
-    second: stats.secondCount,
-    third: stats.thirdCount,
-    fourth: stats.fourthCount ?? 0,
-  },
-});
-
-export const usePersonalRecord = () => {
+export const useStatistics = () => {
   const router = useRouter();
   const [userId, setUserId] = React.useState("");
   const [userName, setUserName] = React.useState("");
   const [joiningLeagueSeasons, setJoiningLeagueSeasons] = React.useState<
-    PersonalRecordSeasonOption[]
+    JoiningSeasonOption[]
   >([]);
   const [selectedLeagueSeasonId, setSelectedLeagueSeasonId] =
     React.useState("");
-  const [selectedStats, setSelectedStats] =
-    React.useState<PersonalRecordStats | null>(null);
+  const [selectedStats, setSelectedStats] = React.useState<ReturnType<
+    typeof toUserStats
+  > | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
-  const [isStatsLoading, setIsStatsLoading] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
+  const [initialError, setInitialError] = React.useState<string | null>(null);
+  const [statsError, setStatsError] = React.useState<string | null>(null);
+  const [statsStatus, setStatsStatus] = React.useState<StatsStatus>("idle");
+  const [retryCount, setRetryCount] = React.useState(0);
+  const statsRequestId = React.useRef(0);
 
   React.useEffect(() => {
     let isActive = true;
 
     const load = async () => {
       setIsLoading(true);
-      setError(null);
+      setInitialError(null);
+      setUserId("");
+      setUserName("");
+      setJoiningLeagueSeasons([]);
+      setSelectedLeagueSeasonId("");
+      setSelectedStats(null);
+      setStatsError(null);
+      setStatsStatus("idle");
+      statsRequestId.current += 1;
 
       try {
-        const me = await fetchMe();
-        const seasons = await fetchJoiningSeasons(me.id);
+        const me = await getCurrentUser();
+        const seasons = await listJoiningSeasons(me.id);
 
-        if (!isActive) {
-          return;
-        }
+        if (!isActive) return;
 
-        setUserId(me.id);
+        setUserId(String(me.id));
         setUserName(me.name);
         setJoiningLeagueSeasons(
-          seasons.map((season) => ({
-            id: buildSeasonOptionId(season.leagueId, season.seasonId),
-            leagueId: season.leagueId,
-            seasonId: season.seasonId,
-            name: `${season.leagueName} - ${season.seasonName}`,
-          }))
+          seasons.map((season) => {
+            const option = toJoiningSeason(season);
+            return {
+              ...option,
+              id: `${option.leagueId}:${option.seasonId}`,
+            };
+          })
         );
       } catch (loadError) {
-        if (!isActive) {
-          return;
-        }
+        if (!isActive) return;
 
         if (loadError instanceof ApiError && loadError.status === 401) {
           router.replace("/login");
           return;
         }
 
-        setError(getApiErrorMessage(loadError, DEFAULT_INITIAL_ERROR_MESSAGE));
+        setInitialError(
+          getApiErrorMessage(loadError, DEFAULT_INITIAL_ERROR_MESSAGE)
+        );
       } finally {
-        if (isActive) {
-          setIsLoading(false);
-        }
+        if (isActive) setIsLoading(false);
       }
     };
 
@@ -113,55 +101,71 @@ export const usePersonalRecord = () => {
     return () => {
       isActive = false;
     };
-  }, [router]);
+  }, [retryCount, router]);
 
-  const onChangeLeagueSeason = React.useCallback(
-    (e: React.ChangeEvent<HTMLSelectElement>) => {
-      setSelectedLeagueSeasonId(e.target.value);
-      setError(null);
-    },
-    []
-  );
-
-  const onDisplayButtonClick = React.useCallback(async () => {
+  const loadStats = React.useCallback(async () => {
     if (!selectedLeagueSeasonId || !userId) {
       setSelectedStats(null);
+      setStatsStatus("idle");
       return;
     }
 
     const selectedSeason = joiningLeagueSeasons.find(
       (season) => season.id === selectedLeagueSeasonId
     );
-
     if (!selectedSeason) {
       setSelectedStats(null);
+      setStatsStatus("idle");
       return;
     }
 
-    setIsStatsLoading(true);
-    setError(null);
+    const requestId = statsRequestId.current + 1;
+    statsRequestId.current = requestId;
+    setStatsStatus("loading");
+    setStatsError(null);
 
     try {
-      const stats = await fetchUserStats({
+      const stats = await getUserStats({
         userId,
         scopeType: "season",
-        leagueId: selectedSeason.leagueId,
-        seasonId: selectedSeason.seasonId,
+        leagueId: String(selectedSeason.leagueId),
+        seasonId: String(selectedSeason.seasonId),
       });
 
-      setSelectedStats(toPersonalRecordStats(stats));
+      if (statsRequestId.current !== requestId) return;
+
+      setSelectedStats(toUserStats(stats));
+      setStatsStatus("success");
     } catch (loadError) {
+      if (statsRequestId.current !== requestId) return;
+
       if (loadError instanceof ApiError && loadError.status === 401) {
         router.replace("/login");
         return;
       }
 
+      if (loadError instanceof ApiError && loadError.status === 404) {
+        setSelectedStats(null);
+        setStatsStatus("uncomputed");
+        return;
+      }
+
       setSelectedStats(null);
-      setError(getApiErrorMessage(loadError, DEFAULT_STATS_ERROR_MESSAGE));
-    } finally {
-      setIsStatsLoading(false);
+      setStatsError(getApiErrorMessage(loadError, DEFAULT_STATS_ERROR_MESSAGE));
+      setStatsStatus("error");
     }
   }, [joiningLeagueSeasons, router, selectedLeagueSeasonId, userId]);
+
+  const onChangeLeagueSeason = React.useCallback(
+    (event: React.ChangeEvent<HTMLSelectElement>) => {
+      statsRequestId.current += 1;
+      setSelectedLeagueSeasonId(event.target.value);
+      setSelectedStats(null);
+      setStatsError(null);
+      setStatsStatus("idle");
+    },
+    []
+  );
 
   return {
     userName,
@@ -169,9 +173,13 @@ export const usePersonalRecord = () => {
     selectedLeagueSeasonId,
     selectedStats,
     isLoading,
-    isStatsLoading,
-    error,
+    initialError,
+    statsError,
+    statsStatus,
+    isStatsLoading: statsStatus === "loading",
     onChangeLeagueSeason,
-    onDisplayButtonClick,
+    onDisplayButtonClick: () => void loadStats(),
+    retry: () => setRetryCount((count) => count + 1),
+    retryStats: () => void loadStats(),
   };
 };

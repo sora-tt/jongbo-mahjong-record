@@ -19,7 +19,7 @@ import { type Props as DropdownProps } from "@/components/ui/dropdown";
 import type {
   PlayerSelectOption,
   SelectedPlayers,
-} from "@/types/domain/player-select";
+} from "@/features/session-match/model/recording-flow";
 
 const DEFAULT_ERROR_MESSAGE =
   "プレイヤー候補の取得に失敗しました。時間をおいて再度お試しください。";
