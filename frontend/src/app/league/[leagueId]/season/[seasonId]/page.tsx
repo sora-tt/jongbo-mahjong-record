@@ -35,14 +35,18 @@ const SeasonPage: React.FC = () => {
     leagueId,
     seasonId,
     season,
+    sessions,
     titles,
     pointProgressionChart,
     chartSeries,
     visibleSeries,
     visibleUserIds,
     loading,
+    sessionsLoading,
+    sessionsError,
     error,
     retry,
+    retrySessions,
     handleStartRecording,
     handleToggleChartSeries,
   } = useSeasonPage();
@@ -104,6 +108,69 @@ const SeasonPage: React.FC = () => {
             <Button onClick={handleStartRecording}>記録する</Button>
           </div>
         </header>
+
+        <Card
+          title="Session一覧"
+          meta={
+            <Link
+              className="font-medium text-brand-strong hover:underline"
+              href={`/league/${leagueId}/season/${seasonId}/sessions/start/players`}
+            >
+              新しいSessionを開始
+            </Link>
+          }
+        >
+          {sessionsLoading ? (
+            <LoadingState label="Session一覧を読み込んでいます…" />
+          ) : sessionsError ? (
+            <ErrorState message={sessionsError} onRetry={retrySessions} />
+          ) : sessions.length === 0 ? (
+            <EmptyState
+              title="Sessionがありません"
+              description="参加者を選択して新しいSessionを開始できます。"
+              action={
+                <Link
+                  href={`/league/${leagueId}/season/${seasonId}/sessions/start/players`}
+                >
+                  <Button>Sessionを開始</Button>
+                </Link>
+              }
+            />
+          ) : (
+            <div className="space-y-3">
+              {sessions.map((session) => (
+                <Link
+                  key={String(session.id)}
+                  href={`/league/${leagueId}/season/${seasonId}/sessions/${session.id}/results`}
+                  className="block rounded-control border border-border p-4 transition-colors hover:border-brand-300 hover:bg-brand-50"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div>
+                      <p className="font-semibold text-foreground">
+                        {formatDate(session.startedAt)}
+                      </p>
+                      <p className="mt-1 text-sm text-text-muted">
+                        {session.members
+                          .map((member) => member.userName)
+                          .join("・")}
+                      </p>
+                    </div>
+                    <span className="rounded-full bg-surface-muted px-3 py-1 text-xs text-text-muted">
+                      {session.endedAt ? "終了" : "進行中"}
+                    </span>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-text-muted">
+                    <span>参加者 {session.memberCount}人</span>
+                    <span>対局 {session.totalMatchCount}局</span>
+                    {session.tableLabel ? (
+                      <span>卓 {session.tableLabel}</span>
+                    ) : null}
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </Card>
 
         <Card
           title="順位表"

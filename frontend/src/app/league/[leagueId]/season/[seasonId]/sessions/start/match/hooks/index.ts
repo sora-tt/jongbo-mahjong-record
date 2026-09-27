@@ -2,133 +2,71 @@ import * as React from "react";
 
 import { useParams, useRouter } from "next/navigation";
 
-import { ApiError } from "@/lib/api/core";
+import {
+  createEmptyMatchFormValues,
+  validateMatchForm,
+  type MatchFormValues,
+} from "@/features/session-match/model/match-form";
+import {
+  getParticipantConstraint,
+  type ParticipantConstraint,
+} from "@/features/session-match/model/participants";
+import { ApiError, getApiErrorMessage } from "@/lib/api/core";
 import { fetchLeagueDetail } from "@/lib/api/leagues";
 import { createMatch } from "@/lib/api/matches";
 import { fetchSeasonDetail } from "@/lib/api/seasons";
-import {
-  createSession,
-  deleteSession,
-  fetchSessionDetail,
-} from "@/lib/api/sessions";
+import { createSession, deleteSession } from "@/lib/api/sessions";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { selectRecordingFlow } from "@/store/selectors/recording-flow-selectors";
-import {
-  clearRecordingFlow,
-  setRecordingFlow,
-} from "@/store/slices/recording-flow-slice";
-
-import { type Props as DropdownProps } from "@/components/ui/dropdown";
-
-import type {
-  PlayerSelectOption,
-  SelectedPlayers,
-} from "@/types/domain/player-select";
+import { clearRecordingFlow } from "@/store/slices/recording-flow-slice";
 
 const DEFAULT_ERROR_MESSAGE =
   "対局記録画面の取得に失敗しました。時間をおいて再度お試しください。";
 const DEFAULT_SUBMIT_ERROR_MESSAGE =
-  "対局記録の保存に失敗しました。時間をおいて再度お試しください。";
-
-const SCORE_POSITIONS = ["first", "second", "third", "fourth"] as const;
-
-const WIND_BY_POSITION = {
-  first: "east",
-  second: "south",
-  third: "west",
-  fourth: "north",
-} as const;
-
-type ScorePosition = (typeof SCORE_POSITIONS)[number];
-
-type ScoreState = Record<ScorePosition, string>;
-
-const INITIAL_SCORES: ScoreState = {
-  first: "",
-  second: "",
-  third: "",
-  fourth: "",
-};
-
-const EMPTY_SELECTED_PLAYERS: SelectedPlayers = {
-  east: "",
-  south: "",
-  west: "",
-  north: "",
-};
-
-const PLAYER_SEATS = ["east", "south", "west", "north"] as const;
-
-const parseScore = (value: string) => {
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return null;
-  }
-
-  const parsed = Number(trimmed);
-  if (!Number.isInteger(parsed)) {
-    return null;
-  }
-
-  return parsed * 100;
-};
+  "対局の保存に失敗しました。入力内容を確認して再度お試しください。";
 
 export const useRecordMatchPage = () => {
   const dispatch = useAppDispatch();
   const router = useRouter();
   const params = useParams<{ leagueId: string; seasonId: string }>();
-  const [query] = React.useState(() => {
-    if (typeof window === "undefined") {
-      return {
-        sessionId: null,
-        matchId: null,
-      };
-    }
-
-    const searchParams = new URLSearchParams(window.location.search);
-    return {
-      sessionId: searchParams.get("sessionId"),
-    };
-  });
-  const querySessionId = query.sessionId;
-  const isNavigatingAfterSubmitRef = React.useRef(false);
   const recordingFlow = useAppSelector(selectRecordingFlow);
-  const [options, setOptions] = React.useState<PlayerSelectOption[]>([]);
-  const [players, setPlayers] = React.useState<SelectedPlayers>(
-    EMPTY_SELECTED_PLAYERS
+  const isNavigatingAfterSubmitRef = React.useRef(false);
+  const [members, setMembers] = React.useState<
+    Awaited<ReturnType<typeof fetchSeasonDetail>>["members"]
+  >([]);
+  const [constraint, setConstraint] = React.useState<ParticipantConstraint>(
+    getParticipantConstraint("yonma")
   );
-  const [scores, setScores] = React.useState<ScoreState>(INITIAL_SCORES);
-  const [isLoading, setIsLoading] = React.useState(true);
-  const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
   const [startingPoints, setStartingPoints] = React.useState<number | null>(
     null
   );
+  const [values, setValues] = React.useState<MatchFormValues>(() => {
+    const initial = createEmptyMatchFormValues();
+    return {
+      ...initial,
+      userIdByWind: {
+        east: recordingFlow.selectedPlayersBySeat.east || null,
+        south: recordingFlow.selectedPlayersBySeat.south || null,
+        west: recordingFlow.selectedPlayersBySeat.west || null,
+        north: recordingFlow.selectedPlayersBySeat.north || null,
+      },
+    };
+  });
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
-    if (isNavigatingAfterSubmitRef.current) {
-      return;
-    }
+    if (isNavigatingAfterSubmitRef.current) return;
 
     let isActive = true;
+    const { leagueId, seasonId } = params;
 
-    const leagueId = params.leagueId;
-    const seasonId = params.seasonId;
-
-    if (!leagueId || !seasonId) {
-      setError("leagueId または seasonId が指定されていません");
-      setIsLoading(false);
-      return;
-    }
-
-    if (
-      !querySessionId &&
-      (recordingFlow.leagueId !== leagueId ||
-        recordingFlow.seasonId !== seasonId ||
-        recordingFlow.selectedPlayerIds.length < 3)
-    ) {
+    if (!leagueId || !seasonId || recordingFlow.selectedPlayerIds.length < 3) {
       router.replace(
-        `/league/${leagueId}/season/${seasonId}/sessions/start/players`
+        leagueId && seasonId
+          ? `/league/${leagueId}/season/${seasonId}/sessions/start/players`
+          : "/"
       );
       return;
     }
@@ -136,233 +74,97 @@ export const useRecordMatchPage = () => {
     const load = async () => {
       setIsLoading(true);
       setError(null);
-
       try {
-        const sessionPromise = querySessionId
-          ? fetchSessionDetail({
-              leagueId,
-              seasonId,
-              sessionId: querySessionId,
-            })
-          : Promise.resolve(null);
-        const [season, league, session] = await Promise.all([
-          fetchSeasonDetail(leagueId, seasonId),
+        const [league, season] = await Promise.all([
           fetchLeagueDetail(leagueId),
-          sessionPromise,
+          fetchSeasonDetail(leagueId, seasonId),
         ]);
+        if (!isActive) return;
 
-        if (!isActive) {
+        const nextConstraint = getParticipantConstraint(league.rule.gameType);
+        const selectedIds = new Set(recordingFlow.selectedPlayerIds);
+        const selectedMembers = season.members.filter((member) =>
+          selectedIds.has(String(member.userId))
+        );
+        if (selectedMembers.length !== nextConstraint.memberCount) {
+          setError(
+            "Sessionの参加者を正しく取得できませんでした。前の画面から選び直してください。"
+          );
           return;
         }
 
-        const memberNameByUserId = new Map(
-          season.members.map((member) => [
-            String(member.userId),
-            member.userName,
-          ])
-        );
-        const selectedPlayerIds =
-          session?.members.map((member) => member.userId) ??
-          recordingFlow.selectedPlayerIds;
-        setOptions(
-          selectedPlayerIds.map((userId) => ({
-            label: memberNameByUserId.get(String(userId)) ?? "不明なユーザー",
-            value: userId,
-          }))
-        );
+        setMembers(selectedMembers);
+        setConstraint(nextConstraint);
         setStartingPoints(league.rule.oka.startingPoints);
-        setPlayers(
-          session
-            ? session.members.reduce<SelectedPlayers>(
-                (acc, member, index) => {
-                  const seat = PLAYER_SEATS[index];
-                  if (seat) {
-                    acc[seat] = member.userId;
-                  }
-                  return acc;
-                },
-                { ...EMPTY_SELECTED_PLAYERS }
-              )
-            : recordingFlow.selectedPlayersBySeat
-        );
       } catch (loadError) {
-        if (!isActive) {
-          return;
-        }
-
+        if (!isActive) return;
         if (loadError instanceof ApiError && loadError.status === 401) {
           router.replace("/login");
           return;
         }
-
-        setError(
-          loadError instanceof Error ? loadError.message : DEFAULT_ERROR_MESSAGE
-        );
+        setError(getApiErrorMessage(loadError, DEFAULT_ERROR_MESSAGE));
       } finally {
-        if (isActive) {
-          setIsLoading(false);
-        }
+        if (isActive) setIsLoading(false);
       }
     };
 
     void load();
-
     return () => {
       isActive = false;
     };
   }, [
+    params,
     params.leagueId,
     params.seasonId,
-    recordingFlow.leagueId,
-    recordingFlow.seasonId,
     recordingFlow.selectedPlayerIds,
-    recordingFlow.selectedPlayerIds.length,
-    recordingFlow.selectedPlayersBySeat,
-    querySessionId,
     router,
   ]);
 
-  const swapPlayers = React.useCallback(
-    (position: keyof SelectedPlayers): DropdownProps["onChange"] =>
-      (_, value) => {
-        setPlayers((prev) => {
-          const next = { ...prev };
-          const previousValue = next[position];
-          const duplicatePosition = (
-            Object.keys(next) as Array<keyof SelectedPlayers>
-          ).find((key) => key !== position && next[key] === value);
-
-          next[position] = value;
-
-          if (duplicatePosition) {
-            next[duplicatePosition] = previousValue;
-          }
-
-          return next;
-        });
-        setError(null);
-      },
-    []
-  );
-
-  const handleScoreChange =
-    (position: ScorePosition) => (e: React.ChangeEvent<HTMLInputElement>) => {
-      setScores((prev) => ({ ...prev, [position]: e.target.value }));
-      setError(null);
-    };
-
   const handleSubmit = React.useCallback(async () => {
-    const leagueId = params.leagueId;
-    const seasonId = params.seasonId;
-
-    if (!leagueId || !seasonId) {
-      setError("leagueId または seasonId が指定されていません");
-      return;
-    }
-
-    const selectedPlayerIds = Object.values(players).filter(Boolean);
-    const parsedRows = SCORE_POSITIONS.map((position) => {
-      const wind = WIND_BY_POSITION[position];
-      const userId = players[wind];
-
-      if (!userId) {
-        return null;
-      }
-
-      return {
-        position,
-        userId,
-        wind,
-        rawScore: parseScore(scores[position]),
-      };
-    }).filter(
-      (
-        row
-      ): row is {
-        position: ScorePosition;
-        userId: string;
-        wind: "east" | "south" | "west" | "north";
-        rawScore: number | null;
-      } => row !== null
-    );
-
-    if (parsedRows.some((row) => row.rawScore === null)) {
-      setError("全員分の点数を整数で入力してください");
-      return;
-    }
-
-    if (startingPoints === null) {
+    const { leagueId, seasonId } = params;
+    if (!leagueId || !seasonId || startingPoints === null) {
       setError(DEFAULT_ERROR_MESSAGE);
       return;
     }
 
-    const rowsWithScores = parsedRows as Array<
-      (typeof parsedRows)[number] & { rawScore: number }
-    >;
-    const expectedRawTotal = startingPoints * rowsWithScores.length;
-    const rawTotal = rowsWithScores.reduce((sum, row) => sum + row.rawScore, 0);
-
-    if (rawTotal !== expectedRawTotal) {
-      setError(
-        `合計点数は ${expectedRawTotal.toLocaleString()} 点になるよう入力してください`
-      );
+    const validation = validateMatchForm({
+      values,
+      constraint,
+      allowedMembers: members,
+      startingPoints,
+    });
+    if (validation.message || !validation.results) {
+      setError(validation.message ?? DEFAULT_SUBMIT_ERROR_MESSAGE);
       return;
     }
 
     setIsSubmitting(true);
     setError(null);
-
     let createdSessionId: string | null = null;
-    const existingSessionId = querySessionId ?? recordingFlow.sessionId;
 
     try {
-      const sessionId =
-        existingSessionId ??
-        (
-          await createSession({
-            leagueId,
-            seasonId,
-            startedAt: new Date().toISOString(),
-            memberUserIds: selectedPlayerIds,
-            tableLabel: null,
-          })
-        ).id;
-      createdSessionId = existingSessionId ? null : sessionId;
-
-      const results = rowsWithScores.map((row) => ({
-        userId: row.userId,
-        wind: row.wind,
-        rawScore: row.rawScore,
-      }));
+      const session = await createSession(leagueId, seasonId, {
+        startedAt: new Date().toISOString(),
+        memberUserIds: validation.results.map((result) => result.userId),
+        tableLabel: null,
+      });
+      createdSessionId = String(session.id);
 
       await createMatch({
         leagueId,
         seasonId,
-        sessionId,
-        playedAt: new Date().toISOString(),
-        results,
+        sessionId: createdSessionId,
+        playedAt: values.playedAt,
+        results: validation.results,
       });
 
       isNavigatingAfterSubmitRef.current = true;
-      dispatch(
-        setRecordingFlow({
-          ...recordingFlow,
-          leagueId,
-          seasonId,
-          selectedPlayerIds,
-          selectedPlayersBySeat: players,
-          sessionId,
-        })
-      );
-
+      dispatch(clearRecordingFlow());
       router.push(
-        `/league/${leagueId}/season/${seasonId}/sessions/${sessionId}/results`
+        `/league/${leagueId}/season/${seasonId}/sessions/${createdSessionId}/results`
       );
     } catch (submitError) {
-      if (
-        createdSessionId &&
-        !(submitError instanceof ApiError && submitError.status === 401)
-      ) {
+      if (createdSessionId) {
         try {
           await deleteSession({
             leagueId,
@@ -370,7 +172,7 @@ export const useRecordMatchPage = () => {
             sessionId: createdSessionId,
           });
         } catch {
-          // rollback 失敗時は元エラーを優先する
+          // 元のMatchエラーを優先して表示する
         }
       }
 
@@ -378,68 +180,30 @@ export const useRecordMatchPage = () => {
         router.replace("/login");
         return;
       }
-
-      setError(
-        submitError instanceof Error
-          ? submitError.message
-          : DEFAULT_SUBMIT_ERROR_MESSAGE
-      );
+      setError(getApiErrorMessage(submitError, DEFAULT_SUBMIT_ERROR_MESSAGE));
+    } finally {
       setIsSubmitting(false);
     }
-  }, [
-    dispatch,
-    params.leagueId,
-    params.seasonId,
-    players,
-    querySessionId,
-    recordingFlow,
-    router,
-    scores,
-    startingPoints,
-  ]);
+  }, [constraint, dispatch, members, params, router, startingPoints, values]);
 
   const handleBack = React.useCallback(() => {
-    const leagueId = params.leagueId;
-    const seasonId = params.seasonId;
-
-    if (!leagueId || !seasonId) {
-      dispatch(clearRecordingFlow());
-      router.push("/");
-      return;
-    }
-
-    const sessionId = querySessionId ?? recordingFlow.sessionId;
-    if (sessionId) {
+    if (params.leagueId && params.seasonId) {
       router.push(
-        `/league/${leagueId}/season/${seasonId}/sessions/${sessionId}/results`
+        `/league/${params.leagueId}/season/${params.seasonId}/sessions/start/players`
       );
-      return;
+    } else {
+      router.push("/");
     }
-
-    router.push(
-      `/league/${leagueId}/season/${seasonId}/sessions/start/players`
-    );
-  }, [
-    dispatch,
-    params.leagueId,
-    params.seasonId,
-    querySessionId,
-    recordingFlow.sessionId,
-    router,
-  ]);
+  }, [params.leagueId, params.seasonId, router]);
 
   return {
-    players,
-    options,
-    scores,
+    values,
+    setValues,
+    constraint,
+    members,
     isLoading,
     isSubmitting,
     error,
-    onEastPlayerChange: swapPlayers("east"),
-    onSouthPlayerChange: swapPlayers("south"),
-    onWestPlayerChange: swapPlayers("west"),
-    onNorthPlayerChange: swapPlayers("north"),
-    handleScoreChange,
     handleSubmit,
     handleBack,
   };

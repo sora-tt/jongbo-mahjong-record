@@ -32,12 +32,20 @@ type SeasonPatchRequest =
   AppClient["api"]["leagues"][":leagueId"]["seasons"][":seasonId"]["$patch"];
 type SessionGetRequest =
   AppClient["api"]["leagues"][":leagueId"]["seasons"][":seasonId"]["sessions"][":sessionId"]["$get"];
+type SessionsGetRequest =
+  AppClient["api"]["leagues"][":leagueId"]["seasons"][":seasonId"]["sessions"]["$get"];
 type SessionPostRequest =
   AppClient["api"]["leagues"][":leagueId"]["seasons"][":seasonId"]["sessions"]["$post"];
 type SessionPatchRequest =
   AppClient["api"]["leagues"][":leagueId"]["seasons"][":seasonId"]["sessions"][":sessionId"]["$patch"];
 type MatchesGetRequest =
   AppClient["api"]["leagues"][":leagueId"]["seasons"][":seasonId"]["sessions"][":sessionId"]["matches"]["$get"];
+type MatchGetRequest =
+  AppClient["api"]["leagues"][":leagueId"]["seasons"][":seasonId"]["sessions"][":sessionId"]["matches"][":matchId"]["$get"];
+type MatchPostRequest =
+  AppClient["api"]["leagues"][":leagueId"]["seasons"][":seasonId"]["sessions"][":sessionId"]["matches"]["$post"];
+type MatchPatchRequest =
+  AppClient["api"]["leagues"][":leagueId"]["seasons"][":seasonId"]["sessions"][":sessionId"]["matches"][":matchId"]["$patch"];
 
 export type ApiUser = InferResponseType<UserMeGetRequest>["data"];
 export type ApiUserStats = InferResponseType<UserStatsRequest>["data"];
@@ -55,7 +63,9 @@ export type ApiSeasonMember = InferResponseType<
   AppClient["api"]["leagues"][":leagueId"]["seasons"][":seasonId"]["members"]["$get"]
 >["data"][number];
 export type ApiSession = InferResponseType<SessionGetRequest>["data"];
+export type ApiSessionList = InferResponseType<SessionsGetRequest>["data"];
 export type ApiMatch = InferResponseType<MatchesGetRequest>["data"][number];
+export type ApiMatchDetail = InferResponseType<MatchGetRequest>["data"];
 
 export type CreateMeInput = InferRequestType<UserMePostRequest>["json"];
 export type CreateLeagueInput = InferRequestType<LeaguePostRequest>["json"];
@@ -64,6 +74,8 @@ export type CreateSeasonInput = InferRequestType<SeasonPostRequest>["json"];
 export type UpdateSeasonInput = InferRequestType<SeasonPatchRequest>["json"];
 export type CreateSessionInput = InferRequestType<SessionPostRequest>["json"];
 export type UpdateSessionInput = InferRequestType<SessionPatchRequest>["json"];
+export type CreateMatchInput = InferRequestType<MatchPostRequest>["json"];
+export type UpdateMatchInput = InferRequestType<MatchPatchRequest>["json"];
 // The current Hono validator exposes this request body as unknown. Keep the
 // shape aligned with backend/src/presentation/schemas/match.ts until the
 // validator publishes an inferred input type.
