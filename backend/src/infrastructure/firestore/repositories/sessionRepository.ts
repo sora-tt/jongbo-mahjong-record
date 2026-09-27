@@ -5,8 +5,17 @@ import type {
   SessionRepository,
   UpdateSessionInput,
 } from "@/domain/session/repository.js";
-import { toIsoString, toTimestamp } from "@/infrastructure/firestore/utils.js";
+import {
+  nullableString,
+  requiredArray,
+  requiredNumber,
+  requiredObject,
+  requiredString,
+  toIsoString,
+  toTimestamp,
+} from "@/infrastructure/firestore/utils.js";
 import { NotFoundError } from "@/domain/shared/errors.js";
+import { asOpaqueId } from "@/domain/shared/types.js";
 
 export class FirestoreSessionRepository implements SessionRepository {
   constructor(private readonly db: Firestore) {}
@@ -139,22 +148,37 @@ export class FirestoreSessionRepository implements SessionRepository {
     sessionId: string,
     data: FirebaseFirestore.DocumentData,
   ): Session {
+    const members = requiredArray(data.members, "sessions.members").map(
+      (value) => {
+        const member = requiredObject(value, "sessions.members[]");
+        return {
+          userId: asOpaqueId(
+            requiredString(member.user_id, "sessions.members[].user_id"),
+          ),
+          userName: requiredString(
+            member.user_name,
+            "sessions.members[].user_name",
+          ),
+        };
+      },
+    );
+
     return {
-      id: sessionId,
-      leagueId,
-      seasonId,
+      id: asOpaqueId(sessionId),
+      leagueId: asOpaqueId(leagueId),
+      seasonId: asOpaqueId(seasonId),
       startedAt: toIsoString(data.started_at),
-      endedAt: data.ended_at ? toIsoString(data.ended_at) : null,
-      members: Array.isArray(data.members)
-        ? data.members.map((member) => ({
-            userId: String(member.user_id ?? ""),
-            userName: String(member.user_name ?? ""),
-          }))
-        : [],
-      memberCount: Number(data.member_count ?? 0),
-      totalMatchCount: Number(data.total_match_count ?? 0),
-      tableLabel: data.table_label ?? null,
-      createdBy: String(data.created_by ?? ""),
+      endedAt: data.ended_at === null ? null : toIsoString(data.ended_at),
+      members,
+      memberCount: requiredNumber(data.member_count, "sessions.member_count"),
+      totalMatchCount: requiredNumber(
+        data.total_match_count,
+        "sessions.total_match_count",
+      ),
+      tableLabel: nullableString(data.table_label, "sessions.table_label"),
+      createdBy: asOpaqueId(
+        requiredString(data.created_by, "sessions.created_by"),
+      ),
       createdAt: toIsoString(data.created_at),
       updatedAt: toIsoString(data.updated_at),
     };

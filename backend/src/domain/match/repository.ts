@@ -6,7 +6,6 @@ export type CreateMatchInput = {
   results: Array<{
     userId: string;
     wind: Wind;
-    rank: number;
     rawScore: number;
   }>;
 };
@@ -16,7 +15,6 @@ export type UpdateMatchInput = {
   results?: Array<{
     userId: string;
     wind: Wind;
-    rank: number;
     rawScore: number;
   }>;
 };

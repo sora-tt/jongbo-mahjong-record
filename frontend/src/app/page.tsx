@@ -2,10 +2,12 @@
 
 import * as React from "react";
 
-import Header from "@/components/common/container/header";
+import { AppShell } from "@/components/layout/app-shell";
 import CreateLeagueCard from "@/components/pages/home/create-league-card/index";
 import EmptyLeagueState from "@/components/pages/home/empty-league-state";
 import LeagueCard from "@/components/pages/home/league-card/index";
+import { ErrorState } from "@/components/ui/error-state";
+import { LoadingState } from "@/components/ui/loading-state";
 
 import { useHome } from "./hooks";
 
@@ -13,12 +15,12 @@ export const Home: React.FC = () => {
   const { userName, leagues, hasLeagues, isLoading, error } = useHome();
 
   return (
-    <div className="flex-1 bg-white min-h-screen font-jp">
-      <Header />
+    <AppShell mainClassName="min-h-screen bg-background font-jp">
       {isLoading ? (
-        <div className="flex min-h-[calc(100vh-56px)] items-center justify-center px-4 text-center text-text-muted">
-          リーグ情報を読み込んでいます...
-        </div>
+        <LoadingState
+          label="リーグ情報を読み込んでいます…"
+          className="min-h-[calc(100vh-4rem)]"
+        />
       ) : (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Header */}
@@ -50,14 +52,10 @@ export const Home: React.FC = () => {
             <EmptyLeagueState />
           )}
 
-          {error && (
-            <div className="mt-8 bg-error-bg border-2 border-error-border rounded-lg p-4">
-              <p className="text-error-text text-sm">{error}</p>
-            </div>
-          )}
+          {error ? <ErrorState message={error} /> : null}
         </div>
       )}
-    </div>
+    </AppShell>
   );
 };
 

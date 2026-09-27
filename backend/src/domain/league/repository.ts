@@ -1,22 +1,11 @@
 import type {
   LeagueDetail,
   LeagueMember,
+  LeagueRule,
   LeagueSummary,
 } from "@/domain/league/types.js";
 
-export type LeagueRule = {
-  gameType: "sanma" | "yonma";
-  uma: {
-    first: number;
-    second: number;
-    third: number;
-    fourth: number | null;
-  };
-  oka: {
-    startingPoints: number;
-    returnPoints: number;
-  };
-};
+export type { LeagueRule } from "@/domain/league/types.js";
 
 export type CreateLeagueInput = {
   name: string;

@@ -1,13 +1,19 @@
-import type { RecordHolder, SeasonStatus } from "@/domain/shared/types.js";
+import type {
+  IsoDateString,
+  LeagueId,
+  Nullable,
+  RecordHolder,
+  SeasonId,
+  SeasonStatus,
+  UserId,
+  UserReference,
+} from "@/domain/shared/types.js";
 
-export type SeasonMember = {
-  userId: string;
-  userName: string;
-};
+export type SeasonMember = UserReference;
 
 export type Standing = {
   rank: number;
-  userId: string;
+  userId: UserId;
   userName: string;
   totalPoints: number;
   matchCount: number;
@@ -18,7 +24,7 @@ export type Standing = {
 };
 
 export type PointProgression = {
-  userId: string;
+  userId: UserId;
   userName: string;
   points: Array<{
     matchIndex: number;
@@ -27,19 +33,19 @@ export type PointProgression = {
 };
 
 export type SeasonSummary = {
-  id: string;
-  leagueId: string;
+  id: SeasonId;
+  leagueId: LeagueId;
   name: string;
   status: SeasonStatus;
   memberCount: number;
   totalMatchCount: number;
-  createdAt: string;
-  updatedAt: string;
+  createdAt: IsoDateString;
+  updatedAt: IsoDateString;
 };
 
 export type SeasonDetail = {
-  id: string;
-  leagueId: string;
+  id: SeasonId;
+  leagueId: LeagueId;
   name: string;
   status: SeasonStatus;
   memberCount: number;
@@ -47,14 +53,14 @@ export type SeasonDetail = {
   members: SeasonMember[];
   standings: Standing[];
   pointProgressions: PointProgression[];
-  seasonRecords: {
+  seasonRecords: Nullable<{
     highestScore: RecordHolder | null;
     avoidLastRate: RecordHolder | null;
     top2Rate: RecordHolder | null;
-  } | null;
-  latestPlayedAt: string | null;
-  createdAt: string;
-  updatedAt: string;
+  }>;
+  latestPlayedAt: Nullable<IsoDateString>;
+  createdAt: IsoDateString;
+  updatedAt: IsoDateString;
 };
 
 export type { RecordHolder };

@@ -1,6 +1,15 @@
 import { type InferResponseType } from "hono/client";
 
-import { apiClient, ensureOk, parseDataResponse } from "@/lib/api/core";
+import {
+  apiClient,
+  executeApiRequest,
+  executeNoContentRequest,
+} from "@/lib/api/core";
+
+import type {
+  CreateSessionInput,
+  UpdateSessionInput,
+} from "@/lib/api/contracts";
 
 const createSessionRequest =
   apiClient.api.leagues[":leagueId"].seasons[":seasonId"].sessions.$post;
@@ -30,20 +39,19 @@ export const createSession = async (input: {
   memberUserIds: string[];
   tableLabel?: string | null;
 }) => {
-  const response = await createSessionRequest({
-    param: {
-      leagueId: input.leagueId,
-      seasonId: input.seasonId,
-    },
-    json: {
-      startedAt: input.startedAt,
-      endedAt: input.endedAt,
-      memberUserIds: input.memberUserIds,
-      tableLabel: input.tableLabel,
-    },
-  });
+  const json: CreateSessionInput = {
+    startedAt: input.startedAt,
+    endedAt: input.endedAt,
+    memberUserIds: input.memberUserIds,
+    tableLabel: input.tableLabel,
+  };
 
-  return parseDataResponse<CreateSessionResponse>(response);
+  return executeApiRequest<CreateSessionResponse>(() =>
+    createSessionRequest({
+      param: { leagueId: input.leagueId, seasonId: input.seasonId },
+      json,
+    })
+  );
 };
 
 export const fetchSessionDetail = async (input: {
@@ -51,11 +59,9 @@ export const fetchSessionDetail = async (input: {
   seasonId: string;
   sessionId: string;
 }) => {
-  const response = await fetchSessionDetailRequest({
-    param: input,
-  });
-
-  return parseDataResponse<FetchSessionDetailResponse>(response);
+  return executeApiRequest<FetchSessionDetailResponse>(() =>
+    fetchSessionDetailRequest({ param: input })
+  );
 };
 
 export const updateSession = async (input: {
@@ -65,19 +71,21 @@ export const updateSession = async (input: {
   endedAt?: string | null;
   tableLabel?: string | null;
 }) => {
-  const response = await updateSessionRequest({
-    param: {
-      leagueId: input.leagueId,
-      seasonId: input.seasonId,
-      sessionId: input.sessionId,
-    },
-    json: {
-      endedAt: input.endedAt,
-      tableLabel: input.tableLabel,
-    },
-  });
+  const json: UpdateSessionInput = {
+    endedAt: input.endedAt,
+    tableLabel: input.tableLabel,
+  };
 
-  return parseDataResponse<UpdateSessionResponse>(response);
+  return executeApiRequest<UpdateSessionResponse>(() =>
+    updateSessionRequest({
+      param: {
+        leagueId: input.leagueId,
+        seasonId: input.seasonId,
+        sessionId: input.sessionId,
+      },
+      json,
+    })
+  );
 };
 
 export const deleteSession = async (input: {
@@ -85,12 +93,9 @@ export const deleteSession = async (input: {
   seasonId: string;
   sessionId: string;
 }) => {
-  const response = await apiClient.api.leagues[":leagueId"].seasons[
-    ":seasonId"
-  ].sessions[":sessionId"].$delete({
-    param: input,
-  });
-
-  await ensureOk(response);
-  return null;
+  await executeNoContentRequest(() =>
+    apiClient.api.leagues[":leagueId"].seasons[":seasonId"].sessions[
+      ":sessionId"
+    ].$delete({ param: input })
+  );
 };

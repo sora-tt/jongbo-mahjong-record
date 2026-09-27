@@ -1,0 +1,24 @@
+{
+  "name": "frontend-foundation-ui",
+  "displayName": "FE API・共通UI基盤",
+  "description": "BE APIを正とするFEの型・API client・adapter・認証・エラー境界と、共通UI・デザイントークン・Header/navigationを統一する。",
+  "version": "1.0.0",
+  "language": "ja",
+  "phase": "tasks-generated",
+  "created_at": "2026-09-25T00:00:00Z",
+  "updated_at": "2026-09-25T00:00:00Z",
+  "approvals": {
+    "requirements": {
+      "generated": true,
+      "approved": true
+    },
+    "design": {
+      "generated": true,
+      "approved": true
+    },
+    "tasks": {
+      "generated": true,
+      "approved": true
+    }
+  }
+}

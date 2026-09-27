@@ -10,6 +10,7 @@ import {
   ConflictError,
   ValidationError,
 } from "@/domain/shared/errors.js";
+import { asOpaqueId } from "@/domain/shared/types.js";
 
 export class SeasonService {
   constructor(
@@ -65,7 +66,7 @@ export class SeasonService {
       leagueMembers.map((member) => [member.userId, member]),
     );
     const members = input.memberUserIds.map((userIdValue) => {
-      const member = leagueMemberMap.get(userIdValue);
+      const member = leagueMemberMap.get(asOpaqueId(userIdValue));
       if (!member) {
         throw new ValidationError("memberUserIds must be league members", {
           userId: userIdValue,

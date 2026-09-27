@@ -2,11 +2,23 @@
 
 import * as React from "react";
 
-import Header from "@/components/common/container/header";
+import { AppShell } from "@/components/layout/app-shell";
 import { AverageRankCard } from "@/components/pages/personal-record/average-rank-card";
 import { TopTwoRateCard } from "@/components/pages/personal-record/top-two-rate-card";
 import { TotalMatchCard } from "@/components/pages/personal-record/total-match-card";
 import { TotalPointCard } from "@/components/pages/personal-record/total-point-card";
+import { Button } from "@/components/ui/button";
+import { ErrorState } from "@/components/ui/error-state";
+import { LoadingState } from "@/components/ui/loading-state";
+import { Select } from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeadCell,
+  TableRow,
+} from "@/components/ui/table";
 
 import { usePersonalRecord } from "./hooks";
 
@@ -25,27 +37,26 @@ const PersonalRecordPage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="flex-1 bg-white min-h-screen font-jp">
-        <Header />
-        <div className="flex min-h-[calc(100vh-56px)] items-center justify-center px-4 text-center text-text-muted">
-          個人成績を読み込んでいます...
-        </div>
-      </div>
+      <AppShell mainClassName="min-h-screen bg-background font-jp">
+        <LoadingState
+          label="個人成績を読み込んでいます…"
+          className="min-h-[calc(100vh-4rem)]"
+        />
+      </AppShell>
     );
   }
 
   return (
-    <div className="flex-1 bg-white min-h-screen font-jp">
-      <Header />
+    <AppShell mainClassName="min-h-screen bg-background font-jp">
       <div className="flex flex-col max-w-7xl gap-4 mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="text-2xl font-bold text-text-dark">
           {userName}さんの個人記録
         </div>
         <div className="flex flex-col gap-2">
-          <div className="font-bold text-xl text-gray-500">シーズン選択</div>
+          <div className="text-xl font-bold text-text-muted">シーズン選択</div>
           <div className="flex flex-row gap-2">
-            <select
-              className="w-full border border-gray-300 rounded-md p-2 text-text-dark"
+            <Select
+              containerClassName="flex-1"
               value={selectedLeagueSeasonId}
               onChange={onChangeLeagueSeason}
             >
@@ -56,15 +67,16 @@ const PersonalRecordPage: React.FC = () => {
                     {leagueSeason.name}
                   </option>
                 ))}
-            </select>
+            </Select>
             <div className="flex">
-              <button
-                className="min-w-16 bg-brand-500 rounded px-3 text-white justify-center items-center disabled:bg-gray-300"
+              <Button
+                className="min-w-16"
                 onClick={onDisplayButtonClick}
                 disabled={!selectedLeagueSeasonId || isStatsLoading}
+                loading={isStatsLoading}
               >
-                {isStatsLoading ? "取得中" : "表示"}
-              </button>
+                表示
+              </Button>
             </div>
           </div>
         </div>
@@ -77,56 +89,51 @@ const PersonalRecordPage: React.FC = () => {
         </div>
 
         <div className="flex flex-col gap-2">
-          <div className="font-bold text-xl text-gray-500">各順位回数</div>
-          <div className="text-base font-bold text-text-dark rounded-md overflow-hidden border border-gray-300">
-            <table className="min-w-full border-collapse">
-              <thead className="bg-gray-100">
-                <tr>
-                  <th className="py-2 px-4 border-b border-gray-300 text-left">
-                    順位
-                  </th>
-                  <th className="py-2 px-4 border-b border-gray-300 text-left">
-                    回数
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td className="py-2 px-4 border-b border-gray-300">1位</td>
-                  <td className="py-2 px-4 border-b border-gray-300">
+          <div className="text-xl font-bold text-text-muted">各順位回数</div>
+          <div className="overflow-hidden rounded-surface border border-border bg-white">
+            <Table
+              caption="各順位の回数"
+              className="text-base font-bold text-foreground"
+            >
+              <TableHead>
+                <TableRow>
+                  <TableHeadCell className="text-left">順位</TableHeadCell>
+                  <TableHeadCell className="text-left">回数</TableHeadCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                <TableRow>
+                  <TableCell className="text-left">1位</TableCell>
+                  <TableCell className="text-left">
                     {selectedStats?.numberOfEachOrder.first ?? "-"}
-                  </td>
-                </tr>
-                <tr>
-                  <td className="py-2 px-4 border-b border-gray-300">2位</td>
-                  <td className="py-2 px-4 border-b border-gray-300">
+                  </TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="text-left">2位</TableCell>
+                  <TableCell className="text-left">
                     {selectedStats?.numberOfEachOrder.second ?? "-"}
-                  </td>
-                </tr>
-                <tr>
-                  <td className="py-2 px-4 border-b border-gray-300">3位</td>
-                  <td className="py-2 px-4 border-b border-gray-300">
+                  </TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="text-left">3位</TableCell>
+                  <TableCell className="text-left">
                     {selectedStats?.numberOfEachOrder.third ?? "-"}
-                  </td>
-                </tr>
-                <tr>
-                  <td className="py-2 px-4">4位</td>
-                  <td className="py-2 px-4">
+                  </TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="text-left">4位</TableCell>
+                  <TableCell className="text-left">
                     {selectedStats?.numberOfEachOrder.fourth ?? "-"}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+                  </TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
           </div>
         </div>
 
-        {error && (
-          <div className="bg-error-bg border-2 border-error-border rounded-lg p-4">
-            <p className="text-error-text text-sm">{error}</p>
-          </div>
-        )}
+        {error ? <ErrorState message={error} /> : null}
       </div>
-    </div>
+    </AppShell>
   );
 };
 

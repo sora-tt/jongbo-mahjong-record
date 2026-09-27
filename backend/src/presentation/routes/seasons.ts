@@ -1,4 +1,3 @@
-import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import type { AppBindings } from "@/presentation/bindings.js";
 import { ok } from "@/presentation/response.js";
@@ -7,6 +6,7 @@ import {
   updateSeasonSchema,
 } from "@/presentation/schemas/season.js";
 import type { Services } from "@/presentation/dependencies.js";
+import { validateJson } from "@/presentation/validation.js";
 
 export const buildSeasonsRouter = (services: Services) =>
   new Hono<AppBindings>()
@@ -19,22 +19,18 @@ export const buildSeasonsRouter = (services: Services) =>
         ),
       ),
     )
-    .post(
-      "/:leagueId/seasons",
-      zValidator("json", createSeasonSchema),
-      async (c) => {
-        const input = c.req.valid("json");
-        return ok(
-          c,
-          await services.seasonService.createSeason(
-            c.get("authUser").uid,
-            c.req.param("leagueId"),
-            input,
-          ),
-          201,
-        );
-      },
-    )
+    .post("/:leagueId/seasons", validateJson(createSeasonSchema), async (c) => {
+      const input = c.req.valid("json");
+      return ok(
+        c,
+        await services.seasonService.createSeason(
+          c.get("authUser").uid,
+          c.req.param("leagueId"),
+          input,
+        ),
+        201,
+      );
+    })
     .get("/:leagueId/seasons/:seasonId", async (c) =>
       ok(
         c,
@@ -47,7 +43,7 @@ export const buildSeasonsRouter = (services: Services) =>
     )
     .patch(
       "/:leagueId/seasons/:seasonId",
-      zValidator("json", updateSeasonSchema),
+      validateJson(updateSeasonSchema),
       async (c) => {
         const input = c.req.valid("json");
         return ok(

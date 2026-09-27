@@ -6,6 +6,7 @@ import type {
   UpdateSessionInput,
 } from "@/domain/session/repository.js";
 import { AppError, ValidationError } from "@/domain/shared/errors.js";
+import { asOpaqueId } from "@/domain/shared/types.js";
 
 export class SessionService {
   constructor(
@@ -48,7 +49,7 @@ export class SessionService {
       seasonMembers.map((member) => [member.userId, member]),
     );
     const members = input.memberUserIds.map((memberId) => {
-      const member = memberMap.get(memberId);
+      const member = memberMap.get(asOpaqueId(memberId));
       if (!member) {
         throw new ValidationError("session members must belong to season", {
           userId: memberId,

@@ -14,8 +14,8 @@ export const SectionCard: React.FC<SectionCardProps> = ({
   bodyClassName = "",
 }) => {
   return (
-    <div className="bg-white rounded-lg overflow-hidden border border-brand-200 shadow-sm">
-      <div className="flex items-baseline justify-between px-4 pt-3 pb-2 border-b-2 border-brand-500 bg-gradient-to-r from-brand-500 to-brand-400">
+    <div className="overflow-hidden rounded-surface border border-border bg-white shadow-sm">
+      <div className="flex items-baseline justify-between border-b border-border bg-brand-600 px-4 pb-2 pt-3">
         <h2 className="text-lg font-bold text-white">{title}</h2>
         {rightText && <p className="text-xs text-white">{rightText}</p>}
       </div>

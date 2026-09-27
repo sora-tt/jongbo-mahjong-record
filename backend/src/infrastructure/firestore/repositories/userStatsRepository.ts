@@ -2,7 +2,15 @@ import { Timestamp, type Firestore } from "firebase-admin/firestore";
 import type { UserStats } from "@/domain/user/types.js";
 import type { UserStatsRepository } from "@/domain/user/repository.js";
 import type { ScopeType } from "@/domain/shared/types.js";
-import { toIsoString } from "@/infrastructure/firestore/utils.js";
+import {
+  nullableNumber,
+  nullableString,
+  requiredNumber,
+  requiredString,
+  toIsoString,
+} from "@/infrastructure/firestore/utils.js";
+import { asOpaqueId } from "@/domain/shared/types.js";
+import { buildUserStatsId, type UserStatsKey } from "@/domain/user/statsKey.js";
 
 export class FirestoreUserStatsRepository implements UserStatsRepository {
   constructor(private readonly db: Firestore) {}
@@ -13,8 +21,21 @@ export class FirestoreUserStatsRepository implements UserStatsRepository {
     leagueId?: string;
     seasonId?: string;
   }): Promise<UserStats | null> {
-    const snapshot = await this.query(params).limit(1).get();
-    const doc = snapshot.docs[0];
+    const key: UserStatsKey = {
+      ...params,
+      leagueId: params.leagueId ?? null,
+      seasonId: params.seasonId ?? null,
+    };
+    const canonical = await this.db
+      .collection("user_stats")
+      .doc(buildUserStatsId(key))
+      .get();
+    if (canonical.exists) {
+      return this.map(canonical.id, canonical.data() ?? {});
+    }
+
+    const legacy = await this.query(params).limit(1).get();
+    const doc = legacy.docs[0];
     return doc ? this.map(doc.id, doc.data()) : null;
   }
 
@@ -27,16 +48,8 @@ export class FirestoreUserStatsRepository implements UserStatsRepository {
     },
     data: Omit<UserStats, "id" | "createdAt" | "updatedAt">,
   ): Promise<string> {
-    const existing = await this.query({
-      userId: key.userId,
-      scopeType: key.scopeType,
-      leagueId: key.leagueId ?? undefined,
-      seasonId: key.seasonId ?? undefined,
-    })
-      .limit(1)
-      .get();
-
     const now = Timestamp.now();
+    const statsId = buildUserStatsId(key);
     const payload = {
       user_id: data.userId,
       user_name: data.userName,
@@ -65,19 +78,13 @@ export class FirestoreUserStatsRepository implements UserStatsRepository {
       updated_at: now,
     };
 
-    if (existing.empty) {
-      const ref = this.db.collection("user_stats").doc();
-      await ref.set({
-        id: ref.id,
-        ...payload,
-        created_at: now,
-      });
-      return ref.id;
-    }
-
-    const doc = existing.docs[0];
-    await doc.ref.update(payload);
-    return doc.id;
+    const ref = this.db.collection("user_stats").doc(statsId);
+    const existing = await ref.get();
+    await ref.set(
+      existing.exists ? payload : { id: statsId, ...payload, created_at: now },
+      { merge: existing.exists },
+    );
+    return statsId;
   }
 
   async deleteMissingSeasonStats(
@@ -119,32 +126,61 @@ export class FirestoreUserStatsRepository implements UserStatsRepository {
   }
 
   private map(id: string, data: FirebaseFirestore.DocumentData): UserStats {
+    const scopeType = requiredString(data.scope_type, "user_stats.scope_type");
+    if (
+      scopeType !== "overall" &&
+      scopeType !== "league" &&
+      scopeType !== "season"
+    ) {
+      throw new TypeError(
+        "invalid or missing Firestore field: user_stats.scope_type",
+      );
+    }
+
+    const leagueId =
+      data.league_id === null
+        ? null
+        : asOpaqueId(requiredString(data.league_id, "user_stats.league_id"));
+    const seasonId =
+      data.season_id === null
+        ? null
+        : asOpaqueId(requiredString(data.season_id, "user_stats.season_id"));
+
     return {
-      id,
-      userId: String(data.user_id ?? ""),
-      userName: String(data.user_name ?? ""),
-      scopeType: data.scope_type,
-      leagueId: data.league_id ?? null,
-      seasonId: data.season_id ?? null,
-      leagueName: data.league_name ?? null,
-      seasonName: data.season_name ?? null,
-      totalPoints: Number(data.total_points ?? 0),
-      totalMatchCount: Number(data.total_match_count ?? 0),
-      averageRank: Number(data.average_rank ?? 0),
-      currentRank: data.current_rank ?? null,
-      firstCount: Number(data.first_count ?? 0),
-      secondCount: Number(data.second_count ?? 0),
-      thirdCount: Number(data.third_count ?? 0),
-      fourthCount: data.fourth_count ?? null,
-      firstRate: Number(data.first_rate ?? 0),
-      secondRate: Number(data.second_rate ?? 0),
-      thirdRate: Number(data.third_rate ?? 0),
-      fourthRate: data.fourth_rate ?? null,
-      highestScore: data.highest_score ?? null,
-      lowestScore: data.lowest_score ?? null,
-      averageScore: data.average_score ?? null,
-      winStreak: data.win_streak ?? null,
-      loseStreak: data.lose_streak ?? null,
+      id: asOpaqueId(id),
+      userId: asOpaqueId(requiredString(data.user_id, "user_stats.user_id")),
+      userName: requiredString(data.user_name, "user_stats.user_name"),
+      scopeType,
+      leagueId,
+      seasonId,
+      leagueName: nullableString(data.league_name, "user_stats.league_name"),
+      seasonName: nullableString(data.season_name, "user_stats.season_name"),
+      totalPoints: requiredNumber(data.total_points, "user_stats.total_points"),
+      totalMatchCount: requiredNumber(
+        data.total_match_count,
+        "user_stats.total_match_count",
+      ),
+      averageRank: requiredNumber(data.average_rank, "user_stats.average_rank"),
+      currentRank: nullableNumber(data.current_rank, "user_stats.current_rank"),
+      firstCount: requiredNumber(data.first_count, "user_stats.first_count"),
+      secondCount: requiredNumber(data.second_count, "user_stats.second_count"),
+      thirdCount: requiredNumber(data.third_count, "user_stats.third_count"),
+      fourthCount: nullableNumber(data.fourth_count, "user_stats.fourth_count"),
+      firstRate: requiredNumber(data.first_rate, "user_stats.first_rate"),
+      secondRate: requiredNumber(data.second_rate, "user_stats.second_rate"),
+      thirdRate: requiredNumber(data.third_rate, "user_stats.third_rate"),
+      fourthRate: nullableNumber(data.fourth_rate, "user_stats.fourth_rate"),
+      highestScore: nullableNumber(
+        data.highest_score,
+        "user_stats.highest_score",
+      ),
+      lowestScore: nullableNumber(data.lowest_score, "user_stats.lowest_score"),
+      averageScore: nullableNumber(
+        data.average_score,
+        "user_stats.average_score",
+      ),
+      winStreak: nullableNumber(data.win_streak, "user_stats.win_streak"),
+      loseStreak: nullableNumber(data.lose_streak, "user_stats.lose_streak"),
       createdAt: toIsoString(data.created_at),
       updatedAt: toIsoString(data.updated_at),
     };

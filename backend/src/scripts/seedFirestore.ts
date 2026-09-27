@@ -128,26 +128,11 @@ const users: SeedUser[] = [
   },
 ];
 
-const rules = [
-  {
-    id: "0001",
-    name: "Mリーグルール",
-    description: "frontend mock を元にした四麻ルール",
-    gameType: "yonma",
-    uma: { first: 20, second: 10, third: -10, fourth: -20 },
-    oka: { startingPoints: 25000, returnPoints: 30000 },
-    scoreCalculation: "decimal",
-  },
-  {
-    id: "0002",
-    name: "ラス回避ルール",
-    description: "frontend mock を元にしたラス回避寄りルール",
-    gameType: "yonma",
-    uma: { first: 25, second: 10, third: -5, fourth: -30 },
-    oka: { startingPoints: 25000, returnPoints: 30000 },
-    scoreCalculation: "decimal",
-  },
-] as const;
+const defaultRule = {
+  gameType: "yonma",
+  uma: { first: 20, second: 10, third: -10, fourth: -20 },
+  oka: { startingPoints: 25000, returnPoints: 30000 },
+} as const;
 
 const allMembers = users.map((user) => ({
   userId: user.id,
@@ -159,9 +144,9 @@ const leagues: SeedLeague[] = [
     id: "000000",
     name: "雀望リーグ",
     rule: {
-      gameType: rules[0].gameType,
-      uma: rules[0].uma,
-      oka: rules[0].oka,
+      gameType: defaultRule.gameType,
+      uma: defaultRule.uma,
+      oka: defaultRule.oka,
     },
     members: allMembers,
     activeSeasonId: "0001",
@@ -308,9 +293,9 @@ const leagues: SeedLeague[] = [
     id: "000001",
     name: "土田リーグ",
     rule: {
-      gameType: rules[0].gameType,
-      uma: rules[0].uma,
-      oka: rules[0].oka,
+      gameType: defaultRule.gameType,
+      uma: defaultRule.uma,
+      oka: defaultRule.oka,
     },
     members: allMembers,
     activeSeasonId: "0003",
@@ -422,7 +407,7 @@ const buildSeasonRecords = (standings: SeedStanding[]) => ({
 
 const clearDatabase = async () => {
   const db = getDb();
-  const targets = ["user_stats", "leagues", "rules", "users"];
+  const targets = ["user_stats", "leagues", "users"];
   for (const target of targets) {
     await db.recursiveDelete(db.collection(target));
   }

@@ -15,7 +15,7 @@ const isTransientApiFailure = (error: unknown) => {
     return false;
   }
 
-  if (error.status >= 500 || error.status === 429) {
+  if (error.status !== null && (error.status >= 500 || error.status === 429)) {
     return true;
   }
 
@@ -38,17 +38,14 @@ export const loginToApp = async (input: {
   // Do not block redirect on profile sync. Home page has a repair path.
   void (async () => {
     try {
-      await fetchMe(idToken);
+      await fetchMe();
     } catch (error) {
       if (error instanceof ApiError && error.code === "not_found") {
         try {
-          await createMe(
-            {
-              name: credential.user.displayName ?? input.email.split("@")[0],
-              username: getFallbackUsername(input.email),
-            },
-            idToken
-          );
+          await createMe({
+            name: credential.user.displayName ?? input.email.split("@")[0],
+            username: getFallbackUsername(input.email),
+          });
         } catch (createError) {
           if (!isTransientApiFailure(createError)) {
             throw createError;
@@ -81,7 +78,7 @@ export const signupToApp = async (input: {
   // Do not block redirect on profile sync. Home page will retry if needed.
   void (async () => {
     try {
-      await createMe({ name: input.name, username: input.username }, idToken);
+      await createMe({ name: input.name, username: input.username });
     } catch (error) {
       if (!isTransientApiFailure(error)) {
         throw error;
