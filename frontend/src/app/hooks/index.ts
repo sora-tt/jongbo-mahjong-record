@@ -2,8 +2,9 @@ import * as React from "react";
 
 import { useRouter } from "next/navigation";
 
+import { fetchLeagues } from "@/features/league/api";
+import { toLeagueSummary } from "@/features/league/model/adapter";
 import { ApiError, getApiErrorMessage } from "@/lib/api/core";
-import { fetchLeagues } from "@/lib/api/leagues";
 import { createMe, fetchMe } from "@/lib/api/users";
 import { getCurrentUser } from "@/lib/firebase/auth";
 
@@ -17,15 +18,16 @@ const getFallbackUsername = (email: string) =>
 const DEFAULT_ERROR_MESSAGE =
   "ホーム画面の取得に失敗しました。時間をおいて再度お試しください。";
 
+type LeagueSummary = ReturnType<typeof toLeagueSummary>;
+
 export const useHome = () => {
   const router = useRouter();
   const [userId, setUserId] = React.useState("");
   const [userName, setUserName] = React.useState("");
-  const [leagues, setLeagues] = React.useState<
-    Awaited<ReturnType<typeof fetchLeagues>>
-  >([]);
+  const [leagues, setLeagues] = React.useState<LeagueSummary[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  const [retryCount, setRetryCount] = React.useState(0);
 
   React.useEffect(() => {
     let isActive = true;
@@ -44,7 +46,7 @@ export const useHome = () => {
 
         setUserId(me.id);
         setUserName(me.name);
-        setLeagues(joinedLeagues);
+        setLeagues(joinedLeagues.map(toLeagueSummary));
       } catch (loadError) {
         if (!isActive) {
           return;
@@ -78,7 +80,7 @@ export const useHome = () => {
 
             setUserId(profile.id);
             setUserName(profile.name);
-            setLeagues(joinedLeagues);
+            setLeagues(joinedLeagues.map(toLeagueSummary));
             return;
           } catch (repairError) {
             if (!isActive) {
@@ -103,7 +105,11 @@ export const useHome = () => {
     return () => {
       isActive = false;
     };
-  }, [router]);
+  }, [retryCount, router]);
+
+  const retry = React.useCallback(() => {
+    setRetryCount((count) => count + 1);
+  }, []);
 
   const hasLeagues = leagues.length > 0;
 
@@ -114,5 +120,6 @@ export const useHome = () => {
     hasLeagues,
     isLoading,
     error,
+    retry,
   };
 };

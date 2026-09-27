@@ -295,6 +295,10 @@ export const getApiErrorMessage = (error: unknown, fallback: string) => {
     return "現在の状態ではこの操作を実行できません。";
   }
 
+  if (error.code === "validation_error") {
+    return error.message;
+  }
+
   if (error.retryable) {
     return "通信に失敗しました。時間をおいて再度お試しください。";
   }

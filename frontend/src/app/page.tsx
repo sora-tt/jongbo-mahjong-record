@@ -12,7 +12,7 @@ import { LoadingState } from "@/components/ui/loading-state";
 import { useHome } from "./hooks";
 
 export const Home: React.FC = () => {
-  const { userName, leagues, hasLeagues, isLoading, error } = useHome();
+  const { userName, leagues, hasLeagues, isLoading, error, retry } = useHome();
 
   return (
     <AppShell mainClassName="min-h-screen bg-background font-jp">
@@ -52,7 +52,7 @@ export const Home: React.FC = () => {
             <EmptyLeagueState />
           )}
 
-          {error ? <ErrorState message={error} /> : null}
+          {error ? <ErrorState message={error} onRetry={retry} /> : null}
         </div>
       )}
     </AppShell>

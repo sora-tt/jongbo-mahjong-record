@@ -3,13 +3,14 @@ import * as React from "react";
 import { useParams, useRouter } from "next/navigation";
 
 import { COLOR_MAP } from "@/constants/color-map";
-import { ApiError } from "@/lib/api/core";
-import { fetchSeasonDetail } from "@/lib/api/seasons";
+import { fetchSeasonDetail } from "@/features/season/api";
+import { toSeasonDetail } from "@/features/season/model/adapter";
+import { ApiError, getApiErrorMessage } from "@/lib/api/core";
 
 const DEFAULT_ERROR_MESSAGE =
   "シーズン詳細の取得に失敗しました。時間をおいて再度お試しください。";
 
-type SeasonDetail = Awaited<ReturnType<typeof fetchSeasonDetail>>;
+type SeasonDetail = ReturnType<typeof toSeasonDetail>;
 
 type Title = {
   label: string;
@@ -111,11 +112,10 @@ const buildSeasonChartData = (season: SeasonDetail) => {
 export const useSeasonPage = () => {
   const router = useRouter();
   const params = useParams<{ leagueId: string; seasonId: string }>();
-  const [season, setSeason] = React.useState<Awaited<
-    ReturnType<typeof fetchSeasonDetail>
-  > | null>(null);
+  const [season, setSeason] = React.useState<SeasonDetail | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  const [retryCount, setRetryCount] = React.useState(0);
 
   React.useEffect(() => {
     let isActive = true;
@@ -140,7 +140,7 @@ export const useSeasonPage = () => {
           return;
         }
 
-        setSeason(seasonDetail);
+        setSeason(toSeasonDetail(seasonDetail));
       } catch (loadError) {
         if (!isActive) {
           return;
@@ -151,9 +151,7 @@ export const useSeasonPage = () => {
           return;
         }
 
-        setError(
-          loadError instanceof Error ? loadError.message : DEFAULT_ERROR_MESSAGE
-        );
+        setError(getApiErrorMessage(loadError, DEFAULT_ERROR_MESSAGE));
       } finally {
         if (isActive) {
           setLoading(false);
@@ -166,7 +164,11 @@ export const useSeasonPage = () => {
     return () => {
       isActive = false;
     };
-  }, [params.leagueId, params.seasonId, router]);
+  }, [params.leagueId, params.seasonId, retryCount, router]);
+
+  const retry = React.useCallback(() => {
+    setRetryCount((count) => count + 1);
+  }, []);
 
   const titles: Title[] = React.useMemo(() => {
     if (!season) {
@@ -261,6 +263,7 @@ export const useSeasonPage = () => {
 
   return {
     leagueId: params.leagueId,
+    seasonId: params.seasonId,
     season,
     titles,
     pointProgressionChart,
@@ -269,6 +272,7 @@ export const useSeasonPage = () => {
     visibleUserIds,
     loading,
     error,
+    retry,
     handleStartRecording,
     handleToggleChartSeries,
   };
