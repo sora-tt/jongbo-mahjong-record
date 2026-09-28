@@ -2,132 +2,186 @@
 
 import * as React from "react";
 
-import Header from "@/components/common/container/header";
-import { AverageRankCard } from "@/components/pages/personal-record/average-rank-card";
-import { TopTwoRateCard } from "@/components/pages/personal-record/top-two-rate-card";
-import { TotalMatchCard } from "@/components/pages/personal-record/total-match-card";
-import { TotalPointCard } from "@/components/pages/personal-record/total-point-card";
+import { StatisticsMetricCard } from "@/features/statistics/ui/StatisticsMetricCard";
 
-import { usePersonalRecord } from "./hooks";
+import { AppShell } from "@/components/layout/app-shell";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import { ErrorState } from "@/components/ui/error-state";
+import { LoadingState } from "@/components/ui/loading-state";
+import { Select } from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeadCell,
+  TableRow,
+} from "@/components/ui/table";
 
-const PersonalRecordPage: React.FC = () => {
+import { useStatistics } from "./hooks";
+
+const formatDecimal = (value: number | null, digits: number) =>
+  value === null ? "未集計" : value.toFixed(digits);
+
+const StatisticsPage: React.FC = () => {
   const {
     userName,
     joiningLeagueSeasons,
     selectedLeagueSeasonId,
     selectedStats,
     isLoading,
+    initialError,
+    statsError,
+    statsStatus,
     isStatsLoading,
-    error,
     onChangeLeagueSeason,
     onDisplayButtonClick,
-  } = usePersonalRecord();
+    retry,
+    retryStats,
+  } = useStatistics();
 
   if (isLoading) {
     return (
-      <div className="flex-1 bg-white min-h-screen font-jp">
-        <Header />
-        <div className="flex min-h-[calc(100vh-56px)] items-center justify-center px-4 text-center text-text-muted">
-          個人成績を読み込んでいます...
-        </div>
-      </div>
+      <AppShell mainClassName="min-h-screen bg-background font-jp">
+        <LoadingState
+          label="個人成績を読み込んでいます…"
+          className="min-h-[calc(100vh-4rem)]"
+        />
+      </AppShell>
     );
   }
 
   return (
-    <div className="flex-1 bg-white min-h-screen font-jp">
-      <Header />
-      <div className="flex flex-col max-w-7xl gap-4 mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="text-2xl font-bold text-text-dark">
-          {userName}さんの個人記録
-        </div>
-        <div className="flex flex-col gap-2">
-          <div className="font-bold text-xl text-gray-500">シーズン選択</div>
-          <div className="flex flex-row gap-2">
-            <select
-              className="w-full border border-gray-300 rounded-md p-2 text-text-dark"
-              value={selectedLeagueSeasonId}
-              onChange={onChangeLeagueSeason}
-            >
-              <option value="">シーズンを選択してください</option>
-              {joiningLeagueSeasons &&
-                joiningLeagueSeasons.map((leagueSeason) => (
-                  <option key={leagueSeason.id} value={leagueSeason.id}>
-                    {leagueSeason.name}
+    <AppShell mainClassName="min-h-screen bg-background font-jp">
+      <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
+        <header>
+          <p className="text-sm text-text-muted">個人成績</p>
+          <h1 className="mt-1 text-2xl font-bold text-foreground">
+            {userName}さんの成績
+          </h1>
+        </header>
+
+        {initialError ? (
+          <ErrorState message={initialError} onRetry={retry} />
+        ) : joiningLeagueSeasons.length === 0 ? (
+          <EmptyState
+            title="参加中のシーズンがありません"
+            description="シーズンに参加すると個人成績を確認できます。"
+          />
+        ) : (
+          <Card title="対象シーズン">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+              <Select
+                label="シーズン"
+                containerClassName="flex-1"
+                value={selectedLeagueSeasonId}
+                onChange={onChangeLeagueSeason}
+              >
+                <option value="">シーズンを選択してください</option>
+                {joiningLeagueSeasons.map((season) => (
+                  <option key={season.id} value={season.id}>
+                    {season.leagueName} - {season.seasonName}
                   </option>
                 ))}
-            </select>
-            <div className="flex">
-              <button
-                className="min-w-16 bg-brand-500 rounded px-3 text-white justify-center items-center disabled:bg-gray-300"
+              </Select>
+              <Button
                 onClick={onDisplayButtonClick}
                 disabled={!selectedLeagueSeasonId || isStatsLoading}
+                loading={isStatsLoading}
               >
-                {isStatsLoading ? "取得中" : "表示"}
-              </button>
+                表示
+              </Button>
             </div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3 mt-1">
-          <TotalMatchCard selectedStats={selectedStats} />
-          <TotalPointCard selectedStats={selectedStats} />
-          <AverageRankCard selectedStats={selectedStats} />
-          <TopTwoRateCard selectedStats={selectedStats} />
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <div className="font-bold text-xl text-gray-500">各順位回数</div>
-          <div className="text-base font-bold text-text-dark rounded-md overflow-hidden border border-gray-300">
-            <table className="min-w-full border-collapse">
-              <thead className="bg-gray-100">
-                <tr>
-                  <th className="py-2 px-4 border-b border-gray-300 text-left">
-                    順位
-                  </th>
-                  <th className="py-2 px-4 border-b border-gray-300 text-left">
-                    回数
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td className="py-2 px-4 border-b border-gray-300">1位</td>
-                  <td className="py-2 px-4 border-b border-gray-300">
-                    {selectedStats?.numberOfEachOrder.first ?? "-"}
-                  </td>
-                </tr>
-                <tr>
-                  <td className="py-2 px-4 border-b border-gray-300">2位</td>
-                  <td className="py-2 px-4 border-b border-gray-300">
-                    {selectedStats?.numberOfEachOrder.second ?? "-"}
-                  </td>
-                </tr>
-                <tr>
-                  <td className="py-2 px-4 border-b border-gray-300">3位</td>
-                  <td className="py-2 px-4 border-b border-gray-300">
-                    {selectedStats?.numberOfEachOrder.third ?? "-"}
-                  </td>
-                </tr>
-                <tr>
-                  <td className="py-2 px-4">4位</td>
-                  <td className="py-2 px-4">
-                    {selectedStats?.numberOfEachOrder.fourth ?? "-"}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {error && (
-          <div className="bg-error-bg border-2 border-error-border rounded-lg p-4">
-            <p className="text-error-text text-sm">{error}</p>
-          </div>
+          </Card>
         )}
+
+        {statsError ? (
+          <ErrorState message={statsError} onRetry={retryStats} />
+        ) : null}
+        {statsStatus === "loading" ? (
+          <LoadingState label="個人成績を読み込んでいます…" />
+        ) : statsStatus === "uncomputed" ? (
+          <EmptyState
+            title="統計がまだ計算されていません"
+            description="対局が登録されると、BEで集計された個人成績が表示されます。"
+          />
+        ) : statsStatus === "idle" && joiningLeagueSeasons.length > 0 ? (
+          <EmptyState title="シーズンを選択して成績を表示してください" />
+        ) : null}
+
+        {statsStatus === "success" && selectedStats ? (
+          <>
+            <p className="text-sm text-text-muted">
+              {selectedStats.leagueName ?? "リーグ不明"} /{" "}
+              {selectedStats.seasonName ?? "シーズン不明"}
+            </p>
+            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+              <StatisticsMetricCard
+                label="総合pt"
+                value={formatDecimal(selectedStats.totalPoints, 1)}
+                unit="pt"
+              />
+              <StatisticsMetricCard
+                label="対局数"
+                value={selectedStats.totalMatchCount}
+                unit="局"
+              />
+              <StatisticsMetricCard
+                label="現在順位"
+                value={formatDecimal(selectedStats.currentRank, 0)}
+                unit={selectedStats.currentRank === null ? undefined : "位"}
+              />
+              <StatisticsMetricCard
+                label="平均順位"
+                value={formatDecimal(selectedStats.averageRank, 2)}
+                unit="位"
+              />
+            </div>
+
+            <Card title="順位別成績" bodyClassName="overflow-x-auto">
+              <Table caption="順位別成績">
+                <TableHead>
+                  <TableRow>
+                    <TableHeadCell className="text-left">順位</TableHeadCell>
+                    <TableHeadCell className="text-left">回数</TableHeadCell>
+                    <TableHeadCell className="text-left">割合</TableHeadCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {[
+                    ["1位", selectedStats.firstCount, selectedStats.firstRate],
+                    [
+                      "2位",
+                      selectedStats.secondCount,
+                      selectedStats.secondRate,
+                    ],
+                    ["3位", selectedStats.thirdCount, selectedStats.thirdRate],
+                    [
+                      "4位",
+                      selectedStats.fourthCount,
+                      selectedStats.fourthRate,
+                    ],
+                  ].map(([label, count, rate]) => (
+                    <TableRow key={label}>
+                      <TableCell className="text-left">{label}</TableCell>
+                      <TableCell className="text-left">
+                        {count ?? "-"}
+                      </TableCell>
+                      <TableCell className="text-left">
+                        {typeof rate === "number" ? `${rate.toFixed(2)}%` : "-"}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </Card>
+          </>
+        ) : null}
       </div>
-    </div>
+    </AppShell>
   );
 };
 
-export default PersonalRecordPage;
+export default StatisticsPage;

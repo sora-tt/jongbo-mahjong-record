@@ -2,17 +2,18 @@
 
 import * as React from "react";
 
-import {
-  logout,
-  subscribeAuthState,
-  type FirebaseUser,
-} from "@/lib/firebase/auth";
+import { logoutFromApp } from "@/lib/auth/flows";
+import { subscribeAuthState, type FirebaseUser } from "@/lib/firebase/auth";
 import { hasFirebaseConfig } from "@/lib/firebase/client";
+
+export type AuthStatus = "loading" | "authenticated" | "unauthenticated";
 
 type AuthContextValue = {
   user: FirebaseUser | null;
   isLoading: boolean;
+  status: AuthStatus;
   logout: () => Promise<void>;
+  markUnauthenticated: () => void;
 };
 
 const AuthContext = React.createContext<AuthContextValue | null>(null);
@@ -22,6 +23,15 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({
 }) => {
   const [user, setUser] = React.useState<FirebaseUser | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
+
+  const handleLogout = React.useCallback(async () => {
+    await logoutFromApp();
+    setUser(null);
+  }, []);
+
+  const markUnauthenticated = React.useCallback(() => {
+    setUser(null);
+  }, []);
 
   React.useEffect(() => {
     if (!hasFirebaseConfig()) {
@@ -57,7 +67,13 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({
   const value = {
     user,
     isLoading,
-    logout,
+    status: isLoading
+      ? ("loading" as const)
+      : user
+        ? ("authenticated" as const)
+        : ("unauthenticated" as const),
+    logout: handleLogout,
+    markUnauthenticated,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

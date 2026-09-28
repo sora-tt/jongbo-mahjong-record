@@ -2,10 +2,11 @@ import * as React from "react";
 
 import { useRouter } from "next/navigation";
 
-import { ApiError } from "@/lib/api/core";
-import { fetchLeagues } from "@/lib/api/leagues";
+import { fetchLeagues } from "@/features/league/api";
+import { toLeagueSummary } from "@/features/league/model/adapter";
+import { ApiError, getApiErrorMessage } from "@/lib/api/core";
 import { createMe, fetchMe } from "@/lib/api/users";
-import { getCurrentIdToken, getCurrentUser } from "@/lib/firebase/auth";
+import { getCurrentUser } from "@/lib/firebase/auth";
 
 const getFallbackUsername = (email: string) =>
   email
@@ -17,15 +18,16 @@ const getFallbackUsername = (email: string) =>
 const DEFAULT_ERROR_MESSAGE =
   "ホーム画面の取得に失敗しました。時間をおいて再度お試しください。";
 
+type LeagueSummary = ReturnType<typeof toLeagueSummary>;
+
 export const useHome = () => {
   const router = useRouter();
   const [userId, setUserId] = React.useState("");
   const [userName, setUserName] = React.useState("");
-  const [leagues, setLeagues] = React.useState<
-    Awaited<ReturnType<typeof fetchLeagues>>
-  >([]);
+  const [leagues, setLeagues] = React.useState<LeagueSummary[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  const [retryCount, setRetryCount] = React.useState(0);
 
   React.useEffect(() => {
     let isActive = true;
@@ -44,7 +46,7 @@ export const useHome = () => {
 
         setUserId(me.id);
         setUserName(me.name);
-        setLeagues(joinedLeagues);
+        setLeagues(joinedLeagues.map(toLeagueSummary));
       } catch (loadError) {
         if (!isActive) {
           return;
@@ -57,24 +59,19 @@ export const useHome = () => {
 
         if (loadError instanceof ApiError && loadError.status === 404) {
           try {
-            const idToken = await getCurrentIdToken();
             const fbUser = await getCurrentUser();
 
-            if (!idToken || !fbUser) {
+            if (!fbUser) {
               router.replace("/login");
               return;
             }
 
-            const profile = await createMe(
-              {
-                name:
-                  fbUser.displayName ?? fbUser.email?.split("@")[0] ?? "user",
-                username: getFallbackUsername(
-                  fbUser.email ?? fbUser.displayName ?? "user"
-                ),
-              },
-              idToken
-            );
+            const profile = await createMe({
+              name: fbUser.displayName ?? fbUser.email?.split("@")[0] ?? "user",
+              username: getFallbackUsername(
+                fbUser.email ?? fbUser.displayName ?? "user"
+              ),
+            });
             const joinedLeagues = await fetchLeagues();
 
             if (!isActive) {
@@ -83,25 +80,19 @@ export const useHome = () => {
 
             setUserId(profile.id);
             setUserName(profile.name);
-            setLeagues(joinedLeagues);
+            setLeagues(joinedLeagues.map(toLeagueSummary));
             return;
           } catch (repairError) {
             if (!isActive) {
               return;
             }
 
-            setError(
-              repairError instanceof Error
-                ? repairError.message
-                : DEFAULT_ERROR_MESSAGE
-            );
+            setError(getApiErrorMessage(repairError, DEFAULT_ERROR_MESSAGE));
             return;
           }
         }
 
-        setError(
-          loadError instanceof Error ? loadError.message : DEFAULT_ERROR_MESSAGE
-        );
+        setError(getApiErrorMessage(loadError, DEFAULT_ERROR_MESSAGE));
       } finally {
         if (isActive) {
           setIsLoading(false);
@@ -114,7 +105,11 @@ export const useHome = () => {
     return () => {
       isActive = false;
     };
-  }, [router]);
+  }, [retryCount, router]);
+
+  const retry = React.useCallback(() => {
+    setRetryCount((count) => count + 1);
+  }, []);
 
   const hasLeagues = leagues.length > 0;
 
@@ -125,5 +120,6 @@ export const useHome = () => {
     hasLeagues,
     isLoading,
     error,
+    retry,
   };
 };

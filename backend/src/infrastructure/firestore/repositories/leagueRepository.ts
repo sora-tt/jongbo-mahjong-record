@@ -11,8 +11,19 @@ import type {
   UpdateLeagueInput,
 } from "@/domain/league/repository.js";
 import type { UserRepository } from "@/domain/user/repository.js";
-import { toIsoString } from "@/infrastructure/firestore/utils.js";
-import { NotFoundError } from "@/domain/shared/errors.js";
+import {
+  nullableNumber,
+  nullableObject,
+  nullableString,
+  requiredArray,
+  requiredNumber,
+  requiredObject,
+  requiredString,
+  toIsoString,
+} from "@/infrastructure/firestore/utils.js";
+import { ConflictError, NotFoundError } from "@/domain/shared/errors.js";
+import { asOpaqueId } from "@/domain/shared/types.js";
+import type { UserReference } from "@/domain/shared/types.js";
 
 export class FirestoreLeagueRepository implements LeagueRepository {
   constructor(
@@ -33,26 +44,37 @@ export class FirestoreLeagueRepository implements LeagueRepository {
 
     return Promise.all(
       docs.map(async (doc) => {
-        const data = doc.data() ?? {};
-        const myStanding = data.active_season_id
+        const data = requiredObject(doc.data(), "leagues");
+        const activeSeasonId = nullableString(
+          data.active_season_id,
+          "leagues.active_season_id",
+        );
+        const activeSeasonName = nullableString(
+          data.active_season_name,
+          "leagues.active_season_name",
+        );
+        const myStanding = activeSeasonId
           ? await this.findMyStanding(
               doc.id,
-              data.active_season_id,
+              activeSeasonId,
               memberUserId ?? "",
             )
           : null;
 
         return {
-          id: doc.id,
-          name: String(data.name ?? ""),
-          memberCount: Number(data.member_count ?? 0),
-          totalMatchCount: Number(data.total_match_count ?? 0),
+          id: asOpaqueId(doc.id),
+          name: requiredString(data.name, "leagues.name"),
+          memberCount: requiredNumber(
+            data.member_count,
+            "leagues.member_count",
+          ),
+          totalMatchCount: requiredNumber(
+            data.total_match_count,
+            "leagues.total_match_count",
+          ),
           activeSeason:
-            data.active_season_id && data.active_season_name
-              ? {
-                  id: String(data.active_season_id),
-                  name: String(data.active_season_name),
-                }
+            activeSeasonId && activeSeasonName
+              ? { id: asOpaqueId(activeSeasonId), name: activeSeasonName }
               : null,
           myStanding,
           createdAt: toIsoString(data.created_at),
@@ -69,30 +91,40 @@ export class FirestoreLeagueRepository implements LeagueRepository {
     }
 
     const members = await this.listMembers(leagueId);
-    const data = snapshot.data() ?? {};
+    const data = requiredObject(snapshot.data(), "leagues");
+    const activeSeasonId = nullableString(
+      data.active_season_id,
+      "leagues.active_season_id",
+    );
+    const activeSeasonName = nullableString(
+      data.active_season_name,
+      "leagues.active_season_name",
+    );
+    const leagueRecords = nullableObject(
+      data.league_records,
+      "leagues.league_records",
+    );
 
     return {
-      id: snapshot.id,
-      name: String(data.name ?? ""),
+      id: asOpaqueId(snapshot.id),
+      name: requiredString(data.name, "leagues.name"),
       rule: this.mapLeagueRule(data.rule),
-      memberCount: Number(data.member_count ?? 0),
-      totalMatchCount: Number(data.total_match_count ?? 0),
+      memberCount: requiredNumber(data.member_count, "leagues.member_count"),
+      totalMatchCount: requiredNumber(
+        data.total_match_count,
+        "leagues.total_match_count",
+      ),
       activeSeason:
-        data.active_season_id && data.active_season_name
-          ? {
-              id: String(data.active_season_id),
-              name: String(data.active_season_name),
-            }
+        activeSeasonId && activeSeasonName
+          ? { id: asOpaqueId(activeSeasonId), name: activeSeasonName }
           : null,
       members,
-      leagueRecords: data.league_records
+      leagueRecords: leagueRecords
         ? {
-            winStreak: this.mapRecordHolder(data.league_records.win_streak),
-            loseStreak: this.mapRecordHolder(data.league_records.lose_streak),
-            highestScore: this.mapRecordHolder(
-              data.league_records.highest_score,
-            ),
-            lowestScore: this.mapRecordHolder(data.league_records.lowest_score),
+            winStreak: this.mapRecordHolder(leagueRecords.win_streak),
+            loseStreak: this.mapRecordHolder(leagueRecords.lose_streak),
+            highestScore: this.mapRecordHolder(leagueRecords.highest_score),
+            lowestScore: this.mapRecordHolder(leagueRecords.lowest_score),
           }
         : null,
       createdAt: toIsoString(data.created_at),
@@ -123,6 +155,7 @@ export class FirestoreLeagueRepository implements LeagueRepository {
       total_match_count: 0,
       active_season_id: null,
       active_season_name: null,
+      rule_locked: false,
       league_records: null,
       created_at: now,
       updated_at: now,
@@ -146,46 +179,56 @@ export class FirestoreLeagueRepository implements LeagueRepository {
     input: UpdateLeagueInput,
   ): Promise<LeagueDetail> {
     const leagueRef = this.db.collection("leagues").doc(leagueId);
-    const snapshot = await leagueRef.get();
-    if (!snapshot.exists) {
-      throw new NotFoundError("league not found", { leagueId });
-    }
+    const users =
+      input.memberUserIds === undefined
+        ? null
+        : await this.userRepository.getByIds(input.memberUserIds);
 
-    const patch: Record<string, unknown> = {
-      updated_at: Timestamp.now(),
-    };
-    if (input.name !== undefined) {
-      patch.name = input.name;
-    }
-    if (input.rule !== undefined) {
-      patch.rule = this.toLeagueRuleDoc(input.rule);
-    }
-    if (input.memberUserIds !== undefined) {
-      patch.member_count = input.memberUserIds.length;
-    }
+    await this.db.runTransaction(async (transaction) => {
+      const snapshot = await transaction.get(leagueRef);
+      if (!snapshot.exists) {
+        throw new NotFoundError("league not found", { leagueId });
+      }
 
-    const batch = this.db.batch();
-    batch.update(leagueRef, patch);
+      const membersSnapshot =
+        input.memberUserIds === undefined
+          ? null
+          : await transaction.get(leagueRef.collection("members"));
+      if (input.rule !== undefined && snapshot.data()?.rule_locked === true) {
+        throw new ConflictError("league rule is locked after the first match", {
+          leagueId,
+        });
+      }
 
-    if (input.memberUserIds !== undefined) {
-      const users = await this.userRepository.getByIds(input.memberUserIds);
-      const membersSnapshot = await leagueRef.collection("members").get();
+      const patch: Record<string, unknown> = {
+        updated_at: Timestamp.now(),
+      };
+      if (input.name !== undefined) {
+        patch.name = input.name;
+      }
+      if (input.rule !== undefined) {
+        patch.rule = this.toLeagueRuleDoc(input.rule);
+      }
+      if (input.memberUserIds !== undefined) {
+        patch.member_count = input.memberUserIds.length;
+      }
 
-      membersSnapshot.docs.forEach((doc) => {
-        batch.delete(doc.ref);
+      transaction.update(leagueRef, patch);
+
+      membersSnapshot?.docs.forEach((doc) => {
+        transaction.delete(doc.ref);
       });
 
-      users.forEach((user) => {
+      users?.forEach((user) => {
         const memberRef = leagueRef.collection("members").doc();
-        batch.set(memberRef, {
+        transaction.set(memberRef, {
           id: memberRef.id,
           user_id: user.id,
           user_name: user.name,
         });
       });
-    }
+    });
 
-    await batch.commit();
     return this.get(leagueId);
   }
 
@@ -210,10 +253,30 @@ export class FirestoreLeagueRepository implements LeagueRepository {
 
     const snapshot = await leagueSnapshot.ref.collection("members").get();
     return snapshot.docs.map((doc) => ({
-      id: doc.id,
-      userId: String(doc.data().user_id ?? ""),
-      userName: String(doc.data().user_name ?? ""),
+      id: asOpaqueId(doc.id),
+      userId: asOpaqueId(
+        requiredString(doc.data().user_id, "leagues.members.user_id"),
+      ),
+      userName: requiredString(
+        doc.data().user_name,
+        "leagues.members.user_name",
+      ),
     }));
+  }
+
+  async listAllMembers(): Promise<UserReference[]> {
+    const leaguesSnapshot = await this.db.collection("leagues").get();
+    const members = await Promise.all(
+      leaguesSnapshot.docs.map((leagueDoc) => this.listMembers(leagueDoc.id)),
+    );
+    const byUserId = new Map<string, UserReference>();
+    members.flat().forEach((member) => {
+      byUserId.set(member.userId, {
+        userId: member.userId,
+        userName: member.userName,
+      });
+    });
+    return [...byUserId.values()];
   }
 
   async setActiveSeason(
@@ -341,32 +404,42 @@ export class FirestoreLeagueRepository implements LeagueRepository {
       return null;
     }
 
-    const standings = seasonSnapshot.data()?.standings ?? [];
-    const standing = Array.isArray(standings)
-      ? standings.find((item) => item.user_id === memberUserId)
-      : undefined;
+    const standings = requiredArray(
+      seasonSnapshot.data()?.standings,
+      "seasons.standings",
+    );
+    const standing = standings.find(
+      (item) =>
+        requiredObject(item, "seasons.standings[]").user_id === memberUserId,
+    );
 
     if (!standing) {
       return null;
     }
 
+    const standingData = requiredObject(standing, "seasons.standings[]");
     return {
-      rank: Number(standing.rank ?? null),
-      totalPoints: Number(standing.total_points ?? 0),
+      rank:
+        standingData.rank === null
+          ? null
+          : requiredNumber(standingData.rank, "seasons.standings.rank"),
+      totalPoints: requiredNumber(
+        standingData.total_points,
+        "seasons.standings.total_points",
+      ),
     };
   }
 
-  private mapRecordHolder(
-    value: FirebaseFirestore.DocumentData | null | undefined,
-  ) {
-    if (!value) {
+  private mapRecordHolder(value: unknown) {
+    const record = nullableObject(value, "record");
+    if (!record) {
       return null;
     }
 
     return {
-      value: Number(value.value ?? 0),
-      userId: String(value.user_id ?? ""),
-      userName: String(value.user_name ?? ""),
+      value: requiredNumber(record.value, "record.value"),
+      userId: asOpaqueId(requiredString(record.user_id, "record.user_id")),
+      userName: requiredString(record.user_name, "record.user_name"),
     };
   }
 
@@ -384,20 +457,34 @@ export class FirestoreLeagueRepository implements LeagueRepository {
     };
   }
 
-  private mapLeagueRule(
-    value: FirebaseFirestore.DocumentData | null | undefined,
-  ) {
+  private mapLeagueRule(value: unknown) {
+    const rule = requiredObject(value, "leagues.rule");
+    const gameType = requiredString(rule.game_type, "leagues.rule.game_type");
+    if (gameType !== "sanma" && gameType !== "yonma") {
+      throw new TypeError(
+        "invalid or missing Firestore field: leagues.rule.game_type",
+      );
+    }
+    const uma = requiredObject(rule.uma, "leagues.rule.uma");
+    const oka = requiredObject(rule.oka, "leagues.rule.oka");
+
     return {
-      gameType: value?.game_type === "sanma" ? "sanma" : "yonma",
+      gameType,
       uma: {
-        first: Number(value?.uma?.first ?? 0),
-        second: Number(value?.uma?.second ?? 0),
-        third: Number(value?.uma?.third ?? 0),
-        fourth: value?.uma?.fourth ?? null,
+        first: requiredNumber(uma.first, "leagues.rule.uma.first"),
+        second: requiredNumber(uma.second, "leagues.rule.uma.second"),
+        third: requiredNumber(uma.third, "leagues.rule.uma.third"),
+        fourth: nullableNumber(uma.fourth, "leagues.rule.uma.fourth"),
       },
       oka: {
-        startingPoints: Number(value?.oka?.starting_points ?? 0),
-        returnPoints: Number(value?.oka?.return_points ?? 0),
+        startingPoints: requiredNumber(
+          oka.starting_points,
+          "leagues.rule.oka.starting_points",
+        ),
+        returnPoints: requiredNumber(
+          oka.return_points,
+          "leagues.rule.oka.return_points",
+        ),
       },
     } satisfies LeagueRule;
   }

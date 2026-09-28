@@ -1,6 +1,6 @@
 import type { MatchResult } from "@/domain/match/types.js";
 import { ValidationError } from "@/domain/shared/errors.js";
-import type { GameType, Wind } from "@/domain/shared/types.js";
+import { asOpaqueId, type GameType, type Wind } from "@/domain/shared/types.js";
 
 type MatchCalculationRule = {
   gameType: GameType;
@@ -14,6 +14,11 @@ type MatchCalculationRule = {
     startingPoints: number;
     returnPoints: number;
   };
+};
+
+const expectedWindsByGameType: Record<GameType, readonly Wind[]> = {
+  sanma: ["east", "south", "west"],
+  yonma: ["east", "south", "west", "north"],
 };
 
 const getUmaByRank = (rule: MatchCalculationRule, rank: number) => {
@@ -39,7 +44,6 @@ export const calculateMatchPoints = (
     userId: string;
     userName: string;
     wind: Wind;
-    rank: number;
     rawScore: number;
   }>,
 ): MatchResult[] => {
@@ -59,6 +63,18 @@ export const calculateMatchPoints = (
     throw new ValidationError("results must not contain duplicate wind");
   }
 
+  const expectedWinds = expectedWindsByGameType[rule.gameType];
+  if (
+    results.some((result) => !expectedWinds.includes(result.wind)) ||
+    expectedWinds.some((wind) => !uniqueWinds.has(wind))
+  ) {
+    throw new ValidationError(`wind is not allowed for ${rule.gameType}`, {
+      field: "results.wind",
+      gameType: rule.gameType,
+      expectedWinds,
+    });
+  }
+
   const rawTotal = results.reduce((sum, result) => sum + result.rawScore, 0);
   const expectedRawTotal = rule.oka.startingPoints * expectedPlayerCount;
   if (rawTotal !== expectedRawTotal) {
@@ -72,7 +88,7 @@ export const calculateMatchPoints = (
   const sorted = [...results].sort(
     (left, right) => right.rawScore - left.rawScore,
   );
-  const ranked: Array<(typeof results)[number]> = [];
+  const ranked: Array<(typeof results)[number] & { rank: number }> = [];
 
   sorted.forEach((result, index) => {
     const previous = ranked[index - 1];
@@ -116,5 +132,8 @@ export const calculateMatchPoints = (
     });
   }
 
-  return withPoints;
+  return withPoints.map((result) => ({
+    ...result,
+    userId: asOpaqueId(result.userId),
+  }));
 };

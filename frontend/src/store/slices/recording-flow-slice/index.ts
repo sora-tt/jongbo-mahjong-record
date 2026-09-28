@@ -3,7 +3,7 @@ import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import type {
   RecordingFlowState,
   SelectedPlayers,
-} from "@/types/domain/player-select";
+} from "@/features/session-match/model/recording-flow";
 
 const createEmptySelectedPlayers = (): SelectedPlayers => ({
   east: "",

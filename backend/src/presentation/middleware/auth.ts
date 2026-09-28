@@ -1,4 +1,4 @@
-import { AppError } from "@/domain/shared/errors.js";
+import { UnauthorizedError } from "@/domain/shared/errors.js";
 import { getAdminAuth } from "@/infrastructure/firebase/client.js";
 import type { AppBindings } from "@/presentation/bindings.js";
 import { SESSION_COOKIE_NAME } from "@/presentation/session.js";
@@ -26,33 +26,19 @@ const withTimeout = async <T>(promise: Promise<T>, ms: number): Promise<T> => {
 
 export const requireAuth: MiddlewareHandler<AppBindings> = async (c, next) => {
   const sessionCookie = getCookie(c, SESSION_COOKIE_NAME);
-  const idToken = c.req.header("x-id-token")?.trim();
 
-  if (!sessionCookie && !idToken) {
-    throw new AppError(
-      "session cookie or x-id-token is required",
-      401,
-      "unauthorized",
-    );
+  if (!sessionCookie) {
+    throw new UnauthorizedError("session cookie is required");
   }
 
   let decodedToken;
   try {
-    if (idToken) {
-      decodedToken = await withTimeout(
-        getAdminAuth().verifyIdToken(idToken),
-        8000,
-      );
-    } else {
-      decodedToken = await withTimeout(
-        getAdminAuth().verifySessionCookie(sessionCookie as string, false),
-        8000,
-      );
-    }
-  } catch (error) {
-    throw new AppError("invalid authentication token", 401, "unauthorized", {
-      originalError: error instanceof Error ? error.message : String(error),
-    });
+    decodedToken = await withTimeout(
+      getAdminAuth().verifySessionCookie(sessionCookie, false),
+      8000,
+    );
+  } catch {
+    throw new UnauthorizedError("invalid authentication session");
   }
 
   c.set("authUser", {

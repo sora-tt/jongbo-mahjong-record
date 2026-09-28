@@ -2,14 +2,25 @@ import * as React from "react";
 
 import { useParams, useRouter } from "next/navigation";
 
-import { COLOR_MAP } from "@/constants/color-map";
-import { ApiError } from "@/lib/api/core";
-import { fetchSeasonDetail } from "@/lib/api/seasons";
+import { fetchSeasonDetail } from "@/features/season/api";
+import { toSeasonDetail } from "@/features/season/model/adapter";
+import { listSessions } from "@/features/session/api";
+import { toSessionList } from "@/features/session/model/adapter";
+import { toPointProgressionChart } from "@/features/statistics/model/adapter";
+import { CHART_SERIES } from "@/features/statistics/model/chart";
+import { ApiError, getApiErrorMessage } from "@/lib/api/core";
 
 const DEFAULT_ERROR_MESSAGE =
   "シーズン詳細の取得に失敗しました。時間をおいて再度お試しください。";
 
-type SeasonDetail = Awaited<ReturnType<typeof fetchSeasonDetail>>;
+type SeasonDetail = ReturnType<typeof toSeasonDetail>;
+type SessionSummary = ReturnType<typeof toSessionList>[number];
+type ChartSeriesItem = ReturnType<
+  typeof toPointProgressionChart
+>["series"][number] & {
+  colorClassName: string;
+  strokeColor: string;
+};
 
 type Title = {
   label: string;
@@ -17,105 +28,18 @@ type Title = {
   value: string;
 };
 
-type SeasonChartSeries = {
-  userId: string;
-  userName: string;
-  colorClassName: string;
-};
-
-type SeasonChartViewSeries = SeasonChartSeries & {
-  strokeColor: string;
-};
-
-type SeasonChartData = {
-  matchIndex: number;
-  [userId: string]: number;
-};
-
 const formatPercent = (value: number) => `${value.toFixed(2)}%`;
-
-const CHART_STROKE_COLORS = [
-  "#ef4444",
-  "#3b82f6",
-  "#22c55e",
-  "#eab308",
-  "#a855f7",
-  "#ec4899",
-  "#f97316",
-  "#0ea5e9",
-  "#10b981",
-  "#f59e0b",
-  "#84cc16",
-  "#14b8a6",
-  "#06b6d4",
-  "#6366f1",
-  "#8b5cf6",
-  "#d946ef",
-  "#f43f5e",
-  "#db2777",
-  "#a16207",
-  "#78716c",
-  "#6b7280",
-  "#111827",
-];
-
-const colorClassNames = Object.values(COLOR_MAP);
-
-const buildSeasonChartData = (season: SeasonDetail) => {
-  const series: SeasonChartSeries[] = season.pointProgressions.map(
-    (progression, index) => ({
-      userId: progression.userId,
-      userName: progression.userName,
-      colorClassName: colorClassNames[index % colorClassNames.length],
-    })
-  );
-
-  const progressionByUser = new Map(
-    season.pointProgressions.map((progression) => [
-      progression.userId,
-      new Map(
-        progression.points.map((point) => [point.matchIndex, point.totalPoints])
-      ),
-    ])
-  );
-
-  const latestPointByUser = new Map<string, number>();
-
-  const chartData: SeasonChartData[] = Array.from(
-    { length: season.totalMatchCount },
-    (_, index) => {
-      const matchIndex = index + 1;
-      const row: SeasonChartData = { matchIndex };
-
-      series.forEach((item) => {
-        const progression = progressionByUser.get(item.userId);
-        const currentPoint = progression?.get(matchIndex);
-        if (typeof currentPoint === "number") {
-          latestPointByUser.set(item.userId, currentPoint);
-        }
-
-        row[item.userId] = latestPointByUser.get(item.userId) ?? 0;
-      });
-
-      return row;
-    }
-  );
-
-  return {
-    series,
-    chartData,
-    isChartEmpty: season.totalMatchCount === 0 || series.length === 0,
-  };
-};
 
 export const useSeasonPage = () => {
   const router = useRouter();
   const params = useParams<{ leagueId: string; seasonId: string }>();
-  const [season, setSeason] = React.useState<Awaited<
-    ReturnType<typeof fetchSeasonDetail>
-  > | null>(null);
+  const [season, setSeason] = React.useState<SeasonDetail | null>(null);
+  const [sessions, setSessions] = React.useState<SessionSummary[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [sessionsLoading, setSessionsLoading] = React.useState(true);
+  const [sessionsError, setSessionsError] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
+  const [retryCount, setRetryCount] = React.useState(0);
 
   React.useEffect(() => {
     let isActive = true;
@@ -133,32 +57,47 @@ export const useSeasonPage = () => {
       setLoading(true);
       setError(null);
 
-      try {
-        const seasonDetail = await fetchSeasonDetail(leagueId, seasonId);
+      setSessionsLoading(true);
+      setSessionsError(null);
 
-        if (!isActive) {
-          return;
-        }
+      const [seasonResult, sessionsResult] = await Promise.allSettled([
+        fetchSeasonDetail(leagueId, seasonId),
+        listSessions(leagueId, seasonId),
+      ]);
 
-        setSeason(seasonDetail);
-      } catch (loadError) {
-        if (!isActive) {
-          return;
-        }
+      if (!isActive) return;
 
-        if (loadError instanceof ApiError && loadError.status === 401) {
-          router.replace("/login");
-          return;
-        }
-
+      if (seasonResult.status === "fulfilled") {
+        setSeason(toSeasonDetail(seasonResult.value));
+        setError(null);
+      } else if (
+        seasonResult.reason instanceof ApiError &&
+        seasonResult.reason.status === 401
+      ) {
+        router.replace("/login");
+      } else {
         setError(
-          loadError instanceof Error ? loadError.message : DEFAULT_ERROR_MESSAGE
+          getApiErrorMessage(seasonResult.reason, DEFAULT_ERROR_MESSAGE)
         );
-      } finally {
-        if (isActive) {
-          setLoading(false);
-        }
       }
+      setLoading(false);
+
+      if (sessionsResult.status === "fulfilled") {
+        setSessions(toSessionList(sessionsResult.value));
+      } else if (
+        sessionsResult.reason instanceof ApiError &&
+        sessionsResult.reason.status === 401
+      ) {
+        router.replace("/login");
+      } else {
+        setSessionsError(
+          getApiErrorMessage(
+            sessionsResult.reason,
+            "Session一覧の取得に失敗しました。"
+          )
+        );
+      }
+      setSessionsLoading(false);
     };
 
     void load();
@@ -166,7 +105,11 @@ export const useSeasonPage = () => {
     return () => {
       isActive = false;
     };
-  }, [params.leagueId, params.seasonId, router]);
+  }, [params.leagueId, params.seasonId, retryCount, router]);
+
+  const retry = React.useCallback(() => {
+    setRetryCount((count) => count + 1);
+  }, []);
 
   const titles: Title[] = React.useMemo(() => {
     if (!season) {
@@ -201,23 +144,26 @@ export const useSeasonPage = () => {
   const pointProgressionChart = React.useMemo(() => {
     if (!season) {
       return {
-        series: [] as SeasonChartSeries[],
-        chartData: [] as SeasonChartData[],
-        isChartEmpty: true,
+        series: [],
+        data: [],
+        isEmpty: true,
+        isUncomputed: false,
       };
     }
 
-    return buildSeasonChartData(season);
+    return toPointProgressionChart(
+      season.pointProgressions,
+      season.totalMatchCount
+    );
   }, [season]);
 
-  const chartSeries: SeasonChartViewSeries[] = React.useMemo(
+  const chartSeries = React.useMemo(
     () =>
       pointProgressionChart.series.map((item, index) => ({
         userId: item.userId,
         userName: item.userName,
-        colorClassName: item.colorClassName,
-        strokeColor:
-          CHART_STROKE_COLORS[index % CHART_STROKE_COLORS.length] ?? "#111827",
+        colorClassName: CHART_SERIES[index % CHART_SERIES.length].className,
+        strokeColor: CHART_SERIES[index % CHART_SERIES.length].stroke,
       })),
     [pointProgressionChart.series]
   );
@@ -228,7 +174,7 @@ export const useSeasonPage = () => {
     setVisibleUserIds(chartSeries.map((item) => item.userId));
   }, [chartSeries]);
 
-  const visibleSeries: SeasonChartViewSeries[] = React.useMemo(
+  const visibleSeries: ChartSeriesItem[] = React.useMemo(
     () =>
       chartSeries.filter((item) =>
         visibleUserIds.some((userId) => userId === item.userId)
@@ -261,14 +207,20 @@ export const useSeasonPage = () => {
 
   return {
     leagueId: params.leagueId,
+    seasonId: params.seasonId,
     season,
+    sessions,
     titles,
     pointProgressionChart,
     chartSeries,
     visibleSeries,
     visibleUserIds,
     loading,
+    sessionsLoading,
+    sessionsError,
     error,
+    retry,
+    retrySessions: retry,
     handleStartRecording,
     handleToggleChartSeries,
   };

@@ -1,22 +1,12 @@
 import type {
   LeagueDetail,
   LeagueMember,
+  LeagueRule,
   LeagueSummary,
 } from "@/domain/league/types.js";
+import type { UserReference } from "@/domain/shared/types.js";
 
-export type LeagueRule = {
-  gameType: "sanma" | "yonma";
-  uma: {
-    first: number;
-    second: number;
-    third: number;
-    fourth: number | null;
-  };
-  oka: {
-    startingPoints: number;
-    returnPoints: number;
-  };
-};
+export type { LeagueRule } from "@/domain/league/types.js";
 
 export type CreateLeagueInput = {
   name: string;
@@ -38,6 +28,7 @@ export interface LeagueRepository {
   update(leagueId: string, input: UpdateLeagueInput): Promise<LeagueDetail>;
   delete(leagueId: string): Promise<void>;
   listMembers(leagueId: string): Promise<LeagueMember[]>;
+  listAllMembers(): Promise<UserReference[]>;
   setActiveSeason(
     leagueId: string,
     seasonId: string | null,

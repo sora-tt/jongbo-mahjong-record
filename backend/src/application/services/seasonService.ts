@@ -10,12 +10,15 @@ import {
   ConflictError,
   ValidationError,
 } from "@/domain/shared/errors.js";
+import { asOpaqueId } from "@/domain/shared/types.js";
+import type { StatsRebuilder } from "@/application/services/statsRebuilder.js";
 
 export class SeasonService {
   constructor(
     private readonly leagueRepository: LeagueRepository,
     private readonly seasonRepository: SeasonRepository,
     private readonly matchRepository: MatchRepository,
+    private readonly statsRebuilder: StatsRebuilder,
   ) {}
 
   async listSeasons(userId: string, leagueId: string) {
@@ -65,7 +68,7 @@ export class SeasonService {
       leagueMembers.map((member) => [member.userId, member]),
     );
     const members = input.memberUserIds.map((userIdValue) => {
-      const member = leagueMemberMap.get(userIdValue);
+      const member = leagueMemberMap.get(asOpaqueId(userIdValue));
       if (!member) {
         throw new ValidationError("memberUserIds must be league members", {
           userId: userIdValue,
@@ -113,6 +116,8 @@ export class SeasonService {
   async deleteSeason(userId: string, leagueId: string, seasonId: string) {
     await this.assertSeasonMembership(userId, leagueId, seasonId);
     await this.seasonRepository.delete(leagueId, seasonId);
+    await this.statsRebuilder.clearSeasonStats(leagueId, seasonId);
+    await this.statsRebuilder.rebuildLeague(leagueId);
   }
 
   private async assertLeagueMembership(userId: string, leagueId: string) {

@@ -9,6 +9,7 @@ import type {
   RecordHolder,
   ScopeType,
 } from "@/domain/shared/types.js";
+import { asOpaqueId } from "@/domain/shared/types.js";
 import type { UserStats } from "@/domain/user/types.js";
 
 type Aggregate = {
@@ -51,7 +52,7 @@ const createAggregate = (member: SeasonMember): Aggregate => ({
   progression: [],
 });
 
-const sortMatches = (matches: Match[]) =>
+export const sortMatches = (matches: Match[]) =>
   [...matches].sort((left, right) => {
     const timeDiff =
       new Date(left.playedAt).getTime() - new Date(right.playedAt).getTime();
@@ -59,7 +60,15 @@ const sortMatches = (matches: Match[]) =>
       return timeDiff;
     }
 
-    return left.matchIndex - right.matchIndex;
+    if (left.sessionId !== right.sessionId) {
+      return left.sessionId.localeCompare(right.sessionId);
+    }
+
+    if (left.matchIndex !== right.matchIndex) {
+      return left.matchIndex - right.matchIndex;
+    }
+
+    return left.id.localeCompare(right.id);
   });
 
 export const buildSeasonAggregates = (
@@ -136,7 +145,8 @@ const sortAggregateEntries = (entries: Aggregate[]) =>
       return right.totalPoints - left.totalPoints;
     }
 
-    return left.userName.localeCompare(right.userName, "ja");
+    const nameDiff = left.userName.localeCompare(right.userName, "ja");
+    return nameDiff !== 0 ? nameDiff : left.userId.localeCompare(right.userId);
   });
 
 export const buildStandings = (
@@ -146,7 +156,7 @@ export const buildStandings = (
 ): Standing[] =>
   buildSeasonAggregates(members, matches).map((aggregate, index) => ({
     rank: index + 1,
-    userId: aggregate.userId,
+    userId: asOpaqueId(aggregate.userId),
     userName: aggregate.userName,
     totalPoints: Number(aggregate.totalPoints.toFixed(1)),
     matchCount: aggregate.totalMatchCount,
@@ -161,7 +171,7 @@ export const buildPointProgressions = (
   matches: Match[],
 ): PointProgression[] =>
   buildSeasonAggregates(members, matches).map((aggregate) => ({
-    userId: aggregate.userId,
+    userId: asOpaqueId(aggregate.userId),
     userName: aggregate.userName,
     points: aggregate.progression,
   }));
@@ -172,7 +182,7 @@ const createRateRecord = (
 ): RecordHolder | null => {
   const candidates = entries
     .map((entry) => ({
-      userId: entry.userId,
+      userId: asOpaqueId(entry.userId),
       userName: entry.userName,
       value: getValue(entry),
     }))
@@ -182,19 +192,30 @@ const createRateRecord = (
     return null;
   }
 
-  return candidates.sort((left, right) => right.value - left.value)[0] ?? null;
+  return (
+    candidates.sort((left, right) => {
+      if (right.value !== left.value) {
+        return right.value - left.value;
+      }
+      const nameDiff = left.userName.localeCompare(right.userName, "ja");
+      return nameDiff !== 0
+        ? nameDiff
+        : left.userId.localeCompare(right.userId);
+    })[0] ?? null
+  );
 };
 
 export const buildSeasonRecords = (
   members: SeasonMember[],
   matches: Match[],
+  gameType: GameType,
 ) => {
   const entries = buildSeasonAggregates(members, matches);
 
   return {
     highestScore: createRateRecord(entries, (entry) => entry.highestScore),
     avoidLastRate: createRateRecord(entries, (entry) => {
-      if (entry.totalMatchCount === 0) {
+      if (gameType === "sanma" || entry.totalMatchCount === 0) {
         return null;
       }
 
@@ -281,7 +302,18 @@ export const buildLeagueRecords = (matches: Match[]) => {
               value: entry.lowestScore,
             }))
             .filter((entry): entry is RecordHolder => entry.value !== null)
-            .sort((left, right) => left.value - right.value)[0] ?? null),
+            .sort((left, right) => {
+              if (left.value !== right.value) {
+                return left.value - right.value;
+              }
+              const nameDiff = left.userName.localeCompare(
+                right.userName,
+                "ja",
+              );
+              return nameDiff !== 0
+                ? nameDiff
+                : left.userId.localeCompare(right.userId);
+            })[0] ?? null),
   };
 };
 
@@ -366,11 +398,11 @@ export const buildUserStats = (params: {
     matchCount === 0 ? 0 : Number((totalRank / matchCount).toFixed(2));
 
   return {
-    userId,
+    userId: asOpaqueId(userId),
     userName,
     scopeType,
-    leagueId,
-    seasonId,
+    leagueId: leagueId === null ? null : asOpaqueId(leagueId),
+    seasonId: seasonId === null ? null : asOpaqueId(seasonId),
     leagueName,
     seasonName,
     totalPoints: Number(totalPoints.toFixed(1)),

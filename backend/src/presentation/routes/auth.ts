@@ -47,10 +47,8 @@ export const buildAuthRouter = () =>
           }),
           8000,
         );
-      } catch (e) {
-        throw new UnauthorizedError("Invalid or expired idToken", {
-          originalError: e instanceof Error ? e.message : String(e),
-        });
+      } catch {
+        throw new UnauthorizedError("invalid authentication token");
       }
 
       setCookie(

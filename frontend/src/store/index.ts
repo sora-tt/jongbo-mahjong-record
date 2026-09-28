@@ -1,45 +1,11 @@
 import { configureStore } from "@reduxjs/toolkit";
 
-import leagueReducer from "./slices/league-slice";
-import matchReducer from "./slices/match-slice";
 import recordingFlowReducer from "./slices/recording-flow-slice";
-import userReducer from "./slices/user-slice";
 
 export const store = configureStore({
   reducer: {
-    league: leagueReducer,
-    user: userReducer,
-    match: matchReducer,
     recordingFlow: recordingFlowReducer,
   },
-  middleware: (getDefaultMiddleware) =>
-    getDefaultMiddleware({
-      serializableCheck: {
-        ignoredActions: [
-          "league/setLeagues",
-          "league/addLeague",
-          "league/updateLeague",
-          "league/addLeagueMember",
-          "league/updateLeagueMember",
-          "league/addLeagueSeason",
-          "league/updateLeagueSeason",
-          "user/setUsers",
-          "user/addUser",
-          "user/updateUser",
-          "user/setCurrentUser",
-          "match/setMatches",
-          "match/addMatch",
-          "match/updateMatch",
-        ],
-        ignoredPaths: [
-          "league.leagues",
-          "league.selectedLeagueId",
-          "user.users",
-          "user.currentUser",
-          "match.matches",
-        ],
-      },
-    }),
 });
 
 export type RootState = ReturnType<typeof store.getState>;

@@ -4,12 +4,15 @@ import type {
   UpdateLeagueInput,
 } from "@/domain/league/repository.js";
 import { AppError, ValidationError } from "@/domain/shared/errors.js";
+import { validateLeagueRule } from "@/domain/league/rule.js";
 import type { UserRepository } from "@/domain/user/repository.js";
+import type { StatsRebuilder } from "@/application/services/statsRebuilder.js";
 
 export class LeagueService {
   constructor(
     private readonly leagueRepository: LeagueRepository,
     private readonly userRepository: UserRepository,
+    private readonly statsRebuilder: StatsRebuilder,
   ) {}
 
   listLeagues(memberUserId: string) {
@@ -27,6 +30,7 @@ export class LeagueService {
   }
 
   async createLeague(ownerUserId: string, input: CreateLeagueInput) {
+    validateLeagueRule(input.rule);
     const memberUserIds = [...new Set([ownerUserId, ...input.memberUserIds])];
     if (memberUserIds.length === 0) {
       throw new ValidationError("memberUserIds must not be empty");
@@ -45,6 +49,9 @@ export class LeagueService {
     input: UpdateLeagueInput,
   ) {
     await this.assertLeagueMembership(userId, leagueId);
+    if (input.rule !== undefined) {
+      validateLeagueRule(input.rule);
+    }
 
     const memberUserIds =
       input.memberUserIds === undefined
@@ -67,6 +74,8 @@ export class LeagueService {
   async deleteLeague(userId: string, leagueId: string) {
     await this.assertLeagueMembership(userId, leagueId);
     await this.leagueRepository.delete(leagueId);
+    await this.statsRebuilder.clearLeagueStats(leagueId);
+    await this.statsRebuilder.rebuildOverall();
   }
 
   async assertLeagueMembership(userId: string, leagueId: string) {

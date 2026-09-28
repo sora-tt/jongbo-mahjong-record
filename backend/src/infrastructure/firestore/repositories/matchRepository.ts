@@ -1,8 +1,16 @@
 import { Timestamp, type Firestore } from "firebase-admin/firestore";
 import type { Match, MatchResult } from "@/domain/match/types.js";
 import type { MatchRepository } from "@/domain/match/repository.js";
-import { toIsoString, toTimestamp } from "@/infrastructure/firestore/utils.js";
+import {
+  requiredArray,
+  requiredNumber,
+  requiredObject,
+  requiredString,
+  toIsoString,
+  toTimestamp,
+} from "@/infrastructure/firestore/utils.js";
 import { NotFoundError } from "@/domain/shared/errors.js";
+import { asOpaqueId } from "@/domain/shared/types.js";
 
 export class FirestoreMatchRepository implements MatchRepository {
   constructor(private readonly db: Firestore) {}
@@ -102,30 +110,64 @@ export class FirestoreMatchRepository implements MatchRepository {
       params.seasonId,
       params.sessionId,
     );
-    const existing = await collection
-      .orderBy("match_index", "desc")
-      .limit(1)
-      .get();
-    const lastMatchIndex = existing.empty
-      ? 0
-      : Number(existing.docs[0].data().match_index ?? 0);
     const ref = collection.doc();
-    const now = Timestamp.now();
+    const sessionRef = this.db
+      .collection("leagues")
+      .doc(params.leagueId)
+      .collection("seasons")
+      .doc(params.seasonId)
+      .collection("sessions")
+      .doc(params.sessionId);
+    const leagueRef = this.db.collection("leagues").doc(params.leagueId);
 
-    await ref.set({
-      id: ref.id,
-      match_index: lastMatchIndex + 1,
-      played_at: toTimestamp(params.playedAt),
-      results: params.results.map((result) => ({
-        user_id: result.userId,
-        user_name: result.userName,
-        wind: result.wind,
-        rank: result.rank,
-        raw_score: result.rawScore,
-        point: result.point,
-      })),
-      created_at: now,
-      updated_at: now,
+    await this.db.runTransaction(async (transaction) => {
+      const sessionSnapshot = await transaction.get(sessionRef);
+      const leagueSnapshot = await transaction.get(leagueRef);
+      if (!sessionSnapshot.exists) {
+        throw new NotFoundError("session not found", {
+          leagueId: params.leagueId,
+          seasonId: params.seasonId,
+          sessionId: params.sessionId,
+        });
+      }
+      if (!leagueSnapshot.exists) {
+        throw new NotFoundError("league not found", {
+          leagueId: params.leagueId,
+        });
+      }
+
+      const existing = await transaction.get(
+        collection.orderBy("match_index", "desc").limit(1),
+      );
+      const lastMatchIndex = existing.empty
+        ? 0
+        : requiredNumber(
+            existing.docs[0].data().match_index,
+            "matches.match_index",
+          );
+      const sessionData = sessionSnapshot.data() ?? {};
+      const totalMatchCount = requiredNumber(
+        sessionData.total_match_count,
+        "sessions.total_match_count",
+      );
+      const now = Timestamp.now();
+
+      transaction.set(ref, {
+        id: ref.id,
+        match_index: lastMatchIndex + 1,
+        played_at: toTimestamp(params.playedAt),
+        results: this.toResultsDoc(params.results),
+        created_at: now,
+        updated_at: now,
+      });
+      transaction.update(sessionRef, {
+        total_match_count: totalMatchCount + 1,
+        updated_at: now,
+      });
+      transaction.update(leagueRef, {
+        rule_locked: true,
+        updated_at: now,
+      });
     });
 
     return this.get(params.leagueId, params.seasonId, params.sessionId, ref.id);
@@ -180,17 +222,43 @@ export class FirestoreMatchRepository implements MatchRepository {
     matchId: string,
   ): Promise<void> {
     const ref = this.collection(leagueId, seasonId, sessionId).doc(matchId);
-    const snapshot = await ref.get();
-    if (!snapshot.exists) {
-      throw new NotFoundError("match not found", {
-        leagueId,
-        seasonId,
-        sessionId,
-        matchId,
-      });
-    }
+    const sessionRef = this.db
+      .collection("leagues")
+      .doc(leagueId)
+      .collection("seasons")
+      .doc(seasonId)
+      .collection("sessions")
+      .doc(sessionId);
 
-    await ref.delete();
+    await this.db.runTransaction(async (transaction) => {
+      const sessionSnapshot = await transaction.get(sessionRef);
+      const matchSnapshot = await transaction.get(ref);
+      if (!matchSnapshot.exists) {
+        throw new NotFoundError("match not found", {
+          leagueId,
+          seasonId,
+          sessionId,
+          matchId,
+        });
+      }
+      if (!sessionSnapshot.exists) {
+        throw new NotFoundError("session not found", {
+          leagueId,
+          seasonId,
+          sessionId,
+        });
+      }
+
+      const remainingMatches = await transaction.get(
+        this.collection(leagueId, seasonId, sessionId),
+      );
+      const now = Timestamp.now();
+      transaction.delete(ref);
+      transaction.update(sessionRef, {
+        total_match_count: Math.max(0, remainingMatches.size - 1),
+        updated_at: now,
+      });
+    });
   }
 
   private collection(leagueId: string, seasonId: string, sessionId: string) {
@@ -204,6 +272,17 @@ export class FirestoreMatchRepository implements MatchRepository {
       .collection("matches");
   }
 
+  private toResultsDoc(results: MatchResult[]) {
+    return results.map((result) => ({
+      user_id: result.userId,
+      user_name: result.userName,
+      wind: result.wind,
+      rank: result.rank,
+      raw_score: result.rawScore,
+      point: result.point,
+    }));
+  }
+
   private map(
     leagueId: string,
     seasonId: string,
@@ -211,23 +290,45 @@ export class FirestoreMatchRepository implements MatchRepository {
     matchId: string,
     data: FirebaseFirestore.DocumentData,
   ): Match {
+    const results = requiredArray(data.results, "matches.results").map(
+      (value) => {
+        const result = requiredObject(value, "matches.results[]");
+        const wind = requiredString(result.wind, "matches.results[].wind");
+        if (!["east", "south", "west", "north"].includes(wind)) {
+          throw new TypeError(
+            "invalid or missing Firestore field: matches.results[].wind",
+          );
+        }
+
+        const normalizedWind = wind as MatchResult["wind"];
+
+        return {
+          userId: asOpaqueId(
+            requiredString(result.user_id, "matches.results[].user_id"),
+          ),
+          userName: requiredString(
+            result.user_name,
+            "matches.results[].user_name",
+          ),
+          wind: normalizedWind,
+          rank: requiredNumber(result.rank, "matches.results[].rank"),
+          rawScore: requiredNumber(
+            result.raw_score,
+            "matches.results[].raw_score",
+          ),
+          point: requiredNumber(result.point, "matches.results[].point"),
+        } satisfies MatchResult;
+      },
+    );
+
     return {
-      id: matchId,
-      leagueId,
-      seasonId,
-      sessionId,
-      matchIndex: Number(data.match_index ?? 0),
+      id: asOpaqueId(matchId),
+      leagueId: asOpaqueId(leagueId),
+      seasonId: asOpaqueId(seasonId),
+      sessionId: asOpaqueId(sessionId),
+      matchIndex: requiredNumber(data.match_index, "matches.match_index"),
       playedAt: toIsoString(data.played_at),
-      results: Array.isArray(data.results)
-        ? data.results.map((result) => ({
-            userId: String(result.user_id ?? ""),
-            userName: String(result.user_name ?? ""),
-            wind: result.wind,
-            rank: Number(result.rank ?? 0),
-            rawScore: Number(result.raw_score ?? 0),
-            point: Number(result.point ?? 0),
-          }))
-        : [],
+      results,
       createdAt: toIsoString(data.created_at),
       updatedAt: toIsoString(data.updated_at),
     };

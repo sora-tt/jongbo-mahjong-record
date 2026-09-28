@@ -1,7 +1,15 @@
 import type { Wind } from "@/domain/shared/types.js";
+import type {
+  IsoDateString,
+  LeagueId,
+  MatchId,
+  SeasonId,
+  SessionId,
+  UserId,
+} from "@/domain/shared/types.js";
 
 export type MatchResult = {
-  userId: string;
+  userId: UserId;
   userName: string;
   wind: Wind;
   rank: number;
@@ -10,13 +18,13 @@ export type MatchResult = {
 };
 
 export type Match = {
-  id: string;
-  leagueId: string;
-  seasonId: string;
-  sessionId: string;
+  id: MatchId;
+  leagueId: LeagueId;
+  seasonId: SeasonId;
+  sessionId: SessionId;
   matchIndex: number;
-  playedAt: string;
+  playedAt: IsoDateString;
   results: MatchResult[];
-  createdAt: string;
-  updatedAt: string;
+  createdAt: IsoDateString;
+  updatedAt: IsoDateString;
 };
