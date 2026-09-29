@@ -25,6 +25,18 @@ import { useStatistics } from "./hooks";
 const formatDecimal = (value: number | null, digits: number) =>
   value === null ? "未集計" : value.toFixed(digits);
 
+const getTopTwoRate = (stats: {
+  totalMatchCount: number;
+  firstCount: number;
+  secondCount: number;
+}) => {
+  if (stats.totalMatchCount === 0) {
+    return null;
+  }
+
+  return ((stats.firstCount + stats.secondCount) / stats.totalMatchCount) * 100;
+};
+
 const StatisticsPage: React.FC = () => {
   const {
     userName,
@@ -55,11 +67,10 @@ const StatisticsPage: React.FC = () => {
 
   return (
     <AppShell mainClassName="min-h-screen bg-background font-jp">
-      <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
+      <div className="mx-auto flex max-w-md flex-col gap-6 px-4 py-8">
         <header>
-          <p className="text-sm text-text-muted">個人成績</p>
-          <h1 className="mt-1 text-2xl font-bold text-foreground">
-            {userName}さんの成績
+          <h1 className="text-2xl font-bold text-foreground">
+            {userName}さんの個人成績
           </h1>
         </header>
 
@@ -71,11 +82,12 @@ const StatisticsPage: React.FC = () => {
             description="シーズンに参加すると個人成績を確認できます。"
           />
         ) : (
-          <Card title="対象シーズン">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+          <section>
+            <h2 className="text-xl font-bold text-text-muted">シーズン選択</h2>
+            <div className="mt-2 flex items-center gap-2">
               <Select
-                label="シーズン"
-                containerClassName="flex-1"
+                aria-label="シーズン選択"
+                containerClassName="min-w-0 flex-1"
                 value={selectedLeagueSeasonId}
                 onChange={onChangeLeagueSeason}
               >
@@ -94,7 +106,7 @@ const StatisticsPage: React.FC = () => {
                 表示
               </Button>
             </div>
-          </Card>
+          </section>
         )}
 
         {statsError ? (
@@ -113,40 +125,35 @@ const StatisticsPage: React.FC = () => {
 
         {statsStatus === "success" && selectedStats ? (
           <>
-            <p className="text-sm text-text-muted">
-              {selectedStats.leagueName ?? "リーグ不明"} /{" "}
-              {selectedStats.seasonName ?? "シーズン不明"}
-            </p>
-            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <div className="grid grid-cols-2 gap-4">
               <StatisticsMetricCard
-                label="総合pt"
-                value={formatDecimal(selectedStats.totalPoints, 1)}
-                unit="pt"
-              />
-              <StatisticsMetricCard
-                label="対局数"
+                label="総対局数"
                 value={selectedStats.totalMatchCount}
                 unit="局"
               />
               <StatisticsMetricCard
-                label="現在順位"
-                value={formatDecimal(selectedStats.currentRank, 0)}
-                unit={selectedStats.currentRank === null ? undefined : "位"}
+                label="総合pt"
+                value={formatDecimal(selectedStats.totalPoints, 2)}
+                unit="pt"
               />
               <StatisticsMetricCard
                 label="平均順位"
                 value={formatDecimal(selectedStats.averageRank, 2)}
                 unit="位"
               />
+              <StatisticsMetricCard
+                label="連対率"
+                value={formatDecimal(getTopTwoRate(selectedStats), 2)}
+                unit="%"
+              />
             </div>
 
-            <Card title="順位別成績" bodyClassName="overflow-x-auto">
+            <Card title="各順位回数" bodyClassName="overflow-x-auto">
               <Table caption="順位別成績">
                 <TableHead>
                   <TableRow>
                     <TableHeadCell className="text-left">順位</TableHeadCell>
                     <TableHeadCell className="text-left">回数</TableHeadCell>
-                    <TableHeadCell className="text-left">割合</TableHeadCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -163,14 +170,11 @@ const StatisticsPage: React.FC = () => {
                       selectedStats.fourthCount,
                       selectedStats.fourthRate,
                     ],
-                  ].map(([label, count, rate]) => (
+                  ].map(([label, count]) => (
                     <TableRow key={label}>
                       <TableCell className="text-left">{label}</TableCell>
                       <TableCell className="text-left">
                         {count ?? "-"}
-                      </TableCell>
-                      <TableCell className="text-left">
-                        {typeof rate === "number" ? `${rate.toFixed(2)}%` : "-"}
                       </TableCell>
                     </TableRow>
                   ))}
