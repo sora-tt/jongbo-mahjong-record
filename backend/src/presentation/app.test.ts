@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { Hono } from "hono";
+import { buildAuthRouter } from "@/presentation/routes/auth.js";
 import { createApp } from "@/presentation/app.js";
 
 test("health endpoint returns the standard data envelope", async () => {
@@ -44,6 +46,51 @@ test("session deletion returns an empty 204 response", async () => {
 
   assert.equal(response.status, 204);
   assert.equal(await response.text(), "");
+});
+
+test("verification email route sends a link for an unverified user", async () => {
+  const mockAuth = {
+    verifySessionCookie: async () => ({
+      uid: "user-123",
+      email: "user@example.com",
+      name: "Test User",
+      email_verified: false,
+    }),
+    getUser: async () => ({
+      uid: "user-123",
+      email: "user@example.com",
+      emailVerified: false,
+    }),
+    generateEmailVerificationLink: async () =>
+      "http://127.0.0.1:3000/verify-email?mode=verify&oobCode=test-code",
+  };
+
+  const app = new Hono().route(
+    "/api/auth",
+    buildAuthRouter({ getAdminAuth: () => mockAuth as never }),
+  );
+
+  const response = await app.request("/api/auth/verification-email", {
+    method: "POST",
+    headers: {
+      Cookie: "jongbo_session=mock-session-cookie",
+    },
+  });
+  const body = (await response.json()) as {
+    data: {
+      sent: boolean;
+      email: string;
+      verificationUrl: string;
+    };
+  };
+
+  assert.equal(response.status, 200);
+  assert.equal(body.data.sent, true);
+  assert.equal(body.data.email, "user@example.com");
+  assert.match(
+    body.data.verificationUrl,
+    /^http:\/\/127\.0\.0\.1:3000\/verify-email\?mode=verify/,
+  );
 });
 
 test("CORS only allows configured origins and credentials", async () => {
