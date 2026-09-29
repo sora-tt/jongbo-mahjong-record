@@ -11,6 +11,7 @@ type Props = React.ButtonHTMLAttributes<HTMLButtonElement> & {
   size?: Size;
   fullWidth?: boolean;
   loading?: boolean;
+  selected?: boolean;
   className?: string;
 };
 
@@ -30,6 +31,8 @@ const variantStyles = {
     "bg-brand-600 text-white shadow-sm hover:bg-brand-strong disabled:hover:bg-brand-600",
   secondary:
     "border border-brand-300 bg-white text-brand-strong hover:bg-brand-50 disabled:hover:bg-white",
+  selection:
+    "border border-slate-300 bg-white text-foreground hover:bg-slate-50 disabled:hover:bg-white",
   ghost: "text-brand-strong hover:bg-brand-50 disabled:hover:bg-transparent",
   danger: "bg-danger text-white hover:bg-red-700 disabled:hover:bg-danger",
 } as const;
@@ -40,8 +43,14 @@ const sizeStyles: Record<Size, string> = {
   lg: "px-6 py-2.5 text-base rounded-xl",
 };
 
+const selectedStyles: Partial<Record<Variant, string>> = {
+  "brand-secondary": "border-brand-500 bg-brand-50 text-foreground",
+  secondary: "border-brand-500 bg-brand-50 text-foreground",
+  selection: "border-2 !border-brand-600 !bg-brand-50 text-foreground",
+};
+
 const baseStyles =
-  "inline-flex items-center justify-center gap-2 font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:opacity-60";
+  "inline-flex flex-nowrap items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-not-allowed disabled:opacity-60";
 
 export const Button: React.FC<Props> = ({
   children,
@@ -49,6 +58,7 @@ export const Button: React.FC<Props> = ({
   size = "md",
   fullWidth = false,
   loading = false,
+  selected,
   className = "",
   disabled,
   ...props
@@ -56,6 +66,7 @@ export const Button: React.FC<Props> = ({
   const variantClass = variantStyles[variant];
   const sizeClass = sizeStyles[size];
   const widthClass = fullWidth ? "w-full" : "";
+  const selectedClass = selected ? selectedStyles[variant] : undefined;
 
   return (
     <button
@@ -64,9 +75,11 @@ export const Button: React.FC<Props> = ({
         variantClass,
         sizeClass,
         widthClass,
+        selectedClass,
         className
       )}
       aria-busy={loading || undefined}
+      aria-pressed={selected}
       disabled={loading || disabled}
       {...props}
     >
@@ -76,7 +89,7 @@ export const Button: React.FC<Props> = ({
           aria-hidden="true"
         />
       ) : null}
-      <span>{children}</span>
+      {children}
     </button>
   );
 };

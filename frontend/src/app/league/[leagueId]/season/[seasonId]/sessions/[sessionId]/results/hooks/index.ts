@@ -50,9 +50,6 @@ export const useSessionResultsPage = () => {
   const [deleteTargetMatchId, setDeleteTargetMatchId] = React.useState<
     string | null
   >(null);
-  const [expandedMatchId, setExpandedMatchId] = React.useState<string | null>(
-    null
-  );
   const [error, setError] = React.useState<string | null>(null);
   const [retryCount, setRetryCount] = React.useState(0);
 
@@ -107,7 +104,7 @@ export const useSessionResultsPage = () => {
         endedAt: new Date().toISOString(),
       });
       dispatch(clearRecordingFlow());
-      await load({ showLoading: false });
+      router.push(`/league/${leagueId}/season/${seasonId}`);
     } catch (endError) {
       if (endError instanceof ApiError && endError.status === 401) {
         router.replace("/login");
@@ -117,7 +114,7 @@ export const useSessionResultsPage = () => {
     } finally {
       setIsEnding(false);
     }
-  }, [dispatch, load, params, router, session]);
+  }, [dispatch, params, router, session]);
 
   const handleConfirmDeleteMatch = React.useCallback(async () => {
     const { leagueId, seasonId, sessionId } = params;
@@ -167,7 +164,6 @@ export const useSessionResultsPage = () => {
     isEnding,
     deletingMatchId,
     deleteTargetMatchId,
-    expandedMatchId,
     error,
     retry: () => setRetryCount((count) => count + 1),
     isEnded: Boolean(session?.endedAt),
@@ -191,8 +187,6 @@ export const useSessionResultsPage = () => {
       );
     },
     handleEndRecord,
-    handleToggleMatch: (matchId: string) =>
-      setExpandedMatchId((current) => (current === matchId ? null : matchId)),
     handleRequestDeleteMatch: (matchId: string) =>
       setDeleteTargetMatchId(matchId),
     handleCancelDeleteMatch: () => setDeleteTargetMatchId(null),

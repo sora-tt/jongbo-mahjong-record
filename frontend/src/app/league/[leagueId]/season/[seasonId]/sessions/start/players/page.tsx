@@ -20,8 +20,6 @@ const WIND_LABELS = {
 
 const PlayerSelectPage: React.FC = () => {
   const {
-    seasonName,
-    gameType,
     requiredWinds,
     players,
     isLoading,
@@ -58,34 +56,30 @@ const PlayerSelectPage: React.FC = () => {
         ) : null}
         {!isLoading && !error && hasCandidates ? (
           <div className="rounded-surface border border-border bg-white p-6 shadow-sm">
-            <p className="text-sm text-text-muted">{seasonName}</p>
-            <h1 className="mt-1 text-2xl font-bold text-foreground">
-              参加者を選択
+            <h1 className="mt-1 text-center text-2xl font-bold text-foreground">
+              プレイヤー選択
             </h1>
-            <p className="mt-2 text-sm text-text-muted">
-              {gameType === "sanma" ? "三麻（3人）" : "四麻（4人）"}
-              。Session内では参加者が固定されます。
-            </p>
-            <div className="mt-6 space-y-4">
+            <div className="mx-auto mt-6 flex max-w-sm flex-col items-center gap-4">
               {requiredWinds.map((wind) => (
                 <label
                   key={wind}
-                  className="block text-sm font-medium text-foreground"
+                  className="flex w-full items-center justify-center gap-4 text-foreground"
                 >
-                  {WIND_LABELS[wind]}
-                  <div className="mt-1">
-                    <Dropdown
-                      defaultOption="プレイヤーを選択"
-                      options={getPositionOptions(wind)}
-                      value={players[wind]}
-                      onChange={onPlayerChange(wind)}
-                      disabled={isSubmitting}
-                    />
-                  </div>
+                  <span className="w-8 shrink-0 text-lg font-bold">
+                    {WIND_LABELS[wind]}
+                  </span>
+                  <Dropdown
+                    defaultOption="プレイヤーを選択"
+                    options={getPositionOptions(wind)}
+                    value={players[wind]}
+                    onChange={onPlayerChange(wind)}
+                    disabled={isSubmitting}
+                    className="w-full max-w-[220px]"
+                  />
                 </label>
               ))}
             </div>
-            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+            <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <Button
                 onClick={handleSubmit}
                 disabled={!canSubmit || isSubmitting}
