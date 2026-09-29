@@ -114,6 +114,29 @@ export const openApiDocument = {
         },
       },
     },
+    "/api/auth/verification-email": {
+      post: {
+        tags: ["Auth"],
+        summary: "send verification email",
+        responses: {
+          "200": {
+            description: "verification email generated",
+            content: jsonContent(
+              dataResponse({
+                type: "object",
+                properties: {
+                  sent: { type: "boolean" },
+                  email: { type: "string" },
+                  verificationUrl: { type: "string" },
+                  expiresAt: { type: "string", format: "date-time" },
+                },
+                required: ["sent", "email", "verificationUrl", "expiresAt"],
+              }),
+            ),
+          },
+        },
+      },
+    },
     "/api/users": {
       get: {
         tags: ["Users"],
