@@ -72,7 +72,7 @@
 
 ## 3. 互換性と連携検証
 
-- [ ] 3.1 初回Match後のLeague rule lockと保存済みpointを回帰検証する
+- [x] 3.1 初回Match後のLeague rule lockと保存済みpointを回帰検証する
   - 初回Match登録でlockされ、以後のrule変更がconflictになることを既存emulator testで確認する。
   - Match削除後もlockが解除されず、保存済みMatch pointとaggregateが再計算されないことを確認する。
   - 完了時、浮き人数別ruleの追加後もrule lock lifecycleが既存契約を保つ。

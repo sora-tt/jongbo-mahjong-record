@@ -8,6 +8,7 @@ import { FirestoreSessionRepository } from "@/infrastructure/firestore/repositor
 import { FirestoreUserStatsRepository } from "@/infrastructure/firestore/repositories/userStatsRepository.js";
 import { FirestoreUserRepository } from "@/infrastructure/firestore/repositories/userRepository.js";
 import { StatsRebuilder } from "@/application/services/statsRebuilder.js";
+import { MatchService } from "@/application/services/matchService.js";
 import { asOpaqueId } from "@/domain/shared/types.js";
 
 const emulatorAvailable = Boolean(process.env.FIRESTORE_EMULATOR_HOST);
@@ -168,6 +169,244 @@ test(
       );
     } finally {
       await db.recursiveDelete(db.collection("leagues").doc(league.id));
+    }
+  },
+);
+
+test(
+  "keeps floating-count rule locked and preserves saved points and aggregates through match deletion",
+  { skip: !emulatorAvailable },
+  async () => {
+    const db = getDb();
+    const userRepository = new FirestoreUserRepository(db);
+    const leagueRepository = new FirestoreLeagueRepository(db, userRepository);
+    const seasonRepository = new FirestoreSeasonRepository(db);
+    const sessionRepository = new FirestoreSessionRepository(db);
+    const matchRepository = new FirestoreMatchRepository(db);
+    const userStatsRepository = new FirestoreUserStatsRepository(db);
+    const statsRebuilder = new StatsRebuilder(
+      leagueRepository,
+      seasonRepository,
+      sessionRepository,
+      matchRepository,
+      userStatsRepository,
+    );
+    const matchService = new MatchService(
+      leagueRepository,
+      seasonRepository,
+      sessionRepository,
+      matchRepository,
+      statsRebuilder,
+    );
+    const league = await leagueRepository.create({
+      name: "floating count rule lock test",
+      rule: floatingRule,
+      memberUserIds: [],
+    });
+    const members = [
+      { userId: asOpaqueId("0001"), userName: "岩田" },
+      { userId: asOpaqueId("0002"), userName: "富田" },
+      { userId: asOpaqueId("0003"), userName: "野口" },
+      { userId: asOpaqueId("0004"), userName: "梶" },
+    ];
+    const season = await seasonRepository.create(
+      league.id,
+      {
+        name: "rule lock season",
+        memberUserIds: members.map(({ userId }) => userId),
+        status: "active",
+      },
+      members,
+    );
+    const session = await sessionRepository.create(
+      league.id,
+      season.id,
+      {
+        startedAt: "2026-01-01T00:00:00.000Z",
+        memberUserIds: members.map(({ userId }) => userId),
+        createdBy: "0001",
+      },
+      members,
+    );
+    const leagueRef = db.collection("leagues").doc(league.id);
+
+    try {
+      assert.equal((await leagueRef.get()).data()?.rule_locked, false);
+
+      const firstMatch = await matchService.createMatch(
+        "0001",
+        league.id,
+        season.id,
+        session.id,
+        {
+          playedAt: "2026-01-01T00:01:00.000Z",
+          results: [
+            { userId: "0001", wind: "east", rawScore: 40000 },
+            { userId: "0002", wind: "south", rawScore: 30000 },
+            { userId: "0003", wind: "west", rawScore: 20000 },
+            { userId: "0004", wind: "north", rawScore: 10000 },
+          ],
+        },
+      );
+
+      assert.equal((await leagueRef.get()).data()?.rule_locked, true);
+      assert.deepEqual(
+        firstMatch.results.map(({ rank, point }) => ({ rank, point })),
+        [
+          { rank: 1, point: 23 },
+          { rank: 2, point: 9 },
+          { rank: 3, point: -9 },
+          { rank: 4, point: -23 },
+        ],
+      );
+
+      await assert.rejects(
+        leagueRepository.update(league.id, {
+          rule: makeFixedRule(),
+        }),
+        /league rule is locked after the first match/,
+      );
+      assert.deepEqual(
+        (
+          await matchRepository.get(
+            league.id,
+            season.id,
+            session.id,
+            firstMatch.id,
+          )
+        ).results,
+        firstMatch.results,
+      );
+
+      const secondMatch = await matchService.createMatch(
+        "0001",
+        league.id,
+        season.id,
+        session.id,
+        {
+          playedAt: "2026-01-01T00:02:00.000Z",
+          results: [
+            { userId: "0001", wind: "east", rawScore: 39000 },
+            { userId: "0002", wind: "south", rawScore: 28000 },
+            { userId: "0003", wind: "west", rawScore: 26000 },
+            { userId: "0004", wind: "north", rawScore: 7000 },
+          ],
+        },
+      );
+      const secondMatchResults = secondMatch.results;
+      const expectedStandingsBeforeDelete = firstMatch.results
+        .map((firstResult) => {
+          const secondResult = secondMatchResults.find(
+            ({ userId }) => userId === firstResult.userId,
+          );
+          assert.ok(secondResult);
+          return {
+            userId: firstResult.userId,
+            totalPoints: firstResult.point + secondResult.point,
+            matchCount: 2,
+          };
+        })
+        .sort((left, right) => left.userId.localeCompare(right.userId));
+      const seasonBeforeDelete = await seasonRepository.get(
+        league.id,
+        season.id,
+      );
+      assert.deepEqual(
+        seasonBeforeDelete.standings
+          .map(({ userId, totalPoints, matchCount }) => ({
+            userId,
+            totalPoints,
+            matchCount,
+          }))
+          .sort((left, right) => left.userId.localeCompare(right.userId)),
+        expectedStandingsBeforeDelete,
+      );
+
+      await matchService.deleteMatch(
+        "0001",
+        league.id,
+        season.id,
+        session.id,
+        firstMatch.id,
+      );
+
+      assert.equal((await leagueRef.get()).data()?.rule_locked, true);
+      await assert.rejects(
+        leagueRepository.update(league.id, {
+          rule: makeFixedRule(),
+        }),
+        /league rule is locked after the first match/,
+      );
+      assert.deepEqual(
+        (
+          await matchRepository.get(
+            league.id,
+            season.id,
+            session.id,
+            secondMatch.id,
+          )
+        ).results,
+        secondMatchResults,
+      );
+      assert.equal(
+        (await sessionRepository.get(league.id, season.id, session.id))
+          .totalMatchCount,
+        1,
+      );
+
+      const seasonAfterDelete = await seasonRepository.get(
+        league.id,
+        season.id,
+      );
+      assert.deepEqual(
+        seasonAfterDelete.standings
+          .map(({ userId, totalPoints, matchCount }) => ({
+            userId,
+            totalPoints,
+            matchCount,
+          }))
+          .sort((left, right) => left.userId.localeCompare(right.userId)),
+        secondMatchResults
+          .map(({ userId, point }) => ({
+            userId,
+            totalPoints: point,
+            matchCount: 1,
+          }))
+          .sort((left, right) => left.userId.localeCompare(right.userId)),
+      );
+      for (const result of secondMatchResults) {
+        const stats = await userStatsRepository.get({
+          userId: result.userId,
+          scopeType: "season",
+          leagueId: league.id,
+          seasonId: season.id,
+        });
+        assert.equal(stats?.totalPoints, result.point);
+        assert.equal(stats?.totalMatchCount, 1);
+      }
+
+      await matchService.deleteMatch(
+        "0001",
+        league.id,
+        season.id,
+        session.id,
+        secondMatch.id,
+      );
+      assert.equal((await leagueRef.get()).data()?.rule_locked, true);
+      assert.equal(
+        (await sessionRepository.get(league.id, season.id, session.id))
+          .totalMatchCount,
+        0,
+      );
+      await assert.rejects(
+        leagueRepository.update(league.id, {
+          rule: makeFixedRule(),
+        }),
+        /league rule is locked after the first match/,
+      );
+    } finally {
+      await db.recursiveDelete(leagueRef);
+      await userStatsRepository.deleteStatsForLeague(league.id);
     }
   },
 );
