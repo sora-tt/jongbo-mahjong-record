@@ -2,14 +2,15 @@ import type { LeagueRule } from "@/domain/league/types.js";
 import { ValidationError } from "@/domain/shared/errors.js";
 
 export const validateLeagueRule = (rule: LeagueRule): void => {
+  if (rule.uma.mode !== "fixed") {
+    throw new ValidationError("floatingCount uma is not supported yet", {
+      field: "rule.uma.mode",
+      mode: rule.uma.mode,
+    });
+  }
+
   const values = [rule.uma.first, rule.uma.second, rule.uma.third];
   if (rule.gameType === "yonma") {
-    if (rule.uma.fourth === null) {
-      throw new ValidationError("rule.uma.fourth is required for yonma", {
-        field: "rule.uma.fourth",
-        gameType: rule.gameType,
-      });
-    }
     values.push(rule.uma.fourth);
   } else if (rule.uma.fourth !== null) {
     throw new ValidationError("rule.uma.fourth must be null for sanma", {

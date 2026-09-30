@@ -1,6 +1,54 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createApp } from "@/presentation/app.js";
+import { createLeagueSchema } from "@/presentation/schemas/league.js";
+
+test("normalizes a legacy fixed League rule and rejects floatingCount until enabled", () => {
+  const legacyFixedInput = {
+    name: "Legacy League",
+    memberUserIds: [],
+    rule: {
+      gameType: "yonma",
+      uma: { first: 20, second: 10, third: -10, fourth: -20 },
+      oka: { startingPoints: 25000, returnPoints: 30000 },
+    },
+  };
+
+  assert.deepEqual(createLeagueSchema.parse(legacyFixedInput).rule.uma, {
+    mode: "fixed",
+    first: 20,
+    second: 10,
+    third: -10,
+    fourth: -20,
+  });
+  assert.equal(
+    createLeagueSchema.safeParse({
+      ...legacyFixedInput,
+      rule: {
+        ...legacyFixedInput.rule,
+        uma: { mode: "fixed", ...legacyFixedInput.rule.uma },
+      },
+    }).success,
+    true,
+  );
+  assert.equal(
+    createLeagueSchema.safeParse({
+      ...legacyFixedInput,
+      rule: {
+        ...legacyFixedInput.rule,
+        uma: {
+          mode: "floatingCount",
+          first: 20,
+          second: 10,
+          third: -10,
+          fourth: -20,
+          pointsByFloatingCount: {},
+        },
+      },
+    }).success,
+    false,
+  );
+});
 
 test("health endpoint returns the standard data envelope", async () => {
   const response = await createApp().request("/api/health");
@@ -94,6 +142,9 @@ test("OpenAPI publishes the canonical auth and match request contracts", async (
           required?: string[];
         };
         LeagueSummary: { properties: Record<string, unknown> };
+        LeagueRule: { oneOf?: Array<{ $ref?: string }> };
+        LeagueRuleInput: { oneOf?: Array<{ $ref?: string }> };
+        LeagueDetail: { properties: Record<string, unknown> };
       };
     };
   };
@@ -119,6 +170,23 @@ test("OpenAPI publishes the canonical auth and match request contracts", async (
     "startedAt",
     "memberUserIds",
   ]);
+  assert.deepEqual(
+    document.components.schemas.LeagueRule.oneOf?.map(({ $ref }) => $ref),
+    [
+      "#/components/schemas/FixedSanmaLeagueRule",
+      "#/components/schemas/FixedYonmaLeagueRule",
+    ],
+  );
+  assert.deepEqual(
+    document.components.schemas.LeagueRuleInput.oneOf?.map(({ $ref }) => $ref),
+    [
+      "#/components/schemas/LeagueRule",
+      "#/components/schemas/LegacyFixedLeagueRule",
+    ],
+  );
+  assert.deepEqual(document.components.schemas.LeagueDetail.properties.rule, {
+    $ref: "#/components/schemas/LeagueRule",
+  });
   const leaguePath = document.paths["/api/leagues/{leagueId}"];
   assert.deepEqual(
     leaguePath.delete?.parameters?.map((parameter) => parameter.name),

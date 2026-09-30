@@ -84,12 +84,17 @@ const LeaguePage: React.FC = () => {
         : "データなし",
     },
   ];
-  const umaValues = [
-    league.rule.uma.first,
-    league.rule.uma.second,
-    league.rule.uma.third,
-    league.rule.uma.fourth,
-  ].filter((value): value is number => value !== null);
+  const umaSummary =
+    league.rule.uma.mode === "fixed"
+      ? [
+          league.rule.uma.first,
+          league.rule.uma.second,
+          league.rule.uma.third,
+          league.rule.uma.fourth,
+        ]
+          .filter((value): value is number => value !== null)
+          .join(" / ")
+      : "浮き人数別順位点";
 
   return (
     <AppShell mainClassName="min-h-screen bg-background font-jp">
@@ -136,9 +141,7 @@ const LeaguePage: React.FC = () => {
                 {league.rule.oka.returnPoints.toLocaleString("ja-JP")}
               </dd>
               <dt className="text-text-muted">ウマ</dt>
-              <dd className="text-right text-foreground">
-                {umaValues.join(" / ")}
-              </dd>
+              <dd className="text-right text-foreground">{umaSummary}</dd>
             </dl>
           </Card>
         </section>

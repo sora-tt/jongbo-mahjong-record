@@ -1,6 +1,5 @@
 import type {
   ActiveSeasonSummary,
-  GameType,
   IsoDateString,
   LeagueId,
   Nullable,
@@ -9,19 +8,49 @@ import type {
   UserReference,
 } from "@/domain/shared/types.js";
 
-export type LeagueRule = {
-  gameType: GameType;
-  uma: {
-    first: number;
-    second: number;
-    third: number;
-    fourth: Nullable<number>;
-  };
-  oka: {
-    startingPoints: number;
-    returnPoints: number;
-  };
+export type FloatingCount = 0 | 1 | 2 | 3 | 4;
+
+export type RankPoints = {
+  first: number;
+  second: number;
+  third: number;
+  fourth: number;
 };
+
+export type FixedYonmaUma = {
+  mode: "fixed";
+  first: number;
+  second: number;
+  third: number;
+  fourth: number;
+};
+
+export type FixedSanmaUma = {
+  mode: "fixed";
+  first: number;
+  second: number;
+  third: number;
+  fourth: null;
+};
+
+export type FloatingCountUma = {
+  mode: "floatingCount";
+  pointsByFloatingCount: Record<FloatingCount, RankPoints>;
+};
+
+export type UmaRule = FixedSanmaUma | FixedYonmaUma | FloatingCountUma;
+
+export type LeagueRule =
+  | {
+      gameType: "sanma";
+      uma: FixedSanmaUma;
+      oka: { startingPoints: number; returnPoints: number };
+    }
+  | {
+      gameType: "yonma";
+      uma: FixedYonmaUma | FloatingCountUma;
+      oka: { startingPoints: number; returnPoints: number };
+    };
 
 export type LeagueMember = UserReference & { id: OpaqueId };
 

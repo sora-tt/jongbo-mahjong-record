@@ -37,6 +37,7 @@ type SeedLeague = {
   rule: {
     gameType: "sanma" | "yonma";
     uma: {
+      mode: "fixed";
       first: number;
       second: number;
       third: number;
@@ -130,7 +131,13 @@ const users: SeedUser[] = [
 
 const defaultRule = {
   gameType: "yonma",
-  uma: { first: 20, second: 10, third: -10, fourth: -20 },
+  uma: {
+    mode: "fixed",
+    first: 20,
+    second: 10,
+    third: -10,
+    fourth: -20,
+  },
   oka: { startingPoints: 25000, returnPoints: 30000 },
 } as const;
 
@@ -484,6 +491,7 @@ const seedLeagues = async () => {
       rule: {
         game_type: league.rule.gameType,
         uma: {
+          mode: "fixed",
           first: league.rule.uma.first,
           second: league.rule.uma.second,
           third: league.rule.uma.third,

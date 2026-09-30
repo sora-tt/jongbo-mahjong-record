@@ -467,32 +467,72 @@ export class FirestoreLeagueRepository implements LeagueRepository {
     }
     const uma = requiredObject(rule.uma, "leagues.rule.uma");
     const oka = requiredObject(rule.oka, "leagues.rule.oka");
+    const umaMode =
+      "mode" in uma
+        ? requiredString(uma.mode, "leagues.rule.uma.mode")
+        : "fixed";
+    if (umaMode !== "fixed") {
+      throw new TypeError(`unsupported Firestore league uma mode: ${umaMode}`);
+    }
 
+    const fourth = nullableNumber(uma.fourth, "leagues.rule.uma.fourth");
+    if (gameType === "sanma" && fourth !== null) {
+      throw new TypeError(
+        "invalid or missing Firestore field: leagues.rule.uma.fourth",
+      );
+    }
+    if (gameType === "yonma" && fourth === null) {
+      throw new TypeError(
+        "invalid or missing Firestore field: leagues.rule.uma.fourth",
+      );
+    }
+
+    const fixedUma = {
+      mode: "fixed" as const,
+      first: requiredNumber(uma.first, "leagues.rule.uma.first"),
+      second: requiredNumber(uma.second, "leagues.rule.uma.second"),
+      third: requiredNumber(uma.third, "leagues.rule.uma.third"),
+    };
+    const mappedOka = {
+      startingPoints: requiredNumber(
+        oka.starting_points,
+        "leagues.rule.oka.starting_points",
+      ),
+      returnPoints: requiredNumber(
+        oka.return_points,
+        "leagues.rule.oka.return_points",
+      ),
+    };
+
+    if (gameType === "sanma") {
+      return {
+        gameType,
+        uma: { ...fixedUma, fourth: null },
+        oka: mappedOka,
+      } satisfies LeagueRule;
+    }
+
+    if (fourth === null) {
+      throw new TypeError(
+        "invalid or missing Firestore field: leagues.rule.uma.fourth",
+      );
+    }
     return {
       gameType,
-      uma: {
-        first: requiredNumber(uma.first, "leagues.rule.uma.first"),
-        second: requiredNumber(uma.second, "leagues.rule.uma.second"),
-        third: requiredNumber(uma.third, "leagues.rule.uma.third"),
-        fourth: nullableNumber(uma.fourth, "leagues.rule.uma.fourth"),
-      },
-      oka: {
-        startingPoints: requiredNumber(
-          oka.starting_points,
-          "leagues.rule.oka.starting_points",
-        ),
-        returnPoints: requiredNumber(
-          oka.return_points,
-          "leagues.rule.oka.return_points",
-        ),
-      },
+      uma: { ...fixedUma, fourth },
+      oka: mappedOka,
     } satisfies LeagueRule;
   }
 
   private toLeagueRuleDoc(rule: LeagueRule) {
+    if (rule.uma.mode !== "fixed") {
+      throw new TypeError("floatingCount uma is not supported yet");
+    }
+
     return {
       game_type: rule.gameType,
       uma: {
+        mode: "fixed",
         first: rule.uma.first,
         second: rule.uma.second,
         third: rule.uma.third,

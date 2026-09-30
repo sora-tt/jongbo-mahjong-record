@@ -4,13 +4,25 @@ import { calculateMatchPoints } from "@/domain/shared/scoring.js";
 
 const yonmaRule = {
   gameType: "yonma" as const,
-  uma: { first: 20, second: 10, third: -10, fourth: -20 },
+  uma: {
+    mode: "fixed" as const,
+    first: 20,
+    second: 10,
+    third: -10,
+    fourth: -20,
+  },
   oka: { startingPoints: 25000, returnPoints: 30000 },
 };
 
 const sanmaRule = {
   gameType: "sanma" as const,
-  uma: { first: 20, second: 10, third: -30, fourth: null },
+  uma: {
+    mode: "fixed" as const,
+    first: 20,
+    second: 10,
+    third: -30,
+    fourth: null,
+  },
   oka: { startingPoints: 25000, returnPoints: 30000 },
 };
 
@@ -82,5 +94,35 @@ test("rejects a raw score total that does not match the table total", () => {
         { userId: "u4", userName: "D", wind: "north", rawScore: 19000 },
       ]),
     /rawScore total does not match table total/,
+  );
+});
+
+test("rejects floatingCount scoring until the mode is enabled", () => {
+  const floatingRule = JSON.parse(
+    JSON.stringify({
+      gameType: "yonma",
+      uma: {
+        mode: "floatingCount",
+        pointsByFloatingCount: {
+          0: { first: 0, second: 0, third: 0, fourth: 0 },
+          1: { first: 12, second: -1, third: -3, fourth: -8 },
+          2: { first: 8, second: 4, third: -4, fourth: -8 },
+          3: { first: 8, second: 3, third: 1, fourth: -12 },
+          4: { first: 0, second: 0, third: 0, fourth: 0 },
+        },
+      },
+      oka: { startingPoints: 25000, returnPoints: 25000 },
+    }),
+  );
+
+  assert.throws(
+    () =>
+      calculateMatchPoints(floatingRule, [
+        { userId: "u1", userName: "A", wind: "east", rawScore: 35000 },
+        { userId: "u2", userName: "B", wind: "south", rawScore: 25000 },
+        { userId: "u3", userName: "C", wind: "west", rawScore: 20000 },
+        { userId: "u4", userName: "D", wind: "north", rawScore: 20000 },
+      ]),
+    /floatingCount uma is not supported yet/,
   );
 });

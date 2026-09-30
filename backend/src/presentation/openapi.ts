@@ -379,7 +379,7 @@ export const openApiDocument = {
             type: "object",
             properties: {
               name: { type: "string" },
-              rule: { $ref: "#/components/schemas/LeagueRule" },
+              rule: { $ref: "#/components/schemas/LeagueRuleInput" },
               memberUserIds: { type: "array", items: { type: "string" } },
             },
           }),
@@ -1174,30 +1174,86 @@ export const openApiDocument = {
         type: "object",
         properties: {
           name: { type: "string" },
-          rule: { $ref: "#/components/schemas/LeagueRule" },
+          rule: { $ref: "#/components/schemas/LeagueRuleInput" },
           memberUserIds: { type: "array", items: { type: "string" } },
         },
         required: ["name", "rule", "memberUserIds"],
       },
       LeagueRule: {
+        oneOf: [
+          { $ref: "#/components/schemas/FixedSanmaLeagueRule" },
+          { $ref: "#/components/schemas/FixedYonmaLeagueRule" },
+        ],
+        discriminator: { propertyName: "gameType" },
+      },
+      LeagueRuleInput: {
+        description:
+          "Accepts the canonical fixed rule with uma.mode=fixed or the legacy fixed shape without uma.mode.",
+        oneOf: [
+          { $ref: "#/components/schemas/LeagueRule" },
+          { $ref: "#/components/schemas/LegacyFixedLeagueRule" },
+        ],
+      },
+      FixedSanmaLeagueRule: {
+        type: "object",
+        properties: {
+          gameType: { type: "string", enum: ["sanma"] },
+          oka: { $ref: "#/components/schemas/LeagueOka" },
+          uma: { $ref: "#/components/schemas/FixedSanmaUma" },
+        },
+        required: ["gameType", "oka", "uma"],
+      },
+      FixedYonmaLeagueRule: {
+        type: "object",
+        properties: {
+          gameType: { type: "string", enum: ["yonma"] },
+          oka: { $ref: "#/components/schemas/LeagueOka" },
+          uma: { $ref: "#/components/schemas/FixedYonmaUma" },
+        },
+        required: ["gameType", "oka", "uma"],
+      },
+      LeagueOka: {
+        type: "object",
+        properties: {
+          startingPoints: { type: "integer" },
+          returnPoints: { type: "integer" },
+        },
+        required: ["startingPoints", "returnPoints"],
+      },
+      FixedSanmaUma: {
+        type: "object",
+        properties: {
+          mode: { type: "string", enum: ["fixed"] },
+          first: { type: "integer" },
+          second: { type: "integer" },
+          third: { type: "integer" },
+          fourth: { enum: [null] },
+        },
+        required: ["mode", "first", "second", "third", "fourth"],
+      },
+      FixedYonmaUma: {
+        type: "object",
+        properties: {
+          mode: { type: "string", enum: ["fixed"] },
+          first: { type: "integer" },
+          second: { type: "integer" },
+          third: { type: "integer" },
+          fourth: { type: "integer" },
+        },
+        required: ["mode", "first", "second", "third", "fourth"],
+      },
+      LegacyFixedLeagueRule: {
         type: "object",
         properties: {
           gameType: { type: "string", enum: ["sanma", "yonma"] },
-          oka: {
-            type: "object",
-            properties: {
-              startingPoints: { type: "number" },
-              returnPoints: { type: "number" },
-            },
-            required: ["startingPoints", "returnPoints"],
-          },
+          oka: { $ref: "#/components/schemas/LeagueOka" },
           uma: {
             type: "object",
             properties: {
-              first: { type: "number" },
-              second: { type: "number" },
-              third: { type: "number" },
-              fourth: { type: "number", nullable: true },
+              first: { type: "integer" },
+              second: { type: "integer" },
+              third: { type: "integer" },
+              fourth: { type: "integer", nullable: true },
             },
             required: ["first", "second", "third", "fourth"],
           },

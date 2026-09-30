@@ -201,25 +201,46 @@ export const useLeagueNew = () => {
       return;
     }
 
+    const oka = {
+      startingPoints: okaStartPoints,
+      returnPoints: okaReturnPoints,
+    };
+    const commonUma = {
+      first: uma[1],
+      second: uma[2],
+      third: uma[3],
+    };
+    const rule =
+      ruleSettings.gameType === "sanma"
+        ? {
+            gameType: "sanma" as const,
+            uma: { mode: "fixed" as const, ...commonUma, fourth: null },
+            oka,
+          }
+        : (() => {
+            const fourth = uma[4];
+            if (fourth === null) {
+              return null;
+            }
+            return {
+              gameType: "yonma" as const,
+              uma: { mode: "fixed" as const, ...commonUma, fourth },
+              oka,
+            };
+          })();
+
+    if (!rule) {
+      setError("四麻では4位のウマを入力してください");
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
       const createdLeague = await createLeague({
         name: leagueName.trim(),
         memberUserIds: Object.keys(addedMembers),
-        rule: {
-          gameType: ruleSettings.gameType,
-          oka: {
-            startingPoints: okaStartPoints,
-            returnPoints: okaReturnPoints,
-          },
-          uma: {
-            first: uma[1],
-            second: uma[2],
-            third: uma[3],
-            fourth: ruleSettings.gameType === "sanma" ? null : uma[4],
-          },
-        },
+        rule,
       });
 
       router.push(`/league/${createdLeague.id}`);

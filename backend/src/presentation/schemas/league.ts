@@ -4,39 +4,44 @@ import type {
   UpdateLeagueInput,
 } from "@/domain/league/repository.js";
 
-const gameTypeSchema = z.enum(["sanma", "yonma"]);
-
-const leagueRuleSchema = z
+const fixedSanmaUmaSchema = z
   .object({
-    gameType: gameTypeSchema,
+    mode: z.literal("fixed").optional(),
+    first: z.number().int(),
+    second: z.number().int(),
+    third: z.number().int(),
+    fourth: z.null(),
+  })
+  .transform((uma) => ({ ...uma, mode: "fixed" as const }));
+
+const fixedYonmaUmaSchema = z
+  .object({
+    mode: z.literal("fixed").optional(),
+    first: z.number().int(),
+    second: z.number().int(),
+    third: z.number().int(),
+    fourth: z.number().int(),
+  })
+  .transform((uma) => ({ ...uma, mode: "fixed" as const }));
+
+const leagueRuleSchema = z.discriminatedUnion("gameType", [
+  z.object({
+    gameType: z.literal("sanma"),
     oka: z.object({
       startingPoints: z.number().int(),
       returnPoints: z.number().int(),
     }),
-    uma: z.object({
-      first: z.number().int(),
-      second: z.number().int(),
-      third: z.number().int(),
-      fourth: z.number().int().nullable(),
+    uma: fixedSanmaUmaSchema,
+  }),
+  z.object({
+    gameType: z.literal("yonma"),
+    oka: z.object({
+      startingPoints: z.number().int(),
+      returnPoints: z.number().int(),
     }),
-  })
-  .superRefine((value, ctx) => {
-    if (value.gameType === "sanma" && value.uma.fourth !== null) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["uma", "fourth"],
-        message: "fourth must be null when gameType is sanma",
-      });
-    }
-
-    if (value.gameType === "yonma" && value.uma.fourth === null) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["uma", "fourth"],
-        message: "fourth is required when gameType is yonma",
-      });
-    }
-  });
+    uma: fixedYonmaUmaSchema,
+  }),
+]) satisfies z.ZodType<CreateLeagueInput["rule"]>;
 
 export const createLeagueSchema: z.ZodType<CreateLeagueInput> = z.object({
   name: z.string().min(1),

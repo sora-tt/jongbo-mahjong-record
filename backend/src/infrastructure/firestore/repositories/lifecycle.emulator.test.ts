@@ -22,7 +22,13 @@ test(
     const seasonRepository = new FirestoreSeasonRepository(db);
     const leagueRule = {
       gameType: "yonma" as const,
-      uma: { first: 20, second: 10, third: -10, fourth: -20 },
+      uma: {
+        mode: "fixed" as const,
+        first: 20,
+        second: 10,
+        third: -10,
+        fourth: -20,
+      },
       oka: { startingPoints: 25000, returnPoints: 30000 },
     };
     const league = await leagueRepository.create({
@@ -30,6 +36,24 @@ test(
       rule: leagueRule,
       memberUserIds: ["0001"],
     });
+
+    const leagueRef = db.collection("leagues").doc(league.id);
+    const createdDocument = (await leagueRef.get()).data();
+    assert.equal(createdDocument?.rule.uma.mode, "fixed");
+    const storedRule = createdDocument?.rule;
+    assert.ok(storedRule);
+    const legacyUma = { ...storedRule.uma };
+    delete legacyUma.mode;
+    await leagueRef.update({ rule: { ...storedRule, uma: legacyUma } });
+    assert.equal((await leagueRepository.getRule(league.id)).uma.mode, "fixed");
+    assert.equal((await leagueRef.get()).data()?.rule.uma.mode, undefined);
+    await leagueRef.update({ "rule.uma.mode": "floating_count" });
+    await assert.rejects(
+      leagueRepository.getRule(league.id),
+      /unsupported Firestore league uma mode/,
+    );
+    await leagueRef.update({ "rule.uma.mode": "fixed" });
+
     const members = [{ userId: asOpaqueId("0001"), userName: "岩田" }];
 
     try {
@@ -137,7 +161,13 @@ test(
       name: "delete lifecycle test",
       rule: {
         gameType: "yonma",
-        uma: { first: 20, second: 10, third: -10, fourth: -20 },
+        uma: {
+          mode: "fixed",
+          first: 20,
+          second: 10,
+          third: -10,
+          fourth: -20,
+        },
         oka: { startingPoints: 25000, returnPoints: 30000 },
       },
       memberUserIds: ["0001"],
