@@ -11,7 +11,7 @@
   - _Requirements: 1.1, 1.3, 4.1_
   - _Boundary: League Rule Contract, Rule Validator, Match Scoring, Rule Persistence Mapper, HTTP Contract Publication, League Rule UI and Form Integration (explicit contract-migration integration)_
 
-- [ ] 1.2 (P) 浮き人数別順位点の保存前検証を有効にする
+- [x] 1.2 (P) 浮き人数別順位点の保存前検証を有効にする
   - 0〜4人の5行すべてに整数の1〜4位順位点を要求し、各行の合計が0であることを検証する。
   - 三麻指定、欠落行、非整数、合計不一致を拒否し、合計違反では該当floatingCountとactualTotalをvalidation detailsで返す。
   - 完了時、domain unit testsで固定・浮き人数別の正常系と各異常系を確認でき、invalid ruleがrepository writeへ到達しない。
