@@ -20,6 +20,7 @@ type Props = {
   fixedUma: FixedUmaDraft;
   floatingCountUma: FloatingCountUmaDraft;
   showErrorSummary?: boolean;
+  submitError?: string | null;
   errorSummaryFocusToken?: number;
   disabled?: boolean;
   onModeChange: (mode: UmaMode) => void;
@@ -44,6 +45,8 @@ const getInputId = (mode: UmaMode, rank: UmaRank, floatingCount?: number) =>
     ? `fixed-uma-${rank}`
     : `floating-count-${floatingCount}-${rank}`;
 
+type SummaryItem = { href?: string; key: string; message: string };
+
 const inputClassName =
   "min-h-11 w-full min-w-0 rounded-control border border-border bg-white px-3 py-2 text-base text-foreground shadow-sm transition-colors focus:border-brand-strong focus:outline-none disabled:cursor-not-allowed disabled:bg-surface-muted disabled:opacity-60 aria-invalid:border-danger";
 
@@ -53,6 +56,7 @@ const LeagueRuleEditor: React.FC<Props> = ({
   fixedUma,
   floatingCountUma,
   showErrorSummary = false,
+  submitError = null,
   errorSummaryFocusToken = 0,
   disabled = false,
   onModeChange,
@@ -68,23 +72,29 @@ const LeagueRuleEditor: React.FC<Props> = ({
   const shouldFocusSummaryRef = React.useRef(false);
 
   const summaryItems = React.useMemo(() => {
+    const submitErrors =
+      showErrorSummary && submitError
+        ? ([{ key: "submit-error", message: submitError }] as SummaryItem[])
+        : [];
+
     if (!showErrorSummary) {
       return [];
     }
 
     if (activeMode === "fixed") {
-      const fields: { href: string; key: string; message: string }[] =
-        Object.entries(fixedErrors.fields ?? {}).map(([rank, message]) => {
-          const rankKey = rank as UmaRank;
-          const rankLabel =
-            visibleRanks.find((candidate) => candidate.key === rankKey)
-              ?.label ?? "順位";
-          return {
-            href: `#${getInputId("fixed", rankKey)}`,
-            key: rankKey,
-            message: `固定順位点の${rankLabel}: ${message}`,
-          };
-        });
+      const fields: SummaryItem[] = Object.entries(
+        fixedErrors.fields ?? {}
+      ).map(([rank, message]) => {
+        const rankKey = rank as UmaRank;
+        const rankLabel =
+          visibleRanks.find((candidate) => candidate.key === rankKey)?.label ??
+          "順位";
+        return {
+          href: `#${getInputId("fixed", rankKey)}`,
+          key: rankKey,
+          message: `固定順位点の${rankLabel}: ${message}`,
+        };
+      });
       if (fixedErrors.total) {
         fields.push({
           href: `#${getInputId("fixed", visibleRanks[0]?.key ?? "first")}`,
@@ -92,16 +102,16 @@ const LeagueRuleEditor: React.FC<Props> = ({
           message: fixedErrors.total.message,
         });
       }
-      return fields;
+      return [...submitErrors, ...fields];
     }
 
-    return FLOATING_COUNTS.flatMap((floatingCount) => {
+    const fields = FLOATING_COUNTS.flatMap((floatingCount) => {
       const errors = floatingErrors[floatingCount];
       if (!errors) {
         return [];
       }
 
-      const fields = Object.entries(errors.fields ?? {}).map(
+      const rowFields = Object.entries(errors.fields ?? {}).map(
         ([rank, message]) => {
           const rankKey = rank as UmaRank;
           const rankLabel =
@@ -115,15 +125,23 @@ const LeagueRuleEditor: React.FC<Props> = ({
         }
       );
       if (errors.total) {
-        fields.push({
+        rowFields.push({
           href: `#${getInputId("floatingCount", "first", floatingCount)}`,
           key: `${floatingCount}-total`,
           message: errors.total.message,
         });
       }
-      return fields;
+      return rowFields;
     });
-  }, [activeMode, fixedErrors, floatingErrors, showErrorSummary, visibleRanks]);
+    return [...submitErrors, ...fields];
+  }, [
+    activeMode,
+    fixedErrors,
+    floatingErrors,
+    showErrorSummary,
+    submitError,
+    visibleRanks,
+  ]);
 
   shouldFocusSummaryRef.current = showErrorSummary && summaryItems.length > 0;
 
@@ -153,12 +171,16 @@ const LeagueRuleEditor: React.FC<Props> = ({
           <ul className="mt-2 list-inside list-disc space-y-1">
             {summaryItems.map((item) => (
               <li key={item.key}>
-                <a
-                  className="underline underline-offset-2 focus-visible:rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
-                  href={item.href}
-                >
-                  {item.message}
-                </a>
+                {item.href ? (
+                  <a
+                    className="underline underline-offset-2 focus-visible:rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                    href={item.href}
+                  >
+                    {item.message}
+                  </a>
+                ) : (
+                  item.message
+                )}
               </li>
             ))}
           </ul>

@@ -54,7 +54,7 @@
   - _Requirements: 1.1, 1.2, 1.3, 3.3_
   - _Boundary: League Rule UI and Form Integration_
 
-- [ ] 2.2 League作成・編集フォームを共通editorとAPI unionへ接続する
+- [x] 2.2 League作成・編集フォームを共通editorとAPI unionへ接続する
   - create/edit hooksのstateとpayloadを固定・浮き人数別unionへ対応させ、編集時は保存済みmodeとテーブルを初期表示する。
   - validation、API、rule lockのエラー時に入力を保持し、保存失敗を成功と誤表示しない。
   - 完了時、作成・編集の双方から選択modeと順位点を正しいshapeで送り、FE typecheckが通る。

@@ -4,6 +4,8 @@ import * as React from "react";
 
 import Link from "next/link";
 
+import { LeagueRuleEditor } from "@/features/league/ui/league-rule-editor";
+
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -22,29 +24,21 @@ const NewLeaguePage: React.FC = () => {
     isSearchingMembers,
     isSubmitting,
     error,
-    umaTotalError,
+    submitError,
+    showUmaErrors,
+    errorSummaryFocusToken,
     ruleSettings,
     handleLeagueNameChange,
     handleMemberQueryChange,
     handleAddMember,
     handleRemoveMember,
-    handleRuleSettingChange,
+    handleGameTypeChange,
+    handleOkaSettingChange,
+    handleModeChange,
+    handleFixedUmaChange,
+    handleFloatingCountUmaChange,
     handleSubmit,
   } = useLeagueNew();
-
-  const umaFields =
-    ruleSettings.gameType === "sanma"
-      ? ([
-          { field: "uma1", label: "1位" },
-          { field: "uma2", label: "2位" },
-          { field: "uma3", label: "3位" },
-        ] as const)
-      : ([
-          { field: "uma1", label: "1位" },
-          { field: "uma2", label: "2位" },
-          { field: "uma3", label: "3位" },
-          { field: "uma4", label: "4位" },
-        ] as const);
 
   return (
     <AppShell mainClassName="min-h-screen bg-background font-jp">
@@ -138,10 +132,7 @@ const NewLeaguePage: React.FC = () => {
               label="ゲーム種別"
               value={ruleSettings.gameType}
               onChange={(event) =>
-                handleRuleSettingChange(
-                  "gameType",
-                  event.target.value as "sanma" | "yonma"
-                )
+                handleGameTypeChange(event.target.value as "sanma" | "yonma")
               }
             >
               <option value="yonma">四麻</option>
@@ -153,7 +144,7 @@ const NewLeaguePage: React.FC = () => {
                 type="number"
                 value={ruleSettings.okaStartPoints}
                 onChange={(event) =>
-                  handleRuleSettingChange("okaStartPoints", event.target.value)
+                  handleOkaSettingChange("okaStartPoints", event.target.value)
                 }
                 required
               />
@@ -162,28 +153,24 @@ const NewLeaguePage: React.FC = () => {
                 type="number"
                 value={ruleSettings.okaReturnPoints}
                 onChange={(event) =>
-                  handleRuleSettingChange("okaReturnPoints", event.target.value)
+                  handleOkaSettingChange("okaReturnPoints", event.target.value)
                 }
                 required
               />
-              {umaFields.map(({ field, label }) => (
-                <Input
-                  key={field}
-                  label={`${label}ウマ`}
-                  type="number"
-                  value={ruleSettings[field]}
-                  onChange={(event) =>
-                    handleRuleSettingChange(field, event.target.value)
-                  }
-                  required
-                />
-              ))}
             </div>
-            {umaTotalError ? (
-              <p className="text-sm text-danger" role="alert">
-                {umaTotalError}
-              </p>
-            ) : null}
+            <LeagueRuleEditor
+              gameType={ruleSettings.gameType}
+              mode={ruleSettings.mode}
+              fixedUma={ruleSettings.fixedUma}
+              floatingCountUma={ruleSettings.floatingCountUma}
+              showErrorSummary={showUmaErrors}
+              submitError={submitError}
+              errorSummaryFocusToken={errorSummaryFocusToken}
+              disabled={isSubmitting}
+              onModeChange={handleModeChange}
+              onFixedUmaChange={handleFixedUmaChange}
+              onFloatingCountUmaChange={handleFloatingCountUmaChange}
+            />
           </section>
 
           {error ? <ErrorState message={error} /> : null}
@@ -192,7 +179,7 @@ const NewLeaguePage: React.FC = () => {
             <Button
               onClick={handleSubmit}
               loading={isSubmitting}
-              disabled={isSubmitting || Boolean(umaTotalError)}
+              disabled={isSubmitting}
             >
               リーグを作成
             </Button>

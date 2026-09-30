@@ -98,3 +98,14 @@ test("sanma editor only presents fixed rank points and hides the mode selector",
   strictEqual(markup.includes('id="fixed-uma-third"'), true);
   strictEqual(markup.includes('id="fixed-uma-fourth"'), false);
 });
+
+test("submit failures are included in the focusable error summary", () => {
+  const markup = renderEditor({
+    submitError: "リーグ設定の保存に失敗しました",
+    errorSummaryFocusToken: 2,
+  });
+
+  strictEqual(markup.includes('role="alert"'), true);
+  strictEqual(markup.includes('tabindex="-1"'), true);
+  strictEqual(markup.includes("リーグ設定の保存に失敗しました"), true);
+});
