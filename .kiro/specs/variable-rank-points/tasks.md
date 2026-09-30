@@ -62,7 +62,7 @@
   - _Requirements: 1.1, 1.2, 1.3, 3.3, 4.2_
   - _Boundary: League Rule UI and Form Integration_
 
-- [ ] 2.3 (P) League詳細に固定ruleまたは浮き人数別ruleを表示する
+- [x] 2.3 (P) League詳細に固定ruleまたは浮き人数別ruleを表示する
   - fixed値または0〜4人の全順位点と「返し点を超えた人数」という基準を表示する。
   - Match結果と統計はBackendが保存したrank/pointを利用し、FE独自の順位点計算を追加しない。
   - 完了時、floatingCount Leagueの詳細でテーブルと基準点を確認でき、既存fixed Leagueも従来どおり表示される。

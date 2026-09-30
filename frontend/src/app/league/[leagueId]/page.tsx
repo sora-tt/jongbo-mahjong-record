@@ -6,6 +6,8 @@ import { Pencil } from "lucide-react";
 
 import Link from "next/link";
 
+import { LeagueRuleSummary } from "@/features/league/ui/league-rule-summary";
+
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -84,17 +86,7 @@ const LeaguePage: React.FC = () => {
         : "データなし",
     },
   ];
-  const umaSummary =
-    league.rule.uma.mode === "fixed"
-      ? [
-          league.rule.uma.first,
-          league.rule.uma.second,
-          league.rule.uma.third,
-          league.rule.uma.fourth,
-        ]
-          .filter((value): value is number => value !== null)
-          .join(" / ")
-      : "浮き人数別順位点";
+  const isFloatingCountUma = league.rule.uma.mode === "floatingCount";
 
   return (
     <AppShell mainClassName="min-h-screen bg-background font-jp">
@@ -140,9 +132,20 @@ const LeaguePage: React.FC = () => {
                 {league.rule.oka.startingPoints.toLocaleString("ja-JP")} /{" "}
                 {league.rule.oka.returnPoints.toLocaleString("ja-JP")}
               </dd>
-              <dt className="text-text-muted">ウマ</dt>
-              <dd className="text-right text-foreground">{umaSummary}</dd>
+              {!isFloatingCountUma ? (
+                <>
+                  <dt className="text-text-muted">ウマ</dt>
+                  <dd className="text-right text-foreground">
+                    <LeagueRuleSummary rule={league.rule} />
+                  </dd>
+                </>
+              ) : null}
             </dl>
+            {isFloatingCountUma ? (
+              <div className="mt-4">
+                <LeagueRuleSummary rule={league.rule} />
+              </div>
+            ) : null}
           </Card>
         </section>
 
