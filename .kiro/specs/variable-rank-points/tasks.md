@@ -35,7 +35,7 @@
   - _Requirements: 1.4, 4.1_
   - _Boundary: Rule Persistence Mapper_
 
-- [ ] 1.5 League APIで浮き人数別ruleを受け付け、契約を公開する
+- [x] 1.5 League APIで浮き人数別ruleを受け付け、契約を公開する
   - League create/updateでfixedとfloatingCountのunionを検証し、modeのない旧fixed requestはfixedへ正規化する。
   - API responseにmodeと全5行を含め、validation errorは既存ErrorEnvelopeで返す。OpenAPIとAPI資料に新旧request/response shapeを記載する。
   - 完了時、旧fixed requestと新floatingCount request、gameType整合、row validation error、response/OpenAPIのunion契約をroute contract testsで確認できる。

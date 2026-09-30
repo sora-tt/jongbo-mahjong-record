@@ -24,6 +24,24 @@ const fixedYonmaUmaSchema = z
   })
   .transform((uma) => ({ ...uma, mode: "fixed" as const }));
 
+const rankPointsSchema = z.object({
+  first: z.number().int(),
+  second: z.number().int(),
+  third: z.number().int(),
+  fourth: z.number().int(),
+});
+
+const floatingCountUmaSchema = z.object({
+  mode: z.literal("floatingCount"),
+  pointsByFloatingCount: z.object({
+    "0": rankPointsSchema,
+    "1": rankPointsSchema,
+    "2": rankPointsSchema,
+    "3": rankPointsSchema,
+    "4": rankPointsSchema,
+  }),
+});
+
 const leagueRuleSchema = z.discriminatedUnion("gameType", [
   z.object({
     gameType: z.literal("sanma"),
@@ -39,7 +57,7 @@ const leagueRuleSchema = z.discriminatedUnion("gameType", [
       startingPoints: z.number().int(),
       returnPoints: z.number().int(),
     }),
-    uma: fixedYonmaUmaSchema,
+    uma: z.union([fixedYonmaUmaSchema, floatingCountUmaSchema]),
   }),
 ]) satisfies z.ZodType<CreateLeagueInput["rule"]>;
 
