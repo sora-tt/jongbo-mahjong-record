@@ -412,6 +412,132 @@ test(
 );
 
 test(
+  "uses a legacy fixed Firestore rule to save Match points and season standings",
+  { skip: !emulatorAvailable },
+  async () => {
+    const db = getDb();
+    const userRepository = new FirestoreUserRepository(db);
+    const leagueRepository = new FirestoreLeagueRepository(db, userRepository);
+    const seasonRepository = new FirestoreSeasonRepository(db);
+    const sessionRepository = new FirestoreSessionRepository(db);
+    const matchRepository = new FirestoreMatchRepository(db);
+    const userStatsRepository = new FirestoreUserStatsRepository(db);
+    const statsRebuilder = new StatsRebuilder(
+      leagueRepository,
+      seasonRepository,
+      sessionRepository,
+      matchRepository,
+      userStatsRepository,
+    );
+    const matchService = new MatchService(
+      leagueRepository,
+      seasonRepository,
+      sessionRepository,
+      matchRepository,
+      statsRebuilder,
+    );
+    const league = await leagueRepository.create({
+      name: "legacy fixed scoring test",
+      rule: makeFixedRule(),
+      memberUserIds: ["0001"],
+    });
+    const leagueRef = db.collection("leagues").doc(league.id);
+    const members = [
+      { userId: asOpaqueId("0001"), userName: "岩田" },
+      { userId: asOpaqueId("0002"), userName: "富田" },
+      { userId: asOpaqueId("0003"), userName: "野口" },
+      { userId: asOpaqueId("0004"), userName: "梶" },
+    ];
+    const season = await seasonRepository.create(
+      league.id,
+      {
+        name: "legacy fixed season",
+        memberUserIds: members.map(({ userId }) => userId),
+        status: "active",
+      },
+      members,
+    );
+    const session = await sessionRepository.create(
+      league.id,
+      season.id,
+      {
+        startedAt: "2026-01-01T00:00:00.000Z",
+        memberUserIds: members.map(({ userId }) => userId),
+        createdBy: "0001",
+      },
+      members,
+    );
+
+    try {
+      const storedRule = (await leagueRef.get()).data()?.rule;
+      assert.ok(storedRule);
+      const legacyUma = { ...storedRule.uma };
+      delete legacyUma.mode;
+      await leagueRef.update({ rule: { ...storedRule, uma: legacyUma } });
+
+      const hydratedRule = await leagueRepository.getRule(league.id);
+      assert.equal(hydratedRule.uma.mode, "fixed");
+      assert.equal((await leagueRef.get()).data()?.rule.uma.mode, undefined);
+
+      const createdMatch = await matchService.createMatch(
+        "0001",
+        league.id,
+        season.id,
+        session.id,
+        {
+          playedAt: "2026-01-01T00:01:00.000Z",
+          results: [
+            { userId: "0001", wind: "east", rawScore: 40000 },
+            { userId: "0002", wind: "south", rawScore: 30000 },
+            { userId: "0003", wind: "west", rawScore: 20000 },
+            { userId: "0004", wind: "north", rawScore: 10000 },
+          ],
+        },
+      );
+      const savedMatch = await matchRepository.get(
+        league.id,
+        season.id,
+        session.id,
+        createdMatch.id,
+      );
+      const savedPoints = savedMatch.results
+        .map(({ userId, rank, point }) => ({ userId, rank, point }))
+        .sort((left, right) => left.userId.localeCompare(right.userId));
+
+      assert.deepEqual(
+        savedPoints,
+        members
+          .map(({ userId }, index) => ({
+            userId,
+            rank: index + 1,
+            point: [50, 10, -20, -40][index],
+          }))
+          .sort((left, right) => left.userId.localeCompare(right.userId)),
+      );
+      assert.deepEqual(
+        (await seasonRepository.get(league.id, season.id)).standings
+          .map(({ userId, totalPoints, matchCount }) => ({
+            userId,
+            totalPoints,
+            matchCount,
+          }))
+          .sort((left, right) => left.userId.localeCompare(right.userId)),
+        members
+          .map(({ userId }, index) => ({
+            userId,
+            totalPoints: [50, 10, -20, -40][index],
+            matchCount: 1,
+          }))
+          .sort((left, right) => left.userId.localeCompare(right.userId)),
+      );
+    } finally {
+      await db.recursiveDelete(leagueRef);
+      await userStatsRepository.deleteStatsForLeague(league.id);
+    }
+  },
+);
+
+test(
   "round trips floating-count uma with every row persisted",
   { skip: !emulatorAvailable },
   async () => {

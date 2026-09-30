@@ -80,7 +80,7 @@
   - _Requirements: 4.2_
   - _Boundary: Rule Lock Compatibility_
 
-- [ ] 3.2 League作成からMatch・集計までの連携と最終検証を行う
+- [x] 3.2 League作成からMatch・集計までの連携と最終検証を行う
   - floatingCount Leagueを作成し、raw scoreからMatchを登録して、保存pointと集計表示までBackend計算結果が使われることを確認する。
   - 同じflowでlegacy fixed Leagueの読込とMatch表示も確認する。
   - 完了時、frontend typecheck/lint/buildとbackend contract/emulator validationを実行し、League ruleからMatch point・集計まで契約が一致する。
