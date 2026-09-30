@@ -1,5 +1,5 @@
 import type { MatchResult } from "@/domain/match/types.js";
-import type { LeagueRule } from "@/domain/league/types.js";
+import type { FloatingCount, LeagueRule } from "@/domain/league/types.js";
 import { ValidationError } from "@/domain/shared/errors.js";
 import { asOpaqueId, type GameType, type Wind } from "@/domain/shared/types.js";
 
@@ -17,31 +17,6 @@ export const calculateMatchPoints = (
     rawScore: number;
   }>,
 ): MatchResult[] => {
-  if (rule.uma.mode !== "fixed") {
-    throw new ValidationError("floatingCount uma is not supported yet", {
-      field: "rule.uma.mode",
-      mode: rule.uma.mode,
-    });
-  }
-
-  const fixedUma = rule.uma;
-  const getUmaByRank = (rank: number) => {
-    const playerCount = rule.gameType === "sanma" ? 3 : 4;
-    const oka =
-      ((rule.oka.returnPoints - rule.oka.startingPoints) * playerCount) / 1000;
-
-    if (rank === 1) {
-      return fixedUma.first + oka;
-    }
-    if (rank === 2) {
-      return fixedUma.second;
-    }
-    if (rank === 3) {
-      return fixedUma.third;
-    }
-    return fixedUma.fourth ?? 0;
-  };
-
   const expectedPlayerCount = rule.gameType === "sanma" ? 3 : 4;
   if (results.length !== expectedPlayerCount) {
     throw new ValidationError(
@@ -78,6 +53,31 @@ export const calculateMatchPoints = (
       rawTotal,
     });
   }
+
+  const rankPoints =
+    rule.uma.mode === "fixed"
+      ? rule.uma
+      : rule.uma.pointsByFloatingCount[
+          results.filter((result) => result.rawScore > rule.oka.returnPoints)
+            .length as FloatingCount
+        ];
+  const getUmaByRank = (rank: number) => {
+    const oka =
+      ((rule.oka.returnPoints - rule.oka.startingPoints) *
+        expectedPlayerCount) /
+      1000;
+
+    if (rank === 1) {
+      return rankPoints.first + oka;
+    }
+    if (rank === 2) {
+      return rankPoints.second;
+    }
+    if (rank === 3) {
+      return rankPoints.third;
+    }
+    return rankPoints.fourth ?? 0;
+  };
 
   // rank は入力値を信用せず、rawScore から再計算する。同点時も backend 側で一貫して扱う。
   const sorted = [...results].sort(

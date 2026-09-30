@@ -19,7 +19,7 @@
   - _Requirements: 1.3, 3.1, 3.2_
   - _Boundary: Rule Validator_
 
-- [ ] 1.3 (P) 浮き人数別順位点をMatch scoringに適用する
+- [x] 1.3 (P) 浮き人数別順位点をMatch scoringに適用する
   - raw scoreが返し点を厳密に超えた参加者だけを浮きとして数え、その人数の順位点行を選ぶ。
   - 既存の順位決定、同点の順位帯配分、オカ計算、小数第1位への丸めとzero-sum検証を維持する。
   - 完了時、0〜4人の行選択、返し点と同点、順位slotを跨ぐ同点、オカ、丸め、zero-sumをunit testsで確認できる。
