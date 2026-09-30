@@ -12,6 +12,39 @@ import { asOpaqueId } from "@/domain/shared/types.js";
 
 const emulatorAvailable = Boolean(process.env.FIRESTORE_EMULATOR_HOST);
 
+const makeFixedRule = () => ({
+  gameType: "yonma" as const,
+  uma: {
+    mode: "fixed" as const,
+    first: 20,
+    second: 10,
+    third: -10,
+    fourth: -20,
+  },
+  oka: { startingPoints: 25000, returnPoints: 30000 },
+});
+
+const floatingRule = {
+  gameType: "yonma" as const,
+  uma: {
+    mode: "floatingCount" as const,
+    pointsByFloatingCount: {
+      0: { first: 0, second: 0, third: 0, fourth: 0 },
+      1: { first: 12, second: -1, third: -3, fourth: -8 },
+      2: { first: 8, second: 4, third: -4, fourth: -8 },
+      3: { first: 8, second: 3, third: 1, fourth: -12 },
+      4: { first: 0, second: 0, third: 0, fourth: 0 },
+    },
+  },
+  oka: { startingPoints: 25000, returnPoints: 25000 },
+};
+
+const makeLeagueRuleDoc = (uma: Record<string, unknown>) => ({
+  game_type: "yonma",
+  uma,
+  oka: { starting_points: 25000, return_points: 25000 },
+});
+
 test(
   "serializes rule lock and active season lifecycle transitions",
   { skip: !emulatorAvailable },
@@ -47,7 +80,7 @@ test(
     await leagueRef.update({ rule: { ...storedRule, uma: legacyUma } });
     assert.equal((await leagueRepository.getRule(league.id)).uma.mode, "fixed");
     assert.equal((await leagueRef.get()).data()?.rule.uma.mode, undefined);
-    await leagueRef.update({ "rule.uma.mode": "floating_count" });
+    await leagueRef.update({ "rule.uma.mode": "unsupported" });
     await assert.rejects(
       leagueRepository.getRule(league.id),
       /unsupported Firestore league uma mode/,
@@ -135,6 +168,104 @@ test(
       );
     } finally {
       await db.recursiveDelete(db.collection("leagues").doc(league.id));
+    }
+  },
+);
+
+test(
+  "round trips floating-count uma with every row persisted",
+  { skip: !emulatorAvailable },
+  async () => {
+    const db = getDb();
+    const userRepository = new FirestoreUserRepository(db);
+    const leagueRepository = new FirestoreLeagueRepository(db, userRepository);
+    const league = await leagueRepository.create({
+      name: "floating count persistence test",
+      rule: makeFixedRule(),
+      memberUserIds: [],
+    });
+    const leagueRef = db.collection("leagues").doc(league.id);
+
+    try {
+      const updatedLeague = await leagueRepository.update(league.id, {
+        rule: floatingRule,
+      });
+      const storedRule = (await leagueRef.get()).data()?.rule;
+
+      assert.equal(storedRule?.uma.mode, "floating_count");
+      assert.deepEqual(storedRule?.uma.points_by_floating_count, {
+        "0": { first: 0, second: 0, third: 0, fourth: 0 },
+        "1": { first: 12, second: -1, third: -3, fourth: -8 },
+        "2": { first: 8, second: 4, third: -4, fourth: -8 },
+        "3": { first: 8, second: 3, third: 1, fourth: -12 },
+        "4": { first: 0, second: 0, third: 0, fourth: 0 },
+      });
+      assert.deepEqual(updatedLeague.rule, floatingRule);
+      assert.deepEqual(await leagueRepository.getRule(league.id), floatingRule);
+    } finally {
+      await db.recursiveDelete(leagueRef);
+    }
+  },
+);
+
+test(
+  "rejects invalid stored floating-count uma shapes",
+  { skip: !emulatorAvailable },
+  async () => {
+    const db = getDb();
+    const userRepository = new FirestoreUserRepository(db);
+    const leagueRepository = new FirestoreLeagueRepository(db, userRepository);
+    const league = await leagueRepository.create({
+      name: "invalid floating count persistence test",
+      rule: makeFixedRule(),
+      memberUserIds: [],
+    });
+    const leagueRef = db.collection("leagues").doc(league.id);
+    const validRows = {
+      "0": { first: 0, second: 0, third: 0, fourth: 0 },
+      "1": { first: 12, second: -1, third: -3, fourth: -8 },
+      "2": { first: 8, second: 4, third: -4, fourth: -8 },
+      "3": { first: 8, second: 3, third: 1, fourth: -12 },
+      "4": { first: 0, second: 0, third: 0, fourth: 0 },
+    };
+
+    try {
+      await leagueRef.update({
+        rule: makeLeagueRuleDoc({ mode: "unknown" }),
+      });
+      await assert.rejects(
+        leagueRepository.getRule(league.id),
+        /unsupported Firestore league uma mode: unknown/,
+      );
+
+      const missingCountRows: Record<string, unknown> = { ...validRows };
+      delete missingCountRows["3"];
+      await leagueRef.update({
+        rule: makeLeagueRuleDoc({
+          mode: "floating_count",
+          points_by_floating_count: missingCountRows,
+        }),
+      });
+      await assert.rejects(
+        leagueRepository.getRule(league.id),
+        /invalid or missing Firestore field: leagues.rule.uma.points_by_floating_count.3/,
+      );
+
+      await leagueRef.update({
+        rule: makeLeagueRuleDoc({
+          mode: "floating_count",
+          points_by_floating_count: {
+            ...validRows,
+            "2": { ...validRows["2"], third: "not-a-number" },
+          },
+        }),
+      });
+      await assert.rejects(
+        leagueRepository.getRule(league.id),
+        /invalid or missing Firestore field: leagues.rule.uma.points_by_floating_count.2.third/,
+      );
+    } finally {
+      await db.recursiveDelete(leagueRef);
     }
   },
 );

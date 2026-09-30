@@ -191,12 +191,59 @@ leagues:
         uma:
           type: object
           fields:
+            # 新規書き込みでは必須。modeのない既存文書はfixedとして読む。
+            mode:
+              type: string
+              enum: [fixed, floating_count]
+
+            # mode: fixed の順位点。四麻ではfourthもnumber。
             first: number
             second: number
             third: number
             fourth:
               type: number
               nullable: true
+
+            # mode: floating_count のときだけ使用する。
+            # 0〜4は返し点を超えた参加者数で、全行・全順位点を保存する。
+            points_by_floating_count:
+              type: object
+              fields:
+                "0":
+                  type: object
+                  fields:
+                    first: number
+                    second: number
+                    third: number
+                    fourth: number
+                "1":
+                  type: object
+                  fields:
+                    first: number
+                    second: number
+                    third: number
+                    fourth: number
+                "2":
+                  type: object
+                  fields:
+                    first: number
+                    second: number
+                    third: number
+                    fourth: number
+                "3":
+                  type: object
+                  fields:
+                    first: number
+                    second: number
+                    third: number
+                    fourth: number
+                "4":
+                  type: object
+                  fields:
+                    first: number
+                    second: number
+                    third: number
+                    fourth: number
         oka:
           type: object
           fields:

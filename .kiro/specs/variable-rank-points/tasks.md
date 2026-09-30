@@ -27,7 +27,7 @@
   - _Requirements: 2.1, 2.2, 2.3, 2.4_
   - _Boundary: Match Scoring_
 
-- [ ] 1.4 (P) 浮き人数別ruleのFirestore読書きと旧document互換を完成する
+- [x] 1.4 (P) 浮き人数別ruleのFirestore読書きと旧document互換を完成する
   - `floating_count` modeと0〜4人の全順位点行を欠落なく読み書きし、不正mode・欠損値・非数値はfail fastにする。
   - modeのない既存fixed documentは固定ruleとして読み取り、読み込みだけではdocumentを書き換えない。
   - 完了時、legacy read、新形式のroundtrip、不正データ拒否をrepository testsで確認でき、Firestore schema資料に新旧shapeが記載される。
