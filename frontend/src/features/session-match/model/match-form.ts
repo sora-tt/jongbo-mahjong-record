@@ -14,6 +14,9 @@ export type MatchFormValues = {
   playedAt: string;
   userIdByWind: ParticipantByWind;
   rawScoreByWind: Readonly<Record<Wind, string>>;
+  chomboOffenderUserIds: string[];
+  offTableKyotakuPresent: boolean;
+  offTableKyotakuCount: string;
 };
 
 export type MatchInputResult = {
@@ -27,6 +30,8 @@ export type MatchValidationInput = {
   constraint: ParticipantConstraint;
   allowedMembers: Parameters<typeof validateParticipants>[0]["allowedMembers"];
   startingPoints: number;
+  allowOffTableKyotaku: boolean;
+  mode: MatchFormMode;
 };
 
 export const parseRawScore = (value: string) => {
@@ -60,6 +65,36 @@ export const validateMatchForm = (input: MatchValidationInput) => {
     return { message: "対局日時を入力してください", results: null };
   }
 
+  if (
+    input.values.chomboOffenderUserIds.some(
+      (userId) =>
+        !input.allowedMembers.some((member) => member.userId === userId)
+    )
+  ) {
+    return {
+      message: "チョンボした人はSessionの参加者から選択してください",
+      results: null,
+    };
+  }
+
+  let offTableKyotakuCount = 0;
+  if (input.values.offTableKyotakuPresent) {
+    const count = Number(input.values.offTableKyotakuCount);
+    if (!Number.isSafeInteger(count) || count < 1) {
+      return {
+        message: "卓外供託の本数を1以上の整数で入力してください",
+        results: null,
+      };
+    }
+    if (!input.allowOffTableKyotaku && input.mode !== "edit") {
+      return {
+        message: "このリーグでは卓外供託を記録できません",
+        results: null,
+      };
+    }
+    offTableKyotakuCount = count;
+  }
+
   const results: MatchInputResult[] = [];
   for (const wind of input.constraint.requiredWinds) {
     const userId = input.values.userIdByWind[wind];
@@ -70,7 +105,9 @@ export const validateMatchForm = (input: MatchValidationInput) => {
     results.push({ userId, wind, rawScore });
   }
 
-  const expectedTotal = input.startingPoints * input.constraint.memberCount;
+  const expectedTotal =
+    input.startingPoints * input.constraint.memberCount -
+    offTableKyotakuCount * 1000;
   const actualTotal = results.reduce((sum, result) => sum + result.rawScore, 0);
   if (actualTotal !== expectedTotal) {
     return {
@@ -79,7 +116,14 @@ export const validateMatchForm = (input: MatchValidationInput) => {
     };
   }
 
-  return { message: null, results };
+  return {
+    message: null,
+    results,
+    chomboEvents: input.values.chomboOffenderUserIds.map((offenderUserId) => ({
+      offenderUserId,
+    })),
+    offTableKyotakuCount,
+  };
 };
 
 export const createEmptyMatchFormValues = (): MatchFormValues => ({
@@ -96,6 +140,9 @@ export const createEmptyMatchFormValues = (): MatchFormValues => ({
     west: "",
     north: "",
   },
+  chomboOffenderUserIds: [],
+  offTableKyotakuPresent: false,
+  offTableKyotakuCount: "",
 });
 
 export const toMatchFormValues = (match: ApiMatch): MatchFormValues => {
@@ -117,7 +164,17 @@ export const toMatchFormValues = (match: ApiMatch): MatchFormValues => {
     rawScoreByWind[result.wind] = String(result.rawScore / 100);
   }
 
-  return { playedAt: match.playedAt, userIdByWind, rawScoreByWind };
+  return {
+    playedAt: match.playedAt,
+    userIdByWind,
+    rawScoreByWind,
+    chomboOffenderUserIds: match.chomboEvents.map((event) =>
+      String(event.offenderUserId)
+    ),
+    offTableKyotakuPresent: match.offTableKyotakuCount > 0,
+    offTableKyotakuCount:
+      match.offTableKyotakuCount > 0 ? String(match.offTableKyotakuCount) : "",
+  };
 };
 
 export const hasOnlyRequiredWinds = (

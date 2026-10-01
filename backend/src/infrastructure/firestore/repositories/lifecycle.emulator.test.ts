@@ -23,6 +23,8 @@ const makeFixedRule = () => ({
     fourth: -20,
   },
   oka: { startingPoints: 25000, returnPoints: 30000 },
+  chomboPenaltyPoints: 0,
+  allowOffTableKyotaku: false,
 });
 
 const floatingRule = {
@@ -38,6 +40,8 @@ const floatingRule = {
     },
   },
   oka: { startingPoints: 25000, returnPoints: 25000 },
+  chomboPenaltyPoints: 0,
+  allowOffTableKyotaku: false,
 };
 
 const makeLeagueRuleDoc = (uma: Record<string, unknown>) => ({
@@ -64,6 +68,8 @@ test(
         fourth: -20,
       },
       oka: { startingPoints: 25000, returnPoints: 30000 },
+      chomboPenaltyPoints: 0,
+      allowOffTableKyotaku: false,
     };
     const league = await leagueRepository.create({
       name: "lifecycle test",
@@ -163,6 +169,8 @@ test(
           rule: {
             ...leagueRule,
             oka: { startingPoints: 30000, returnPoints: 30000 },
+            chomboPenaltyPoints: 0,
+            allowOffTableKyotaku: false,
           },
         }),
         /league rule is locked after the first match/,
@@ -665,6 +673,8 @@ test(
           fourth: -20,
         },
         oka: { startingPoints: 25000, returnPoints: 30000 },
+        chomboPenaltyPoints: 0,
+        allowOffTableKyotaku: false,
       },
       memberUserIds: ["0001"],
     });

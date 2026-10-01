@@ -19,6 +19,8 @@ export type LeagueRuleDraft = {
   mode: UmaMode;
   okaStartPoints: string;
   okaReturnPoints: string;
+  chomboPenaltyPoints: string;
+  allowOffTableKyotaku: boolean;
   fixedUma: FixedUmaDraft;
   floatingCountUma: FloatingCountUmaDraft;
 };
@@ -37,6 +39,8 @@ export const createDefaultLeagueRuleDraft = (): LeagueRuleDraft => ({
   mode: "fixed",
   okaStartPoints: "",
   okaReturnPoints: "",
+  chomboPenaltyPoints: "0",
+  allowOffTableKyotaku: false,
   fixedUma: { first: "", second: "", third: "", fourth: "" },
   floatingCountUma: createDefaultFloatingCountUmaDraft(),
 });
@@ -74,6 +78,8 @@ export const toLeagueRuleDraft = (rule: ApiLeague["rule"]): LeagueRuleDraft => {
     mode: uma.mode,
     okaStartPoints: rule.oka.startingPoints.toString(),
     okaReturnPoints: rule.oka.returnPoints.toString(),
+    chomboPenaltyPoints: String(rule.chomboPenaltyPoints ?? 0),
+    allowOffTableKyotaku: rule.allowOffTableKyotaku ?? false,
     fixedUma,
     floatingCountUma,
   };
@@ -97,6 +103,14 @@ export const buildLeagueRulePayload = (
   const returnPoints = parseIntegerInput(draft.okaReturnPoints);
   if (startingPoints === null || returnPoints === null) {
     return { ok: false, error: "持ち点と返し点を整数で入力してください" };
+  }
+
+  const chomboPenaltyPoints = parseIntegerInput(draft.chomboPenaltyPoints);
+  if (chomboPenaltyPoints === null || chomboPenaltyPoints < 0) {
+    return {
+      ok: false,
+      error: "チョンボ罰符は0以上の整数で入力してください",
+    };
   }
 
   const oka = { startingPoints, returnPoints };
@@ -135,6 +149,8 @@ export const buildLeagueRulePayload = (
         gameType: "yonma",
         uma: { mode: "floatingCount", pointsByFloatingCount },
         oka,
+        chomboPenaltyPoints,
+        allowOffTableKyotaku: draft.allowOffTableKyotaku,
       },
     };
   }
@@ -168,6 +184,8 @@ export const buildLeagueRulePayload = (
           fourth: null,
         },
         oka,
+        chomboPenaltyPoints,
+        allowOffTableKyotaku: draft.allowOffTableKyotaku,
       },
     };
   }
@@ -184,6 +202,8 @@ export const buildLeagueRulePayload = (
         fourth: uma.fourth as number,
       },
       oka,
+      chomboPenaltyPoints,
+      allowOffTableKyotaku: draft.allowOffTableKyotaku,
     },
   };
 };

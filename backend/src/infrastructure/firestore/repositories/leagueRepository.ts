@@ -467,6 +467,23 @@ export class FirestoreLeagueRepository implements LeagueRepository {
     }
     const uma = requiredObject(rule.uma, "leagues.rule.uma");
     const oka = requiredObject(rule.oka, "leagues.rule.oka");
+    const chomboPenaltyPoints =
+      rule.chombo_penalty_points === undefined
+        ? 0
+        : requiredNumber(
+            rule.chombo_penalty_points,
+            "leagues.rule.chombo_penalty_points",
+          );
+    const storedAllowOffTableKyotaku = rule.allow_off_table_kyotaku;
+    if (
+      storedAllowOffTableKyotaku !== undefined &&
+      typeof storedAllowOffTableKyotaku !== "boolean"
+    ) {
+      throw new TypeError(
+        "invalid Firestore field: leagues.rule.allow_off_table_kyotaku",
+      );
+    }
+    const allowOffTableKyotaku = storedAllowOffTableKyotaku ?? false;
     const umaMode =
       "mode" in uma
         ? requiredString(uma.mode, "leagues.rule.uma.mode")
@@ -535,6 +552,8 @@ export class FirestoreLeagueRepository implements LeagueRepository {
           },
         },
         oka: mappedOka,
+        chomboPenaltyPoints,
+        allowOffTableKyotaku,
       } satisfies LeagueRule;
     }
 
@@ -562,6 +581,8 @@ export class FirestoreLeagueRepository implements LeagueRepository {
         gameType,
         uma: { ...fixedUma, fourth: null },
         oka: mappedOka,
+        chomboPenaltyPoints,
+        allowOffTableKyotaku,
       } satisfies LeagueRule;
     }
 
@@ -574,6 +595,8 @@ export class FirestoreLeagueRepository implements LeagueRepository {
       gameType,
       uma: { ...fixedUma, fourth },
       oka: mappedOka,
+      chomboPenaltyPoints,
+      allowOffTableKyotaku,
     } satisfies LeagueRule;
   }
 
@@ -595,6 +618,8 @@ export class FirestoreLeagueRepository implements LeagueRepository {
           starting_points: rule.oka.startingPoints,
           return_points: rule.oka.returnPoints,
         },
+        chombo_penalty_points: rule.chomboPenaltyPoints,
+        allow_off_table_kyotaku: rule.allowOffTableKyotaku,
       };
     }
 
@@ -611,6 +636,8 @@ export class FirestoreLeagueRepository implements LeagueRepository {
         starting_points: rule.oka.startingPoints,
         return_points: rule.oka.returnPoints,
       },
+      chombo_penalty_points: rule.chomboPenaltyPoints,
+      allow_off_table_kyotaku: rule.allowOffTableKyotaku,
     };
   }
 }

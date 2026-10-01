@@ -17,6 +17,10 @@ export type MatchResult = {
   point: number;
 };
 
+export type ChomboEvent = {
+  offenderUserId: UserId;
+};
+
 export type Match = {
   id: MatchId;
   leagueId: LeagueId;
@@ -25,6 +29,8 @@ export type Match = {
   matchIndex: number;
   playedAt: IsoDateString;
   results: MatchResult[];
+  chomboEvents: ChomboEvent[];
+  offTableKyotakuCount: number;
   createdAt: IsoDateString;
   updatedAt: IsoDateString;
 };

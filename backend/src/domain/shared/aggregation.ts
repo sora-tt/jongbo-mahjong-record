@@ -326,6 +326,7 @@ export const buildUserStats = (params: {
   leagueName: string | null;
   seasonName: string | null;
   matchCount: number;
+  chomboCount: number;
   currentRank: number | null;
   results: MatchResult[];
   playerCount: number;
@@ -339,6 +340,7 @@ export const buildUserStats = (params: {
     leagueName,
     seasonName,
     matchCount,
+    chomboCount,
     currentRank,
     results,
     playerCount,
@@ -407,6 +409,7 @@ export const buildUserStats = (params: {
     seasonName,
     totalPoints: Number(totalPoints.toFixed(1)),
     totalMatchCount: matchCount,
+    chomboCount,
     averageRank,
     currentRank,
     firstCount,

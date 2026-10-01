@@ -88,9 +88,27 @@
   - _Requirements: 7.1, 7.2, 7.3, 7.4, 8.2, 8.3, 8.4, 9.2, 9.4_
   - _Boundary: Season UI and Forms, Request Hooks, Route Integration_
 
-## 5. Route移行とshared boundary接続
+## 5. ISSUE-99リーグrule項目
 
-- [x] 5.1 旧route、mock参照、未接続操作を対象範囲から除去する
+- [ ] 5.1 チョンボ罰符と卓外供託設定をLeague ruleへ追加する
+  - backend-foundationのIssue #99 API契約とAppTypeからrule fieldを導出し、League作成フォームに非負整数のchomboPenaltyPointsと卓外供託可否を追加する。
+  - League detailのrule表示にも両値を追加し、legacy Leagueに値がない場合は0/falseとして表示する。既存画面の構成を保ち、必要な入力・表示だけを既存UIに沿って加える。
+  - 完了時、作成payloadとLeague detailが同じ型の値を扱い、FE独自rule DTOや点数計算を持たない。
+  - _Requirements: 2.1, 3.1, 3.3, 4.1, 8.2, 9.3_
+  - _Depends: 1.1_
+  - _Boundary: League UI and Forms_
+
+- [ ] 5.2 初回Match後のrule lockを外卓項目にも適用する
+  - LeagueのMatch件数が0より大きい場合、チョンボ罰符・卓外供託可否をread-onlyにし、League PATCHには許可されたname/memberUserIdsだけを含める。
+  - BEのconflict/validation errorを安全に表示して入力を保持し、rule fieldをmockやlocal stateで更新しない。
+  - 完了時、rule lock後のLeague更新が外卓項目を送信せず、BEのrule値をそのまま表示する。
+  - _Requirements: 3.5, 3.6, 4.2, 4.3, 4.4, 8.3, 9.2, 9.4_
+  - _Depends: 5.1_
+  - _Boundary: League UI and Forms, Request Hooks_
+
+## 6. Route移行とshared boundary接続
+
+- [x] 6.1 旧route、mock参照、未接続操作を対象範囲から除去する
   - Home、League、Seasonの本番routeから旧domain/mockを正本として読むimport、season editのconsole出力、未接続submit/buttonを除去する。
   - season editをleagueIdを含む正規routeへ統一し、旧URLは安全なredirectまたは到達不能な移行対象として二重実装を残さない。
   - 完了時、主要操作はAPI完了または明確なroute遷移を持ち、Session/Match・統計画面の実装や旧資産の全削除を取り込んでいない。
@@ -98,28 +116,28 @@
   - _Requirements: 6.3, 7.2, 8.1, 9.1, 9.2, 9.4_
   - _Boundary: Route Integration, Migration Validation_
 
-- [x] 5.2 AppShell、共通UI、下流Session導線を再検証する
+- [x] 6.2 AppShell、共通UI、下流Session導線を再検証する
   - foundationのAppShell/Header、UI primitives、AsyncState、Auth boundaryを対象画面へ接続し、feature側で共通transport・primitive・認証を再実装しない。
   - Headerのleague導線がホーム`/`へ到達し、Season detailの記録導線が既存Session開始routeへ渡ることを確認する。
   - 完了時、共通UIのloading/error/empty、focus、disabled/loading actionが対象画面で一貫し、foundationまたは下流仕様へ必要な再検証差分が明示される。
-  - _Depends: 2.1, 4.2, 5.1_
+  - _Depends: 2.1, 4.2, 6.1_
   - _Requirements: 1.4, 6.3, 8.3, 9.1, 9.3, 9.4_
   - _Boundary: Route Integration, Migration Validation_
 
-## 6. 契約・品質検証
+## 7. 契約・品質検証
 
-- [ ] 6.1 API契約、adapter、form payloadの回帰検証を追加する
+- [ ] 7.1 API契約、adapter、form payloadの回帰検証を追加する
   - League/Seasonのendpoint status、`{ data }`、ErrorEnvelope、rule fourth nullability、Season updateのname/status限定、BE派生値保持を検証する。
   - uma合計0のFE事前検証と、BEが返す`validation_error`の表示・入力保持・BE優先を検証する。empty/null、active conflict、rule lock、401/403/404/409、stale request、二重submitの状態遷移も検証する。
   - 完了時、frontendの検証結果から不一致した契約・画面状態・入力項目を特定でき、FE独自のrank/point/standing計算が検出される。
-  - _Depends: 3.3, 4.3, 5.1_
+  - _Depends: 3.3, 4.3, 6.1_
   - _Requirements: 2.2, 3.4, 3.6, 4.3, 5.4, 6.2, 6.4, 7.2, 7.4, 8.2, 8.3, 8.4, 9.2, 9.3_
   - _Boundary: Migration Validation, League Feature API, Season Feature API_
 
-- [x] 6.2 typecheck、lint、buildと対象routeの静的スキャンを完了する
+- [x] 7.2 typecheck、lint、buildと対象routeの静的スキャンを完了する
   - `pnpm typecheck`、`pnpm lint`、`pnpm build`を実行し、AppType変更、React/Next構成、import境界、共通UI利用、route解決を確認する。
   - 対象routeに対するmock import、`console.log`、直接fetch、未接続button、旧season edit pathをスキャンし、Session/Match・統計の境界外変更がないことを確認する。
   - 完了時、ホームからLeague/Seasonのcreate/detail/editとSession開始導線までの主要routeがcompile/build可能で、BEのuma合計0契約と`validation_error`表示が確認済みとして追跡される。
-  - _Depends: 5.2, 6.1_
+  - _Depends: 6.2, 7.1_
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 2.1, 2.3, 2.4, 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 4.1, 4.2, 4.4, 5.1, 5.2, 5.3, 5.4, 6.1, 6.3, 7.1, 7.3, 8.1, 8.3, 8.4, 9.1, 9.3, 9.4_
   - _Boundary: Migration Validation_

@@ -60,6 +60,7 @@ export class FirestoreUserStatsRepository implements UserStatsRepository {
       season_name: data.seasonName,
       total_points: data.totalPoints,
       total_match_count: data.totalMatchCount,
+      chombo_count: data.chomboCount,
       average_rank: data.averageRank,
       current_rank: data.currentRank,
       first_count: data.firstCount,
@@ -182,6 +183,10 @@ export class FirestoreUserStatsRepository implements UserStatsRepository {
         data.total_match_count,
         "user_stats.total_match_count",
       ),
+      chomboCount:
+        data.chombo_count === undefined
+          ? 0
+          : requiredNumber(data.chombo_count, "user_stats.chombo_count"),
       averageRank: requiredNumber(data.average_rank, "user_stats.average_rank"),
       currentRank: nullableNumber(data.current_rank, "user_stats.current_rank"),
       firstCount: requiredNumber(data.first_count, "user_stats.first_count"),

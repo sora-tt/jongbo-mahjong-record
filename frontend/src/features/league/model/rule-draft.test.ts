@@ -71,6 +71,8 @@ test("sanma always builds a fixed rule while retaining yonma floating draft", ()
     gameType: "sanma",
     uma: { mode: "fixed", first: 5, second: -1, third: -4, fourth: null },
     oka: { startingPoints: 25000, returnPoints: 25000 },
+    chomboPenaltyPoints: 0,
+    allowOffTableKyotaku: false,
   });
   strictEqual(draft.floatingCountUma[1].first, "21");
 });
@@ -89,6 +91,8 @@ test("edit draft loads the persisted floating mode and every saved row", () => {
       },
     },
     oka: { startingPoints: 25000, returnPoints: 30000 },
+    chomboPenaltyPoints: 20,
+    allowOffTableKyotaku: true,
   });
 
   strictEqual(draft.mode, "floatingCount");

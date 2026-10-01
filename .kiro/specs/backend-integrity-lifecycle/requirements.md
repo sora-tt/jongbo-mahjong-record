@@ -9,8 +9,8 @@ BEを利用するFE実装者、運用者、対局記録を扱う利用者は、S
 ### 対象
 
 - League rule に対応した Session の人数、メンバー、wind、固定性
-- Match 参加者、raw score、rank、point、同点処理、match index
-- Match を正本とした Session・Season・League・overall の集計
+- Match 参加者、raw score、rank、point、同点処理、チョンボ発生・卓外供託、match index
+- Match を正本とした Session・Season・League・overall の集計（チョンボ回数を含む）
 - Match、Session、Season、League の作成・更新・削除後の派生値更新
 - active season の一意性とキャッシュ整合
 - backend-foundation の logical key に従う user_stats の upsert と stale cleanup
@@ -26,8 +26,8 @@ BEを利用するFE実装者、運用者、対局記録を扱う利用者は、S
 
 ### 上流・下流との契約
 
-- `backend-foundation` の embedded `rule`（`gameType`、`uma`、`oka`）、camelCase DTO、既存 route/status、`{ data }` と ErrorEnvelope、session cookie、AppType、user_stats logical keyを入力契約として利用する。
-- `frontend-session-match` は Session の固定メンバー、三麻/四麻の許容 wind、BEが返す `matchIndex`・`rank`・`point`を利用する。FEは同じ計算を複製しない。
+- `backend-foundation` の embedded `rule`（`gameType`、`uma`、`oka`、チョンボ点数、卓外供託可否）、camelCase DTO、既存 route/status、`{ data }` と ErrorEnvelope、session cookie、AppType、user_stats logical keyを入力契約として利用する。
+- `frontend-session-match` は Session の固定メンバー、三麻/四麻の許容 wind、BEが返す `matchIndex`・`rank`・`point`および外卓入力に対応した結果を利用する。FEは同じ計算を複製しない。
 - `frontend-statistics-quality` は Season/League/UserStats の再構築結果、削除後の stale stats cleanup、sanma の fourth 系 `null` を利用する。
 
 ## 要件
@@ -44,7 +44,7 @@ BEを利用するFE実装者、運用者、対局記録を扱う利用者は、S
 
 ### Requirement 2: Match入力と決定的な点数計算
 
-2.1 When Match入力を検証するとき, the Backend Integrity Lifecycle shall 三麻では`east`・`south`・`west`、四麻では`east`・`south`・`west`・`north`を一度ずつ要求し、raw scoreの合計を`startingPoints × playerCount`と一致させる。
+2.1 When Match入力を検証するとき, the Backend Integrity Lifecycle shall 三麻では`east`・`south`・`west`、四麻では`east`・`south`・`west`・`north`を一度ずつ要求し、raw scoreの合計は記録された外卓要因で説明できる差分だけを許容し、外卓要因がない場合は`startingPoints × playerCount`と一致させる。
 
 2.2 If Match入力のuserId、wind、raw score、関連Sessionが契約に適合しない場合, the Backend Integrity Lifecycle shall 正本Matchを書き込まずvalidation errorを返す。
 
@@ -52,13 +52,17 @@ BEを利用するFE実装者、運用者、対局記録を扱う利用者は、S
 
 2.4 When Matchのpointを計算するとき, the Backend Integrity Lifecycle shall League ruleのoka・uma、playerCount、returnPointsに基づいてpointを算出し、小数第1位へ丸め、同じruleと入力に対して同じ結果を返す。
 
-2.5 When Match結果を保存または返却するとき, the Backend Integrity Lifecycle shall BEが計算したrankとpointを提供し、計算されたpointの合計が許容される丸め誤差内で0になることを検証する。
+2.5 When Match結果を保存または返却するとき, the Backend Integrity Lifecycle shall BEが計算したrankとpointを提供し、point合計をLeagueのチョンボ点数とMatchのチョンボ発生・卓外供託から算出した外卓分の合計と照合する。外卓要因がない場合の合計は許容丸め誤差内で0とする。
+
+2.6 When Matchにチョンボが記録されるとき, the Backend Integrity Lifecycle shall 各発生をチョンボしたuserIdと対応づけて個別に保持し、同じMatch内で同じuserIdの複数回発生を表現できるようにする。
+
+2.7 If Matchに卓外供託が入力され、League ruleで卓外供託が許可されていない場合, the Backend Integrity Lifecycle shall 正本Matchを書き込まずvalidation errorとして拒否する。
 
 ### Requirement 3: Rule lifecycle と match index
 
 3.1 While Leagueに正本Matchが一件も存在しない状態, the Backend Integrity Lifecycle shall League ruleの更新を許可し、最初のMatch登録時点のruleをそのMatchの計算に使用する。
 
-3.2 If Leagueに一度でも正本Matchが登録された後にruleを更新しようとする場合, the Backend Integrity Lifecycle shall conflictとして拒否し、既存Matchの結果を再計算または書き換えない。
+3.2 If Leagueに一度でも正本Matchが登録された後にruleを更新しようとする場合, the Backend Integrity Lifecycle shall conflictとして拒否し、既存Matchの結果を再計算または書き換えない。チョンボ点数と卓外供託可否もこのrule lockに従う。
 
 3.3 When同じSessionへMatchを同時登録するとき, the Backend Integrity Lifecycle shall Session内で重複しない正のmatchIndexを割り当て、既存の最大値より大きい値を返す。
 
@@ -104,6 +108,8 @@ BEを利用するFE実装者、運用者、対局記録を扱う利用者は、S
 
 7.4 When user_statsを再構築するとき, the Backend Integrity Lifecycle shall totalPoints、averageRank、各順位回数・率、score、streakを同じ正本Match集合から計算し、対象scopeの現在値と一致させる。
 
+7.5 When user_statsを再構築するとき, the Backend Integrity Lifecycle shall 対象scopeに含まれるMatchのチョンボ発生記録から各userのチョンボ回数を計算し、Matchの作成・更新・削除後に正本Match集合と一致させる。
+
 ### Requirement 8: 失敗、repair、後続仕様への引き渡し
 
 8.1 When正本Matchの保存後に派生集計の更新が失敗するとき, the Backend Integrity Lifecycle shall 標準internal errorを返し、保存済みの正本Matchを重複作成せず、repair/rebuildで再実行できる状態を残す。
@@ -116,6 +122,7 @@ BEを利用するFE実装者、運用者、対局記録を扱う利用者は、S
 
 - Match indexはSession内で現在の最大値+1をtransactionで割り当てる。削除時に既存値を詰めないが、別途公開されていない高水位カウンタの契約は追加しない。
 - Matchの同点処理は現行 scoring の competition ranking とuma平均配分を正本とする。Match requestにはrankを含めず、計算結果だけをresponseへ返す。
+- チョンボ点数および卓外供託の点数単位、各入力値からpointへの符号・換算規則は設計で定義し、計算結果はMatchに保持して再構築時に同じ結果を使う。
 - League member変更は履歴を保持する。current membershipは新規Sessionの認可に使い、過去Matchの参加者を置換しない。
 - active Season削除後の自動昇格は行わない。activeが存在しない状態は正常な状態として扱う。
 - repair/rebuildの運用起動方法は公開APIではなく、既存のbackend運用スクリプトまたは内部application serviceとする。公開routeの追加は本仕様に含めない。

@@ -115,6 +115,7 @@ export class StatsRebuilder {
     );
 
     const resultsByUser = collectUserResults(orderedMatches);
+    const chomboCountByUserId = collectUserChomboCounts(orderedMatches);
     await this.rebuildUserStats("season", {
       leagueId,
       seasonId,
@@ -123,6 +124,7 @@ export class StatsRebuilder {
       members: season.members,
       standings,
       resultsByUser,
+      chomboCountByUserId,
       playerCount: playerCountForGameType(rule.gameType),
     });
 
@@ -166,6 +168,7 @@ export class StatsRebuilder {
         )
       : [];
     const resultsByUser = collectUserResults(orderedMatches);
+    const chomboCountByUserId = collectUserChomboCounts(orderedMatches);
     await this.rebuildUserStats("league", {
       leagueId,
       seasonId: null,
@@ -174,6 +177,7 @@ export class StatsRebuilder {
       members: league.members,
       standings: activeStandings,
       resultsByUser,
+      chomboCountByUserId,
       playerCount: playerCountForGameType(rule.gameType),
     });
 
@@ -192,6 +196,7 @@ export class StatsRebuilder {
     ]);
     const orderedMatches = sortMatches(allMatches);
     const resultsByUser = collectUserResults(orderedMatches);
+    const chomboCountByUserId = collectUserChomboCounts(orderedMatches);
     const playerCountByUser = collectPlayerCounts(orderedMatches);
     const members = mergeMembers(currentMembers, resultsByUser);
 
@@ -203,6 +208,7 @@ export class StatsRebuilder {
       members,
       standings: [],
       resultsByUser,
+      chomboCountByUserId,
       playerCount: 4,
       playerCountByUser,
     });
@@ -237,6 +243,7 @@ export class StatsRebuilder {
       members: SeasonMember[];
       standings: Array<{ rank: number; userId: string }>;
       resultsByUser: Map<string, MatchResult[]>;
+      chomboCountByUserId: Map<string, number>;
       playerCount: number;
       playerCountByUser?: Map<string, number>;
     },
@@ -259,6 +266,7 @@ export class StatsRebuilder {
             leagueName: params.leagueName,
             seasonName: params.seasonName,
             matchCount: results.length,
+            chomboCount: params.chomboCountByUserId.get(member.userId) ?? 0,
             currentRank: rankMap.get(member.userId) ?? null,
             results,
             playerCount:
@@ -295,6 +303,16 @@ const collectUserResults = (matches: Match[]) => {
       const current = result.get(row.userId) ?? [];
       current.push(row);
       result.set(row.userId, current);
+    });
+  });
+  return result;
+};
+
+const collectUserChomboCounts = (matches: Match[]) => {
+  const result = new Map<string, number>();
+  matches.forEach((match) => {
+    match.chomboEvents.forEach(({ offenderUserId }) => {
+      result.set(offenderUserId, (result.get(offenderUserId) ?? 0) + 1);
     });
   });
   return result;

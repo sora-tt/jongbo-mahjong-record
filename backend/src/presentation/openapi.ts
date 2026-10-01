@@ -942,6 +942,11 @@ export const openApiDocument = {
                     required: ["userId", "wind", "rawScore"],
                   },
                 },
+                chomboEvents: {
+                  type: "array",
+                  items: { $ref: "#/components/schemas/ChomboEvent" },
+                },
+                offTableKyotakuCount: { type: "integer", minimum: 0 },
               },
             }),
           },
@@ -1048,6 +1053,7 @@ export const openApiDocument = {
           averageScore: { type: "number", nullable: true },
           winStreak: { type: "number", nullable: true },
           loseStreak: { type: "number", nullable: true },
+          chomboCount: { type: "integer", minimum: 0 },
           createdAt: { type: "string", format: "date-time" },
           updatedAt: { type: "string", format: "date-time" },
         },
@@ -1166,9 +1172,20 @@ export const openApiDocument = {
           matchIndex: { type: "number" },
           playedAt: { type: "string", format: "date-time" },
           results: { type: "array", items: { type: "object" } },
+          chomboEvents: {
+            type: "array",
+            items: { $ref: "#/components/schemas/ChomboEvent" },
+          },
+          offTableKyotakuCount: { type: "integer", minimum: 0 },
           createdAt: { type: "string", format: "date-time" },
           updatedAt: { type: "string", format: "date-time" },
         },
+        required: ["chomboEvents", "offTableKyotakuCount"],
+      },
+      ChomboEvent: {
+        type: "object",
+        properties: { offenderUserId: { type: "string" } },
+        required: ["offenderUserId"],
       },
       CreateLeagueInput: {
         type: "object",
@@ -1188,12 +1205,62 @@ export const openApiDocument = {
       },
       LeagueRuleInput: {
         description:
-          "Accepts canonical fixed or floatingCount rules and legacy fixed rules without uma.mode. Legacy requests are normalized to mode=fixed.",
+          "Accepts fixed or floatingCount rules, with or without chomboPenaltyPoints and allowOffTableKyotaku. Omitted fields default to 0 and false; legacy fixed rules without uma.mode are normalized to mode=fixed.",
         oneOf: [
-          { $ref: "#/components/schemas/LeagueRule" },
+          { $ref: "#/components/schemas/FixedSanmaLeagueRuleInput" },
+          { $ref: "#/components/schemas/FixedYonmaLeagueRuleInput" },
+          { $ref: "#/components/schemas/FloatingCountYonmaLeagueRuleInput" },
           { $ref: "#/components/schemas/LegacyFixedSanmaLeagueRule" },
           { $ref: "#/components/schemas/LegacyFixedYonmaLeagueRule" },
         ],
+      },
+      FixedSanmaLeagueRuleInput: {
+        type: "object",
+        properties: {
+          gameType: { type: "string", enum: ["sanma"] },
+          oka: { $ref: "#/components/schemas/LeagueOka" },
+          uma: {
+            allOf: [
+              { $ref: "#/components/schemas/UmaRule" },
+              { $ref: "#/components/schemas/FixedSanmaUma" },
+            ],
+          },
+          chomboPenaltyPoints: { type: "integer", minimum: 0, default: 0 },
+          allowOffTableKyotaku: { type: "boolean", default: false },
+        },
+        required: ["gameType", "oka", "uma"],
+      },
+      FixedYonmaLeagueRuleInput: {
+        type: "object",
+        properties: {
+          gameType: { type: "string", enum: ["yonma"] },
+          oka: { $ref: "#/components/schemas/LeagueOka" },
+          uma: {
+            allOf: [
+              { $ref: "#/components/schemas/UmaRule" },
+              { $ref: "#/components/schemas/FixedYonmaUma" },
+            ],
+          },
+          chomboPenaltyPoints: { type: "integer", minimum: 0, default: 0 },
+          allowOffTableKyotaku: { type: "boolean", default: false },
+        },
+        required: ["gameType", "oka", "uma"],
+      },
+      FloatingCountYonmaLeagueRuleInput: {
+        type: "object",
+        properties: {
+          gameType: { type: "string", enum: ["yonma"] },
+          oka: { $ref: "#/components/schemas/LeagueOka" },
+          uma: {
+            allOf: [
+              { $ref: "#/components/schemas/UmaRule" },
+              { $ref: "#/components/schemas/FloatingCountUma" },
+            ],
+          },
+          chomboPenaltyPoints: { type: "integer", minimum: 0, default: 0 },
+          allowOffTableKyotaku: { type: "boolean", default: false },
+        },
+        required: ["gameType", "oka", "uma"],
       },
       UmaRule: {
         description:
@@ -1221,8 +1288,16 @@ export const openApiDocument = {
               { $ref: "#/components/schemas/FixedSanmaUma" },
             ],
           },
+          chomboPenaltyPoints: { type: "integer", minimum: 0 },
+          allowOffTableKyotaku: { type: "boolean" },
         },
-        required: ["gameType", "oka", "uma"],
+        required: [
+          "gameType",
+          "oka",
+          "uma",
+          "chomboPenaltyPoints",
+          "allowOffTableKyotaku",
+        ],
       },
       FixedYonmaLeagueRule: {
         type: "object",
@@ -1235,8 +1310,16 @@ export const openApiDocument = {
               { $ref: "#/components/schemas/FixedYonmaUma" },
             ],
           },
+          chomboPenaltyPoints: { type: "integer", minimum: 0 },
+          allowOffTableKyotaku: { type: "boolean" },
         },
-        required: ["gameType", "oka", "uma"],
+        required: [
+          "gameType",
+          "oka",
+          "uma",
+          "chomboPenaltyPoints",
+          "allowOffTableKyotaku",
+        ],
       },
       FloatingCountYonmaLeagueRule: {
         type: "object",
@@ -1251,8 +1334,16 @@ export const openApiDocument = {
               { $ref: "#/components/schemas/FloatingCountUma" },
             ],
           },
+          chomboPenaltyPoints: { type: "integer", minimum: 0 },
+          allowOffTableKyotaku: { type: "boolean" },
         },
-        required: ["gameType", "oka", "uma"],
+        required: [
+          "gameType",
+          "oka",
+          "uma",
+          "chomboPenaltyPoints",
+          "allowOffTableKyotaku",
+        ],
       },
       LeagueOka: {
         type: "object",
@@ -1406,6 +1497,11 @@ export const openApiDocument = {
               required: ["userId", "wind", "rawScore"],
             },
           },
+          chomboEvents: {
+            type: "array",
+            items: { $ref: "#/components/schemas/ChomboEvent" },
+          },
+          offTableKyotakuCount: { type: "integer", minimum: 0 },
         },
         required: ["playedAt", "results"],
       },

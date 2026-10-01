@@ -37,6 +37,8 @@ export const useRecordMatchPage = () => {
   const [startingPoints, setStartingPoints] = React.useState<number | null>(
     null
   );
+  const [chomboPenaltyPoints, setChomboPenaltyPoints] = React.useState(0);
+  const [allowOffTableKyotaku, setAllowOffTableKyotaku] = React.useState(false);
   const [values, setValues] = React.useState<MatchFormValues>(
     createEmptyMatchFormValues
   );
@@ -67,6 +69,8 @@ export const useRecordMatchPage = () => {
         setMembers(session.members);
         setConstraint(getParticipantConstraint(league.rule.gameType));
         setStartingPoints(league.rule.oka.startingPoints);
+        setChomboPenaltyPoints(league.rule.chomboPenaltyPoints ?? 0);
+        setAllowOffTableKyotaku(league.rule.allowOffTableKyotaku ?? false);
         setValues({
           ...createEmptyMatchFormValues(),
           userIdByWind: membersToParticipants(session.members),
@@ -101,6 +105,8 @@ export const useRecordMatchPage = () => {
       constraint,
       allowedMembers: members,
       startingPoints,
+      allowOffTableKyotaku,
+      mode: "additional",
     });
     if (validation.message || !validation.results) {
       setError(validation.message ?? DEFAULT_SUBMIT_ERROR_MESSAGE);
@@ -116,6 +122,8 @@ export const useRecordMatchPage = () => {
         sessionId,
         playedAt: values.playedAt,
         results: validation.results,
+        chomboEvents: validation.chomboEvents,
+        offTableKyotakuCount: validation.offTableKyotakuCount,
       });
       router.push(
         `/league/${leagueId}/season/${seasonId}/sessions/${sessionId}/results`
@@ -129,7 +137,15 @@ export const useRecordMatchPage = () => {
     } finally {
       setIsSubmitting(false);
     }
-  }, [constraint, members, params, router, startingPoints, values]);
+  }, [
+    allowOffTableKyotaku,
+    constraint,
+    members,
+    params,
+    router,
+    startingPoints,
+    values,
+  ]);
 
   const handleBack = React.useCallback(() => {
     const { leagueId, seasonId, sessionId } = params;
@@ -147,6 +163,8 @@ export const useRecordMatchPage = () => {
     setValues,
     constraint,
     members,
+    chomboPenaltyPoints,
+    allowOffTableKyotaku,
     isLoading,
     isSubmitting,
     error,

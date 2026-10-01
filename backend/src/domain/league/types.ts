@@ -45,11 +45,15 @@ export type LeagueRule =
       gameType: "sanma";
       uma: FixedSanmaUma;
       oka: { startingPoints: number; returnPoints: number };
+      chomboPenaltyPoints: number;
+      allowOffTableKyotaku: boolean;
     }
   | {
       gameType: "yonma";
       uma: FixedYonmaUma | FloatingCountUma;
       oka: { startingPoints: number; returnPoints: number };
+      chomboPenaltyPoints: number;
+      allowOffTableKyotaku: boolean;
     };
 
 export type LeagueMember = UserReference & { id: OpaqueId };

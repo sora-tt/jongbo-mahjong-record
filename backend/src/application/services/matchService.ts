@@ -72,10 +72,14 @@ export class MatchService {
       this.leagueRepository.getRule(leagueId),
       this.sessionRepository.get(leagueId, seasonId, sessionId),
     ]);
+    const chomboEvents = input.chomboEvents ?? [];
+    const offTableKyotakuCount = input.offTableKyotakuCount ?? 0;
     const results = this.buildMatchResults(
       input.results,
       session.members,
       rule,
+      chomboEvents,
+      offTableKyotakuCount,
     );
 
     const match = await this.matchRepository.create({
@@ -84,6 +88,8 @@ export class MatchService {
       sessionId,
       playedAt: input.playedAt,
       results,
+      chomboEvents,
+      offTableKyotakuCount,
     });
     await this.statsRebuilder.rebuildSeason(leagueId, seasonId);
     return match;
@@ -104,10 +110,29 @@ export class MatchService {
       this.matchRepository.get(leagueId, seasonId, sessionId, matchId),
     ]);
 
-    const nextResults =
-      input.results === undefined
-        ? undefined
-        : this.buildMatchResults(input.results, session.members, rule);
+    const chomboEvents = input.chomboEvents ?? existing.chomboEvents;
+    const offTableKyotakuCount =
+      input.offTableKyotakuCount ?? existing.offTableKyotakuCount;
+    const shouldRecalculate =
+      input.results !== undefined ||
+      input.chomboEvents !== undefined ||
+      input.offTableKyotakuCount !== undefined;
+    const inputResults =
+      input.results ??
+      existing.results.map(({ userId, wind, rawScore }) => ({
+        userId,
+        wind,
+        rawScore,
+      }));
+    const nextResults = shouldRecalculate
+      ? this.buildMatchResults(
+          inputResults,
+          session.members,
+          rule,
+          chomboEvents,
+          offTableKyotakuCount,
+        )
+      : undefined;
 
     const updated = await this.matchRepository.update({
       leagueId,
@@ -116,6 +141,11 @@ export class MatchService {
       matchId,
       playedAt: input.playedAt ?? existing.playedAt,
       results: nextResults,
+      chomboEvents: input.chomboEvents === undefined ? undefined : chomboEvents,
+      offTableKyotakuCount:
+        input.offTableKyotakuCount === undefined
+          ? undefined
+          : offTableKyotakuCount,
     });
     await this.statsRebuilder.rebuildSeason(leagueId, seasonId);
     return updated;
@@ -137,8 +167,30 @@ export class MatchService {
     results: CreateMatchInput["results"],
     members: Array<{ userId: string; userName: string }>,
     rule: Awaited<ReturnType<LeagueRepository["getRule"]>>,
+    chomboEvents: ReadonlyArray<{ offenderUserId: string }>,
+    offTableKyotakuCount: number,
   ) {
     validateMatchParticipants(results, members);
+    const memberUserIds = new Set(members.map((member) => member.userId));
+    const invalidOffender = chomboEvents.find(
+      ({ offenderUserId }) => !memberUserIds.has(offenderUserId),
+    );
+    if (invalidOffender) {
+      throw new ValidationError("chombo offender must belong to session", {
+        field: "chomboEvents.offenderUserId",
+        offenderUserId: invalidOffender.offenderUserId,
+      });
+    }
+    if (!rule.allowOffTableKyotaku && offTableKyotakuCount > 0) {
+      throw new ValidationError(
+        "off-table kyotaku is not allowed by league rule",
+        {
+          field: "offTableKyotakuCount",
+          allowOffTableKyotaku: false,
+        },
+      );
+    }
+
     const memberNameByUserId = new Map(
       members.map((member) => [member.userId, member.userName]),
     );
@@ -157,6 +209,7 @@ export class MatchService {
           userName,
         };
       }),
+      { chomboEvents, offTableKyotakuCount },
     );
   }
 

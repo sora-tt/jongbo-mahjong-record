@@ -35,6 +35,8 @@ export const useEditMatchPage = () => {
   const [startingPoints, setStartingPoints] = React.useState<number | null>(
     null
   );
+  const [chomboPenaltyPoints, setChomboPenaltyPoints] = React.useState(0);
+  const [allowOffTableKyotaku, setAllowOffTableKyotaku] = React.useState(false);
   const [values, setValues] = React.useState<MatchFormValues | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -63,6 +65,8 @@ export const useEditMatchPage = () => {
         setMembers(session.members);
         setConstraint(getParticipantConstraint(league.rule.gameType));
         setStartingPoints(league.rule.oka.startingPoints);
+        setChomboPenaltyPoints(league.rule.chomboPenaltyPoints ?? 0);
+        setAllowOffTableKyotaku(league.rule.allowOffTableKyotaku ?? false);
         setValues(toMatchFormValues(match));
       } catch (loadError) {
         if (!isActive) return;
@@ -107,6 +111,8 @@ export const useEditMatchPage = () => {
       constraint,
       allowedMembers: members,
       startingPoints,
+      allowOffTableKyotaku,
+      mode: "edit",
     });
     if (validation.message || !validation.results) {
       setError(validation.message ?? DEFAULT_SUBMIT_ERROR_MESSAGE);
@@ -135,7 +141,15 @@ export const useEditMatchPage = () => {
     } finally {
       setIsSubmitting(false);
     }
-  }, [constraint, members, params, router, startingPoints, values]);
+  }, [
+    allowOffTableKyotaku,
+    constraint,
+    members,
+    params,
+    router,
+    startingPoints,
+    values,
+  ]);
 
   const handleBack = React.useCallback(() => {
     const { leagueId, seasonId, sessionId } = params;
@@ -153,6 +167,8 @@ export const useEditMatchPage = () => {
     setValues,
     constraint,
     members,
+    chomboPenaltyPoints,
+    allowOffTableKyotaku,
     isLoading,
     isSubmitting,
     error,

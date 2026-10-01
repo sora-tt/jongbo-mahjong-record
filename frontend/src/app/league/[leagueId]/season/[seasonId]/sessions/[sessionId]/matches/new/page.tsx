@@ -16,6 +16,8 @@ const NewMatchPage: React.FC = () => {
     setValues,
     constraint,
     members,
+    chomboPenaltyPoints,
+    allowOffTableKyotaku,
     isLoading,
     isSubmitting,
     error,
@@ -41,6 +43,8 @@ const NewMatchPage: React.FC = () => {
           values={values}
           constraint={constraint}
           members={members}
+          chomboPenaltyPoints={chomboPenaltyPoints}
+          allowOffTableKyotaku={allowOffTableKyotaku}
           error={error}
           isSubmitting={isSubmitting}
           onChange={setValues}

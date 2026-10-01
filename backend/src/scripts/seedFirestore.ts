@@ -47,6 +47,8 @@ type SeedLeague = {
       startingPoints: number;
       returnPoints: number;
     };
+    chomboPenaltyPoints: number;
+    allowOffTableKyotaku: boolean;
   };
   members: Array<{ userId: string; userName: string }>;
   activeSeasonId: string | null;
@@ -139,6 +141,8 @@ const defaultRule = {
     fourth: -20,
   },
   oka: { startingPoints: 25000, returnPoints: 30000 },
+  chomboPenaltyPoints: 0,
+  allowOffTableKyotaku: false,
 } as const;
 
 const allMembers = users.map((user) => ({
@@ -154,6 +158,8 @@ const leagues: SeedLeague[] = [
       gameType: defaultRule.gameType,
       uma: defaultRule.uma,
       oka: defaultRule.oka,
+      chomboPenaltyPoints: defaultRule.chomboPenaltyPoints,
+      allowOffTableKyotaku: defaultRule.allowOffTableKyotaku,
     },
     members: allMembers,
     activeSeasonId: "0001",
@@ -303,6 +309,8 @@ const leagues: SeedLeague[] = [
       gameType: defaultRule.gameType,
       uma: defaultRule.uma,
       oka: defaultRule.oka,
+      chomboPenaltyPoints: defaultRule.chomboPenaltyPoints,
+      allowOffTableKyotaku: defaultRule.allowOffTableKyotaku,
     },
     members: allMembers,
     activeSeasonId: "0003",
@@ -501,6 +509,8 @@ const seedLeagues = async () => {
           starting_points: league.rule.oka.startingPoints,
           return_points: league.rule.oka.returnPoints,
         },
+        chombo_penalty_points: league.rule.chomboPenaltyPoints,
+        allow_off_table_kyotaku: league.rule.allowOffTableKyotaku,
       },
       member_count: league.members.length,
       total_match_count: totalMatchCount,
@@ -763,6 +773,7 @@ const createUserStatsDoc = (params: {
     season_name: params.seasonName,
     total_points: params.totalPoints,
     total_match_count: params.totalMatchCount,
+    chombo_count: 0,
     average_rank: params.averageRank,
     current_rank: params.currentRank,
     first_count: params.firstCount,

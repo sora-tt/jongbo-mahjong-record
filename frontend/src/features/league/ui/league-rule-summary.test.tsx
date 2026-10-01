@@ -19,12 +19,16 @@ const fixedRule: ApiLeague["rule"] = {
     fourth: -10,
   },
   oka: { startingPoints: 25000, returnPoints: 25000 },
+  chomboPenaltyPoints: 0,
+  allowOffTableKyotaku: false,
 };
 
 const fixedSanmaRule: ApiLeague["rule"] = {
   gameType: "sanma",
   uma: { mode: "fixed", first: 10, second: 5, third: -5, fourth: null },
   oka: { startingPoints: 35000, returnPoints: 35000 },
+  chomboPenaltyPoints: 20,
+  allowOffTableKyotaku: true,
 };
 
 const floatingCountRule: ApiLeague["rule"] = {
@@ -40,6 +44,8 @@ const floatingCountRule: ApiLeague["rule"] = {
     },
   },
   oka: { startingPoints: 25000, returnPoints: 25000 },
+  chomboPenaltyPoints: 20,
+  allowOffTableKyotaku: true,
 };
 
 const renderSummary = (rule: ApiLeague["rule"]) =>
