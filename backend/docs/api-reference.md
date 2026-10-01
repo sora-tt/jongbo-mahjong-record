@@ -445,13 +445,7 @@ floatingCountのresponseも同じ5行とmodeを含みます。浮き人数はraw
     "name": "雀望リーグ",
     "rule": {
       "gameType": "yonma",
-      "uma": {
-        "mode": "fixed",
-        "first": 20,
-        "second": 10,
-        "third": -10,
-        "fourth": -20
-      },
+      "uma": { "first": 20, "second": 10, "third": -10, "fourth": -20 },
       "oka": { "startingPoints": 25000, "returnPoints": 30000 }
     },
     "memberCount": 9,
@@ -508,13 +502,7 @@ floatingCountのresponseも同じ5行とmodeを含みます。浮き人数はraw
   "name": "雀望リーグ改",
   "rule": {
     "gameType": "yonma",
-    "uma": {
-      "mode": "fixed",
-      "first": 20,
-      "second": 10,
-      "third": -10,
-      "fourth": -20
-    },
+    "uma": { "first": 20, "second": 10, "third": -10, "fourth": -20 },
     "oka": { "startingPoints": 25000, "returnPoints": 30000 }
   },
   "memberUserIds": ["0001", "0002", "0003", "0004"]
@@ -530,13 +518,7 @@ floatingCountのresponseも同じ5行とmodeを含みます。浮き人数はraw
     "name": "雀望リーグ改",
     "rule": {
       "gameType": "yonma",
-      "uma": {
-        "mode": "fixed",
-        "first": 20,
-        "second": 10,
-        "third": -10,
-        "fourth": -20
-      },
+      "uma": { "first": 20, "second": 10, "third": -10, "fourth": -20 },
       "oka": { "startingPoints": 25000, "returnPoints": 30000 }
     },
     "memberCount": 9,

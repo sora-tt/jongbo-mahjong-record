@@ -126,8 +126,6 @@
 - `PATCH /api/leagues/:leagueId`
   - リーグ名、ルール、メンバーの軽微変更。
 
-League作成・更新では固定順位点と、四麻のみ浮き人数別順位点を受け付ける。uma.modeを省略した既存の固定rule requestも互換性のため受け付け、responseではmode=fixedを含むcanonical shapeで返す。浮き人数別ruleはmode=floatingCountとpointsByFloatingCountのkey "0"〜"4"をすべて必須とし、各行はfirst〜fourthの整数順位点を持つ。三麻では受け付けない。行の欠落・非整数・合計不一致はHTTP 400 validation_errorと共通ErrorEnvelopeで返す。
-
 ### 6.4 シーズン
 
 - `GET /api/leagues/:leagueId/seasons`
@@ -229,13 +227,7 @@ League ruleのdomain validation errorも共通ErrorEnvelopeを使い、details�
     "name": "社内リーグ",
     "rule": {
       "gameType": "yonma",
-      "uma": {
-        "mode": "fixed",
-        "first": 20,
-        "second": 10,
-        "third": -10,
-        "fourth": -20
-      },
+      "uma": { "first": 20, "second": 10, "third": -10, "fourth": -20 },
       "oka": { "startingPoints": 25000, "returnPoints": 30000 }
     },
     "memberCount": 8,
@@ -755,13 +747,7 @@ League ruleのdomain validation errorも共通ErrorEnvelopeを使い、details�
     "name": "Mリーグ",
     "rule": {
       "gameType": "yonma",
-      "uma": {
-        "mode": "fixed",
-        "first": 20,
-        "second": 10,
-        "third": -10,
-        "fourth": -20
-      },
+      "uma": { "first": 20, "second": 10, "third": -10, "fourth": -20 },
       "oka": { "startingPoints": 25000, "returnPoints": 30000 }
     },
     "memberCount": 4,

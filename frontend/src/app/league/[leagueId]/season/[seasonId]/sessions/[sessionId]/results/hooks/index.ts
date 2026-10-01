@@ -117,7 +117,7 @@ export const useSessionResultsPage = () => {
     } finally {
       setIsEnding(false);
     }
-  }, [dispatch, load, params, router, session]);
+  }, [dispatch, params, router, session]);
 
   const handleConfirmDeleteMatch = React.useCallback(async () => {
     const { leagueId, seasonId, sessionId } = params;
@@ -191,8 +191,6 @@ export const useSessionResultsPage = () => {
       );
     },
     handleEndRecord,
-    handleToggleMatch: (matchId: string) =>
-      setExpandedMatchId((current) => (current === matchId ? null : matchId)),
     handleRequestDeleteMatch: (matchId: string) =>
       setDeleteTargetMatchId(matchId),
     handleCancelDeleteMatch: () => setDeleteTargetMatchId(null),

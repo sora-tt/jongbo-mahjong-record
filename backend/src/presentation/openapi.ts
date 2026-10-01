@@ -379,7 +379,7 @@ export const openApiDocument = {
             type: "object",
             properties: {
               name: { type: "string" },
-              rule: { $ref: "#/components/schemas/LeagueRuleInput" },
+              rule: { $ref: "#/components/schemas/LeagueRule" },
               memberUserIds: { type: "array", items: { type: "string" } },
             },
           }),
