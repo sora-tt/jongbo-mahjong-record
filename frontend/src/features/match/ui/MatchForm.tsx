@@ -102,29 +102,31 @@ export const MatchForm: React.FC<Props> = ({
       </h1>
 
       <div className="space-y-4 rounded-surface border border-border bg-white p-5 shadow-sm">
-        <label className="block text-sm font-medium text-foreground">
-          対局日時
-          <TextBox
-            className="mt-1"
-            type="datetime-local"
-            value={formatDateTimeLocal(values.playedAt)}
-            onChange={(event) => {
-              const value = event.target.value;
-              onChange({
-                ...values,
-                playedAt: value ? new Date(value).toISOString() : "",
-              });
-            }}
-            disabled={isSubmitting}
-          />
-        </label>
+        {mode === "edit" ? (
+          <label className="block text-sm font-medium text-foreground">
+            対局日時
+            <TextBox
+              className="mt-1"
+              type="datetime-local"
+              value={formatDateTimeLocal(values.playedAt)}
+              onChange={(event) => {
+                const value = event.target.value;
+                onChange({
+                  ...values,
+                  playedAt: value ? new Date(value).toISOString() : "",
+                });
+              }}
+              disabled={isSubmitting}
+            />
+          </label>
+        ) : null}
 
         {constraint.requiredWinds.map((wind) => (
           <div
             key={wind}
-            className="grid grid-cols-[2rem_1fr_7rem] items-start gap-2"
+            className="grid grid-cols-[2rem_minmax(0,1fr)_auto] items-center gap-2"
           >
-            <span className="pt-2 font-bold text-foreground">
+            <span className="font-bold text-foreground">
               {WIND_LABELS[wind]}
             </span>
             <Dropdown
@@ -133,22 +135,24 @@ export const MatchForm: React.FC<Props> = ({
               value={values.userIdByWind[wind] ?? ""}
               onChange={(_, value) => updateWind(wind, value)}
               disabled={isSubmitting || mode === "edit"}
+              className="w-full"
             />
-            <TextBox
-              variant="number"
-              type="text"
-              inputMode="numeric"
-              placeholder="点数"
-              value={values.rawScoreByWind[wind]}
-              onChange={(event) => updateScore(wind, event.target.value)}
-              disabled={isSubmitting}
-            />
+            <div className="flex items-center gap-2">
+              <TextBox
+                variant="number"
+                type="text"
+                inputMode="numeric"
+                placeholder="点数"
+                value={values.rawScoreByWind[wind]}
+                onChange={(event) => updateScore(wind, event.target.value)}
+                disabled={isSubmitting}
+              />
+              <span className="whitespace-nowrap text-sm font-bold text-foreground">
+                00点
+              </span>
+            </div>
           </div>
         ))}
-
-        <p className="text-xs text-text-muted">
-          参加者はSession作成時に固定されます。別の参加者で記録する場合は新しいSessionを開始してください。
-        </p>
 
         {error ? <p className="text-sm text-error-text">{error}</p> : null}
 

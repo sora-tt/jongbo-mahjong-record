@@ -38,6 +38,31 @@ const renderEditor = (
   return renderToStaticMarkup(React.createElement(LeagueRuleEditor, props));
 };
 
+test("fixed rank points preserve the original four-column Uma input grid", () => {
+  const markup = renderEditor({ mode: "fixed" });
+
+  strictEqual(markup.includes('class="grid grid-cols-4 gap-2"'), true);
+  strictEqual(markup.includes('label for="fixed-uma-first"'), true);
+  strictEqual(markup.includes('id="fixed-uma-fourth"'), true);
+  strictEqual(markup.includes("方式"), true);
+  strictEqual(markup.includes("固定順位点"), true);
+  strictEqual(markup.includes("浮き人数別順位点"), true);
+  strictEqual(markup.includes('type="radio"'), false);
+
+  const labels = ["1位", "2位", "3位", "4位"];
+  const labelPositions = labels.map((label) => markup.indexOf(label));
+  strictEqual(
+    labelPositions.every((position) => position >= 0),
+    true
+  );
+  strictEqual(
+    labelPositions.every(
+      (position, index) => index === 0 || labelPositions[index - 1] < position
+    ),
+    true
+  );
+});
+
 test("floating-count editor renders all five responsive rows with labelled inputs", () => {
   const markup = renderEditor();
 
@@ -50,11 +75,10 @@ test("floating-count editor renders all five responsive rows with labelled input
       );
     }
   }
-  strictEqual(markup.includes("md:table"), true);
-  strictEqual(markup.includes("hidden md:table-header-group"), true);
-  strictEqual(markup.includes("grid-cols-2"), true);
+  strictEqual(markup.includes("table-fixed"), true);
+  strictEqual(markup.includes('aria-label="0人浮きの1位"'), true);
   strictEqual(markup.includes("overflow-x-auto"), false);
-  strictEqual(markup.includes("aria-labelledby="), true);
+  strictEqual(markup.includes("<caption"), true);
 });
 
 test("floating-count errors link to a field and describe its inline error", () => {
@@ -91,7 +115,7 @@ test("floating-count row-total errors link to a field and describe the invalid r
 test("sanma editor only presents fixed rank points and hides the mode selector", () => {
   const markup = renderEditor({ gameType: "sanma", mode: "floatingCount" });
 
-  strictEqual(markup.includes("順位点の方式"), false);
+  strictEqual(markup.includes(">方式</h4>"), false);
   strictEqual(markup.includes("浮き人数別順位点"), false);
   strictEqual(markup.includes('id="fixed-uma-first"'), true);
   strictEqual(markup.includes('id="fixed-uma-second"'), true);

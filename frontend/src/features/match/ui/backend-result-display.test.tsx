@@ -43,17 +43,19 @@ test("Match and season standings display points supplied by Backend", () => {
   } as unknown as ApiMatch;
   const matchMarkup = renderToStaticMarkup(
     React.createElement(MatchList, {
+      players: [
+        { userId: "user-1", userName: "一郎" },
+        { userId: "user-2", userName: "二郎" },
+      ],
       matches: toMatchList([match]),
-      expandedMatchId: "match-1",
       deletingMatchId: null,
-      onToggle: () => {},
       onEdit: () => {},
       onDelete: () => {},
     })
   );
 
-  strictEqual(matchMarkup.includes("1位 / point：23"), true);
-  strictEqual(matchMarkup.includes("2位 / point：9"), true);
+  strictEqual(matchMarkup.includes("+23.0pt"), true);
+  strictEqual(matchMarkup.includes("+9.0pt"), true);
 
   const standings = [
     {

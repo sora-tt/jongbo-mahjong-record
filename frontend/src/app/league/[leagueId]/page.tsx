@@ -15,8 +15,8 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { LoadingState } from "@/components/ui/loading-state";
 
-import { useLeaguePage } from "./hooks";
 import { formatScore, formatStreak } from "../utils";
+import { useLeaguePage } from "./hooks";
 
 const LeaguePage: React.FC = () => {
   const {
@@ -91,17 +91,12 @@ const LeaguePage: React.FC = () => {
   return (
     <AppShell mainClassName="min-h-screen bg-background font-jp">
       <div className="mx-auto flex max-w-7xl flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8">
-        <header className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <p className="text-sm text-text-muted">リーグ記録</p>
-            <h1 className="mt-1 text-2xl font-bold text-foreground">
-              {league.name}
-            </h1>
-          </div>
+        <header className="flex flex-wrap items-center justify-between gap-4">
+          <h1 className="text-2xl font-bold text-foreground">{league.name}</h1>
           <Link href={`/league/${league.id}/edit`}>
             <Button variant="secondary" size="sm">
               <Pencil className="h-4 w-4" />
-              リーグ設定を変更
+              リーグを編集
             </Button>
           </Link>
         </header>
@@ -149,7 +144,7 @@ const LeaguePage: React.FC = () => {
           </Card>
         </section>
 
-        <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <section className="grid grid-cols-2 gap-4">
           {records.map(({ label, record, value }) => (
             <Card key={label} bodyClassName="space-y-2">
               <h2 className="text-sm font-semibold text-text-muted">{label}</h2>
@@ -167,9 +162,6 @@ const LeaguePage: React.FC = () => {
               <h2 className="text-xl font-bold text-foreground">
                 シーズン一覧
               </h2>
-              <p className="mt-1 text-sm text-text-muted">
-                {league.memberCount}人のメンバーで管理しています。
-              </p>
             </div>
             <Link href={`/league/${league.id}/season/new`}>
               <Button size="sm">シーズンを作成</Button>
@@ -178,6 +170,7 @@ const LeaguePage: React.FC = () => {
 
           {leagueSeasons.length === 0 ? (
             <EmptyState
+              className="!bg-transparent"
               title="まだシーズンが作成されていません"
               description="シーズンを作成して対局記録を始めましょう。"
               action={

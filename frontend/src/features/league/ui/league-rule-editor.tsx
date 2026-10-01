@@ -11,6 +11,9 @@ import {
   type UmaRank,
 } from "@/features/league/model/validation";
 
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+
 type GameType = "sanma" | "yonma";
 type UmaMode = "fixed" | "floatingCount";
 
@@ -47,9 +50,6 @@ const getInputId = (mode: UmaMode, rank: UmaRank, floatingCount?: number) =>
 
 type SummaryItem = { href?: string; key: string; message: string };
 
-const inputClassName =
-  "min-h-11 w-full min-w-0 rounded-control border border-border bg-white px-3 py-2 text-base text-foreground shadow-sm transition-colors focus:border-brand-strong focus:outline-none disabled:cursor-not-allowed disabled:bg-surface-muted disabled:opacity-60 aria-invalid:border-danger";
-
 const LeagueRuleEditor: React.FC<Props> = ({
   gameType,
   mode,
@@ -69,71 +69,64 @@ const LeagueRuleEditor: React.FC<Props> = ({
   const fixedErrors = validateFixedUmaDraft(gameType, fixedUma);
   const floatingErrors = validateFloatingCountUmaDraft(floatingCountUma);
   const summaryRef = React.useRef<HTMLDivElement>(null);
-  const shouldFocusSummaryRef = React.useRef(false);
 
   const summaryItems = React.useMemo(() => {
-    const submitErrors =
-      showErrorSummary && submitError
-        ? ([{ key: "submit-error", message: submitError }] as SummaryItem[])
-        : [];
-
     if (!showErrorSummary) {
       return [];
     }
 
+    const items: SummaryItem[] = submitError
+      ? [{ key: "submit-error", message: submitError }]
+      : [];
+
     if (activeMode === "fixed") {
-      const fields: SummaryItem[] = Object.entries(
-        fixedErrors.fields ?? {}
-      ).map(([rank, message]) => {
+      Object.entries(fixedErrors.fields ?? {}).forEach(([rank, message]) => {
         const rankKey = rank as UmaRank;
         const rankLabel =
           visibleRanks.find((candidate) => candidate.key === rankKey)?.label ??
           "順位";
-        return {
+        items.push({
           href: `#${getInputId("fixed", rankKey)}`,
           key: rankKey,
           message: `固定順位点の${rankLabel}: ${message}`,
-        };
+        });
       });
       if (fixedErrors.total) {
-        fields.push({
+        items.push({
           href: `#${getInputId("fixed", visibleRanks[0]?.key ?? "first")}`,
           key: "fixed-total",
           message: fixedErrors.total.message,
         });
       }
-      return [...submitErrors, ...fields];
+      return items;
     }
 
-    const fields = FLOATING_COUNTS.flatMap((floatingCount) => {
+    FLOATING_COUNTS.forEach((floatingCount) => {
       const errors = floatingErrors[floatingCount];
       if (!errors) {
-        return [];
+        return;
       }
 
-      const rowFields = Object.entries(errors.fields ?? {}).map(
-        ([rank, message]) => {
-          const rankKey = rank as UmaRank;
-          const rankLabel =
-            RANKS.find((candidate) => candidate.key === rankKey)?.label ??
-            "順位";
-          return {
-            href: `#${getInputId("floatingCount", rankKey, floatingCount)}`,
-            key: `${floatingCount}-${rankKey}`,
-            message: `${floatingCount}人浮きの${rankLabel}: ${message}`,
-          };
-        }
-      );
+      Object.entries(errors.fields ?? {}).forEach(([rank, message]) => {
+        const rankKey = rank as UmaRank;
+        const rankLabel =
+          RANKS.find((candidate) => candidate.key === rankKey)?.label ?? "順位";
+        items.push({
+          href: `#${getInputId("floatingCount", rankKey, floatingCount)}`,
+          key: `${floatingCount}-${rankKey}`,
+          message: `${floatingCount}人浮きの${rankLabel}: ${message}`,
+        });
+      });
       if (errors.total) {
-        rowFields.push({
+        items.push({
           href: `#${getInputId("floatingCount", "first", floatingCount)}`,
           key: `${floatingCount}-total`,
           message: errors.total.message,
         });
       }
-      return rowFields;
     });
-    return [...submitErrors, ...fields];
+
+    return items;
   }, [
     activeMode,
     fixedErrors,
@@ -143,39 +136,58 @@ const LeagueRuleEditor: React.FC<Props> = ({
     visibleRanks,
   ]);
 
-  shouldFocusSummaryRef.current = showErrorSummary && summaryItems.length > 0;
-
   React.useEffect(() => {
-    if (shouldFocusSummaryRef.current) {
+    if (summaryItems.length > 0) {
       summaryRef.current?.focus();
     }
-  }, [errorSummaryFocusToken]);
+  }, [errorSummaryFocusToken, summaryItems.length]);
 
   return (
-    <section className="min-w-0 space-y-4" aria-labelledby="uma-rule-title">
-      <h3 id="uma-rule-title" className="font-semibold text-foreground">
-        順位点設定
-      </h3>
+    <div className="min-w-0 space-y-2">
+      {!isSanma ? (
+        <div className="space-y-2">
+          <h4 className="text-sm font-semibold text-foreground">方式</h4>
+          <div className="flex flex-wrap gap-3">
+            <Button
+              type="button"
+              variant="selection"
+              size="sm"
+              selected={mode === "fixed"}
+              disabled={disabled}
+              onClick={() => onModeChange("fixed")}
+            >
+              固定順位点
+            </Button>
+            <Button
+              type="button"
+              variant="selection"
+              size="sm"
+              selected={mode === "floatingCount"}
+              disabled={disabled}
+              onClick={() => onModeChange("floatingCount")}
+            >
+              浮き人数別順位点
+            </Button>
+          </div>
+        </div>
+      ) : null}
 
       {summaryItems.length > 0 ? (
         <div
           ref={summaryRef}
-          className="rounded-control border border-danger bg-danger/5 p-4 text-foreground"
+          className="rounded-lg border border-danger bg-white px-2.5 py-2 text-xs text-foreground"
           role="alert"
           aria-labelledby="uma-rule-error-title"
           tabIndex={-1}
         >
-          <h4 id="uma-rule-error-title" className="font-semibold text-danger">
+          <h5 id="uma-rule-error-title" className="font-semibold text-danger">
             順位点を確認してください
-          </h4>
-          <ul className="mt-2 list-inside list-disc space-y-1">
+          </h5>
+          <ul className="mt-1 list-inside list-disc space-y-0.5">
             {summaryItems.map((item) => (
               <li key={item.key}>
                 {item.href ? (
-                  <a
-                    className="underline underline-offset-2 focus-visible:rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
-                    href={item.href}
-                  >
+                  <a className="underline underline-offset-2" href={item.href}>
                     {item.message}
                   </a>
                 ) : (
@@ -187,41 +199,9 @@ const LeagueRuleEditor: React.FC<Props> = ({
         </div>
       ) : null}
 
-      {!isSanma ? (
-        <fieldset className="space-y-2" disabled={disabled}>
-          <legend className="text-sm font-medium text-foreground">
-            順位点の方式
-          </legend>
-          <div className="grid gap-2 sm:grid-cols-2">
-            <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-control border border-border px-3 py-2 text-base text-foreground focus-within:border-brand-strong">
-              <input
-                type="radio"
-                name="league-uma-mode"
-                value="fixed"
-                checked={mode === "fixed"}
-                onChange={() => onModeChange("fixed")}
-                className="size-4 accent-brand-strong"
-              />
-              固定順位点
-            </label>
-            <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-control border border-border px-3 py-2 text-base text-foreground focus-within:border-brand-strong">
-              <input
-                type="radio"
-                name="league-uma-mode"
-                value="floatingCount"
-                checked={mode === "floatingCount"}
-                onChange={() => onModeChange("floatingCount")}
-                className="size-4 accent-brand-strong"
-              />
-              浮き人数別順位点
-            </label>
-          </div>
-        </fieldset>
-      ) : null}
-
       {activeMode === "fixed" ? (
-        <div className="min-w-0 space-y-3">
-          <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
+        <>
+          <div className="grid grid-cols-4 gap-2">
             {visibleRanks.map(({ key: rank, label }) => {
               const inputId = getInputId("fixed", rank);
               const fieldError = showErrorSummary
@@ -238,163 +218,139 @@ const LeagueRuleEditor: React.FC<Props> = ({
                 .join(" ");
 
               return (
-                <div key={rank} className="min-w-0 space-y-1.5">
-                  <label
-                    htmlFor={inputId}
-                    className="block text-sm font-medium text-foreground"
-                  >
-                    {label}ウマ
-                  </label>
-                  <input
-                    id={inputId}
-                    type="number"
-                    step="1"
-                    inputMode="numeric"
-                    value={fixedUma[rank]}
-                    disabled={disabled}
-                    aria-invalid={fieldError || totalError ? true : undefined}
-                    aria-describedby={describedBy || undefined}
-                    className={inputClassName}
-                    onChange={(event) =>
-                      onFixedUmaChange(rank, event.currentTarget.value)
-                    }
-                  />
-                  {fieldError ? (
-                    <p id={`${inputId}-error`} className="text-sm text-danger">
-                      {fieldError}
-                    </p>
-                  ) : null}
-                </div>
+                <Input
+                  key={rank}
+                  id={inputId}
+                  label={label}
+                  containerClassName="space-y-1"
+                  className="h-10 rounded-lg px-2 text-center shadow-none"
+                  type="number"
+                  value={fixedUma[rank]}
+                  disabled={disabled}
+                  aria-invalid={totalError ? true : undefined}
+                  aria-describedby={describedBy || undefined}
+                  error={fieldError}
+                  placeholder="例: 15"
+                  onChange={(event) =>
+                    onFixedUmaChange(rank, event.target.value)
+                  }
+                />
               );
             })}
           </div>
           {showErrorSummary && fixedErrors.total ? (
-            <p id="fixed-uma-total-error" className="text-sm text-danger">
+            <p
+              id="fixed-uma-total-error"
+              className="text-xs text-danger"
+              role="alert"
+            >
               {fixedErrors.total.message}
             </p>
           ) : null}
-        </div>
+        </>
       ) : (
-        <div className="min-w-0 space-y-3">
-          <p className="text-sm text-text-muted">
-            各順位の点は、返し点を超えた人数に対応する行から適用します。
+        <div className="space-y-2">
+          <p className="text-xs text-text-muted">
+            返し点を超えている人数ごとの順位点を設定します。
           </p>
           <div className="min-w-0">
-            <table className="block w-full table-fixed md:table">
-              <caption className="sr-only">
-                返し点を超えた人数ごとの順位点
-              </caption>
-              <thead className="hidden md:table-header-group">
+            <table className="w-full table-fixed">
+              <caption className="sr-only">浮き人数ごとの順位点</caption>
+              <thead>
                 <tr>
                   <th
                     scope="col"
-                    className="w-32 border-b border-border px-3 py-2 text-left text-sm font-semibold text-foreground"
+                    className="w-11 pb-1 text-left text-xs font-semibold text-foreground"
                   >
-                    浮き人数
+                    浮き
                   </th>
                   {RANKS.map(({ key, label }) => (
                     <th
                       key={key}
                       id={`floating-count-column-${key}`}
                       scope="col"
-                      className="border-b border-border px-3 py-2 text-left text-sm font-semibold text-foreground"
+                      className="pb-1 text-center text-xs font-semibold text-foreground"
                     >
                       {label}
                     </th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="grid gap-3 md:table-row-group md:gap-0">
+              <tbody>
                 {FLOATING_COUNTS.map((floatingCount) => {
-                  const rowId = `floating-count-row-${floatingCount}`;
                   const rowErrors = floatingErrors[floatingCount];
                   const totalError = showErrorSummary
                     ? rowErrors?.total?.message
                     : undefined;
 
                   return (
-                    <tr
-                      id={rowId}
-                      key={floatingCount}
-                      className="grid min-w-0 grid-cols-2 gap-x-3 gap-y-2 rounded-control border border-border bg-white p-3 md:table-row md:border-0 md:bg-transparent md:p-0"
-                    >
-                      <th
-                        id={`floating-count-heading-${floatingCount}`}
-                        scope="row"
-                        className="col-span-2 block text-left text-base font-semibold text-foreground md:table-cell md:border-b md:border-border md:px-3 md:py-3 md:text-sm"
-                      >
-                        {floatingCount}人浮き
-                        {totalError ? (
-                          <span
-                            id={`floating-count-${floatingCount}-total-error`}
-                            className="mt-1 block text-sm font-normal text-danger"
-                          >
-                            {totalError}
-                          </span>
-                        ) : null}
-                      </th>
-                      {RANKS.map(({ key: rank, label }) => {
-                        const inputId = getInputId(
-                          "floatingCount",
-                          rank,
-                          floatingCount
-                        );
-                        const fieldError = showErrorSummary
-                          ? rowErrors?.fields?.[rank]
-                          : undefined;
-                        const describedBy = [
-                          fieldError ? `${inputId}-error` : undefined,
-                          totalError
-                            ? `floating-count-${floatingCount}-total-error`
-                            : undefined,
-                        ]
-                          .filter(Boolean)
-                          .join(" ");
+                    <React.Fragment key={floatingCount}>
+                      <tr>
+                        <th
+                          id={`floating-count-heading-${floatingCount}`}
+                          scope="row"
+                          className="py-1 text-left text-xs font-medium text-foreground"
+                        >
+                          {floatingCount}人
+                        </th>
+                        {RANKS.map(({ key: rank, label }) => {
+                          const inputId = getInputId(
+                            "floatingCount",
+                            rank,
+                            floatingCount
+                          );
+                          const fieldError = showErrorSummary
+                            ? rowErrors?.fields?.[rank]
+                            : undefined;
+                          const describedBy = [
+                            fieldError ? `${inputId}-error` : undefined,
+                            totalError
+                              ? `floating-count-${floatingCount}-total-error`
+                              : undefined,
+                          ]
+                            .filter(Boolean)
+                            .join(" ");
 
-                        return (
-                          <td
-                            key={rank}
-                            className="block min-w-0 md:table-cell md:border-b md:border-border md:px-2 md:py-3"
-                          >
-                            <label
-                              htmlFor={inputId}
-                              className="mb-1 block text-sm font-medium text-foreground md:sr-only"
+                          return (
+                            <td key={rank} className="px-0.5 py-1">
+                              <Input
+                                id={inputId}
+                                containerClassName="space-y-0"
+                                className="h-9 rounded-lg px-1 text-center shadow-none"
+                                type="number"
+                                value={floatingCountUma[floatingCount][rank]}
+                                disabled={disabled}
+                                aria-label={`${floatingCount}人浮きの${label}`}
+                                aria-invalid={
+                                  fieldError || totalError ? true : undefined
+                                }
+                                aria-describedby={describedBy || undefined}
+                                error={fieldError}
+                                onChange={(event) =>
+                                  onFloatingCountUmaChange(
+                                    floatingCount,
+                                    rank,
+                                    event.target.value
+                                  )
+                                }
+                              />
+                            </td>
+                          );
+                        })}
+                      </tr>
+                      {totalError ? (
+                        <tr>
+                          <td colSpan={5} className="pb-1">
+                            <p
+                              id={`floating-count-${floatingCount}-total-error`}
+                              className="text-xs text-danger"
                             >
-                              {label}
-                            </label>
-                            <input
-                              id={inputId}
-                              type="number"
-                              step="1"
-                              inputMode="numeric"
-                              value={floatingCountUma[floatingCount][rank]}
-                              disabled={disabled}
-                              aria-invalid={
-                                fieldError || totalError ? true : undefined
-                              }
-                              aria-describedby={describedBy || undefined}
-                              aria-labelledby={`floating-count-heading-${floatingCount} floating-count-column-${rank}`}
-                              className={inputClassName}
-                              onChange={(event) =>
-                                onFloatingCountUmaChange(
-                                  floatingCount,
-                                  rank,
-                                  event.currentTarget.value
-                                )
-                              }
-                            />
-                            {fieldError ? (
-                              <p
-                                id={`${inputId}-error`}
-                                className="mt-1 text-sm text-danger"
-                              >
-                                {fieldError}
-                              </p>
-                            ) : null}
+                              {totalError}
+                            </p>
                           </td>
-                        );
-                      })}
-                    </tr>
+                        </tr>
+                      ) : null}
+                    </React.Fragment>
                   );
                 })}
               </tbody>
@@ -402,7 +358,7 @@ const LeagueRuleEditor: React.FC<Props> = ({
           </div>
         </div>
       )}
-    </section>
+    </div>
   );
 };
 

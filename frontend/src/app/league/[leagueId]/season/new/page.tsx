@@ -2,6 +2,8 @@
 
 import * as React from "react";
 
+import { ArrowLeft, CalendarDays, Check, Type, UsersRound } from "lucide-react";
+
 import Link from "next/link";
 
 import { AppShell } from "@/components/layout/app-shell";
@@ -11,7 +13,6 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { Input } from "@/components/ui/input";
 import { LoadingState } from "@/components/ui/loading-state";
-import { Select } from "@/components/ui/select";
 
 import { useSeasonNew } from "./hooks";
 
@@ -22,13 +23,11 @@ const SeasonNewPage: React.FC = () => {
     leagueMembers,
     selectedMembers,
     seasonName,
-    status,
     loading,
     isSubmitting,
     error,
     handleMemberToggle,
     handleSeasonNameChange,
-    setStatus,
     handleSubmit,
   } = useSeasonNew();
 
@@ -45,42 +44,55 @@ const SeasonNewPage: React.FC = () => {
 
   return (
     <AppShell mainClassName="min-h-screen bg-background font-jp">
-      <div className="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">シーズン作成</h1>
-          <p className="mt-2 text-sm text-text-muted">
-            対象リーグ：{leagueName}
-          </p>
+      <div className="mx-auto flex w-full max-w-[390px] flex-col gap-4 px-4 pb-8 pt-4">
+        <div className="flex items-center gap-2">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-200 text-white">
+            <CalendarDays className="h-4 w-4" aria-hidden="true" />
+          </span>
+          <h1 className="text-xl font-bold text-foreground">シーズン作成</h1>
         </div>
 
-        <Card bodyClassName="space-y-6">
-          <Input
-            label="シーズン名"
-            placeholder="例: 2026シーズン"
-            value={seasonName}
-            onChange={handleSeasonNameChange}
-            required
-          />
-          <Select
-            label="状態"
-            value={status}
-            onChange={(event) =>
-              setStatus(event.target.value as "active" | "archived")
-            }
-          >
-            <option value="active">進行中</option>
-            <option value="archived">終了</option>
-          </Select>
+        <Card
+          className="rounded-xl border-2 border-brand-200 shadow-none"
+          bodyClassName="space-y-4 p-4"
+        >
+          <div className="space-y-1">
+            <p className="text-sm font-semibold text-foreground">対象リーグ</p>
+            <p className="text-sm text-text-muted">{leagueName}</p>
+          </div>
 
-          <section className="space-y-3">
+          <div className="space-y-1.5">
+            <label
+              htmlFor="season-name"
+              className="flex items-center gap-2 text-sm font-semibold text-foreground"
+            >
+              <Type className="h-4 w-4 text-slate-700" aria-hidden="true" />
+              シーズン名
+            </label>
+            <Input
+              id="season-name"
+              containerClassName="space-y-0"
+              className="h-9 rounded-lg px-3 shadow-none"
+              placeholder="例: 2026シーズン"
+              value={seasonName}
+              onChange={handleSeasonNameChange}
+            />
+          </div>
+
+          <section className="space-y-2">
             <div className="flex items-center justify-between gap-3">
-              <div>
-                <h2 className="font-semibold text-foreground">参加者</h2>
-                <p className="mt-1 text-xs text-text-muted">
-                  このシーズンの参加者を選択してください。
-                </p>
-              </div>
-              <span className="rounded-full bg-brand-50 px-3 py-1 text-xs font-medium text-brand-strong">
+              <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                <UsersRound
+                  className="h-4 w-4 text-slate-700"
+                  aria-hidden="true"
+                />
+                参加者
+              </h2>
+              <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-brand-200 px-4 py-1 text-xs font-semibold text-foreground">
+                <UsersRound
+                  className="h-4 w-4 text-brand-600"
+                  aria-hidden="true"
+                />
                 {Object.keys(selectedMembers).length}人選択
               </span>
             </div>
@@ -90,21 +102,27 @@ const SeasonNewPage: React.FC = () => {
                 description="Seasonを作成するにはLeagueにメンバーが必要です。"
               />
             ) : (
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              <div className="grid grid-cols-3 gap-3 rounded-lg border border-border bg-white p-4">
                 {leagueMembers.map((member) => {
                   const isSelected = member.userId in selectedMembers;
                   return (
                     <label
                       key={member.userId}
-                      className={`cursor-pointer rounded-control border p-3 text-center text-sm transition-colors ${isSelected ? "border-brand-600 bg-brand-50 text-brand-strong" : "border-border bg-white text-text-muted hover:border-brand-400"}`}
+                      className={`relative flex min-h-10 cursor-pointer items-center justify-center gap-1 rounded-lg border-2 p-2 text-center text-sm font-semibold transition-colors ${isSelected ? "border-brand-500 bg-brand-50 text-foreground shadow-sm" : "border-slate-300 bg-white text-foreground hover:border-brand-400"}`}
                     >
                       <input
                         type="checkbox"
                         checked={isSelected}
                         onChange={() => handleMemberToggle(member.userId)}
                         className="sr-only"
+                        aria-label={`${member.userName}を選択`}
                       />
                       {member.userName}
+                      {isSelected ? (
+                        <span className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-brand-500 text-white">
+                          <Check className="h-3 w-3" aria-hidden="true" />
+                        </span>
+                      ) : null}
                     </label>
                   );
                 })}
@@ -114,19 +132,22 @@ const SeasonNewPage: React.FC = () => {
 
           {error ? <ErrorState message={error} /> : null}
 
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-col items-center gap-3 pt-1">
             <Button
               onClick={handleSubmit}
               loading={isSubmitting}
               disabled={isSubmitting || leagueMembers.length === 0}
+              size="lg"
+              className="min-w-[144px] rounded-xl"
             >
               シーズンを作成
             </Button>
             <Link
               href={leagueId ? `/league/${leagueId}` : "/"}
-              className="text-sm text-text-muted underline-offset-4 hover:text-foreground hover:underline"
+              className="inline-flex cursor-pointer items-center gap-1 text-sm text-text-muted transition-colors hover:text-foreground"
             >
-              キャンセル
+              <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+              リーグへ戻る
             </Link>
           </div>
         </Card>

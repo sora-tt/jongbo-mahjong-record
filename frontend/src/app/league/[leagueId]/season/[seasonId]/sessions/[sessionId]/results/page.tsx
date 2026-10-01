@@ -2,13 +2,16 @@
 
 import * as React from "react";
 
+import { CalendarDays } from "lucide-react";
+
 import { MatchList } from "@/features/match/ui/MatchList";
 
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { ErrorState } from "@/components/ui/error-state";
+import { HeaderCard } from "@/components/ui/header-card";
 import { LoadingState } from "@/components/ui/loading-state";
+import { SectionCard } from "@/components/ui/section-card";
 
 import { useSessionResultsPage } from "./hooks";
 
@@ -20,24 +23,27 @@ const SessionResultsPage: React.FC = () => {
     isEnding,
     deletingMatchId,
     deleteTargetMatchId,
-    expandedMatchId,
     error,
     retry,
     isEnded,
-    formatDate,
     handleAddRecord,
     handleEditMatch,
     handleEndRecord,
-    handleToggleMatch,
     handleRequestDeleteMatch,
     handleCancelDeleteMatch,
     handleConfirmDeleteMatch,
-    goToSeason,
   } = useSessionResultsPage();
+
+  const formatSessionDate = (value: string) =>
+    new Intl.DateTimeFormat("ja-JP", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(new Date(value));
 
   return (
     <AppShell mainClassName="min-h-screen bg-background font-jp">
-      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-[390px] px-3 py-5">
         {isLoading ? (
           <LoadingState
             label="Sessionの結果を読み込んでいます…"
@@ -47,69 +53,42 @@ const SessionResultsPage: React.FC = () => {
           <ErrorState message={error} onRetry={retry} />
         ) : session ? (
           <div className="space-y-6">
-            <header className="flex flex-wrap items-start justify-between gap-4">
-              <div>
-                <p className="text-sm text-text-muted">Session詳細</p>
-                <h1 className="mt-1 text-2xl font-bold text-foreground">
-                  {formatDate(session.startedAt)}
-                </h1>
-                <p className="mt-2 text-sm text-text-muted">
-                  {isEnded ? `終了：${formatDate(session.endedAt)}` : "進行中"}
-                  {session.tableLabel ? ` / ${session.tableLabel}` : ""}
-                </p>
-              </div>
-              <Button variant="secondary" onClick={goToSeason}>
-                シーズンへ戻る
-              </Button>
-            </header>
+            <HeaderCard title="本日の成績">
+              <span className="inline-flex items-center gap-1">
+                <CalendarDays size={14} aria-hidden="true" />
+                {formatSessionDate(session.startedAt)}
+              </span>
+            </HeaderCard>
 
             {error ? <ErrorState message={error} onRetry={retry} /> : null}
 
-            <Card
-              title="参加者"
-              meta={`${session.memberCount}人 / 対局数 ${session.totalMatchCount}`}
-            >
-              <div className="flex flex-wrap gap-2">
-                {session.members.map((member) => (
-                  <span
-                    key={String(member.userId)}
-                    className="rounded-full bg-brand-50 px-3 py-1 text-sm text-brand-strong"
-                  >
-                    {member.userName}
-                  </span>
-                ))}
-              </div>
-            </Card>
-
-            <Card title="対局結果" meta="順位・pointはBE返却値">
+            <SectionCard title="成績表" bodyClassName="overflow-hidden">
               <MatchList
+                players={session.members}
                 matches={matches}
-                expandedMatchId={expandedMatchId}
                 deletingMatchId={deletingMatchId}
-                onToggle={handleToggleMatch}
                 onEdit={handleEditMatch}
                 onDelete={handleRequestDeleteMatch}
               />
-            </Card>
+            </SectionCard>
 
-            <div className="flex flex-col justify-center gap-3 sm:flex-row">
+            <div className="flex flex-col items-center gap-3 pt-4">
               <Button
-                variant="secondary"
+                variant="brand-secondary"
                 onClick={handleAddRecord}
                 disabled={isEnded || isLoading}
+                className="w-40"
               >
-                対局を追加
+                記録を追加
               </Button>
               <Button
+                variant="brand-primary"
                 onClick={handleEndRecord}
                 disabled={isEnded || isLoading || isEnding}
                 loading={isEnding}
+                className="w-40"
               >
-                {isEnded
-                  ? "Session終了済み"
-                  : isEnding
-                    ? "終了中…"
-                    : "Sessionを終了"}
+                {isEnded ? "記録終了済み" : isEnding ? "終了中…" : "記録を終了"}
               </Button>
             </div>
           </div>

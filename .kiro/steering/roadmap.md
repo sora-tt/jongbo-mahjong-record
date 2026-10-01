@@ -65,3 +65,7 @@
 - [x] frontend-league-season -- リーグ・シーズン画面のCRUD、表示、未接続ボタン、mock依存を整理する。Dependencies: frontend-foundation-ui
 - [x] frontend-session-match -- 参加者選択、Session、Match入力・編集・結果画面を共通化し、BE計算結果を表示する。Dependencies: backend-integrity-lifecycle, frontend-foundation-ui, frontend-league-season
 - [x] frontend-statistics-quality -- 個人成績、ランキング、日次記録、チャートを移行し、旧型・mock・Redux・重複コードを削除して品質検証を追加する。Dependencies: backend-integrity-lifecycle, frontend-foundation-ui, frontend-league-season, frontend-session-match
+
+## Post-Roadmap Follow-up
+
+- [ ] variable-rank-points -- 浮き人数に応じて順位点を選ぶ四麻ルールを、リーグ設定・BE計算・FE表示へ追加する。Dependencies: backend-foundation, backend-integrity-lifecycle, frontend-league-season
