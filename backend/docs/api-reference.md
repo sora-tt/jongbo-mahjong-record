@@ -424,7 +424,7 @@ x-id-token: <ID_TOKEN>
 }
 ```
 
-floatingCountのresponseも同じ5行とmodeを含みます。浮き人数はraw scoreが返し点を厳密に超えた参加者数です。modeとgameTypeの不整合、欠落行、非整数、行合計不一致はHTTP 400で共通ErrorEnvelopeを返します。
+floatingCountのresponseも同じ5行とmodeを含みます。浮き人数はraw scoreが返し点以上の参加者数です。modeとgameTypeの不整合、欠落行、非整数、行合計不一致はHTTP 400で共通ErrorEnvelopeを返します。
 
 ### GET /api/leagues/:leagueId
 

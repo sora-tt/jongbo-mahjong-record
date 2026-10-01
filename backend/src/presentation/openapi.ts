@@ -1241,7 +1241,7 @@ export const openApiDocument = {
       FloatingCountYonmaLeagueRule: {
         type: "object",
         description:
-          "A yonma rule whose rank points are selected by the number of raw scores strictly above returnPoints.",
+          "A yonma rule whose rank points are selected by the number of raw scores at or above returnPoints.",
         properties: {
           gameType: { type: "string", enum: ["yonma"] },
           oka: { $ref: "#/components/schemas/LeagueOka" },

@@ -139,7 +139,7 @@ test("uses the zero-floating row when every score is at or below the return poin
   );
 });
 
-test("uses the one-floating row and does not count a score equal to the return points", () => {
+test("counts a score equal to the return points as floating", () => {
   const results = calculateMatchPoints(floatingCountRule, [
     { userId: "u1", userName: "A", wind: "east", rawScore: 40000 },
     { userId: "u2", userName: "B", wind: "south", rawScore: 25000 },
@@ -150,9 +150,9 @@ test("uses the one-floating row and does not count a score equal to the return p
   assert.deepEqual(
     results.map(({ rank, point }) => ({ rank, point })),
     [
-      { rank: 1, point: 27 },
-      { rank: 2, point: -1 },
-      { rank: 3, point: -8 },
+      { rank: 1, point: 23 },
+      { rank: 2, point: 4 },
+      { rank: 3, point: -9 },
       { rank: 4, point: -18 },
     ],
   );

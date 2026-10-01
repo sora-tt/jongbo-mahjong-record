@@ -54,5 +54,5 @@ ISSUE #98 の例は25,000点持ち・25,000点返しであり、連盟公式ル�
 | 既存Firestore文書に `mode` がなく、読込で失敗する | Mapperで方式欠落を固定umaと解釈し、読み取り時の一括migrationを避ける |
 | FEだけが新DTOを送り、BE契約が旧shapeのままになる | Hono route schema、Domain型、OpenAPIとFEの型導出を同じ変更単位で更新する |
 | 旧Matchを新計算で再処理すると履歴が変わる | League rule lockを維持し、保存済みMatch結果と既存集計値を更新しない |
-| 浮き判定を返し点との一致で誤る | `rawScore > returnPoints` をBEの正本条件とし、FEには同じ基準を表示する |
+| 浮き判定を返し点との一致で誤る | `rawScore >= returnPoints` をBEの正本条件とし、FEには同じ基準を表示する |
 | 5×4入力がモバイルで読めない | 広い画面は表、狭い画面は浮き人数ごとの2列カードに切り替える |

@@ -58,7 +58,7 @@ export const calculateMatchPoints = (
     rule.uma.mode === "fixed"
       ? rule.uma
       : rule.uma.pointsByFloatingCount[
-          results.filter((result) => result.rawScore > rule.oka.returnPoints)
+          results.filter((result) => result.rawScore >= rule.oka.returnPoints)
             .length as FloatingCount
         ];
   const getUmaByRank = (rank: number) => {

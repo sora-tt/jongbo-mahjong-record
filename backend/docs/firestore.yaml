@@ -205,7 +205,7 @@ leagues:
               nullable: true
 
             # mode: floating_count のときだけ使用する。
-            # 0〜4は返し点を超えた参加者数で、全行・全順位点を保存する。
+            # 0〜4は返し点以上の参加者数で、全行・全順位点を保存する。
             points_by_floating_count:
               type: object
               fields:

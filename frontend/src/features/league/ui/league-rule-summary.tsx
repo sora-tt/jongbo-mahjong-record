@@ -44,8 +44,8 @@ export const LeagueRuleSummary: React.FC<Props> = ({ rule }) => {
           className="text-sm leading-relaxed text-text-muted"
         >
           浮き人数は、素点（raw score）が返し点（
-          {rule.oka.returnPoints.toLocaleString("ja-JP")}点）を超えた人数です。
-          返し点と同点は含みません。
+          {rule.oka.returnPoints.toLocaleString("ja-JP")}点）以上の人数です。
+          返し点と同点も含みます。
         </p>
       </div>
 

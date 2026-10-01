@@ -49,7 +49,7 @@ test("fixed rule summary keeps the existing ordered uma display", () => {
   const markup = renderSummary(fixedRule);
 
   strictEqual(markup.includes("10 / 5 / -5 / -10"), true);
-  strictEqual(markup.includes("返し点を超えた人数"), false);
+  strictEqual(markup.includes("floating-count-rule-basis"), false);
 });
 
 test("fixed sanma summary keeps its three-rank display", () => {
@@ -59,7 +59,7 @@ test("fixed sanma summary keeps its three-rank display", () => {
   strictEqual(markup.includes("10 / 5 / -5 /"), false);
 });
 
-test("floating-count summary renders all points with the strict return-point basis", () => {
+test("floating-count summary renders all points with an inclusive return-point basis", () => {
   const markup = renderSummary(floatingCountRule);
   const expectedPoints = [
     [0, 0, 0, 0],
@@ -93,8 +93,8 @@ test("floating-count summary renders all points with the strict return-point bas
     strictEqual(markup.includes(responsiveClass), true);
   }
   strictEqual(markup.includes("素点（raw score）"), true);
-  strictEqual(markup.includes("返し点（25,000点）を超えた人数"), true);
-  strictEqual(markup.includes("返し点と同点は含みません"), true);
+  strictEqual(markup.includes("返し点（25,000点）以上の人数です"), true);
+  strictEqual(markup.includes("返し点と同点も含みます"), true);
   strictEqual((markup.match(/<caption/g) ?? []).length, 5);
   strictEqual((markup.match(/scope="col"/g) ?? []).length, 10);
   const basisDescriptionReference =

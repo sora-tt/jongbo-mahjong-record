@@ -251,7 +251,7 @@ const LeagueRuleEditor: React.FC<Props> = ({
       ) : (
         <div className="space-y-2">
           <p className="text-xs text-text-muted">
-            返し点を超えている人数ごとの順位点を設定します。
+            返し点以上の人数ごとの順位点を設定します。
           </p>
           <div className="min-w-0">
             <table className="w-full table-fixed">

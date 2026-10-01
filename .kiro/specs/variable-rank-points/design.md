@@ -4,7 +4,7 @@
 
 ### Summary
 
-League ruleのumaに固定方式と浮き人数別方式を追加する。BEはraw scoreから返し点超過人数を数え、対応する順位点行を既存の同点処理・oka計算と合成する。FEはLeague作成・編集で方式と配点表を設定し、League詳細で表を表示する。既存Firestore ruleは方式なしを固定方式として読み込み、保存済みMatch結果は変更しない。
+League ruleのumaに固定方式と浮き人数別方式を追加する。BEはraw scoreから返し点以上の人数を数え、対応する順位点行を既存の同点処理・oka計算と合成する。FEはLeague作成・編集で方式と配点表を設定し、League詳細で表を表示する。既存Firestore ruleは方式なしを固定方式として読み込み、保存済みMatch結果は変更しない。
 
 ### Goals
 
@@ -49,7 +49,7 @@ League ruleのumaに固定方式と浮き人数別方式を追加する。BEはr
 ### Revalidation Triggers
 
 - `LeagueRule.uma` のmode名、union shape、`pointsByFloatingCount` のkeyまたはnull semanticsの変更。
-- 浮き判定を `returnPoints` 以外に結び付ける変更、strict greater-thanの変更。
+- 浮き判定を `returnPoints` 以外に結び付ける変更、返し点との一致を含める境界条件の変更。
 - 固定uma/動的表のゼロサム検証、同点配分、okaの適用、丸め許容値の変更。
 - League rule lock、Firestore mapper、OpenAPI、Hono RPC型の変更。
 - BE pointを利用する `frontend-session-match` または `frontend-statistics-quality` の表示・集計変更。
@@ -99,7 +99,7 @@ sequenceDiagram
   ApiClient->>Route: request
   Route->>Service: validated input
   Service->>Scoring: LeagueRule and raw scores
-  Scoring->>Scoring: count rawScore greater than returnPoints
+  Scoring->>Scoring: count rawScore greater than or equal to returnPoints
   Scoring->>Scoring: apply rank points ties and oka
   Scoring-->>Service: rank and point
   Service->>Repository: save calculated Match
@@ -169,7 +169,7 @@ type LeagueRule =
 `calculateMatchPoints(rule, results)` は既存の計算入口を維持し、入力にrankや浮き人数を追加しない。入力の形は既存実装どおり、各要素が `{userId, userName, wind, rawScore}` である。
 
 1. 現行どおりplayer count、wind、userId、raw score合計を検証する。
-2. 浮き人数を `results.filter(result => result.rawScore > rule.oka.returnPoints).length` で算出する。返し点と同点の人は浮きに数えない。
+2. 浮き人数を `results.filter(result => result.rawScore >= rule.oka.returnPoints).length` で算出する。返し点と同点の人も浮きに数える。
 3. raw score降順からcompetition rankingを決定する。
 4. fixed modeでは現行の順位別uma、floatingCount modeでは算出した人数に対応する順位点行を選ぶ。
 5. 同点者には占有する順位帯の順位点を平均配分する。okaは現行どおり1位slotに加算して同点者間で配分する。
@@ -273,7 +273,7 @@ validateLeagueRule(rule: LeagueRule): void;
 | Yonma + fixed | 現行の4順位点入力とmode selector |
 | Yonma + floatingCount | 0〜4人浮きの5行、各1〜4位入力、提示された初期値 |
 | Sanma | 現行の3順位点入力。floating modeは選択不可 |
-| Rule detail | fixed値、または全5行の順位点と「返し点を超えた人数」の説明 |
+| Rule detail | fixed値、または全5行の順位点と「返し点以上の人数」の説明 |
 
 - `frontend/src/features/league/ui/league-rule-editor.tsx` はcreate/editで共用する。form stateは既存ページhooksが所有し、表示componentはprops/callbackで受け渡す。固定値と浮き人数別表の状態を保持し、mode切替時に入力済みの別modeの値を失わない。初回に浮き人数別を選択した時はissue記載の初期表を表示する。
 - 四麻から三麻へ切り替えるとmode selectorを隠して固定順位点を表示し、三麻のまま送信する場合は固定ruleを送る。下書き中の浮き人数別表と四麻のmodeは保持し、四麻へ戻すと再表示する。
@@ -324,7 +324,7 @@ API responseにmodeを追加する。modeなしfixed requestは引き続き受�
 | Validation area | 確認内容 | Requirements |
 |---|---|---|
 | Rule domain validation | fixed sanma 3値、fixed yonma 4値、floatingCount 5行、欠落/非整数/非ゼロ合計、sanma floating拒否 | 1.3, 3.1, 3.2, 4.1 |
-| Scoring | 0〜4人の選択、`rawScore === returnPoints`、strict greater、同順位が隣接slotを跨ぐ配分、oka別計算、小数第1位、合計0 | 2.1-2.4 |
+| Scoring | 0〜4人の選択、`rawScore === returnPoints`を浮きに含める境界値、greater-than-or-equal判定、同順位が隣接slotを跨ぐ配分、oka別計算、小数第1位、合計0 | 2.1-2.4 |
 | Persistence | mode無し旧文書がfixedになること、floating table roundtrip、invalid stored shape fail-fast、一括更新なし | 4.1 |
 | Rule lock lifecycle | 最初のMatch作成transaction後のrule updateがconflictとなり、Match削除後もlockと既存pointが維持される | 4.2 |
 | HTTP contract | fixed/floatingCount union、gameTypeとmode整合、validation details、OpenAPI一致 | 1.1-1.5, 3.1-3.2 |
@@ -349,7 +349,7 @@ API responseにmodeを追加する。modeなしfixed requestは引き続き受�
 | 1.3 | 三麻でfixed設定を維持 | League Rule Contract, League Rule UI and Form Integration | Sanma League form |
 | 1.4 | 保存済みfloating表を再表示 | Rule Persistence Mapper, League Rule UI and Form Integration | Firestore -> League detail -> edit form |
 | 1.5 | 詳細に全表と判定基準を表示 | League Rule UI and Form Integration | League detail |
-| 2.1 | 返し点を厳密に超えたraw scoreの人数を数える | Match Scoring | LeagueRule.returnPoints → calculateMatchPoints |
+| 2.1 | 返し点以上のraw scoreの人数を数える | Match Scoring | LeagueRule.returnPoints → calculateMatchPoints |
 | 2.2 | 浮き人数に対応する行を順位別に適用する | Match Scoring | selected row + raw score rank → MatchResult |
 | 2.3 | okaを独立適用し、同点帯で等分して小数第1位へ丸める | Match Scoring | rank slots -> point |
 | 2.4 | 同じ入力の結果を決定し、合計0を保つ | Match Scoring | calculateMatchPoints invariant |
