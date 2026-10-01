@@ -1174,35 +1174,199 @@ export const openApiDocument = {
         type: "object",
         properties: {
           name: { type: "string" },
-          rule: { $ref: "#/components/schemas/LeagueRule" },
+          rule: { $ref: "#/components/schemas/LeagueRuleInput" },
           memberUserIds: { type: "array", items: { type: "string" } },
         },
         required: ["name", "rule", "memberUserIds"],
       },
       LeagueRule: {
+        oneOf: [
+          { $ref: "#/components/schemas/FixedSanmaLeagueRule" },
+          { $ref: "#/components/schemas/FixedYonmaLeagueRule" },
+          { $ref: "#/components/schemas/FloatingCountYonmaLeagueRule" },
+        ],
+      },
+      LeagueRuleInput: {
+        description:
+          "Accepts canonical fixed or floatingCount rules and legacy fixed rules without uma.mode. Legacy requests are normalized to mode=fixed.",
+        oneOf: [
+          { $ref: "#/components/schemas/LeagueRule" },
+          { $ref: "#/components/schemas/LegacyFixedSanmaLeagueRule" },
+          { $ref: "#/components/schemas/LegacyFixedYonmaLeagueRule" },
+        ],
+      },
+      UmaRule: {
+        description:
+          "Canonical uma mode union. The enclosing LeagueRule constrains fixed uma to the gameType-specific shape.",
+        oneOf: [
+          { $ref: "#/components/schemas/FixedUma" },
+          { $ref: "#/components/schemas/FloatingCountUma" },
+        ],
+        discriminator: {
+          propertyName: "mode",
+          mapping: {
+            fixed: "#/components/schemas/FixedUma",
+            floatingCount: "#/components/schemas/FloatingCountUma",
+          },
+        },
+      },
+      FixedSanmaLeagueRule: {
         type: "object",
         properties: {
-          gameType: { type: "string", enum: ["sanma", "yonma"] },
-          oka: {
-            type: "object",
-            properties: {
-              startingPoints: { type: "number" },
-              returnPoints: { type: "number" },
-            },
-            required: ["startingPoints", "returnPoints"],
-          },
+          gameType: { type: "string", enum: ["sanma"] },
+          oka: { $ref: "#/components/schemas/LeagueOka" },
           uma: {
-            type: "object",
-            properties: {
-              first: { type: "number" },
-              second: { type: "number" },
-              third: { type: "number" },
-              fourth: { type: "number", nullable: true },
-            },
-            required: ["first", "second", "third", "fourth"],
+            allOf: [
+              { $ref: "#/components/schemas/UmaRule" },
+              { $ref: "#/components/schemas/FixedSanmaUma" },
+            ],
           },
         },
         required: ["gameType", "oka", "uma"],
+      },
+      FixedYonmaLeagueRule: {
+        type: "object",
+        properties: {
+          gameType: { type: "string", enum: ["yonma"] },
+          oka: { $ref: "#/components/schemas/LeagueOka" },
+          uma: {
+            allOf: [
+              { $ref: "#/components/schemas/UmaRule" },
+              { $ref: "#/components/schemas/FixedYonmaUma" },
+            ],
+          },
+        },
+        required: ["gameType", "oka", "uma"],
+      },
+      FloatingCountYonmaLeagueRule: {
+        type: "object",
+        description:
+          "A yonma rule whose rank points are selected by the number of raw scores at or above returnPoints.",
+        properties: {
+          gameType: { type: "string", enum: ["yonma"] },
+          oka: { $ref: "#/components/schemas/LeagueOka" },
+          uma: {
+            allOf: [
+              { $ref: "#/components/schemas/UmaRule" },
+              { $ref: "#/components/schemas/FloatingCountUma" },
+            ],
+          },
+        },
+        required: ["gameType", "oka", "uma"],
+      },
+      LeagueOka: {
+        type: "object",
+        properties: {
+          startingPoints: { type: "integer" },
+          returnPoints: { type: "integer" },
+        },
+        required: ["startingPoints", "returnPoints"],
+      },
+      FixedSanmaUma: {
+        type: "object",
+        properties: {
+          mode: { type: "string", enum: ["fixed"] },
+          first: { type: "integer" },
+          second: { type: "integer" },
+          third: { type: "integer" },
+          fourth: { enum: [null] },
+        },
+        required: ["mode", "first", "second", "third", "fourth"],
+      },
+      FixedYonmaUma: {
+        type: "object",
+        properties: {
+          mode: { type: "string", enum: ["fixed"] },
+          first: { type: "integer" },
+          second: { type: "integer" },
+          third: { type: "integer" },
+          fourth: { type: "integer" },
+        },
+        required: ["mode", "first", "second", "third", "fourth"],
+      },
+      FixedUma: {
+        type: "object",
+        properties: {
+          mode: { type: "string", enum: ["fixed"] },
+          first: { type: "integer" },
+          second: { type: "integer" },
+          third: { type: "integer" },
+          fourth: { type: "integer", nullable: true },
+        },
+        required: ["mode", "first", "second", "third", "fourth"],
+      },
+      FloatingCountUma: {
+        type: "object",
+        description:
+          "Requires all floating counts from 0 to 4 and integer first-through-fourth rank points in each row. Each row must total zero.",
+        properties: {
+          mode: { type: "string", enum: ["floatingCount"] },
+          pointsByFloatingCount: {
+            $ref: "#/components/schemas/FloatingCountRankPointsTable",
+          },
+        },
+        required: ["mode", "pointsByFloatingCount"],
+      },
+      FloatingCountRankPointsTable: {
+        type: "object",
+        properties: {
+          "0": { $ref: "#/components/schemas/RankPoints" },
+          "1": { $ref: "#/components/schemas/RankPoints" },
+          "2": { $ref: "#/components/schemas/RankPoints" },
+          "3": { $ref: "#/components/schemas/RankPoints" },
+          "4": { $ref: "#/components/schemas/RankPoints" },
+        },
+        required: ["0", "1", "2", "3", "4"],
+      },
+      RankPoints: {
+        type: "object",
+        properties: {
+          first: { type: "integer" },
+          second: { type: "integer" },
+          third: { type: "integer" },
+          fourth: { type: "integer" },
+        },
+        required: ["first", "second", "third", "fourth"],
+      },
+      LegacyFixedSanmaLeagueRule: {
+        type: "object",
+        properties: {
+          gameType: { type: "string", enum: ["sanma"] },
+          oka: { $ref: "#/components/schemas/LeagueOka" },
+          uma: { $ref: "#/components/schemas/LegacyFixedSanmaUma" },
+        },
+        required: ["gameType", "oka", "uma"],
+      },
+      LegacyFixedYonmaLeagueRule: {
+        type: "object",
+        properties: {
+          gameType: { type: "string", enum: ["yonma"] },
+          oka: { $ref: "#/components/schemas/LeagueOka" },
+          uma: { $ref: "#/components/schemas/LegacyFixedYonmaUma" },
+        },
+        required: ["gameType", "oka", "uma"],
+      },
+      LegacyFixedSanmaUma: {
+        type: "object",
+        properties: {
+          first: { type: "integer" },
+          second: { type: "integer" },
+          third: { type: "integer" },
+          fourth: { enum: [null] },
+        },
+        required: ["first", "second", "third", "fourth"],
+        additionalProperties: false,
+      },
+      LegacyFixedYonmaUma: {
+        type: "object",
+        properties: {
+          first: { type: "integer" },
+          second: { type: "integer" },
+          third: { type: "integer" },
+          fourth: { type: "integer" },
+        },
+        required: ["first", "second", "third", "fourth"],
+        additionalProperties: false,
       },
       CreateSeasonInput: {
         type: "object",

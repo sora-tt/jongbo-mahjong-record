@@ -6,26 +6,23 @@ import { useRouter } from "next/navigation";
 
 import { createLeague } from "@/features/league/api";
 import {
-  getUmaTotalError,
-  parseIntegerInput,
-} from "@/features/league/model/validation";
+  buildLeagueRulePayload,
+  createDefaultLeagueRuleDraft,
+  type LeagueGameType,
+  type UmaMode,
+} from "@/features/league/model/rule-draft";
 import { ApiError, getApiErrorMessage } from "@/lib/api/core";
 import { searchUsers } from "@/lib/api/users";
+
+import type {
+  FloatingCount,
+  UmaRank,
+} from "@/features/league/model/validation";
 
 type MemberCandidate = {
   userId: string;
   name: string;
   username: string;
-};
-
-type RuleSettings = {
-  gameType: "sanma" | "yonma";
-  okaStartPoints: string;
-  okaReturnPoints: string;
-  uma1: string;
-  uma2: string;
-  uma3: string;
-  uma4: string;
 };
 
 export const useLeagueNew = () => {
@@ -42,16 +39,18 @@ export const useLeagueNew = () => {
   const [isSearchingMembers, setIsSearchingMembers] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [submitError, setSubmitError] = React.useState<string | null>(null);
+  const [showUmaErrors, setShowUmaErrors] = React.useState(false);
+  const [errorSummaryFocusToken, setErrorSummaryFocusToken] = React.useState(0);
 
-  const [ruleSettings, setRuleSettings] = React.useState<RuleSettings>({
-    gameType: "yonma",
-    okaStartPoints: "",
-    okaReturnPoints: "",
-    uma1: "",
-    uma2: "",
-    uma3: "",
-    uma4: "",
-  });
+  const [ruleSettings, setRuleSettings] = React.useState(
+    createDefaultLeagueRuleDraft
+  );
+
+  const failSubmit = React.useCallback((message: string) => {
+    setSubmitError(message);
+    setErrorSummaryFocusToken((token) => token + 1);
+  }, []);
 
   // リーグ名入力
   const handleLeagueNameChange = React.useCallback(
@@ -140,64 +139,60 @@ export const useLeagueNew = () => {
     });
   }, []);
 
-  const handleRuleSettingChange = React.useCallback(
-    (field: keyof RuleSettings, value: string) => {
+  const handleGameTypeChange = React.useCallback((gameType: LeagueGameType) => {
+    setRuleSettings((prev) => ({ ...prev, gameType }));
+  }, []);
+
+  const handleOkaSettingChange = React.useCallback(
+    (field: "okaStartPoints" | "okaReturnPoints", value: string) => {
+      setRuleSettings((prev) => ({ ...prev, [field]: value }));
+    },
+    []
+  );
+
+  const handleModeChange = React.useCallback((mode: UmaMode) => {
+    setRuleSettings((prev) => ({ ...prev, mode }));
+  }, []);
+
+  const handleFixedUmaChange = React.useCallback(
+    (rank: UmaRank, value: string) => {
       setRuleSettings((prev) => ({
         ...prev,
-        [field]: value,
+        fixedUma: { ...prev.fixedUma, [rank]: value },
       }));
     },
     []
   );
 
-  const umaTotalError = React.useMemo(() => {
-    const values =
-      ruleSettings.gameType === "sanma"
-        ? [ruleSettings.uma1, ruleSettings.uma2, ruleSettings.uma3]
-        : [
-            ruleSettings.uma1,
-            ruleSettings.uma2,
-            ruleSettings.uma3,
-            ruleSettings.uma4,
-          ];
-
-    if (values.some((value) => !value.trim())) {
-      return null;
-    }
-
-    return getUmaTotalError(values);
-  }, [ruleSettings]);
+  const handleFloatingCountUmaChange = React.useCallback(
+    (floatingCount: FloatingCount, rank: UmaRank, value: string) => {
+      setRuleSettings((prev) => ({
+        ...prev,
+        floatingCountUma: {
+          ...prev.floatingCountUma,
+          [floatingCount]: {
+            ...prev.floatingCountUma[floatingCount],
+            [rank]: value,
+          },
+        },
+      }));
+    },
+    []
+  );
 
   const handleSubmit = React.useCallback(async () => {
     setError(null);
-
-    const okaStartPoints = parseIntegerInput(ruleSettings.okaStartPoints);
-    const okaReturnPoints = parseIntegerInput(ruleSettings.okaReturnPoints);
-    const uma = {
-      1: parseIntegerInput(ruleSettings.uma1),
-      2: parseIntegerInput(ruleSettings.uma2),
-      3: parseIntegerInput(ruleSettings.uma3),
-      4: parseIntegerInput(ruleSettings.uma4),
-    };
+    setSubmitError(null);
+    setShowUmaErrors(true);
 
     if (!leagueName.trim()) {
-      setError("リーグ名を入力してください");
+      failSubmit("リーグ名を入力してください");
       return;
     }
 
-    if (
-      okaStartPoints === null ||
-      okaReturnPoints === null ||
-      uma[1] === null ||
-      uma[2] === null ||
-      uma[3] === null ||
-      (ruleSettings.gameType === "yonma" && uma[4] === null)
-    ) {
-      setError("モードに応じたオカとウマをすべて入力してください");
-      return;
-    }
-
-    if (umaTotalError) {
+    const result = buildLeagueRulePayload(ruleSettings);
+    if (!result.ok) {
+      failSubmit(result.error);
       return;
     }
 
@@ -207,19 +202,7 @@ export const useLeagueNew = () => {
       const createdLeague = await createLeague({
         name: leagueName.trim(),
         memberUserIds: Object.keys(addedMembers),
-        rule: {
-          gameType: ruleSettings.gameType,
-          oka: {
-            startingPoints: okaStartPoints,
-            returnPoints: okaReturnPoints,
-          },
-          uma: {
-            first: uma[1],
-            second: uma[2],
-            third: uma[3],
-            fourth: ruleSettings.gameType === "sanma" ? null : uma[4],
-          },
-        },
+        rule: result.rule,
       });
 
       router.push(`/league/${createdLeague.id}`);
@@ -229,11 +212,11 @@ export const useLeagueNew = () => {
         return;
       }
 
-      setError(getApiErrorMessage(submitError, "リーグ作成に失敗しました"));
+      failSubmit(getApiErrorMessage(submitError, "リーグ作成に失敗しました"));
     } finally {
       setIsSubmitting(false);
     }
-  }, [leagueName, addedMembers, ruleSettings, router, umaTotalError]);
+  }, [leagueName, addedMembers, ruleSettings, router, failSubmit]);
 
   return {
     leagueName,
@@ -243,14 +226,20 @@ export const useLeagueNew = () => {
     isSearchingMembers,
     isSubmitting,
     error,
-    umaTotalError,
+    submitError,
+    showUmaErrors,
+    errorSummaryFocusToken,
     ruleSettings,
 
     handleLeagueNameChange,
     handleMemberQueryChange,
     handleAddMember,
     handleRemoveMember,
-    handleRuleSettingChange,
+    handleGameTypeChange,
+    handleOkaSettingChange,
+    handleModeChange,
+    handleFixedUmaChange,
+    handleFloatingCountUmaChange,
     handleSubmit,
   };
 };

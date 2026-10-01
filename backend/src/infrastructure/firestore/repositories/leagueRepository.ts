@@ -467,32 +467,141 @@ export class FirestoreLeagueRepository implements LeagueRepository {
     }
     const uma = requiredObject(rule.uma, "leagues.rule.uma");
     const oka = requiredObject(rule.oka, "leagues.rule.oka");
+    const umaMode =
+      "mode" in uma
+        ? requiredString(uma.mode, "leagues.rule.uma.mode")
+        : "fixed";
+    if (umaMode !== "fixed" && umaMode !== "floating_count") {
+      throw new TypeError(`unsupported Firestore league uma mode: ${umaMode}`);
+    }
 
+    const mappedOka = {
+      startingPoints: requiredNumber(
+        oka.starting_points,
+        "leagues.rule.oka.starting_points",
+      ),
+      returnPoints: requiredNumber(
+        oka.return_points,
+        "leagues.rule.oka.return_points",
+      ),
+    };
+
+    if (umaMode === "floating_count") {
+      if (gameType !== "yonma") {
+        throw new TypeError(
+          "invalid Firestore league rule: floating_count uma requires yonma",
+        );
+      }
+
+      const pointsByFloatingCount = requiredObject(
+        uma.points_by_floating_count,
+        "leagues.rule.uma.points_by_floating_count",
+      );
+      const mapRankPoints = (floatingCount: number) => {
+        const row = requiredObject(
+          pointsByFloatingCount[String(floatingCount)],
+          `leagues.rule.uma.points_by_floating_count.${floatingCount}`,
+        );
+        return {
+          first: requiredNumber(
+            row.first,
+            `leagues.rule.uma.points_by_floating_count.${floatingCount}.first`,
+          ),
+          second: requiredNumber(
+            row.second,
+            `leagues.rule.uma.points_by_floating_count.${floatingCount}.second`,
+          ),
+          third: requiredNumber(
+            row.third,
+            `leagues.rule.uma.points_by_floating_count.${floatingCount}.third`,
+          ),
+          fourth: requiredNumber(
+            row.fourth,
+            `leagues.rule.uma.points_by_floating_count.${floatingCount}.fourth`,
+          ),
+        };
+      };
+
+      return {
+        gameType,
+        uma: {
+          mode: "floatingCount",
+          pointsByFloatingCount: {
+            0: mapRankPoints(0),
+            1: mapRankPoints(1),
+            2: mapRankPoints(2),
+            3: mapRankPoints(3),
+            4: mapRankPoints(4),
+          },
+        },
+        oka: mappedOka,
+      } satisfies LeagueRule;
+    }
+
+    const fourth = nullableNumber(uma.fourth, "leagues.rule.uma.fourth");
+    if (gameType === "sanma" && fourth !== null) {
+      throw new TypeError(
+        "invalid or missing Firestore field: leagues.rule.uma.fourth",
+      );
+    }
+    if (gameType === "yonma" && fourth === null) {
+      throw new TypeError(
+        "invalid or missing Firestore field: leagues.rule.uma.fourth",
+      );
+    }
+
+    const fixedUma = {
+      mode: "fixed" as const,
+      first: requiredNumber(uma.first, "leagues.rule.uma.first"),
+      second: requiredNumber(uma.second, "leagues.rule.uma.second"),
+      third: requiredNumber(uma.third, "leagues.rule.uma.third"),
+    };
+
+    if (gameType === "sanma") {
+      return {
+        gameType,
+        uma: { ...fixedUma, fourth: null },
+        oka: mappedOka,
+      } satisfies LeagueRule;
+    }
+
+    if (fourth === null) {
+      throw new TypeError(
+        "invalid or missing Firestore field: leagues.rule.uma.fourth",
+      );
+    }
     return {
       gameType,
-      uma: {
-        first: requiredNumber(uma.first, "leagues.rule.uma.first"),
-        second: requiredNumber(uma.second, "leagues.rule.uma.second"),
-        third: requiredNumber(uma.third, "leagues.rule.uma.third"),
-        fourth: nullableNumber(uma.fourth, "leagues.rule.uma.fourth"),
-      },
-      oka: {
-        startingPoints: requiredNumber(
-          oka.starting_points,
-          "leagues.rule.oka.starting_points",
-        ),
-        returnPoints: requiredNumber(
-          oka.return_points,
-          "leagues.rule.oka.return_points",
-        ),
-      },
+      uma: { ...fixedUma, fourth },
+      oka: mappedOka,
     } satisfies LeagueRule;
   }
 
   private toLeagueRuleDoc(rule: LeagueRule) {
+    if (rule.uma.mode === "floatingCount") {
+      return {
+        game_type: rule.gameType,
+        uma: {
+          mode: "floating_count",
+          points_by_floating_count: {
+            "0": rule.uma.pointsByFloatingCount[0],
+            "1": rule.uma.pointsByFloatingCount[1],
+            "2": rule.uma.pointsByFloatingCount[2],
+            "3": rule.uma.pointsByFloatingCount[3],
+            "4": rule.uma.pointsByFloatingCount[4],
+          },
+        },
+        oka: {
+          starting_points: rule.oka.startingPoints,
+          return_points: rule.oka.returnPoints,
+        },
+      };
+    }
+
     return {
       game_type: rule.gameType,
       uma: {
+        mode: "fixed",
         first: rule.uma.first,
         second: rule.uma.second,
         third: rule.uma.third,

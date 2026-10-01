@@ -191,6 +191,8 @@
 }
 ```
 
+League ruleのdomain validation errorも共通ErrorEnvelopeを使い、detailsに該当する入力field、浮き人数、期待合計、実際の合計を含める。
+
 ### 7.3 リーグ一覧
 
 `GET /api/leagues`
@@ -721,6 +723,7 @@
   "rule": {
     "gameType": "yonma",
     "uma": {
+      "mode": "fixed",
       "first": 20,
       "second": 10,
       "third": -10,

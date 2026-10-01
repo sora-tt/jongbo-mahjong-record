@@ -12,6 +12,7 @@ const makeService = (gameType: "sanma" | "yonma") => {
     getRule: async () => ({
       gameType,
       uma: {
+        mode: "fixed",
         first: 20,
         second: 10,
         third: -10,

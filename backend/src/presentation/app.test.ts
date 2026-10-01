@@ -1,6 +1,323 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { Hono } from "hono";
+import { validateLeagueRule } from "@/domain/league/rule.js";
+import { AppError } from "@/domain/shared/errors.js";
+import type { Services } from "@/presentation/dependencies.js";
+import type { AppBindings } from "@/presentation/bindings.js";
 import { createApp } from "@/presentation/app.js";
+import { buildLeaguesRouter } from "@/presentation/routes/leagues.js";
+import { createLeagueSchema } from "@/presentation/schemas/league.js";
+
+const floatingRule = {
+  gameType: "yonma",
+  oka: { startingPoints: 25000, returnPoints: 25000 },
+  uma: {
+    mode: "floatingCount",
+    pointsByFloatingCount: {
+      "0": { first: 0, second: 0, third: 0, fourth: 0 },
+      "1": { first: 12, second: -1, third: -3, fourth: -8 },
+      "2": { first: 8, second: 4, third: -4, fourth: -8 },
+      "3": { first: 8, second: 3, third: 1, fourth: -12 },
+      "4": { first: 0, second: 0, third: 0, fourth: 0 },
+    },
+  },
+} as const;
+
+const createLeagueContractApp = () => {
+  const services = {
+    leagueService: {
+      createLeague: async (
+        _userId: string,
+        input: { rule: Parameters<typeof validateLeagueRule>[0] },
+      ) => {
+        validateLeagueRule(input.rule);
+        return { id: "league-1", rule: input.rule };
+      },
+      updateLeague: async (
+        _userId: string,
+        _leagueId: string,
+        input: { rule?: Parameters<typeof validateLeagueRule>[0] },
+      ) => {
+        if (input.rule) validateLeagueRule(input.rule);
+        return { id: "league-1", rule: input.rule };
+      },
+    },
+  } as unknown as Services;
+
+  const app = new Hono<AppBindings>();
+  app.use("/api/leagues", async (c, next) => {
+    c.set("authUser", {
+      uid: "owner",
+      email: null,
+      name: null,
+      emailVerified: false,
+    });
+    await next();
+  });
+  app.use("/api/leagues/*", async (c, next) => {
+    c.set("authUser", {
+      uid: "owner",
+      email: null,
+      name: null,
+      emailVerified: false,
+    });
+    await next();
+  });
+  app.route("/api/leagues", buildLeaguesRouter(services));
+  app.onError((error, c) => {
+    if (error instanceof AppError) {
+      return c.json(
+        {
+          error: {
+            code: error.code,
+            message: error.message,
+            details: error.details ?? {},
+          },
+        },
+        error.status as 400 | 401 | 403 | 404 | 409 | 500,
+      );
+    }
+    throw error;
+  });
+  return app;
+};
+
+test("normalizes legacy fixed rules and accepts only valid gameType/mode pairs", () => {
+  const legacyFixedInput = {
+    name: "Legacy League",
+    memberUserIds: [],
+    rule: {
+      gameType: "yonma",
+      uma: { first: 20, second: 10, third: -10, fourth: -20 },
+      oka: { startingPoints: 25000, returnPoints: 30000 },
+    },
+  };
+
+  assert.deepEqual(createLeagueSchema.parse(legacyFixedInput).rule.uma, {
+    mode: "fixed",
+    first: 20,
+    second: 10,
+    third: -10,
+    fourth: -20,
+  });
+  assert.equal(
+    createLeagueSchema.safeParse({
+      ...legacyFixedInput,
+      rule: {
+        ...legacyFixedInput.rule,
+        uma: { mode: "fixed", ...legacyFixedInput.rule.uma },
+      },
+    }).success,
+    true,
+  );
+  assert.equal(
+    createLeagueSchema.safeParse({
+      ...legacyFixedInput,
+      rule: floatingRule,
+    }).success,
+    true,
+  );
+  assert.equal(
+    createLeagueSchema.safeParse({
+      ...legacyFixedInput,
+      rule: { ...floatingRule, gameType: "sanma" },
+    }).success,
+    false,
+  );
+});
+
+test("League create/update routes accept floatingCount rules and return the canonical five rows", async () => {
+  const app = createLeagueContractApp();
+  const createResponse = await app.request("/api/leagues", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      name: "浮き人数別",
+      rule: floatingRule,
+      memberUserIds: [],
+    }),
+  });
+  const createBody = (await createResponse.json()) as {
+    data: { rule: { uma: { mode: string; pointsByFloatingCount: unknown } } };
+  };
+
+  assert.equal(createResponse.status, 201);
+  assert.equal(createBody.data.rule.uma.mode, "floatingCount");
+  assert.deepEqual(
+    createBody.data.rule.uma.pointsByFloatingCount,
+    floatingRule.uma.pointsByFloatingCount,
+  );
+
+  const updateResponse = await app.request("/api/leagues/league-1", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ rule: floatingRule }),
+  });
+  const updateBody = (await updateResponse.json()) as {
+    data: { rule: { uma: { mode: string; pointsByFloatingCount: unknown } } };
+  };
+
+  assert.equal(updateResponse.status, 200);
+  assert.equal(updateBody.data.rule.uma.mode, "floatingCount");
+  assert.deepEqual(
+    updateBody.data.rule.uma.pointsByFloatingCount,
+    floatingRule.uma.pointsByFloatingCount,
+  );
+});
+
+test("League create/update routes preserve legacy fixed requests and return mode=fixed", async () => {
+  const app = createLeagueContractApp();
+  const legacyRule = {
+    gameType: "yonma",
+    oka: { startingPoints: 25000, returnPoints: 30000 },
+    uma: { first: 20, second: 10, third: -10, fourth: -20 },
+  };
+
+  const createResponse = await app.request("/api/leagues", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      name: "旧形式",
+      rule: legacyRule,
+      memberUserIds: [],
+    }),
+  });
+  const createBody = (await createResponse.json()) as {
+    data: { rule: { uma: { mode: string } } };
+  };
+
+  assert.equal(createResponse.status, 201);
+  assert.equal(createBody.data.rule.uma.mode, "fixed");
+
+  const updateResponse = await app.request("/api/leagues/league-1", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ rule: legacyRule }),
+  });
+  const updateBody = (await updateResponse.json()) as {
+    data: { rule: { uma: { mode: string } } };
+  };
+
+  assert.equal(updateResponse.status, 200);
+  assert.equal(updateBody.data.rule.uma.mode, "fixed");
+});
+
+test("League routes return ErrorEnvelope for invalid floatingCount rows", async () => {
+  const app = createLeagueContractApp();
+  const invalidRule = {
+    ...floatingRule,
+    uma: {
+      ...floatingRule.uma,
+      pointsByFloatingCount: {
+        ...floatingRule.uma.pointsByFloatingCount,
+        "2": { first: 9, second: 4, third: -4, fourth: -8 },
+      },
+    },
+  };
+
+  for (const request of [
+    {
+      path: "/api/leagues",
+      method: "POST",
+      body: { name: "不正ルール", rule: invalidRule, memberUserIds: [] },
+      expectedStatus: 400,
+    },
+    {
+      path: "/api/leagues/league-1",
+      method: "PATCH",
+      body: { rule: invalidRule },
+      expectedStatus: 400,
+    },
+  ]) {
+    const response = await app.request(request.path, {
+      method: request.method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(request.body),
+    });
+    const body = (await response.json()) as {
+      error: {
+        code: string;
+        message: string;
+        details: Record<string, unknown>;
+      };
+    };
+
+    assert.equal(response.status, request.expectedStatus);
+    assert.equal(body.error.code, "validation_error");
+    assert.equal(
+      body.error.message,
+      "floatingCount 2 rule.uma must total zero",
+    );
+    assert.deepEqual(body.error.details, {
+      field: "rule.uma",
+      mode: "floatingCount",
+      floatingCount: 2,
+      expectedTotal: 0,
+      actualTotal: 1,
+    });
+  }
+});
+
+test("League routes return ErrorEnvelope for missing rows and reject sanma floatingCount", async () => {
+  const app = createLeagueContractApp();
+  const missingRowRule = {
+    ...floatingRule,
+    uma: {
+      ...floatingRule.uma,
+      pointsByFloatingCount: {
+        ...floatingRule.uma.pointsByFloatingCount,
+        "4": undefined,
+      },
+    },
+  };
+  const nonIntegerRule = {
+    ...floatingRule,
+    uma: {
+      ...floatingRule.uma,
+      pointsByFloatingCount: {
+        ...floatingRule.uma.pointsByFloatingCount,
+        "3": { first: 8.5, second: 3, third: 1, fourth: -12 },
+      },
+    },
+  };
+
+  for (const rule of [missingRowRule, nonIntegerRule]) {
+    const response = await app.request("/api/leagues", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: "invalid floating rows",
+        rule,
+        memberUserIds: [],
+      }),
+    });
+    const body = (await response.json()) as {
+      error: { code: string; message: string; details: { issues: unknown[] } };
+    };
+
+    assert.equal(response.status, 400);
+    assert.equal(body.error.code, "validation_error");
+    assert.equal(body.error.message, "request validation failed");
+    assert.ok(body.error.details.issues.length > 0);
+  }
+
+  const sanmaRule = {
+    ...floatingRule,
+    gameType: "sanma",
+  };
+  const sanmaResponse = await app.request("/api/leagues", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name: "三麻", rule: sanmaRule, memberUserIds: [] }),
+  });
+  const sanmaBody = (await sanmaResponse.json()) as {
+    error: { code: string };
+  };
+
+  assert.equal(sanmaResponse.status, 400);
+  assert.equal(sanmaBody.error.code, "validation_error");
+});
 
 test("health endpoint returns the standard data envelope", async () => {
   const response = await createApp().request("/api/health");
@@ -94,6 +411,34 @@ test("OpenAPI publishes the canonical auth and match request contracts", async (
           required?: string[];
         };
         LeagueSummary: { properties: Record<string, unknown> };
+        LeagueRule: { oneOf?: Array<{ $ref?: string }> };
+        LeagueRuleInput: { oneOf?: Array<{ $ref?: string }> };
+        UmaRule: {
+          oneOf?: Array<{ $ref?: string }>;
+          discriminator?: {
+            propertyName?: string;
+            mapping?: Record<string, string>;
+          };
+        };
+        FixedYonmaUma: {
+          properties: Record<string, unknown>;
+          required?: string[];
+        };
+        LegacyFixedSanmaUma: {
+          properties: Record<string, unknown>;
+          required?: string[];
+          additionalProperties?: boolean;
+        };
+        LegacyFixedYonmaUma: {
+          properties: Record<string, unknown>;
+          required?: string[];
+          additionalProperties?: boolean;
+        };
+        FloatingCountRankPointsTable: {
+          properties: Record<string, unknown>;
+          required?: string[];
+        };
+        LeagueDetail: { properties: Record<string, unknown> };
       };
     };
   };
@@ -119,6 +464,57 @@ test("OpenAPI publishes the canonical auth and match request contracts", async (
     "startedAt",
     "memberUserIds",
   ]);
+  assert.deepEqual(
+    document.components.schemas.LeagueRule.oneOf?.map(({ $ref }) => $ref),
+    [
+      "#/components/schemas/FixedSanmaLeagueRule",
+      "#/components/schemas/FixedYonmaLeagueRule",
+      "#/components/schemas/FloatingCountYonmaLeagueRule",
+    ],
+  );
+  assert.deepEqual(
+    document.components.schemas.LeagueRuleInput.oneOf?.map(({ $ref }) => $ref),
+    [
+      "#/components/schemas/LeagueRule",
+      "#/components/schemas/LegacyFixedSanmaLeagueRule",
+      "#/components/schemas/LegacyFixedYonmaLeagueRule",
+    ],
+  );
+  assert.deepEqual(
+    document.components.schemas.UmaRule.oneOf?.map(({ $ref }) => $ref),
+    ["#/components/schemas/FixedUma", "#/components/schemas/FloatingCountUma"],
+  );
+  assert.deepEqual(document.components.schemas.UmaRule.discriminator, {
+    propertyName: "mode",
+    mapping: {
+      fixed: "#/components/schemas/FixedUma",
+      floatingCount: "#/components/schemas/FloatingCountUma",
+    },
+  });
+  assert.equal(
+    "mode" in document.components.schemas.FixedYonmaUma.properties,
+    true,
+  );
+  for (const legacyUma of [
+    document.components.schemas.LegacyFixedSanmaUma,
+    document.components.schemas.LegacyFixedYonmaUma,
+  ]) {
+    assert.equal("mode" in legacyUma.properties, false);
+    assert.equal(legacyUma.additionalProperties, false);
+  }
+  assert.deepEqual(
+    document.components.schemas.FloatingCountRankPointsTable.required,
+    ["0", "1", "2", "3", "4"],
+  );
+  assert.deepEqual(
+    Object.keys(
+      document.components.schemas.FloatingCountRankPointsTable.properties,
+    ).sort(),
+    ["0", "1", "2", "3", "4"],
+  );
+  assert.deepEqual(document.components.schemas.LeagueDetail.properties.rule, {
+    $ref: "#/components/schemas/LeagueRule",
+  });
   const leaguePath = document.paths["/api/leagues/{leagueId}"];
   assert.deepEqual(
     leaguePath.delete?.parameters?.map((parameter) => parameter.name),

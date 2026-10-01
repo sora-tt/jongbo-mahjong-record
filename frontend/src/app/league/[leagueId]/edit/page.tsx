@@ -13,6 +13,8 @@ import {
 
 import Link from "next/link";
 
+import { LeagueRuleEditor } from "@/features/league/ui/league-rule-editor";
+
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -34,30 +36,22 @@ const EditLeaguePage: React.FC = () => {
     isSubmitting,
     error,
     isRuleLocked,
-    umaTotalError,
+    submitError,
+    showUmaErrors,
+    errorSummaryFocusToken,
     ruleSettings,
     handleLeagueNameChange,
     handleMemberQueryChange,
     handleAddMember,
     handleRemoveMember,
-    handleRuleSettingChange,
+    handleGameTypeChange,
+    handleOkaSettingChange,
+    handleModeChange,
+    handleFixedUmaChange,
+    handleFloatingCountUmaChange,
     handleSubmit,
     retry,
   } = useLeagueEdit();
-
-  const umaFields =
-    ruleSettings.gameType === "sanma"
-      ? ([
-          { field: "uma1", label: "1位" },
-          { field: "uma2", label: "2位" },
-          { field: "uma3", label: "3位" },
-        ] as const)
-      : ([
-          { field: "uma1", label: "1位" },
-          { field: "uma2", label: "2位" },
-          { field: "uma3", label: "3位" },
-          { field: "uma4", label: "4位" },
-        ] as const);
 
   if (loading) {
     return (
@@ -238,7 +232,7 @@ const EditLeaguePage: React.FC = () => {
                     size="sm"
                     selected={ruleSettings.gameType === value}
                     disabled={isRuleLocked}
-                    onClick={() => handleRuleSettingChange("gameType", value)}
+                    onClick={() => handleGameTypeChange(value)}
                   >
                     {label}
                   </Button>
@@ -266,7 +260,7 @@ const EditLeaguePage: React.FC = () => {
                     value={ruleSettings[field]}
                     disabled={isRuleLocked}
                     onChange={(event) =>
-                      handleRuleSettingChange(field, event.target.value)
+                      handleOkaSettingChange(field, event.target.value)
                     }
                     placeholder={placeholder}
                   />
@@ -278,30 +272,20 @@ const EditLeaguePage: React.FC = () => {
               <h3 className="text-sm font-semibold text-foreground">
                 ウマ設定
               </h3>
-              <div className="grid grid-cols-4 gap-2">
-                {umaFields.map(({ field, label }) => (
-                  <Input
-                    key={field}
-                    label={label}
-                    containerClassName="space-y-1"
-                    className="h-10 rounded-lg px-2 text-center shadow-none"
-                    type="number"
-                    value={ruleSettings[field]}
-                    disabled={isRuleLocked}
-                    onChange={(event) =>
-                      handleRuleSettingChange(field, event.target.value)
-                    }
-                    placeholder="例: 15"
-                  />
-                ))}
-              </div>
+              <LeagueRuleEditor
+                gameType={ruleSettings.gameType}
+                mode={ruleSettings.mode}
+                fixedUma={ruleSettings.fixedUma}
+                floatingCountUma={ruleSettings.floatingCountUma}
+                showErrorSummary={showUmaErrors}
+                submitError={submitError}
+                errorSummaryFocusToken={errorSummaryFocusToken}
+                disabled={isRuleLocked || isSubmitting}
+                onModeChange={handleModeChange}
+                onFixedUmaChange={handleFixedUmaChange}
+                onFloatingCountUmaChange={handleFloatingCountUmaChange}
+              />
             </div>
-
-            {umaTotalError ? (
-              <p className="text-sm text-danger" role="alert">
-                {umaTotalError}
-              </p>
-            ) : null}
           </section>
 
           {error ? <ErrorState message={error} /> : null}
@@ -310,7 +294,7 @@ const EditLeaguePage: React.FC = () => {
             <Button
               onClick={handleSubmit}
               loading={isSubmitting}
-              disabled={isSubmitting || Boolean(umaTotalError)}
+              disabled={isSubmitting || isRuleLocked}
               size="lg"
               className="min-w-[144px] rounded-xl"
             >

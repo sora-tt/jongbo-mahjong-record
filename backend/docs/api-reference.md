@@ -350,6 +350,7 @@ x-id-token: <ID_TOKEN>
   "rule": {
     "gameType": "yonma",
     "uma": {
+      "mode": "fixed",
       "first": 20,
       "second": 10,
       "third": -10,
@@ -374,6 +375,7 @@ x-id-token: <ID_TOKEN>
     "rule": {
       "gameType": "yonma",
       "uma": {
+        "mode": "fixed",
         "first": 20,
         "second": 10,
         "third": -10,
@@ -400,6 +402,29 @@ x-id-token: <ID_TOKEN>
   }
 }
 ```
+
+既存clientとの互換性のため、固定ruleのrequestではuma.modeを省略できます。たとえば旧形式のumaは { first: 20, second: 10, third: -10, fourth: -20 } です。modeなしで送信したfixed ruleも、responseではuma.mode=fixedを含むcanonical shapeで返ります。
+
+四麻で浮き人数別順位点を設定する場合は、POST/PATCHのruleを次の形で送ります。0〜4人の全行が必須で、各順位点は整数、各行の合計は0である必要があります。
+
+```json
+{
+  "gameType": "yonma",
+  "uma": {
+    "mode": "floatingCount",
+    "pointsByFloatingCount": {
+      "0": { "first": 0, "second": 0, "third": 0, "fourth": 0 },
+      "1": { "first": 12, "second": -1, "third": -3, "fourth": -8 },
+      "2": { "first": 8, "second": 4, "third": -4, "fourth": -8 },
+      "3": { "first": 8, "second": 3, "third": 1, "fourth": -12 },
+      "4": { "first": 0, "second": 0, "third": 0, "fourth": 0 }
+    }
+  },
+  "oka": { "startingPoints": 25000, "returnPoints": 25000 }
+}
+```
+
+floatingCountのresponseも同じ5行とmodeを含みます。浮き人数はraw scoreが返し点以上の参加者数です。modeとgameTypeの不整合、欠落行、非整数、行合計不一致はHTTP 400で共通ErrorEnvelopeを返します。
 
 ### GET /api/leagues/:leagueId
 

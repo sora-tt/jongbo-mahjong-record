@@ -1,45 +1,15 @@
 import type { MatchResult } from "@/domain/match/types.js";
+import type { FloatingCount, LeagueRule } from "@/domain/league/types.js";
 import { ValidationError } from "@/domain/shared/errors.js";
 import { asOpaqueId, type GameType, type Wind } from "@/domain/shared/types.js";
-
-type MatchCalculationRule = {
-  gameType: GameType;
-  uma: {
-    first: number;
-    second: number;
-    third: number;
-    fourth: number | null;
-  };
-  oka: {
-    startingPoints: number;
-    returnPoints: number;
-  };
-};
 
 const expectedWindsByGameType: Record<GameType, readonly Wind[]> = {
   sanma: ["east", "south", "west"],
   yonma: ["east", "south", "west", "north"],
 };
 
-const getUmaByRank = (rule: MatchCalculationRule, rank: number) => {
-  const playerCount = rule.gameType === "sanma" ? 3 : 4;
-  const oka =
-    ((rule.oka.returnPoints - rule.oka.startingPoints) * playerCount) / 1000;
-
-  if (rank === 1) {
-    return rule.uma.first + oka;
-  }
-  if (rank === 2) {
-    return rule.uma.second;
-  }
-  if (rank === 3) {
-    return rule.uma.third;
-  }
-  return rule.uma.fourth ?? 0;
-};
-
 export const calculateMatchPoints = (
-  rule: MatchCalculationRule,
+  rule: LeagueRule,
   results: Array<{
     userId: string;
     userName: string;
@@ -84,6 +54,31 @@ export const calculateMatchPoints = (
     });
   }
 
+  const rankPoints =
+    rule.uma.mode === "fixed"
+      ? rule.uma
+      : rule.uma.pointsByFloatingCount[
+          results.filter((result) => result.rawScore >= rule.oka.returnPoints)
+            .length as FloatingCount
+        ];
+  const getUmaByRank = (rank: number) => {
+    const oka =
+      ((rule.oka.returnPoints - rule.oka.startingPoints) *
+        expectedPlayerCount) /
+      1000;
+
+    if (rank === 1) {
+      return rankPoints.first + oka;
+    }
+    if (rank === 2) {
+      return rankPoints.second;
+    }
+    if (rank === 3) {
+      return rankPoints.third;
+    }
+    return rankPoints.fourth ?? 0;
+  };
+
   // rank は入力値を信用せず、rawScore から再計算する。同点時も backend 側で一貫して扱う。
   const sorted = [...results].sort(
     (left, right) => right.rawScore - left.rawScore,
@@ -113,7 +108,7 @@ export const calculateMatchPoints = (
       (_, index) => result.rank + index,
     );
     const splitUma =
-      occupiedRanks.reduce((sum, rank) => sum + getUmaByRank(rule, rank), 0) /
+      occupiedRanks.reduce((sum, rank) => sum + getUmaByRank(rank), 0) /
       tiedPlayers.length;
     // rawScore は 100 点単位で渡される前提なので、素点差は 1000 で割るだけでよい。
     const adjusted = result.rawScore - rule.oka.returnPoints;
