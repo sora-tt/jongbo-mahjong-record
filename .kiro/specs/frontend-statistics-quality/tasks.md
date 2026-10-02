@@ -82,7 +82,7 @@
   - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5_
   - _Boundary: Statistics Aggregation Module_
 
-- [ ] 2.4 確定Match結果からuser-match投影を構築する
+- [x] 2.4 確定Match結果からuser-match投影を構築する
   - 各参加者につき1対局1投影を作り、順位・席・素点・最終point・日時・形式・チョンボ・相手情報を保持する。
   - ゲーム形式は記録済みresults件数から決め、現在のリーグ設定で過去対局を再分類しない。
   - 同じMatchから常に同じ投影を生成し、正本にない局単位情報を補わない。
