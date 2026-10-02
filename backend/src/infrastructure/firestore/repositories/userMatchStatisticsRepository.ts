@@ -6,11 +6,264 @@ import {
   type Firestore,
   type Query,
 } from "firebase-admin/firestore";
+import { asIsoDateString, asOpaqueId } from "@/domain/shared/types.js";
 import type { UserMatchStatisticsRepository } from "@/domain/statistics/repository.js";
-import type { UserMatchStatistics } from "@/domain/statistics/types.js";
+import type {
+  StatisticsMatchPage,
+  StatisticsScope,
+  UserMatchStatistics,
+} from "@/domain/statistics/types.js";
+import {
+  nullableString,
+  requiredArray,
+  requiredNumber,
+  requiredObject,
+  requiredString,
+  toIsoString,
+} from "@/infrastructure/firestore/utils.js";
 
 const COLLECTION = "user_match_statistics";
 const WRITE_BATCH_SIZE = 400;
+const MAX_HISTORY_PAGE_SIZE = 100;
+const HISTORY_ORDER = [
+  ["played_at", "desc"],
+  ["session_id", "desc"],
+  ["match_index", "desc"],
+  ["match_id", "desc"],
+] as const;
+
+type UserMatchStatisticsQuery = StatisticsScope & { userId: string };
+type UserMatchStatisticsPageQuery = UserMatchStatisticsQuery & {
+  limit: number;
+  cursor?: string;
+};
+
+type HistoryCursor = {
+  version: 1;
+  query: string;
+  playedAt: string;
+  sessionId: string;
+  matchIndex: number;
+  matchId: string;
+};
+
+const cursorQueryKey = (query: UserMatchStatisticsQuery): string =>
+  JSON.stringify({
+    userId: query.userId,
+    scopeType: query.scopeType,
+    leagueId: query.scopeType === "overall" ? null : query.leagueId,
+    seasonId: query.scopeType === "season" ? query.seasonId : null,
+    from: query.from ?? null,
+    to: query.to ?? null,
+    gameType: query.gameType ?? "all",
+  });
+
+const toStatisticsScope = (
+  query: UserMatchStatisticsQuery,
+): StatisticsScope => {
+  const filters = {
+    ...(query.from ? { from: query.from } : {}),
+    ...(query.to ? { to: query.to } : {}),
+    ...(query.gameType ? { gameType: query.gameType } : {}),
+  };
+
+  if (query.scopeType === "overall") {
+    return { ...filters, scopeType: "overall" };
+  }
+  if (query.scopeType === "league") {
+    return {
+      ...filters,
+      scopeType: "league",
+      leagueId: query.leagueId,
+    };
+  }
+  return {
+    ...filters,
+    scopeType: "season",
+    leagueId: query.leagueId,
+    seasonId: query.seasonId,
+  };
+};
+
+const encodeCursor = (
+  queryKey: string,
+  lastRow: Pick<
+    UserMatchStatistics,
+    "playedAt" | "sessionId" | "matchIndex" | "matchId"
+  >,
+): string =>
+  Buffer.from(
+    JSON.stringify({
+      version: 1,
+      query: queryKey,
+      playedAt: lastRow.playedAt,
+      sessionId: lastRow.sessionId,
+      matchIndex: lastRow.matchIndex,
+      matchId: lastRow.matchId,
+    } satisfies HistoryCursor),
+  ).toString("base64url");
+
+const decodeCursor = (cursor: string, queryKey: string): HistoryCursor => {
+  let value: unknown;
+  try {
+    value = JSON.parse(Buffer.from(cursor, "base64url").toString("utf8"));
+  } catch {
+    throw new TypeError("invalid cursor");
+  }
+
+  if (typeof value !== "object" || value === null) {
+    throw new TypeError("invalid cursor");
+  }
+
+  const decoded = value as Partial<HistoryCursor>;
+  if (
+    decoded.version !== 1 ||
+    typeof decoded.query !== "string" ||
+    typeof decoded.playedAt !== "string" ||
+    typeof decoded.sessionId !== "string" ||
+    typeof decoded.matchIndex !== "number" ||
+    !Number.isFinite(decoded.matchIndex) ||
+    typeof decoded.matchId !== "string"
+  ) {
+    throw new TypeError("invalid cursor");
+  }
+  if (decoded.query !== queryKey) {
+    throw new TypeError("cursor does not match query");
+  }
+
+  return decoded as HistoryCursor;
+};
+
+const mapProjection = (id: string, data: DocumentData): UserMatchStatistics => {
+  const gameType = requiredString(
+    data.game_type,
+    "user_match_statistics.game_type",
+  );
+  if (gameType !== "sanma" && gameType !== "yonma") {
+    throw new TypeError(
+      "invalid or missing Firestore field: user_match_statistics.game_type",
+    );
+  }
+  const wind = requiredString(data.wind, "user_match_statistics.wind");
+  if (
+    wind !== "east" &&
+    wind !== "south" &&
+    wind !== "west" &&
+    wind !== "north"
+  ) {
+    throw new TypeError(
+      "invalid or missing Firestore field: user_match_statistics.wind",
+    );
+  }
+  const playerCount = requiredNumber(
+    data.player_count,
+    "user_match_statistics.player_count",
+  );
+  if (playerCount !== 3 && playerCount !== 4) {
+    throw new TypeError(
+      "invalid or missing Firestore field: user_match_statistics.player_count",
+    );
+  }
+
+  return {
+    id: asOpaqueId(id),
+    userId: asOpaqueId(
+      requiredString(data.user_id, "user_match_statistics.user_id"),
+    ),
+    userName: requiredString(data.user_name, "user_match_statistics.user_name"),
+    leagueId: asOpaqueId(
+      requiredString(data.league_id, "user_match_statistics.league_id"),
+    ),
+    leagueName: requiredString(
+      data.league_name,
+      "user_match_statistics.league_name",
+    ),
+    seasonId: asOpaqueId(
+      requiredString(data.season_id, "user_match_statistics.season_id"),
+    ),
+    seasonName: requiredString(
+      data.season_name,
+      "user_match_statistics.season_name",
+    ),
+    sessionId: asOpaqueId(
+      requiredString(data.session_id, "user_match_statistics.session_id"),
+    ),
+    sessionLabel: nullableString(
+      data.session_label,
+      "user_match_statistics.session_label",
+    ),
+    matchId: asOpaqueId(
+      requiredString(data.match_id, "user_match_statistics.match_id"),
+    ),
+    matchIndex: requiredNumber(
+      data.match_index,
+      "user_match_statistics.match_index",
+    ),
+    playedAt: toIsoString(data.played_at),
+    gameType,
+    playerCount,
+    wind,
+    rank: requiredNumber(data.rank, "user_match_statistics.rank"),
+    rawScore: requiredNumber(data.raw_score, "user_match_statistics.raw_score"),
+    finalPoint: requiredNumber(
+      data.final_point,
+      "user_match_statistics.final_point",
+    ),
+    chomboCount: requiredNumber(
+      data.chombo_count,
+      "user_match_statistics.chombo_count",
+    ),
+    opponents: requiredArray(
+      data.opponents,
+      "user_match_statistics.opponents",
+    ).map((value) => {
+      const opponent = requiredObject(
+        value,
+        "user_match_statistics.opponents[]",
+      );
+      return {
+        userId: asOpaqueId(
+          requiredString(
+            opponent.user_id,
+            "user_match_statistics.opponents[].user_id",
+          ),
+        ),
+        userName: requiredString(
+          opponent.user_name,
+          "user_match_statistics.opponents[].user_name",
+        ),
+        rank: requiredNumber(
+          opponent.rank,
+          "user_match_statistics.opponents[].rank",
+        ),
+        finalPoint: requiredNumber(
+          opponent.final_point,
+          "user_match_statistics.opponents[].final_point",
+        ),
+      };
+    }),
+    updatedAt: toIsoString(data.updated_at),
+  };
+};
+
+const toHistoryItem = (row: UserMatchStatistics) => ({
+  match: {
+    matchId: row.matchId,
+    leagueId: row.leagueId,
+    leagueName: row.leagueName,
+    seasonId: row.seasonId,
+    seasonName: row.seasonName,
+    sessionId: row.sessionId,
+    sessionLabel: row.sessionLabel,
+    playedAt: row.playedAt,
+  },
+  gameType: row.gameType,
+  wind: row.wind,
+  rank: row.rank,
+  rawScore: row.rawScore,
+  finalPoint: row.finalPoint,
+  opponents: row.opponents,
+});
 
 /** Stable for the same user, league, season, session, and match tuple. */
 export const buildUserMatchStatisticsId = (
@@ -131,6 +384,114 @@ export class FirestoreUserMatchStatisticsRepository implements UserMatchStatisti
       this.db.collection(COLLECTION).where("league_id", "==", leagueId),
       () => true,
     );
+  }
+
+  async listForScope(
+    query: UserMatchStatisticsQuery,
+  ): Promise<UserMatchStatistics[]> {
+    const snapshot = await this.buildScopedQuery(query)
+      .orderBy(...HISTORY_ORDER[0])
+      .orderBy(...HISTORY_ORDER[1])
+      .orderBy(...HISTORY_ORDER[2])
+      .orderBy(...HISTORY_ORDER[3])
+      .get();
+    return snapshot.docs.map((doc) => mapProjection(doc.id, doc.data()));
+  }
+
+  async listPage(
+    query: UserMatchStatisticsPageQuery,
+  ): Promise<StatisticsMatchPage> {
+    if (
+      !Number.isInteger(query.limit) ||
+      query.limit < 1 ||
+      query.limit > MAX_HISTORY_PAGE_SIZE
+    ) {
+      throw new TypeError(
+        `limit must be between 1 and ${MAX_HISTORY_PAGE_SIZE}`,
+      );
+    }
+
+    const queryKey = cursorQueryKey(query);
+    const cursor = query.cursor
+      ? decodeCursor(query.cursor, queryKey)
+      : undefined;
+    let scopedQuery = this.buildScopedQuery(query)
+      .orderBy(...HISTORY_ORDER[0])
+      .orderBy(...HISTORY_ORDER[1])
+      .orderBy(...HISTORY_ORDER[2])
+      .orderBy(...HISTORY_ORDER[3]);
+
+    if (cursor) {
+      scopedQuery = scopedQuery.startAfter(
+        Timestamp.fromDate(new Date(cursor.playedAt)),
+        cursor.sessionId,
+        cursor.matchIndex,
+        cursor.matchId,
+      );
+    }
+
+    const snapshot = await scopedQuery.limit(query.limit + 1).get();
+    const pageDocuments = snapshot.docs.slice(0, query.limit);
+    const rows = pageDocuments.map((doc) => mapProjection(doc.id, doc.data()));
+    const hasNextPage = snapshot.docs.length > query.limit;
+    const lastRow = rows.at(-1);
+    const nextCursor =
+      hasNextPage && lastRow ? encodeCursor(queryKey, lastRow) : null;
+    const generatedAt = asIsoDateString(new Date().toISOString());
+
+    if (rows.length === 0) {
+      return {
+        status: "empty",
+        scope: toStatisticsScope(query),
+        generatedAt,
+        timeZone: "Asia/Tokyo",
+        items: [],
+        nextCursor: null,
+      };
+    }
+
+    return {
+      status: "ready",
+      scope: toStatisticsScope(query),
+      generatedAt,
+      timeZone: "Asia/Tokyo",
+      items: rows.map(toHistoryItem),
+      nextCursor,
+    };
+  }
+
+  private buildScopedQuery(
+    query: UserMatchStatisticsQuery,
+  ): Query<DocumentData> {
+    let scopedQuery: Query<DocumentData> = this.db
+      .collection(COLLECTION)
+      .where("user_id", "==", query.userId);
+
+    if (query.scopeType !== "overall") {
+      scopedQuery = scopedQuery.where("league_id", "==", query.leagueId);
+    }
+    if (query.scopeType === "season") {
+      scopedQuery = scopedQuery.where("season_id", "==", query.seasonId);
+    }
+    if (query.from) {
+      scopedQuery = scopedQuery.where(
+        "played_at",
+        ">=",
+        Timestamp.fromDate(new Date(query.from)),
+      );
+    }
+    if (query.to) {
+      scopedQuery = scopedQuery.where(
+        "played_at",
+        "<",
+        Timestamp.fromDate(new Date(query.to)),
+      );
+    }
+    if (query.gameType && query.gameType !== "all") {
+      scopedQuery = scopedQuery.where("game_type", "==", query.gameType);
+    }
+
+    return scopedQuery;
   }
 
   private async deleteMatching(

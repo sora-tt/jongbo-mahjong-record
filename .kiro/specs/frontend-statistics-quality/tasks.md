@@ -16,7 +16,7 @@
   - _Requirements: 5.5, 8.1, 8.2_
   - _Boundary: UserMatchStatisticsRepository_
 
-- [ ] 1.3 user-match投影の絞り込み検索とcursor pageを実装する
+- [x] 1.3 user-match投影の絞り込み検索とcursor pageを実装する
   - target user、scope、日時、game typeを使って投影を検索する。
   - 履歴sortをplayedAt、sessionId、matchIndex、matchIdの降順で固定し、opaque cursorを扱う。
   - 条件を維持した複数ページに欠落・重複がなく、指定したlimit以内の結果だけを返す。
