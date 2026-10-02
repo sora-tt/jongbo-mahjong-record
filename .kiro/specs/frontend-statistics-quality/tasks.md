@@ -40,7 +40,7 @@
   - _Requirements: 9.8, 10.1_
   - _Boundary: League and Season Membership Repositories_
 
-- [ ] 1.6 statistics target access policyを実装する
+- [x] 1.6 statistics target access policyを実装する
   - viewerとtargetが同じIDなら本人の閲覧を許可する。
   - 異なるIDではleague/seasonに限り、両者が同じscopeの参加者の場合だけ許可する。
   - overallの他人指定またはscope外のtargetを403で拒否する。
