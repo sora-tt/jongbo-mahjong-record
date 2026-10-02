@@ -9,7 +9,7 @@
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 8.2, 8.3, 9.1_
   - _Boundary: Statistics Domain Contracts_
 
-- [ ] 1.2 user-match投影の保存repositoryを実装する
+- [x] 1.2 user-match投影の保存repositoryを実装する
   - user・league・season・session・matchの組から決定的IDを作り、投影を冪等に保存する。
   - season単位の置換、古い投影のprune、season/league単位の削除を提供する。
   - 同じ再構築を繰り返しても重複せず、更新・削除後に対象外の投影が残らない。
