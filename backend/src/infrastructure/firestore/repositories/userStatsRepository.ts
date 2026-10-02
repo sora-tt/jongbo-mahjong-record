@@ -1,7 +1,17 @@
 import { Timestamp, type Firestore } from "firebase-admin/firestore";
-import type { UserStats } from "@/domain/user/types.js";
+import { z } from "zod";
+import type {
+  UserStats,
+  UserStatsUpsertData,
+  UserStatsWithPersonalStatistics,
+} from "@/domain/user/types.js";
 import type { UserStatsRepository } from "@/domain/user/repository.js";
-import type { ScopeType } from "@/domain/shared/types.js";
+import {
+  asIsoDateString,
+  asOpaqueId,
+  type ScopeType,
+} from "@/domain/shared/types.js";
+import type { PersonalStatisticsSnapshot } from "@/domain/statistics/types.js";
 import {
   nullableNumber,
   nullableString,
@@ -9,8 +19,198 @@ import {
   requiredString,
   toIsoString,
 } from "@/infrastructure/firestore/utils.js";
-import { asOpaqueId } from "@/domain/shared/types.js";
 import { buildUserStatsId, type UserStatsKey } from "@/domain/user/statsKey.js";
+
+const finiteNumberSchema = z.number().finite();
+const nullableNumberSchema = finiteNumberSchema.nullable();
+const gameTypeSchema = z.enum(["sanma", "yonma"]);
+
+const uniqueGameTypes = <T extends { gameType: string }>(
+  summaries: readonly T[],
+) =>
+  new Set(summaries.map((summary) => summary.gameType)).size ===
+  summaries.length;
+
+const containsBothGameTypes = <T extends { gameType: string }>(
+  summaries: readonly T[],
+) =>
+  summaries.length === 2 &&
+  summaries.some((summary) => summary.gameType === "sanma") &&
+  summaries.some((summary) => summary.gameType === "yonma");
+
+const rateCountSchema = z.object({
+  count: finiteNumberSchema,
+  denominator: finiteNumberSchema,
+  rate: nullableNumberSchema,
+});
+
+const numericSummarySchema = z.object({
+  matchCount: finiteNumberSchema,
+  average: nullableNumberSchema,
+  maximum: nullableNumberSchema,
+  minimum: nullableNumberSchema,
+  median: nullableNumberSchema,
+  populationStandardDeviation: nullableNumberSchema,
+});
+
+const formatSummarySchema = z
+  .object({
+    gameType: gameTypeSchema,
+    matchCount: finiteNumberSchema,
+    totalPoints: finiteNumberSchema,
+    averageFinalPoint: nullableNumberSchema,
+    averageRank: nullableNumberSchema,
+    ranks: z
+      .array(
+        z.object({
+          rank: finiteNumberSchema,
+          count: finiteNumberSchema,
+          rate: nullableNumberSchema,
+        }),
+      )
+      .max(4),
+    topRate: nullableNumberSchema,
+    topTwoRate: nullableNumberSchema,
+    topThreeRate: nullableNumberSchema,
+    lastRate: nullableNumberSchema,
+    lastAvoidanceRate: nullableNumberSchema,
+  })
+  .superRefine((summary, context) => {
+    if (summary.ranks.length > (summary.gameType === "sanma" ? 3 : 4)) {
+      context.addIssue({
+        code: "custom",
+        message: "rank count exceeds the selected game type",
+        path: ["ranks"],
+      });
+    }
+  });
+
+const formatSummaryListSchema = z
+  .array(formatSummarySchema)
+  .max(2)
+  .superRefine((summaries, context) => {
+    if (!uniqueGameTypes(summaries)) {
+      context.addIssue({
+        code: "custom",
+        message: "game type summaries must be unique",
+      });
+    }
+  });
+
+const completeFormatSummaryListSchema = z
+  .array(formatSummarySchema)
+  .max(2)
+  .superRefine((summaries, context) => {
+    if (!containsBothGameTypes(summaries)) {
+      context.addIssue({
+        code: "custom",
+        message: "must contain both sanma and yonma summaries",
+      });
+    }
+  });
+
+const matchReferenceSchema = z.object({
+  matchId: z.string().transform((value) => asOpaqueId(value)),
+  leagueId: z.string().transform((value) => asOpaqueId(value)),
+  leagueName: z.string(),
+  seasonId: z.string().transform((value) => asOpaqueId(value)),
+  seasonName: z.string(),
+  sessionId: z.string().transform((value) => asOpaqueId(value)),
+  sessionLabel: z.string().nullable(),
+  playedAt: z.string().transform((value) => asIsoDateString(value)),
+});
+
+const recordHolderSchema = z
+  .object({ value: finiteNumberSchema, match: matchReferenceSchema })
+  .nullable();
+
+const snapshotValuesSchema = z.object({
+  totals: z.object({
+    totalMatchCount: finiteNumberSchema,
+    sessionCount: finiteNumberSchema,
+    totalPoints: finiteNumberSchema,
+    averageFinalPoint: nullableNumberSchema,
+    chomboCount: finiteNumberSchema,
+  }),
+  rawScore: numericSummarySchema,
+  finalPoint: numericSummarySchema.extend({
+    positive: rateCountSchema,
+    negative: rateCountSchema,
+    even: rateCountSchema,
+  }),
+  scoreByRank: z
+    .array(
+      z.object({
+        gameType: gameTypeSchema,
+        rank: finiteNumberSchema,
+        matchCount: finiteNumberSchema,
+        averageRawScore: nullableNumberSchema,
+        averageFinalPoint: nullableNumberSchema,
+      }),
+    )
+    .max(7),
+  records: z.object({
+    highestRawScore: recordHolderSchema,
+    lowestRawScore: recordHolderSchema,
+    highestFinalPoint: recordHolderSchema,
+    lowestFinalPoint: recordHolderSchema,
+  }),
+  streaks: z
+    .array(
+      z.object({
+        type: z.enum(["top", "last", "topTwo", "positive", "negative"]),
+        currentCount: finiteNumberSchema,
+        longestCount: finiteNumberSchema,
+      }),
+    )
+    .max(5),
+  recentResults: z
+    .array(
+      z.object({
+        windowSize: z.union([z.literal(10), z.literal(20), z.literal(50)]),
+        matchCount: finiteNumberSchema,
+        totalPoints: finiteNumberSchema,
+        byGameType: formatSummaryListSchema,
+      }),
+    )
+    .max(3),
+  currentStanding: z
+    .object({
+      rank: finiteNumberSchema,
+      totalPoints: finiteNumberSchema,
+      pointsBehindAbove: nullableNumberSchema,
+      pointsAheadBelow: nullableNumberSchema,
+      source: z.enum(["season", "activeSeason"]),
+    })
+    .nullable(),
+});
+
+const personalStatisticsSnapshotSchema = z.object({
+  all: snapshotValuesSchema.extend({
+    byGameType: completeFormatSummaryListSchema,
+  }),
+  byGameType: z
+    .array(
+      z.object({
+        gameType: gameTypeSchema,
+        summary: snapshotValuesSchema,
+      }),
+    )
+    .max(2)
+    .superRefine((summaries, context) => {
+      if (!containsBothGameTypes(summaries)) {
+        context.addIssue({
+          code: "custom",
+          message: "must contain both sanma and yonma summaries",
+        });
+      }
+    }),
+});
+
+const mapPersonalStatisticsSnapshot = (
+  value: unknown,
+): PersonalStatisticsSnapshot =>
+  personalStatisticsSnapshotSchema.parse(value) as PersonalStatisticsSnapshot;
 
 export class FirestoreUserStatsRepository implements UserStatsRepository {
   constructor(private readonly db: Firestore) {}
@@ -21,6 +221,28 @@ export class FirestoreUserStatsRepository implements UserStatsRepository {
     leagueId?: string;
     seasonId?: string;
   }): Promise<UserStats | null> {
+    const document = await this.findDocument(params);
+    return document ? this.map(document.id, document.data) : null;
+  }
+
+  async getWithPersonalStatistics(params: {
+    userId: string;
+    scopeType: ScopeType;
+    leagueId?: string;
+    seasonId?: string;
+  }): Promise<UserStatsWithPersonalStatistics | null> {
+    const document = await this.findDocument(params);
+    return document
+      ? this.mapWithPersonalStatistics(document.id, document.data)
+      : null;
+  }
+
+  private async findDocument(params: {
+    userId: string;
+    scopeType: ScopeType;
+    leagueId?: string;
+    seasonId?: string;
+  }): Promise<{ id: string; data: FirebaseFirestore.DocumentData } | null> {
     const key: UserStatsKey = {
       ...params,
       leagueId: params.leagueId ?? null,
@@ -31,12 +253,12 @@ export class FirestoreUserStatsRepository implements UserStatsRepository {
       .doc(buildUserStatsId(key))
       .get();
     if (canonical.exists) {
-      return this.map(canonical.id, canonical.data() ?? {});
+      return { id: canonical.id, data: canonical.data() ?? {} };
     }
 
     const legacy = await this.query(params).limit(1).get();
     const doc = legacy.docs[0];
-    return doc ? this.map(doc.id, doc.data()) : null;
+    return doc ? { id: doc.id, data: doc.data() } : null;
   }
 
   async upsert(
@@ -46,8 +268,27 @@ export class FirestoreUserStatsRepository implements UserStatsRepository {
       leagueId: string | null;
       seasonId: string | null;
     },
-    data: Omit<UserStats, "id" | "createdAt" | "updatedAt">,
+    data: UserStatsUpsertData,
   ): Promise<string> {
+    const personalStatisticsVersion = data.personalStatisticsVersion ?? 0;
+    if (
+      !Number.isSafeInteger(personalStatisticsVersion) ||
+      personalStatisticsVersion < 0
+    ) {
+      throw new TypeError(
+        "personalStatisticsVersion must be a non-negative integer",
+      );
+    }
+    const personalStatisticsSnapshot =
+      data.personalStatisticsSnapshot == null
+        ? null
+        : mapPersonalStatisticsSnapshot(data.personalStatisticsSnapshot);
+    if (personalStatisticsVersion > 0 && personalStatisticsSnapshot === null) {
+      throw new TypeError(
+        "a ready personal statistics version requires a snapshot",
+      );
+    }
+
     const now = Timestamp.now();
     const statsId = buildUserStatsId(key);
     const payload = {
@@ -76,6 +317,8 @@ export class FirestoreUserStatsRepository implements UserStatsRepository {
       average_score: data.averageScore,
       win_streak: data.winStreak,
       lose_streak: data.loseStreak,
+      personal_statistics_version: personalStatisticsVersion,
+      personal_statistics: personalStatisticsSnapshot,
       updated_at: now,
     };
 
@@ -210,6 +453,44 @@ export class FirestoreUserStatsRepository implements UserStatsRepository {
       loseStreak: nullableNumber(data.lose_streak, "user_stats.lose_streak"),
       createdAt: toIsoString(data.created_at),
       updatedAt: toIsoString(data.updated_at),
+    };
+  }
+
+  private mapWithPersonalStatistics(
+    id: string,
+    data: FirebaseFirestore.DocumentData,
+  ): UserStatsWithPersonalStatistics {
+    const personalStatisticsVersion =
+      data.personal_statistics_version === undefined
+        ? 0
+        : requiredNumber(
+            data.personal_statistics_version,
+            "user_stats.personal_statistics_version",
+          );
+    if (
+      !Number.isSafeInteger(personalStatisticsVersion) ||
+      personalStatisticsVersion < 0
+    ) {
+      throw new TypeError(
+        "invalid or missing Firestore field: user_stats.personal_statistics_version",
+      );
+    }
+
+    const personalStatisticsSnapshot =
+      data.personal_statistics === undefined ||
+      data.personal_statistics === null
+        ? null
+        : mapPersonalStatisticsSnapshot(data.personal_statistics);
+    if (personalStatisticsVersion > 0 && personalStatisticsSnapshot === null) {
+      throw new TypeError(
+        "missing Firestore field: user_stats.personal_statistics",
+      );
+    }
+
+    return {
+      stats: this.map(id, data),
+      personalStatisticsVersion,
+      personalStatisticsSnapshot,
     };
   }
 }

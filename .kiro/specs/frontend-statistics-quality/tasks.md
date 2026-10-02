@@ -24,7 +24,7 @@
   - _Requirements: 1.2, 1.4, 5.5, 6.2, 6.3, 8.1_
   - _Boundary: UserMatchStatisticsRepository_
 
-- [ ] 1.4 UserStatsへbounded snapshotとreadiness versionを追加する
+- [x] 1.4 UserStatsへbounded snapshotとreadiness versionを追加する
   - 既存scope documentに固定長の全体・三麻・四麻snapshotとpersonal statistics versionを保存する。
   - 旧documentのversion未設定を未計算として読み、summaryとversionを同じdocumentに書く。
   - 既存stats APIのresponseを保ったまま、新snapshotを1 document readで取得できる。
