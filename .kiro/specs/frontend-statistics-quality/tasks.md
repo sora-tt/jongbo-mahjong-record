@@ -48,7 +48,7 @@
   - _Requirements: 9.8, 10.1, 10.2_
   - _Boundary: StatisticsTargetAccessService_
 
-- [ ] 1.7 user-match schemaとFirestore複合indexを追加する
+- [x] 1.7 user-match schemaとFirestore複合indexを追加する
   - user-match collectionとUserStats snapshotの保存項目をFirestore schema定義へ反映する。
   - analysis/historyのscope、game type、日時、cursor sortに必要なindexを既存設定へ追加する。
   - emulatorと既存firebase設定が同じindex定義を参照する。
