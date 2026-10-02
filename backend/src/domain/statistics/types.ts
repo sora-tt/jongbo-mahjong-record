@@ -115,6 +115,20 @@ export type StatisticsMatchReference = {
   playedAt: IsoDateString;
 };
 
+export type StatisticsRecordMatchReference = StatisticsMatchReference & {
+  opponents: Array<{
+    userId: UserId;
+    userName: string;
+    rank: number;
+    finalPoint: number;
+  }>;
+};
+
+export type StatisticsRecord = {
+  value: number;
+  match: StatisticsRecordMatchReference;
+};
+
 export type PersonalStatisticsSummary = {
   status: "ready" | "empty";
   scope: StatisticsScope;
@@ -142,13 +156,10 @@ export type PersonalStatisticsSummary = {
     averageFinalPoint: number | null;
   }>;
   records: {
-    highestRawScore: { value: number; match: StatisticsMatchReference } | null;
-    lowestRawScore: { value: number; match: StatisticsMatchReference } | null;
-    highestFinalPoint: {
-      value: number;
-      match: StatisticsMatchReference;
-    } | null;
-    lowestFinalPoint: { value: number; match: StatisticsMatchReference } | null;
+    highestRawScore: StatisticsRecord | null;
+    lowestRawScore: StatisticsRecord | null;
+    highestFinalPoint: StatisticsRecord | null;
+    lowestFinalPoint: StatisticsRecord | null;
   };
   streaks: Array<{
     type: "top" | "last" | "topTwo" | "positive" | "negative";

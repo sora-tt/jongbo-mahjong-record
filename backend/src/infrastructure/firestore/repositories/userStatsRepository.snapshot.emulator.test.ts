@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { FieldValue } from "firebase-admin/firestore";
-import { asOpaqueId } from "@/domain/shared/types.js";
+import { asIsoDateString, asOpaqueId } from "@/domain/shared/types.js";
 import type {
   PersonalStatisticsSnapshot,
   PersonalStatisticsSnapshotValues,
@@ -65,7 +65,9 @@ const makeFormatSummary = (gameType: "sanma" | "yonma"): FormatSummary => ({
   lastAvoidanceRate: null,
 });
 
-const makeSnapshotValues = (): PersonalStatisticsSnapshotValues => ({
+const makeSnapshotValues = (
+  opponentCount: 2 | 3 = 3,
+): PersonalStatisticsSnapshotValues => ({
   totals: {
     totalMatchCount: 0,
     sessionCount: 0,
@@ -95,7 +97,24 @@ const makeSnapshotValues = (): PersonalStatisticsSnapshotValues => ({
   },
   scoreByRank: [],
   records: {
-    highestRawScore: null,
+    highestRawScore: {
+      value: 1,
+      match: {
+        matchId: asOpaqueId("record-match"),
+        leagueId: asOpaqueId("record-league"),
+        leagueName: "record league",
+        seasonId: asOpaqueId("record-season"),
+        seasonName: "record season",
+        sessionId: asOpaqueId("record-session"),
+        sessionLabel: null,
+        playedAt: asIsoDateString("2026-09-25T00:00:00.000Z"),
+        opponents: [
+          { userId: asOpaqueId("o1"), userName: "o1", rank: 1, finalPoint: 0 },
+          { userId: asOpaqueId("o2"), userName: "o2", rank: 2, finalPoint: 0 },
+          { userId: asOpaqueId("o3"), userName: "o3", rank: 3, finalPoint: 0 },
+        ].slice(0, opponentCount),
+      },
+    },
     lowestRawScore: null,
     highestFinalPoint: null,
     lowestFinalPoint: null,
@@ -108,16 +127,15 @@ const makeSnapshotValues = (): PersonalStatisticsSnapshotValues => ({
 const makeSnapshot = (): PersonalStatisticsSnapshot => ({
   all: makeSnapshotValues(),
   byGameType: [
-    { gameType: "sanma", summary: makeFormatSnapshotValues() },
-    { gameType: "yonma", summary: makeFormatSnapshotValues() },
+    { gameType: "sanma", summary: makeFormatSnapshotValues("sanma") },
+    { gameType: "yonma", summary: makeFormatSnapshotValues("yonma") },
   ],
 });
 
-const makeFormatSnapshotValues = (): Omit<
-  PersonalStatisticsSnapshotValues,
-  "byGameType"
-> => {
-  const values = makeSnapshotValues();
+const makeFormatSnapshotValues = (
+  gameType: "sanma" | "yonma",
+): Omit<PersonalStatisticsSnapshotValues, "byGameType"> => {
+  const values = makeSnapshotValues(gameType === "sanma" ? 2 : 3);
   return {
     totals: values.totals,
     rawScore: values.rawScore,
@@ -206,6 +224,63 @@ test(
       assert.equal(result?.personalStatisticsVersion, 1);
       assert.deepEqual(result?.personalStatisticsSnapshot, snapshot);
       assert.equal(result?.stats.totalMatchCount, 0);
+
+      const oversizedRecordOpponents: PersonalStatisticsSnapshot = {
+        ...snapshot,
+        all: {
+          ...snapshot.all,
+          records: {
+            ...snapshot.all.records,
+            highestRawScore: {
+              value: 1,
+              match: {
+                matchId: asOpaqueId("record-match"),
+                leagueId: asOpaqueId("record-league"),
+                leagueName: "record league",
+                seasonId: asOpaqueId("record-season"),
+                seasonName: "record season",
+                sessionId: asOpaqueId("record-session"),
+                sessionLabel: null,
+                playedAt: asIsoDateString("2026-09-25T00:00:00.000Z"),
+                opponents: [
+                  {
+                    userId: asOpaqueId("o1"),
+                    userName: "o1",
+                    rank: 1,
+                    finalPoint: 0,
+                  },
+                  {
+                    userId: asOpaqueId("o2"),
+                    userName: "o2",
+                    rank: 2,
+                    finalPoint: 0,
+                  },
+                  {
+                    userId: asOpaqueId("o3"),
+                    userName: "o3",
+                    rank: 3,
+                    finalPoint: 0,
+                  },
+                  {
+                    userId: asOpaqueId("o4"),
+                    userName: "o4",
+                    rank: 4,
+                    finalPoint: 0,
+                  },
+                ],
+              },
+            },
+          },
+        },
+      };
+      await assert.rejects(
+        repository.upsert(key, {
+          ...makeStats(key),
+          personalStatisticsVersion: 1,
+          personalStatisticsSnapshot: oversizedRecordOpponents,
+        }),
+        /expected array to have <=3 items/,
+      );
 
       await ref.update({
         personal_statistics: { all: null, byGameType: [] },

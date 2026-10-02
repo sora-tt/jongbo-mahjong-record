@@ -120,8 +120,21 @@ const matchReferenceSchema = z.object({
   playedAt: z.string().transform((value) => asIsoDateString(value)),
 });
 
+const recordMatchReferenceSchema = matchReferenceSchema.extend({
+  opponents: z
+    .array(
+      z.object({
+        userId: z.string().transform((value) => asOpaqueId(value)),
+        userName: z.string(),
+        rank: finiteNumberSchema,
+        finalPoint: finiteNumberSchema,
+      }),
+    )
+    .max(3),
+});
+
 const recordHolderSchema = z
-  .object({ value: finiteNumberSchema, match: matchReferenceSchema })
+  .object({ value: finiteNumberSchema, match: recordMatchReferenceSchema })
   .nullable();
 
 const snapshotValuesSchema = z.object({

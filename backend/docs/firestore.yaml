@@ -558,6 +558,16 @@ user_stats:
                           type: string
                           nullable: true
                         playedAt: string
+                        opponents:
+                          type: array
+                          maxItems: 3
+                          items:
+                            type: object
+                            fields:
+                              userId: string
+                              userName: string
+                              rank: number
+                              finalPoint: number
                 lowestRawScore:
                   type: object
                   nullable: true
@@ -576,6 +586,16 @@ user_stats:
                           type: string
                           nullable: true
                         playedAt: string
+                        opponents:
+                          type: array
+                          maxItems: 3
+                          items:
+                            type: object
+                            fields:
+                              userId: string
+                              userName: string
+                              rank: number
+                              finalPoint: number
                 highestFinalPoint:
                   type: object
                   nullable: true
@@ -594,6 +614,16 @@ user_stats:
                           type: string
                           nullable: true
                         playedAt: string
+                        opponents:
+                          type: array
+                          maxItems: 3
+                          items:
+                            type: object
+                            fields:
+                              userId: string
+                              userName: string
+                              rank: number
+                              finalPoint: number
                 lowestFinalPoint:
                   type: object
                   nullable: true
@@ -612,6 +642,16 @@ user_stats:
                           type: string
                           nullable: true
                         playedAt: string
+                        opponents:
+                          type: array
+                          maxItems: 3
+                          items:
+                            type: object
+                            fields:
+                              userId: string
+                              userName: string
+                              rank: number
+                              finalPoint: number
             streaks:
               type: array
               items:
@@ -808,6 +848,16 @@ user_stats:
                                 type: string
                                 nullable: true
                               playedAt: string
+                              opponents:
+                                type: array
+                                maxItems: 3
+                                items:
+                                  type: object
+                                  fields:
+                                    userId: string
+                                    userName: string
+                                    rank: number
+                                    finalPoint: number
                       lowestRawScore:
                         type: object
                         nullable: true
@@ -826,6 +876,16 @@ user_stats:
                                 type: string
                                 nullable: true
                               playedAt: string
+                              opponents:
+                                type: array
+                                maxItems: 3
+                                items:
+                                  type: object
+                                  fields:
+                                    userId: string
+                                    userName: string
+                                    rank: number
+                                    finalPoint: number
                       highestFinalPoint:
                         type: object
                         nullable: true
@@ -844,6 +904,16 @@ user_stats:
                                 type: string
                                 nullable: true
                               playedAt: string
+                              opponents:
+                                type: array
+                                maxItems: 3
+                                items:
+                                  type: object
+                                  fields:
+                                    userId: string
+                                    userName: string
+                                    rank: number
+                                    finalPoint: number
                       lowestFinalPoint:
                         type: object
                         nullable: true
@@ -862,6 +932,16 @@ user_stats:
                                 type: string
                                 nullable: true
                               playedAt: string
+                              opponents:
+                                type: array
+                                maxItems: 3
+                                items:
+                                  type: object
+                                  fields:
+                                    userId: string
+                                    userName: string
+                                    rank: number
+                                    finalPoint: number
                   streaks:
                     type: array
                     items:

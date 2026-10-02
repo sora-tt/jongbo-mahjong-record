@@ -105,6 +105,11 @@ test("Firestore schema documents bounded personal statistics and match projectio
     .split("\n              summary:\n")[1]
     ?.split("\n    created_at:")[0];
   assert.ok(gameTypeSummary, "per-game-type snapshot summary must be defined");
+  assert.equal(
+    userStatsSchema.match(/^\s+opponents:$/gm)?.length,
+    8,
+    "all and per-game-type record holders must include bounded opponents",
+  );
 
   for (const record of [
     "highestRawScore",
@@ -116,6 +121,13 @@ test("Firestore schema documents bounded personal statistics and match projectio
       gameTypeSummary,
       new RegExp(
         `^ +${record}:\\n +type: object\\n +nullable: true\\n +fields:\\n +value: number\\n +match:\\n +type: object\\n +fields:\\n +matchId: string\\n +leagueId: string`,
+        "m",
+      ),
+    );
+    assert.match(
+      gameTypeSummary,
+      new RegExp(
+        `^ +${record}:[\\s\\S]*?playedAt: string\\n +opponents:\\n +type: array\\n +maxItems: 3\\n +items:\\n +type: object\\n +fields:\\n +userId: string\\n +userName: string\\n +rank: number\\n +finalPoint: number`,
         "m",
       ),
     );
