@@ -28,6 +28,12 @@ export interface LeagueRepository {
   update(leagueId: string, input: UpdateLeagueInput): Promise<LeagueDetail>;
   delete(leagueId: string): Promise<void>;
   listMembers(leagueId: string): Promise<LeagueMember[]>;
+  /** Returns whether both users belong to the requested league. */
+  areMembers(
+    leagueId: string,
+    viewerUserId: string,
+    targetUserId: string,
+  ): Promise<boolean>;
   listAllMembers(): Promise<UserReference[]>;
   setActiveSeason(
     leagueId: string,

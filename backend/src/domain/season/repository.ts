@@ -33,6 +33,13 @@ export interface SeasonRepository {
   ): Promise<SeasonDetail>;
   delete(leagueId: string, seasonId: string): Promise<void>;
   listMembers(leagueId: string, seasonId: string): Promise<SeasonMember[]>;
+  /** Returns whether both users belong to the requested season. */
+  areMembers(
+    leagueId: string,
+    seasonId: string,
+    viewerUserId: string,
+    targetUserId: string,
+  ): Promise<boolean>;
   updateStatistics(params: {
     leagueId: string;
     seasonId: string;

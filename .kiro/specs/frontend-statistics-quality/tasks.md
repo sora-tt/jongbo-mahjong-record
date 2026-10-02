@@ -32,7 +32,7 @@
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 4.8, 7.1, 7.2, 7.3, 8.1, 8.3_
   - _Boundary: UserStats Snapshot Repository_
 
-- [ ] 1.5 viewer/target向けleague・season membership lookupを追加する
+- [x] 1.5 viewer/target向けleague・season membership lookupを追加する
   - League member subcollectionとseason document内membersから、指定されたviewer/target IDの所属を判定する。
   - 参加者全体や対局・統計projectionを走査せず、対象scopeのmembershipだけを確認する。
   - 既存の参加者一覧APIは閲覧可能なviewerに候補一覧を返し、FEが選択肢を利用できる。

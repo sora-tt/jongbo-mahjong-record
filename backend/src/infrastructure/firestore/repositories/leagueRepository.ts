@@ -264,6 +264,31 @@ export class FirestoreLeagueRepository implements LeagueRepository {
     }));
   }
 
+  async areMembers(
+    leagueId: string,
+    viewerUserId: string,
+    targetUserId: string,
+  ): Promise<boolean> {
+    if (!viewerUserId || !targetUserId) {
+      return false;
+    }
+
+    const requestedUserIds = new Set([viewerUserId, targetUserId]);
+    const snapshot = await this.db
+      .collection("leagues")
+      .doc(leagueId)
+      .collection("members")
+      .where("user_id", "in", [...requestedUserIds])
+      .get();
+    const matchedUserIds = new Set(
+      snapshot.docs.map((doc) =>
+        requiredString(doc.data().user_id, "leagues.members.user_id"),
+      ),
+    );
+
+    return [...requestedUserIds].every((userId) => matchedUserIds.has(userId));
+  }
+
   async listAllMembers(): Promise<UserReference[]> {
     const leaguesSnapshot = await this.db.collection("leagues").get();
     const members = await Promise.all(
