@@ -22,6 +22,8 @@ type Props = {
   mode: UmaMode;
   fixedUma: FixedUmaDraft;
   floatingCountUma: FloatingCountUmaDraft;
+  chomboPenaltyPoints: string;
+  allowOffTableKyotaku: boolean;
   showErrorSummary?: boolean;
   submitError?: string | null;
   errorSummaryFocusToken?: number;
@@ -33,6 +35,8 @@ type Props = {
     rank: UmaRank,
     value: string
   ) => void;
+  onChomboPenaltyPointsChange: (value: string) => void;
+  onAllowOffTableKyotakuChange: (value: boolean) => void;
 };
 
 const FLOATING_COUNTS = [0, 1, 2, 3, 4] as const;
@@ -55,6 +59,8 @@ const LeagueRuleEditor: React.FC<Props> = ({
   mode,
   fixedUma,
   floatingCountUma,
+  chomboPenaltyPoints,
+  allowOffTableKyotaku,
   showErrorSummary = false,
   submitError = null,
   errorSummaryFocusToken = 0,
@@ -62,6 +68,8 @@ const LeagueRuleEditor: React.FC<Props> = ({
   onModeChange,
   onFixedUmaChange,
   onFloatingCountUmaChange,
+  onChomboPenaltyPointsChange,
+  onAllowOffTableKyotakuChange,
 }) => {
   const isSanma = gameType === "sanma";
   const activeMode: UmaMode = isSanma ? "fixed" : mode;
@@ -358,6 +366,29 @@ const LeagueRuleEditor: React.FC<Props> = ({
           </div>
         </div>
       )}
+      <div className="space-y-3 border-t border-border pt-3">
+        <Input
+          id="chombo-penalty-points"
+          label="チョンボ罰符（pt）"
+          type="number"
+          min={0}
+          step={1}
+          value={chomboPenaltyPoints}
+          disabled={disabled}
+          onChange={(event) => onChomboPenaltyPointsChange(event.target.value)}
+        />
+        <label className="flex items-center gap-2 text-sm text-foreground">
+          <input
+            type="checkbox"
+            checked={allowOffTableKyotaku}
+            disabled={disabled}
+            onChange={(event) =>
+              onAllowOffTableKyotakuChange(event.target.checked)
+            }
+          />
+          卓外供託を記録できる
+        </label>
+      </div>
     </div>
   );
 };

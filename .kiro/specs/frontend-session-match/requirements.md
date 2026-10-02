@@ -11,7 +11,7 @@ Session・Matchを記録する利用者とFE実装者は、参加者選択、Ses
 - Seasonの参加者候補からのPlayer select
 - Sessionの作成、一覧、詳細、終了状態の表示
 - 初回Match、追加Match、Match編集で共有する入力フォーム
-- 三麻/四麻の人数、wind、Session member一致、raw scoreの入力制約表示
+- 三麻/四麻の人数、wind、Session member一致、raw score、チョンボ発生、卓外供託の入力制約表示
 - Matchの作成、編集、一覧、詳細、既存の削除操作
 - BEが返す`matchIndex`、`rank`、`point`、raw score、結果日時の表示
 - loading、empty、API error、retry、二重submit防止、成功後の再取得
@@ -30,8 +30,8 @@ Session・Matchを記録する利用者とFE実装者は、参加者選択、Ses
 
 - `frontend-foundation-ui` のHono `AppType`由来型、共通API client、`{ data }`、ErrorEnvelope、Cookie認証、AsyncState、UI primitivesを利用する。
 - `frontend-league-season` のSeason詳細からのSession開始導線を受け取り、Session一覧・詳細とMatch画面を所有する。Season/Leagueの集計表示は所有しない。
-- `backend-foundation` のcamelCase DTO、ISO 8601、Session/Match route、status、`rank`・`point`・`matchIndex`のresponse契約を正本として利用する。
-- `backend-integrity-lifecycle` のSession固定member、三麻の`east/south/west`、四麻の`east/south/west/north`、Match参加者完全一致、BE計算結果、欠番を許容するmatchIndexを画面へ反映する。
+- `backend-foundation` のcamelCase DTO、ISO 8601、Session/Match route、status、`rank`・`point`・`matchIndex`、チョンボ発生・卓外供託のresponse契約を正本として利用する。
+- `backend-integrity-lifecycle` のSession固定member、三麻の`east/south/west`、四麻の`east/south/west/north`、Match参加者完全一致、BE計算結果、欠番を許容するmatchIndex、League ruleに応じた外卓入力を画面へ反映する。
 
 ## 要件
 
@@ -69,7 +69,7 @@ Session・Matchを記録する利用者とFE実装者は、参加者選択、Ses
 
 3.2 While Matchフォームが表示されている状態, the Session-Match Feature shall Session membersと完全一致するuserIdだけを表示し、三麻/四麻で許可されたwindを一度ずつ選択できるようにし、編集時の参加者変更を許可しない。
 
-3.3 When raw scoreを入力するとき, the Session-Match Feature shall BE契約から取得したstartingPointsと参加人数に基づく入力範囲・整数・合計制約を利用者へ示し、入力不能値や合計不一致をAPI呼び出し前に表示する。
+3.3 When raw scoreを入力するとき, the Session-Match Feature shall BE契約から取得したstartingPointsと参加人数に基づく入力範囲・整数・外卓入力を考慮した合計制約を利用者へ示し、入力不能値や合計不一致をAPI呼び出し前に表示する。
 
 3.4 When Matchフォームを送信するとき, the Session-Match Feature shall rankをMatch登録リクエストへ含めず、pointも送信せず、raw scoreその他のBE入力契約だけを送信し、BEが算出して返したresponseのrank/pointを表示用状態へ渡す。
 
@@ -77,11 +77,17 @@ Session・Matchを記録する利用者とFE実装者は、参加者選択、Ses
 
 3.6 While Matchフォームのmutationが実行中である状態, the Session-Match Feature shall submit、戻る、参加者変更などの競合操作を適切に無効化し、二重submitを防止する。
 
+3.7 When 利用者がMatchフォームでチョンボ発生を有効にするとき, the Session-Match Feature shall 発生回数と各発生のチョンボしたuserを入力する欄を表示し、同じuserの複数回発生を個別に記録できるようにする。
+
+3.8 When 対象Leagueのruleで卓外供託が許可されているとき, the Session-Match Feature shall 卓外供託の有無を選択できるようにし、発生ありの場合に残数を入力する欄を表示する。ruleで許可されていないときは関連する選択欄と入力欄を表示しない。
+
+3.9 When 新しい外卓入力を既存Matchフォームへ追加するとき, the Session-Match Feature shall mainブランチのMatch UIの構成・見た目を維持し、必要な入力欄だけを既存UIに沿って追加する。
+
 ### Requirement 4: Matchの作成・編集・一覧・詳細
 
 4.1 When 初回または追加Matchを登録するとき, the Session-Match Feature shall `POST /api/leagues/:leagueId/seasons/:seasonId/sessions/:sessionId/matches`へrankを含めず、Session memberと完全一致するresultsを送信し、別参加者を登録するために既存Sessionを再利用しない。初回Matchでは直前に作成したSessionを使用する。
 
-4.2 When Match一覧または詳細を表示するとき, the Session-Match Feature shall `GET`のMatch DTOからplayedAt、Session、各結果のuserName、wind、rawScore、BE算出済みrank、BE算出済みpointを表示する。
+4.2 When Match一覧または詳細を表示するとき, the Session-Match Feature shall `GET`のMatch DTOからplayedAt、Session、各結果のuserName、wind、rawScore、BE算出済みrank、BE算出済みpointを表示し、詳細では記録済みチョンボ発生者と卓外供託を確認できるようにする。
 
 4.3 When Match一覧を表示するとき, the Session-Match Feature shall BEが返した`matchIndex`をそのまま表示し、削除による欠番をFEで詰めたり連番へ補正したりしない。
 
@@ -123,3 +129,4 @@ Session・Matchを記録する利用者とFE実装者は、参加者選択、Ses
 - SessionはPlayer Selectで参加者を一時保持し、初回Match送信直前に一度だけ作成する。初回Match作成が失敗した場合は同じ送信で作成したSessionを削除してロールバックし、既存Sessionや既存Matchを削除しない。
 - Match登録リクエストのrankは削除する。FEはrankを計算せず、BEがraw scoreから算出して返すresponseのrankを表示する。pointも従来どおりBE responseだけを表示する。
 - raw scoreの表示単位は現行画面の「100点単位入力」とBEの整数raw score契約を踏襲する。入力単位を変更する場合はフォーム仕様とBE validationを同時に再検証する。
+- 外卓の入力欄はチョンボと卓外供託を別項目として扱う。FEは点数計算を行わず、Match画面の既存UIへ最小限の欄を追加する。

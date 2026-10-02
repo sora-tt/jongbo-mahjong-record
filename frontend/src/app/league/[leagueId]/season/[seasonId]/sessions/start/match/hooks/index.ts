@@ -40,6 +40,8 @@ export const useRecordMatchPage = () => {
   const [startingPoints, setStartingPoints] = React.useState<number | null>(
     null
   );
+  const [chomboPenaltyPoints, setChomboPenaltyPoints] = React.useState(0);
+  const [allowOffTableKyotaku, setAllowOffTableKyotaku] = React.useState(false);
   const [values, setValues] = React.useState<MatchFormValues>(() => {
     const initial = createEmptyMatchFormValues();
     return {
@@ -96,6 +98,8 @@ export const useRecordMatchPage = () => {
         setMembers(selectedMembers);
         setConstraint(nextConstraint);
         setStartingPoints(league.rule.oka.startingPoints);
+        setChomboPenaltyPoints(league.rule.chomboPenaltyPoints ?? 0);
+        setAllowOffTableKyotaku(league.rule.allowOffTableKyotaku ?? false);
       } catch (loadError) {
         if (!isActive) return;
         if (loadError instanceof ApiError && loadError.status === 401) {
@@ -132,6 +136,8 @@ export const useRecordMatchPage = () => {
       constraint,
       allowedMembers: members,
       startingPoints,
+      allowOffTableKyotaku,
+      mode: "initial",
     });
     if (validation.message || !validation.results) {
       setError(validation.message ?? DEFAULT_SUBMIT_ERROR_MESSAGE);
@@ -140,7 +146,6 @@ export const useRecordMatchPage = () => {
 
     setIsSubmitting(true);
     setError(null);
-    let createdSessionId: string | null = null;
 
     try {
       const session = await createSession(leagueId, seasonId, {
@@ -148,23 +153,19 @@ export const useRecordMatchPage = () => {
         memberUserIds: validation.results.map((result) => result.userId),
         tableLabel: null,
       });
-      createdSessionId = String(session.id);
+      const createdSessionId = String(session.id);
 
-      await createMatch({
-        leagueId,
-        seasonId,
-        sessionId: createdSessionId,
-        playedAt: values.playedAt,
-        results: validation.results,
-      });
-
-      isNavigatingAfterSubmitRef.current = true;
-      dispatch(clearRecordingFlow());
-      router.push(
-        `/league/${leagueId}/season/${seasonId}/sessions/${createdSessionId}/results`
-      );
-    } catch (submitError) {
-      if (createdSessionId) {
+      try {
+        await createMatch({
+          leagueId,
+          seasonId,
+          sessionId: createdSessionId,
+          playedAt: values.playedAt,
+          results: validation.results,
+          chomboEvents: validation.chomboEvents,
+          offTableKyotakuCount: validation.offTableKyotakuCount,
+        });
+      } catch (matchError) {
         try {
           await deleteSession({
             leagueId,
@@ -174,8 +175,15 @@ export const useRecordMatchPage = () => {
         } catch {
           // 元のMatchエラーを優先して表示する
         }
+        throw matchError;
       }
 
+      isNavigatingAfterSubmitRef.current = true;
+      dispatch(clearRecordingFlow());
+      router.push(
+        `/league/${leagueId}/season/${seasonId}/sessions/${createdSessionId}/results`
+      );
+    } catch (submitError) {
       if (submitError instanceof ApiError && submitError.status === 401) {
         router.replace("/login");
         return;
@@ -184,7 +192,16 @@ export const useRecordMatchPage = () => {
     } finally {
       setIsSubmitting(false);
     }
-  }, [constraint, dispatch, members, params, router, startingPoints, values]);
+  }, [
+    allowOffTableKyotaku,
+    constraint,
+    dispatch,
+    members,
+    params,
+    router,
+    startingPoints,
+    values,
+  ]);
 
   const handleBack = React.useCallback(() => {
     if (params.leagueId && params.seasonId) {
@@ -201,6 +218,8 @@ export const useRecordMatchPage = () => {
     setValues,
     constraint,
     members,
+    chomboPenaltyPoints,
+    allowOffTableKyotaku,
     isLoading,
     isSubmitting,
     error,

@@ -2,6 +2,19 @@ import type { LeagueRule } from "@/domain/league/types.js";
 import { ValidationError } from "@/domain/shared/errors.js";
 
 export const validateLeagueRule = (rule: LeagueRule): void => {
+  if (
+    !Number.isSafeInteger(rule.chomboPenaltyPoints) ||
+    rule.chomboPenaltyPoints < 0
+  ) {
+    throw new ValidationError(
+      "rule.chomboPenaltyPoints must be a non-negative integer",
+      {
+        field: "rule.chomboPenaltyPoints",
+        actualValue: rule.chomboPenaltyPoints,
+      },
+    );
+  }
+
   if (rule.uma.mode === "floatingCount") {
     const gameType: string = rule.gameType;
     if (gameType !== "yonma") {

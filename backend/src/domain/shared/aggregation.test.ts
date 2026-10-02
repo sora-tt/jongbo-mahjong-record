@@ -44,6 +44,8 @@ const match = (
       point: points[1],
     },
   ],
+  chomboEvents: [],
+  offTableKyotakuCount: 0,
   createdAt: asIsoDateString("2026-01-01T00:00:00.000Z"),
   updatedAt: asIsoDateString("2026-01-01T00:00:00.000Z"),
 });
@@ -112,6 +114,7 @@ test("keeps fourth-place stats null for sanma", () => {
     leagueName: "League",
     seasonName: "Season",
     matchCount: 1,
+    chomboCount: 0,
     currentRank: 1,
     results: [
       {

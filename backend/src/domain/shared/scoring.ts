@@ -16,7 +16,22 @@ export const calculateMatchPoints = (
     wind: Wind;
     rawScore: number;
   }>,
+  external: {
+    chomboEvents?: ReadonlyArray<{ offenderUserId: string }>;
+    offTableKyotakuCount?: number;
+  } = {},
 ): MatchResult[] => {
+  const chomboEvents = external.chomboEvents ?? [];
+  const offTableKyotakuCount = external.offTableKyotakuCount ?? 0;
+  if (!Number.isSafeInteger(offTableKyotakuCount) || offTableKyotakuCount < 0) {
+    throw new ValidationError(
+      "offTableKyotakuCount must be a non-negative integer",
+      {
+        field: "offTableKyotakuCount",
+      },
+    );
+  }
+
   const expectedPlayerCount = rule.gameType === "sanma" ? 3 : 4;
   if (results.length !== expectedPlayerCount) {
     throw new ValidationError(
@@ -46,7 +61,8 @@ export const calculateMatchPoints = (
   }
 
   const rawTotal = results.reduce((sum, result) => sum + result.rawScore, 0);
-  const expectedRawTotal = rule.oka.startingPoints * expectedPlayerCount;
+  const expectedRawTotal =
+    rule.oka.startingPoints * expectedPlayerCount - 1000 * offTableKyotakuCount;
   if (rawTotal !== expectedRawTotal) {
     throw new ValidationError("rawScore total does not match table total", {
       expectedRawTotal,
@@ -98,6 +114,14 @@ export const calculateMatchPoints = (
     });
   });
 
+  const chomboCountByUserId = new Map<string, number>();
+  chomboEvents.forEach(({ offenderUserId }) => {
+    chomboCountByUserId.set(
+      offenderUserId,
+      (chomboCountByUserId.get(offenderUserId) ?? 0) + 1,
+    );
+  });
+
   const withPoints = ranked.map((result) => {
     // 同順位がいる場合、その順位帯の uma を等分して配る。1 位 uma には oka を事前加算している。
     const tiedPlayers = ranked.filter(
@@ -116,15 +140,30 @@ export const calculateMatchPoints = (
 
     return {
       ...result,
-      point: Number((base + splitUma).toFixed(1)),
+      point: Number(
+        (
+          base +
+          splitUma -
+          (chomboCountByUserId.get(result.userId) ?? 0) *
+            rule.chomboPenaltyPoints
+        ).toFixed(1),
+      ),
     };
   });
 
   const totalPoint = withPoints.reduce((sum, result) => sum + result.point, 0);
-  if (Math.abs(totalPoint) > 0.2) {
-    throw new ValidationError("calculated point total must be 0", {
-      totalPoint,
-    });
+  const expectedPointTotal = -(
+    chomboEvents.length * rule.chomboPenaltyPoints +
+    offTableKyotakuCount
+  );
+  if (Math.abs(totalPoint - expectedPointTotal) > 0.2) {
+    throw new ValidationError(
+      "calculated point total does not match off-table total",
+      {
+        expectedPointTotal,
+        totalPoint,
+      },
+    );
   }
 
   return withPoints.map((result) => ({

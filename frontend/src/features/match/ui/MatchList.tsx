@@ -1,6 +1,6 @@
 import * as React from "react";
 
-import { Pencil, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronUp, Pencil, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -35,6 +35,9 @@ export const MatchList: React.FC<Props> = ({
   onEdit,
   onDelete,
 }) => {
+  const [expandedMatchId, setExpandedMatchId] = React.useState<string | null>(
+    null
+  );
   const totalPointsByPlayer = players.map((player) => ({
     userId: String(player.userId),
     point: matches.reduce((total, match) => {
@@ -77,55 +80,120 @@ export const MatchList: React.FC<Props> = ({
         </TableRow>
       </TableHead>
       <TableBody>
-        {matches.map((match) => (
-          <TableRow key={String(match.id)}>
-            <TableCell className="font-semibold text-text-muted">
-              #{match.matchIndex}
-            </TableCell>
-            {players.map((player) => {
-              const result = match.results.find(
-                (candidate) =>
-                  String(candidate.userId) === String(player.userId)
-              );
+        {matches.map((match) => {
+          const matchId = String(match.id);
+          const expanded = expandedMatchId === matchId;
+          const chomboNames = match.chomboEvents.map(
+            ({ offenderUserId }) =>
+              players.find(
+                (player) => String(player.userId) === String(offenderUserId)
+              )?.userName ?? "参加者"
+          );
 
-              return (
-                <TableCell key={String(player.userId)}>
-                  {result ? (
-                    <span
-                      className={`font-medium ${getPointClassName(result.point)}`}
-                    >
-                      {formatPoint(result.point)}
-                    </span>
-                  ) : (
-                    <span className="text-text-muted">—</span>
-                  )}
+          return (
+            <React.Fragment key={matchId}>
+              <TableRow>
+                <TableCell className="font-semibold text-text-muted">
+                  #{match.matchIndex}
                 </TableCell>
-              );
-            })}
-            <TableCell>
-              <div className="flex justify-center gap-1">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onEdit(String(match.id))}
-                  disabled={Boolean(deletingMatchId)}
-                  aria-label="対局結果を編集"
-                >
-                  <Pencil size={16} />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onDelete(String(match.id))}
-                  disabled={Boolean(deletingMatchId)}
-                  aria-label="対局結果を削除"
-                >
-                  <Trash2 size={16} />
-                </Button>
-              </div>
-            </TableCell>
-          </TableRow>
-        ))}
+                {players.map((player) => {
+                  const result = match.results.find(
+                    (candidate) =>
+                      String(candidate.userId) === String(player.userId)
+                  );
+
+                  return (
+                    <TableCell key={String(player.userId)}>
+                      {result ? (
+                        <span
+                          className={`font-medium ${getPointClassName(result.point)}`}
+                        >
+                          {formatPoint(result.point)}
+                        </span>
+                      ) : (
+                        <span className="text-text-muted">—</span>
+                      )}
+                    </TableCell>
+                  );
+                })}
+                <TableCell>
+                  <div className="flex justify-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() =>
+                        setExpandedMatchId(expanded ? null : matchId)
+                      }
+                      aria-expanded={expanded}
+                      aria-label={
+                        expanded ? "対局詳細を閉じる" : "対局詳細を表示"
+                      }
+                    >
+                      {expanded ? (
+                        <ChevronUp size={16} />
+                      ) : (
+                        <ChevronDown size={16} />
+                      )}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onEdit(matchId)}
+                      disabled={Boolean(deletingMatchId)}
+                      aria-label="対局結果を編集"
+                    >
+                      <Pencil size={16} />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onDelete(matchId)}
+                      disabled={Boolean(deletingMatchId)}
+                      aria-label="対局結果を削除"
+                    >
+                      <Trash2 size={16} />
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+              {expanded ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={players.length + 2}
+                    className="bg-surface-muted text-sm"
+                  >
+                    <div className="space-y-2 py-1">
+                      <p className="text-text-muted">
+                        {new Date(match.playedAt).toLocaleString("ja-JP")}
+                      </p>
+                      <ul className="grid gap-x-4 gap-y-1 sm:grid-cols-2">
+                        {match.results.map((result) => (
+                          <li key={String(result.userId)}>
+                            {result.wind}・{result.userName}：
+                            {result.rawScore.toLocaleString("ja-JP")}点／
+                            {result.rank}位／{formatPoint(result.point)}
+                          </li>
+                        ))}
+                      </ul>
+                      <p>
+                        チョンボ：
+                        {chomboNames.length > 0
+                          ? `${chomboNames.join("、")}（${chomboNames.length}回）`
+                          : "なし"}
+                      </p>
+                      <p>
+                        卓外供託：
+                        {match.offTableKyotakuCount > 0
+                          ? `${match.offTableKyotakuCount}本`
+                          : "なし"}
+                      </p>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : null}
+            </React.Fragment>
+          );
+        })}
         <TableRow className="border-t-2 border-brand-500">
           <TableCell className="font-semibold text-foreground">計</TableCell>
           {totalPointsByPlayer.map((total) => (

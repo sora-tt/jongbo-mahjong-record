@@ -8,6 +8,8 @@ export type CreateMatchInput = {
     wind: Wind;
     rawScore: number;
   }>;
+  chomboEvents?: Array<{ offenderUserId: string }>;
+  offTableKyotakuCount?: number;
 };
 
 export type UpdateMatchInput = {
@@ -17,6 +19,8 @@ export type UpdateMatchInput = {
     wind: Wind;
     rawScore: number;
   }>;
+  chomboEvents?: Array<{ offenderUserId: string }>;
+  offTableKyotakuCount?: number;
 };
 
 export interface MatchRepository {
@@ -36,6 +40,8 @@ export interface MatchRepository {
     sessionId: string;
     playedAt: string;
     results: MatchResult[];
+    chomboEvents?: Array<{ offenderUserId: string }>;
+    offTableKyotakuCount?: number;
   }): Promise<Match>;
   update(params: {
     leagueId: string;
@@ -44,6 +50,8 @@ export interface MatchRepository {
     matchId: string;
     playedAt?: string;
     results?: MatchResult[];
+    chomboEvents?: Array<{ offenderUserId: string }>;
+    offTableKyotakuCount?: number;
   }): Promise<Match>;
   delete(
     leagueId: string,

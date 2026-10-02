@@ -136,3 +136,44 @@
   - _Requirements: 8.3_
   - _Depends: 3.1, 3.4, 4.1_
   - _Boundary: Contract Publication, downstream handoff_
+
+## 5. ISSUE-99外卓フィールド契約
+
+- [ ] 5.1 League rule、Match、UserStatsの外卓項目を正本型へ追加する
+  - League ruleに非負整数の`chomboPenaltyPoints`とbooleanの`allowOffTableKyotaku`を追加し、PR #104のuma契約を維持する。
+  - Matchに発生単位の`chomboEvents`と棒数の`offTableKyotakuCount`、UserStatsに`chomboCount`を追加する。同一userIdのチョンボ発生を複数要素で表現できる。
+  - 旧League ruleは0/false、旧Matchは空配列/0、旧UserStatsは0として読み取る契約にし、本番データの一括backfillを含めない。
+  - 完了時、正本Domain/API型が各外卓項目とlegacy defaultを表し、既存識別子とPR #104 uma型を維持する。
+  - _Requirements: 1.2, 1.5, 2.4, 2.5_
+  - _Boundary: Canonical Contracts_
+
+- [ ] 5.2 Repository mapperで外卓項目と旧データを正規化する
+  - MatchとUserStatsのsnake_case保存値をcamelCaseへ変換し、League ruleの新規則も保存・読み戻しに含める。
+  - Match createで外卓項目が省略された場合は空配列/0を保存し、updateで省略された項目は既存値を保持し、明示した空配列/0は消去として扱う。
+  - 完了時、新旧League/Match/UserStats fixtureの読み書きで新項目と既存値が保持され、破壊的な移行なしにDTOへ正規化される。
+  - _Requirements: 1.3, 1.5, 2.4, 2.5_
+  - _Depends: 5.1_
+  - _Boundary: Repository Mappers_
+
+- [ ] 5.3 League・Match・UserStats API schemaを外卓契約へ揃える
+  - League ruleの罰符・可否、Matchのevent配列・供託本数、UserStatsの回数をroute request/response schemaへ反映し、AppTypeから参照可能にする。
+  - eventのoffenderUserId必須、供託本数の非負整数など型・形式はservice実行前に検証する。Session member整合性とLeague ruleによる許可判定は後続lifecycleの責務に残す。
+  - 完了時、MatchとLeagueのAPI型で外卓項目が別々に表現され、形式不正な入力はserviceへ到達しない。
+  - _Requirements: 1.5, 2.5, 4.4, 4.5, 7.2_
+  - _Depends: 5.1_
+  - _Boundary: HTTP Contract Boundary_
+
+- [ ] 5.4 OpenAPI、Swagger、API referenceへ新項目を公開する
+  - Runtime OpenAPI/Swaggerと静的API referenceに新しいLeague rule、Match request/response、UserStats fieldと既定値を反映する。
+  - 完了時、公開schemaと実装DTOが同じfield名、型、nullable/default semanticsを示す。
+  - _Requirements: 6.1, 6.2, 7.3_
+  - _Depends: 5.3_
+  - _Boundary: Contract Publication_
+
+- [ ] 5.5 Emulator seedに外卓契約の既定値を追加する
+  - seedのLeague ruleにchomboPenaltyPoints/allowOffTableKyotaku、Matchに空のchomboEventsと0本、UserStatsにchomboCount 0を明示する。
+  - 既存ID・logical keyを維持し、新しいindexやRulesを追加しない。
+  - 完了時、seedから取得したDTOに全外卓項目が含まれ、繰り返しseedしても既存の正本識別子が変わらない。
+  - _Requirements: 1.4, 6.2, 6.3_
+  - _Depends: 5.2, 5.3_
+  - _Boundary: Seed and Infrastructure_

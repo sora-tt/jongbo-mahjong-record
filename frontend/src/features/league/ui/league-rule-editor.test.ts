@@ -27,11 +27,15 @@ const renderEditor = (
     mode: "floatingCount",
     fixedUma,
     floatingCountUma: createDefaultFloatingCountUmaDraft(),
+    chomboPenaltyPoints: "0",
+    allowOffTableKyotaku: false,
     showErrorSummary: true,
     errorSummaryFocusToken: 1,
     onModeChange: () => {},
     onFixedUmaChange: () => {},
     onFloatingCountUmaChange: () => {},
+    onChomboPenaltyPointsChange: () => {},
+    onAllowOffTableKyotakuChange: () => {},
     ...overrides,
   };
 

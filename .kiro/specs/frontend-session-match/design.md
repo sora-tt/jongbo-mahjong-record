@@ -4,7 +4,7 @@
 
 ### Summary
 
-Seasonの参加者候補から固定Sessionを作成し、Session membersを正本として初回・追加・編集Matchを共通フォームで扱う。`frontend-foundation-ui`のtyped API client、AsyncState、Error boundary、UI primitivesを利用し、`backend-integrity-lifecycle`が返すcomputed `rank`・`point`・`matchIndex`を表示する。FEはscore/rank/point/aggregateを再計算せず、mutation成功後にGETで正本を再取得する。
+Seasonの参加者候補から固定Sessionを作成し、Session membersを正本として初回・追加・編集Matchを共通フォームで扱う。`frontend-foundation-ui`のtyped API client、AsyncState、Error boundary、UI primitivesを利用し、`backend-integrity-lifecycle`が返すcomputed `rank`・`point`・`matchIndex`を表示する。ISSUE-99ではMatchごとのチョンボ発生者と卓外供託を別入力で記録し、外卓入力を結果詳細で確認できるようにする。FEはscore/rank/point/aggregateを再計算せず、mutation成功後にGETで正本を再取得する。
 
 ### Goals
 
@@ -12,6 +12,8 @@ Seasonの参加者候補から固定Sessionを作成し、Session membersを正�
 - Session member snapshotをSession作成時に固定し、Matchのparticipant集合を常に完全一致させる。
 - Sessionの作成・一覧・詳細、Matchの作成・編集・一覧・詳細・削除と結果表示をAPIへ接続する。
 - 初回・追加・編集でMatchフォームの入力・validation・mutation状態を共通化する。
+- League ruleで卓外供託が許可される場合だけ供託入力を表示し、チョンボ発生行と供託本数を別々に送信する。
+- Main/PR #104のMatch UIを維持し、チョンボ・供託の入力欄と結果詳細だけを追加する。
 - API error/loading/empty、retry、二重submit、stale request、未接続操作を対象画面で統一する。
 
 ### Non-Goals
@@ -29,14 +31,15 @@ Seasonの参加者候補から固定Sessionを作成し、Session membersを正�
 - Session feature API、Session一覧・詳細・終了表示、Session membersのview model。
 - Match feature API、共通Matchフォーム、Match一覧・詳細・結果表示、create/update/delete後の再取得。
 - Session membersとMatch participantの一致をUIで表示・送信する境界、raw scoreの入力補助、BE結果の表示。
+- Matchごとのchombo event・off-table kyotaku inputと、BEが保存した両項目の結果詳細表示。
 - 対象routeのloading/error/empty/retry、二重submit防止、stale request防止、未接続buttonの解消。
 
 ### Out of Boundary
 
-- BEのcanonical Session/Match、固定member、wind/raw score validation、score/rank/point計算、matchIndex採番、集計・repair・削除ライフサイクル。
+- BEのcanonical Session/Match、固定member、wind/raw score validation、score/rank/point計算、外卓点数処理、matchIndex採番、集計・repair・削除ライフサイクル。
 - `frontend-foundation-ui`のtransport、AppType公開位置、認証Cookie、ErrorEnvelope parser、AsyncState/UI primitiveの内部実装。
-- `frontend-league-season`のLeague/Season CRUDとstanding/record表示、`frontend-statistics-quality`の統計・旧コード削除。
-- Session作成後のmember変更、別参加者を既存Sessionへ追加する操作、新しいgame rule。
+- `frontend-league-season`のLeague rule編集とstanding/record表示、`frontend-statistics-quality`の統計・旧コード削除。
+- Session作成後のmember変更、別参加者を既存Sessionへ追加する操作、League rule設定や点数計算。
 
 ### Allowed Dependencies
 
@@ -44,15 +47,15 @@ Seasonの参加者候補から固定Sessionを作成し、Session membersを正�
 |---|---|---:|---|
 | Inbound | `frontend-foundation-ui` | P0 | AppType aliases、共通client、ApiError、AsyncState、Auth、UI primitives |
 | Inbound | `frontend-league-season` | P0 | Season detailからのSession開始導線、Season member候補 |
-| Inbound | `backend-foundation` | P0 | Session/Match route、camelCase DTO、ISO日時、status、ErrorEnvelope、AppType |
-| Inbound | `backend-integrity-lifecycle` | P0 | fixed members、allowed wind、computed rank/point、matchIndex、欠番、fourth null |
+| Inbound | `backend-foundation` | P0 | Session/Match route、camelCase DTO、ISO日時、status、Match external fields、ErrorEnvelope、AppType |
+| Inbound | `backend-integrity-lifecycle` | P0 | fixed members、allowed wind、League rule external settings、computed rank/point、matchIndex、欠番、fourth null |
 | Outbound | `frontend-statistics-quality` | P1 | Session/Match画面がBE結果を再計算しない境界、旧資産の移行対象 |
 | External | Next.js `15.5.19` / React `19.1.0` | P0 | App Router、useParams/useRouter、`React.FC` |
 
 ### Revalidation Triggers
 
 - Session/Matchのrequest/response DTO、route、HTTP status、ErrorCode、AppType公開位置の変更。
-- Session members、gameType、allowed wind、raw score total、rank/point計算、matchIndex欠番、fourth null semanticsの変更。
+- Session members、gameType、allowed wind、raw score totalとkyotaku count、chombo event/penalty契約、rank/point計算、matchIndex欠番、fourth null semanticsの変更。
 - 共通client、Auth boundary、AsyncState、Loading/Error/Empty、Input/Select/Table primitiveの変更。
 - Season詳細からのSession開始導線、Session詳細route、Match一覧・詳細route、Session作成タイミングの変更。
 - Create/UpdateMatchでrankを入力するかどうかのBE契約変更。
@@ -131,9 +134,9 @@ Player selectでは参加者を一時保持し、初回Match送信直前にSessi
 | Session update | `PATCH /api/leagues/:leagueId/seasons/:seasonId/sessions/:sessionId` | endedAt/tableLabel → 200 `Session` | 終了操作、再取得 |
 | Session delete | existing API only for rollback/explicit supported action | 204 | UIの必須機能には含めない |
 | Match list | `GET /api/leagues/:leagueId/seasons/:seasonId/sessions/:sessionId/matches` | `data: Match[]` | matchIndex、raw score、rank、point |
-| Match create | `POST /api/leagues/:leagueId/seasons/:seasonId/sessions/:sessionId/matches` | create input → 201 `Match` | 初回・追加登録 |
+| Match create | `POST /api/leagues/:leagueId/seasons/:seasonId/sessions/:sessionId/matches` | create input（rank/pointなし、外卓欄別）→ 201 `Match` | 初回・追加登録 |
 | Match detail | `GET /api/leagues/:leagueId/seasons/:seasonId/sessions/:sessionId/matches/:matchId` | `data: Match` | 編集初期値、結果詳細 |
-| Match update | `PATCH /api/leagues/:leagueId/seasons/:seasonId/sessions/:sessionId/matches/:matchId` | update input → 200 `Match` | raw score/playedAt更新 |
+| Match update | `PATCH /api/leagues/:leagueId/seasons/:seasonId/sessions/:sessionId/matches/:matchId` | update input（rank/point/外卓fieldなし）→ 200 `Match` | raw score/playedAt更新。外卓field omissionで既存値を保持 |
 | Match delete | `DELETE /api/leagues/:leagueId/seasons/:seasonId/sessions/:sessionId/matches/:matchId` | 204 | 確認、削除後再取得 |
 
 具体的なrequest/response typeは手書きDTOを新設せず、foundationの`AppType`から`InferRequestType`/`InferResponseType`で導出する。`frontend/src/lib/api/sessions.ts`と`matches.ts`はfeature APIへの互換入口として整理し、共通parserや認証を再実装しない。
@@ -166,6 +169,10 @@ type MatchFormValues = {
   playedAt: string;
   userIdByWind: ParticipantByWind;
   rawScoreByWind: Readonly<Record<Wind, string>>;
+  hasChomboEvents: boolean;
+  chomboEvents: ReadonlyArray<{ offenderUserId: string | null }>;
+  hasOffTableKyotaku: boolean;
+  offTableKyotakuCount: string;
 };
 
 type MatchFormMode = "initial" | "additional" | "edit";
@@ -174,6 +181,10 @@ type MatchFormProps = {
   mode: MatchFormMode;
   members: FixedSessionMembers;
   constraint: ParticipantConstraint;
+  externalRule: {
+    chomboPenaltyPoints: number;
+    allowOffTableKyotaku: boolean;
+  };
   initialValues: MatchFormValues | null;
   submitting: boolean;
   errorMessage: string | null;
@@ -182,7 +193,7 @@ type MatchFormProps = {
 };
 ```
 
-フォームはraw score文字列を保持し、送信時にBE入力の整数へ変換する。raw scoreの合計・整数・必須入力は表示上の早期検証として扱うが、BE validationが最終権威である。rankとpointは`MatchFormValues`に含めず、Match create/update requestにも含めない。API responseの`results[].rank`/`point`だけをMatch view modelへ渡す。
+Match create用フォームはraw score、供託本数、チョンボ発生者IDを文字列/行配列として保持し、送信時にAppTypeのMatch入力へ変換する。`hasChomboEvents`を有効にすると発生1回ごとの行を表示し、行数が発生回数になる。同じ`offenderUserId`の複数行を許す。未選択行、Session memberに含まれないID、供託ありなのに1以上の整数でない本数は送信前に拒否する。供託なしは0本へ変換する。卓外供託がruleで許可されない場合は該当controlを表示せず、入力値0を送る。raw score合計の期待値は`startingPoints × memberCount - 1000 × offTableKyotakuCount`とし、チョンボ回数はraw score合計に影響させない。これらは利用者向けの早期検証であり、BE validationが最終権威である。rankとpointは`MatchFormValues`に含めず、Match create/update requestにも含めない。API responseの`results[].rank`/`point`だけをMatch view modelへ渡す。既存Matchのedit modeはチョンボ発生・供託をread-onlyで表示し、PATCHから両fieldを省略して既存値を保持する。これは承認済みRequirement 4.4の「編集対象はplayedAt/raw score」に沿う。
 
 ### Adapter policy
 
@@ -190,12 +201,12 @@ Adapterは次を担当する。
 
 - opaque ID、ISO 8601日時、必須DTOフィールドの検証。
 - Session member snapshot、Match result、sanmaのfourth系nullの保持。
-- BE responseの`matchIndex`、`rank`、`point`、rawScore、userNameの表示整形。
+- BE responseの`matchIndex`、`rank`、`point`、rawScore、userName、`chomboEvents`、`offTableKyotakuCount`の表示整形とedit form初期化。
 - API ErrorEnvelopeをfoundation `ApiError`/safe messageへ渡すためのfeature context付与。
 
 Adapterは次を担当しない。
 
-- raw scoreからrank/pointを計算すること。
+- raw scoreからrank/pointを計算すること、chombo penaltyやkyotakuの点数影響をFEで計算すること。
 - matchIndexを並べ替え、欠番を埋めること。
 - Session resultのpoint合算、standing、統計、累計値を生成すること。
 - Session memberをSeason current membersへ更新すること、API DTOにない値をmockで補うこと。
@@ -218,8 +229,8 @@ Adapterは次を担当しない。
 | Match Feature API | Match list/create/detail/update/deleteを型付きで提供する | 4.1-4.5, 6.1-6.2 | Foundation client、AppType | API, Type |
 | Participant Model | gameType、wind、fixed memberを検証する | 1.1-1.6, 3.2 | Season/League DTO、Session DTO | Type, State |
 | Session Hooks and UI | Player select、Session list/detail、終了操作を表示する | 1.1-2.5, 5.1-5.3, 6.3-6.4 | AsyncState、UI primitives | UI, State |
-| Common Match Form | initial/additional/editを同一入力契約にする | 3.1-3.6, 4.1, 4.4 | Participant Model、Match API | UI, State |
-| Match Views | list/detail/result/delete confirmationを表示する | 4.2-4.5, 5.1-5.3 | Match adapter、Table | UI |
+| Common Match Form | initial/additional/editを同一入力契約にし、チョンボ発生と許可された卓外供託を別入力にする | 3.1-3.9, 4.1, 4.4 | Participant Model、League rule、Match API | UI, State |
+| Match Views | list/detail/result/delete confirmationと記録済み外卓入力を表示する | 4.2-4.5, 5.1-5.3 | Match adapter、Table | UI |
 | Route Integration | existing routeとSeason detail導線を接続する | 2.1, 5.1-5.4, 7.1-7.3 | Next Router、League-Season | UI, State |
 | Validation Handoff | typecheck/lint/buildと境界を検証する | 6.1-6.4, 7.1-7.3 | project scripts、BE contract | Test |
 
@@ -323,8 +334,11 @@ Matchのread-only詳細は専用routeを新設せず、既存results routeのMat
 - Player selectはLeague ruleとSeason membersを同時に読み、三麻はnorth controlを表示せず、四麻は4枠を必須にする。
 - Session detailのmembersは作成時snapshot。Season membersの現在値を上書きしない。
 - Match formのedit modeはparticipantをread-onlyにし、raw score/playedAtだけを編集する。別参加者の場合は新Session開始へ戻す説明を出す。
+- 初回/追加Match formでは既存のplayedAt/席別点数行の後に外卓欄を追加する。チョンボ発生toggleがONなら、Session memberを選ぶ発生者行（1行=1回）と「発生を追加/削除」を表示し、同一userの複数行を許す。各回の罰符はLeague ruleの値を説明表示するだけでFE計算しない。
+- 卓外供託の有無と本数欄は`allowOffTableKyotaku=true`の場合だけ描画する。ありを選んだ時だけ棒数欄を出し、0または不正値では送信を止める。falseの場合は選択・入力controlを描画しない。
+- Match edit modeでは既存のチョンボ発生者と卓外供託本数をread-onlyで表示し、追加・削除・変更controlを表示しない。PATCHは外卓fieldを省略して既存値を保持する。
 - Match listはBEの配列順と各`matchIndex`を表示し、欠番補正を行わない。sortを追加する場合もdisplay indexを変更しない。
-- Match listの各行は展開状態を持ち、展開時に同じMatch DTOのwind、raw score、rank、point、playedAtをread-onlyで表示する。編集は既存のedit routeへ遷移する。
+- Match listの各行は展開状態を持ち、展開時に同じMatch DTOのwind、raw score、rank、point、playedAt、記録済みチョンボ発生回数と各発生者、卓外供託本数をread-onlyで表示する。編集は既存のedit routeへ遷移する。
 - Session resultは各MatchのBE結果を表示し、pointの総和や順位の再計算で表示値を上書きしない。
 - 作成・更新・削除後は対象resourceと一覧を再取得する。楽観更新、mock fallback、console-only completionは持たない。
 
@@ -337,7 +351,6 @@ Matchのread-only詳細は専用routeを新設せず、既存results routeのMat
 | Session Feature API | `frontend/src/features/session/api/index.ts` | Session list/create/detail/updateのtyped wrapper |
 | Match Feature API | `frontend/src/features/match/api/index.ts` | Match list/create/detail/update/deleteのtyped wrapper |
 | Participant Model | `frontend/src/features/session-match/model/participants.ts` | gameType、wind、fixed member、seat constraint |
-| Match Form Model | `frontend/src/features/session-match/model/match-form.ts` | initial/additional/edit values、raw score validation、BE input mapping |
 | Session Hooks | `frontend/src/features/session/hooks/index.ts` | Player select、Session list/detail、stale/error state |
 | Match Hooks | `frontend/src/features/match/hooks/index.ts` | Match list/detail/form mutation、refetch state |
 | Session UI | `frontend/src/features/session/ui/index.tsx` | Player select、Session list/detail、empty/error composition |
@@ -348,6 +361,12 @@ Matchのread-only詳細は専用routeを新設せず、既存results routeのMat
 
 | Component | Path | Responsibility |
 |---|---|---|
+| ISSUE-99 Match Form Model | `frontend/src/features/session-match/model/match-form.ts` | external input draft、kyotaku調整後raw total validation、AppType payload変換、Match DTOからの初期化 |
+| ISSUE-99 Match Form UI | `frontend/src/features/match/ui/MatchForm.tsx` | 既存フォームにchombo toggle/event rowsとrule許可時のみのkyotaku controlを追加 |
+| ISSUE-99 Match Result UI | `frontend/src/features/match/ui/MatchList.tsx` | 展開詳細にMatch DTOのchombo/kyotakuを表示 |
+| ISSUE-99 Match route hooks | `frontend/src/app/league/[leagueId]/season/[seasonId]/sessions/start/match/hooks/index.ts`、`frontend/src/app/league/[leagueId]/season/[seasonId]/sessions/[sessionId]/matches/new/hooks/index.ts`、`frontend/src/app/league/[leagueId]/season/[seasonId]/sessions/[sessionId]/matches/[matchId]/edit/hooks/index.ts` | League external ruleをフォームへ渡し、外卓入力をMatch create/updateへ渡す |
+| Match Form Validation | `frontend/src/features/session-match/model/match-form.ts`、`frontend/src/features/match/ui/backend-result-display.test.tsx` | 外卓入力のpayload/validationとBE結果表示を既存test/model境界で検証 |
+| Validation Handoff | `frontend/package.json`, `frontend/tsconfig.json` | 既存typecheck/lint/build entryとHono API type境界を確認 |
 | Session API compatibility | `frontend/src/lib/api/sessions.ts` | feature APIへの薄い互換入口、list/detail契約の不足を補う |
 | Match API compatibility | `frontend/src/lib/api/matches.ts` | feature APIへの薄い互換入口、match detailとtyped inputを接続 |
 | Player select route | `frontend/src/app/league/[leagueId]/season/[seasonId]/sessions/start/players/*` | Participant ModelとSession creationを接続 |
@@ -392,8 +411,8 @@ Matchのread-only詳細は専用routeを新設せず、既存results routeのMat
 |---|---|---|
 | Participant constraint check | sanma/yonma count、allowed wind、duplicate、fixed members、new Session handoff | 1.1-1.6, 2.1, 3.2, 4.1, 4.4 |
 | Session API contract check | list/create/detail/update、snapshot、DTO/null/ISO、status/ErrorEnvelope | 2.1-2.5, 6.1-6.2 |
-| Match form check | common modes、raw score validation、participant read-only、no FE rank/point | 3.1-3.6, 4.1, 4.4 |
-| Match result check | list/detail/delete/refetch、computed rank/point、matchIndex gaps | 4.2-4.5, 5.1-5.3 |
+| Match form check | common modes、外卓供託棒を差し引いたraw score total、chombo event別offender、repeat offender、ruleによるkyotaku欄の非表示、participant read-only、no FE rank/point | 3.1-3.9, 4.1, 4.4 |
+| Match result check | list/detail/delete/refetch、computed rank/point、matchIndex gaps、記録済みchombo/kyotaku表示 | 4.2-4.5, 5.1-5.3 |
 | State and error check | loading/empty/retry、401 handoff、403/404/409/validation/transport、stale request | 1.6, 2.5, 3.5-3.6, 6.3-6.4 |
 | Route smoke | Season detail → Session → first/additional/edit/result/back flow and no-op buttons | 5.1-5.3, 7.3 |
 | Project validation | `pnpm typecheck`、`pnpm lint`、`pnpm build`、mock/direct-fetch/FE-calculation scan | 5.4, 6.1, 7.1-7.3 |
@@ -403,6 +422,7 @@ Matchのread-only詳細は専用routeを新設せず、既存results routeのMat
 ## 10. Open Questions / Risks
 
 - backendのrebuildが非同期化された場合、mutation直後のGETが古い派生値を返さない完了契約を再確認する。
+- League ruleのlegacy fallbackが`allowOffTableKyotaku=false`なら、該当LeagueのMatch画面では供託欄を表示しない。必要な既存Leagueを有効化する運用移行はBE/League仕様の判断と整合させる。
 
 ## 11. Requirements Traceability
 
@@ -410,8 +430,10 @@ Matchのread-only詳細は専用routeを新設せず、既存results routeのMat
 |---|---|---|---|
 | 1.1, 1.2, 1.3, 1.4, 1.5, 1.6 | gameType別Player select、重複、fixed member、候補状態 | Participant Model, Session Hooks and UI | Season/League → Player select |
 | 2.1, 2.2, 2.3, 2.4, 2.5 | Session create/list/detail/end/error | Session Feature API, Session Hooks and UI | Session endpoints → Session views |
+| 2.6 | Match create失敗時に今回作成したSessionだけをrollbackし、入力を保持 | Route Integration, Session Feature API, Match Feature API | create Session → create Match failure → delete newly-created Session |
 | 3.1, 3.2, 3.3, 3.4, 3.5, 3.6 | 共通Match form、raw score、participant一致、BE結果、二重submit | Common Match Form, Participant Model | form → Match API |
-| 4.1, 4.2, 4.3, 4.4, 4.5 | Match create/update/delete、list/detail、欠番、編集固定、refetch | Match Feature API, Match Views | Match endpoints → result views |
+| 3.7, 3.8, 3.9 | chombo eventごとのoffender、ruleに応じたkyotaku controlの表示/非表示、既存UIへの追加 | Common Match Form | League rule + Match form → separate external Match fields |
+| 4.1, 4.2, 4.3, 4.4, 4.5 | Match create/update/delete、list/detail、外卓結果、欠番、編集固定、refetch | Match Feature API, Match Views | Match endpoints → result views |
 | 5.1, 5.2, 5.3, 5.4 | success navigation、BE result表示、未接続操作、scope | Route Integration, Match Views | mutation → route/refetch |
 | 6.1, 6.2, 6.3, 6.4 | foundation contracts、adapter、loading/error/stale | Session/Match API, Validation Handoff | feature → shared boundaries |
 | 7.1, 7.2, 7.3 | revalidation、project validation、ownership boundary | Route Integration, Validation Handoff | upstream/downstream handoff |

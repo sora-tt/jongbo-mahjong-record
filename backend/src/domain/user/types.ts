@@ -28,6 +28,7 @@ export type UserStats = {
   seasonName: Nullable<string>;
   totalPoints: number;
   totalMatchCount: number;
+  chomboCount: number;
   averageRank: number;
   currentRank: Nullable<number>;
   firstCount: number;

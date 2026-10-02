@@ -67,6 +67,27 @@
 | 既存データの rank/point が新計算と異なる | 既存 scoring の tie、uma、oka、丸め規則をテストで固定し、移行なしに既存 Match を書き換えない |
 | 既存の不正・欠損データを rebuild が推測してしまう | 必須値・scope・gameType の契約違反は repair report で検出し、既定値で補正せず停止する |
 
+## ISSUE-99 追加調査（2026-10-01）
+
+### 拡張点
+
+- 現行 `backend/src/domain/shared/scoring.ts` はrawScore totalを `startingPoints × playerCount` と照合し、既存point totalが0から0.2を超えて外れた場合に拒否する。ここが外卓供託とチョンボ罰符を反映する計算境界である。
+- `backend/src/application/services/matchService.ts` は既存Match入力を読み、scoring結果をcanonical Matchへ保存する境界である。Matchの外卓fieldを別々に保ったまま計算へ渡す。
+- `backend/src/domain/shared/aggregation.ts` はMatch集合からUserStatsを作る境界である。chombo回数はMatch event配列の出現数を各scopeで合計すれば、別の正本・追加collectionなしに再構築できる。
+
+### 計算判断
+
+- 卓外供託は1本をraw score 1,000点として扱い、rawScore合計を `startingPoints × playerCount - 1000 × count` と照合する。rawScoreから計算される点数合計への効果を維持し、点数から同じ供託分を二重に差し引かない。
+- chomboはLeague ruleの非負整数罰符を各eventのoffender pointから引く。rank、rawScore、PR #104のfloatingCount判定は変更しない。
+- `expectedPointTotal = -(chomboEvents.length × chomboPenaltyPoints + offTableKyotakuCount)` とし、既存の小数第1位丸め許容0.2で照合する。外卓入力がない場合は既存の0合計に一致する。
+- `allowOffTableKyotaku=false`ならcount 0だけを受け付ける。offenderはSession member集合内に限るが、同一offenderのevent重複は許す。
+
+### build vs. adopt とリスク
+
+- 新規ledger/collection、score engine、依存packageは追加せず、既存scoring pure functionとcanonical Match eventからのrebuildへ拡張する。
+- chombo eventとkyotakuを同じ保存fieldへ統合すると、UserStats回数やruleによるkyotaku表示制御を失うため採用しない。計算段階のみ外卓要因としてまとめる。
+- 既存Leagueは新rule defaultが0/falseであり、初回Match後はrule lockされる。既存Leagueの設定移行が必要かは運用計画で確認し、計算時の自動推測や履歴再計算は行わない。
+
 ## 未解決ではなく明示した仮定
 
 - League の member 変更は Match 本体を変更せず、以後の Session 作成可否だけに影響する。過去 Match に参加したユーザーの履歴は保持する。

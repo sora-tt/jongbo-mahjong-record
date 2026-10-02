@@ -84,6 +84,7 @@ export type MatchResultInput = Array<{
   wind: "east" | "south" | "west" | "north";
   rawScore: number;
 }>;
+export type MatchChomboEventInput = Array<{ offenderUserId: string }>;
 
 type Brand<T, Name extends string> = T & { readonly __brand: Name };
 

@@ -12,6 +12,8 @@ const yonmaRule = {
     fourth: -20,
   },
   oka: { startingPoints: 25000, returnPoints: 30000 },
+  chomboPenaltyPoints: 0,
+  allowOffTableKyotaku: false,
 };
 
 const sanmaRule = {
@@ -24,6 +26,8 @@ const sanmaRule = {
     fourth: null,
   },
   oka: { startingPoints: 25000, returnPoints: 30000 },
+  chomboPenaltyPoints: 0,
+  allowOffTableKyotaku: false,
 };
 
 const floatingCountRule = {
@@ -39,6 +43,8 @@ const floatingCountRule = {
     },
   },
   oka: { startingPoints: 25000, returnPoints: 25000 },
+  chomboPenaltyPoints: 0,
+  allowOffTableKyotaku: false,
 };
 
 test("calculates yonma rank and zero-sum points without trusting rank input", () => {
@@ -116,6 +122,8 @@ test("uses the zero-floating row when every score is at or below the return poin
   const rule = {
     ...floatingCountRule,
     oka: { startingPoints: 20000, returnPoints: 25000 },
+    chomboPenaltyPoints: 0,
+    allowOffTableKyotaku: false,
   };
   const results = calculateMatchPoints(rule, [
     { userId: "u1", userName: "A", wind: "east", rawScore: 24000 },
@@ -212,6 +220,8 @@ test("uses the four-floating row", () => {
   const rule = {
     ...floatingCountRule,
     oka: { startingPoints: 25000, returnPoints: 20000 },
+    chomboPenaltyPoints: 0,
+    allowOffTableKyotaku: false,
   };
   const results = calculateMatchPoints(rule, [
     { userId: "u1", userName: "A", wind: "east", rawScore: 28000 },
@@ -283,6 +293,8 @@ test("adds oka independently and rounds tied points to one decimal place", () =>
       },
     },
     oka: { startingPoints: 25000, returnPoints: 30000 },
+    chomboPenaltyPoints: 0,
+    allowOffTableKyotaku: false,
   };
   const results = calculateMatchPoints(rule, [
     { userId: "u1", userName: "A", wind: "east", rawScore: 31000 },

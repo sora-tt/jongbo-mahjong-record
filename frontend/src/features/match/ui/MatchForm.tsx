@@ -38,6 +38,8 @@ type Props = {
   values: MatchFormValues;
   constraint: ParticipantConstraint;
   members: ReadonlyArray<SessionMember>;
+  chomboPenaltyPoints: number;
+  allowOffTableKyotaku: boolean;
   error: string | null;
   isSubmitting: boolean;
   onChange: (values: MatchFormValues) => void;
@@ -50,6 +52,8 @@ export const MatchForm: React.FC<Props> = ({
   values,
   constraint,
   members,
+  chomboPenaltyPoints,
+  allowOffTableKyotaku,
   error,
   isSubmitting,
   onChange,
@@ -93,6 +97,12 @@ export const MatchForm: React.FC<Props> = ({
       ...values,
       rawScoreByWind: { ...values.rawScoreByWind, [wind]: value },
     });
+  };
+
+  const setChomboOffender = (index: number, offenderUserId: string) => {
+    const chomboOffenderUserIds = [...values.chomboOffenderUserIds];
+    chomboOffenderUserIds[index] = offenderUserId;
+    onChange({ ...values, chomboOffenderUserIds });
   };
 
   return (
@@ -153,6 +163,156 @@ export const MatchForm: React.FC<Props> = ({
             </div>
           </div>
         ))}
+
+        {mode === "edit" ? (
+          <section className="space-y-1 border-t border-border pt-3 text-sm">
+            <h2 className="font-semibold text-foreground">外卓記録</h2>
+            <p className="text-text-muted">
+              チョンボ：
+              {values.chomboOffenderUserIds.length > 0
+                ? values.chomboOffenderUserIds
+                    .map(
+                      (userId) =>
+                        members.find(
+                          (member) => String(member.userId) === userId
+                        )?.userName ?? "参加者"
+                    )
+                    .join("、")
+                : "なし"}
+              {values.chomboOffenderUserIds.length > 0
+                ? `（${values.chomboOffenderUserIds.length}回）`
+                : null}
+            </p>
+            <p className="text-text-muted">
+              卓外供託：
+              {values.offTableKyotakuPresent
+                ? `${values.offTableKyotakuCount}本`
+                : "なし"}
+            </p>
+            <p className="text-xs text-text-muted">
+              チョンボ罰符 {chomboPenaltyPoints}pt／外卓記録は編集できません
+            </p>
+          </section>
+        ) : (
+          <section className="space-y-3 border-t border-border pt-3">
+            <div className="space-y-1">
+              <h2 className="text-sm font-semibold text-foreground">
+                外卓記録
+              </h2>
+              <p className="text-xs text-text-muted">
+                チョンボ罰符：{chomboPenaltyPoints}pt／回
+              </p>
+            </div>
+            <label className="flex items-center gap-2 text-sm text-foreground">
+              <input
+                type="checkbox"
+                checked={values.chomboOffenderUserIds.length > 0}
+                disabled={isSubmitting}
+                onChange={(event) =>
+                  onChange({
+                    ...values,
+                    chomboOffenderUserIds: event.target.checked ? [""] : [],
+                  })
+                }
+              />
+              チョンボが発生した
+            </label>
+            {values.chomboOffenderUserIds.length > 0 ? (
+              <div className="space-y-2 pl-1">
+                {values.chomboOffenderUserIds.map((offenderUserId, index) => (
+                  <div
+                    key={`chombo-${index}`}
+                    className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2"
+                  >
+                    <Dropdown
+                      defaultOption="チョンボした人を選択"
+                      options={options}
+                      value={offenderUserId}
+                      onChange={(_, value) => setChomboOffender(index, value)}
+                      disabled={isSubmitting}
+                      className="w-full"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      disabled={isSubmitting}
+                      onClick={() =>
+                        onChange({
+                          ...values,
+                          chomboOffenderUserIds:
+                            values.chomboOffenderUserIds.filter(
+                              (_, eventIndex) => eventIndex !== index
+                            ),
+                        })
+                      }
+                    >
+                      削除
+                    </Button>
+                  </div>
+                ))}
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  disabled={isSubmitting}
+                  onClick={() =>
+                    onChange({
+                      ...values,
+                      chomboOffenderUserIds: [
+                        ...values.chomboOffenderUserIds,
+                        "",
+                      ],
+                    })
+                  }
+                >
+                  チョンボ発生を追加
+                </Button>
+              </div>
+            ) : null}
+
+            {allowOffTableKyotaku ? (
+              <div className="space-y-2 border-t border-border pt-3">
+                <label className="flex items-center gap-2 text-sm text-foreground">
+                  <input
+                    type="checkbox"
+                    checked={values.offTableKyotakuPresent}
+                    disabled={isSubmitting}
+                    onChange={(event) =>
+                      onChange({
+                        ...values,
+                        offTableKyotakuPresent: event.target.checked,
+                        offTableKyotakuCount: event.target.checked
+                          ? values.offTableKyotakuCount || "1"
+                          : "",
+                      })
+                    }
+                  />
+                  卓外へ供託がある
+                </label>
+                {values.offTableKyotakuPresent ? (
+                  <label className="block text-sm font-medium text-foreground">
+                    卓外供託の本数
+                    <TextBox
+                      className="mt-1 max-w-32"
+                      variant="number"
+                      type="text"
+                      inputMode="numeric"
+                      value={values.offTableKyotakuCount}
+                      onChange={(event) =>
+                        onChange({
+                          ...values,
+                          offTableKyotakuCount: event.target.value,
+                        })
+                      }
+                      disabled={isSubmitting}
+                    />
+                  </label>
+                ) : null}
+              </div>
+            ) : null}
+          </section>
+        )}
 
         {error ? <p className="text-sm text-error-text">{error}</p> : null}
 

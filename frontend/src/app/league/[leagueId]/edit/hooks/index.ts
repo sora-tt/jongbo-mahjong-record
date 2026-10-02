@@ -220,6 +220,17 @@ export const useLeagueEdit = () => {
     []
   );
 
+  const handleChomboPenaltyPointsChange = React.useCallback((value: string) => {
+    setRuleSettings((prev) => ({ ...prev, chomboPenaltyPoints: value }));
+  }, []);
+
+  const handleAllowOffTableKyotakuChange = React.useCallback(
+    (value: boolean) => {
+      setRuleSettings((prev) => ({ ...prev, allowOffTableKyotaku: value }));
+    },
+    []
+  );
+
   const handleModeChange = React.useCallback((mode: UmaMode) => {
     setRuleSettings((prev) => ({ ...prev, mode }));
   }, []);
@@ -334,6 +345,8 @@ export const useLeagueEdit = () => {
     handleRemoveMember,
     handleGameTypeChange,
     handleOkaSettingChange,
+    handleChomboPenaltyPointsChange,
+    handleAllowOffTableKyotakuChange,
     handleModeChange,
     handleFixedUmaChange,
     handleFloatingCountUmaChange,

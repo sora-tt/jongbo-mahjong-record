@@ -6,7 +6,10 @@ import {
   executeNoContentRequest,
 } from "@/lib/api/core";
 
-import type { MatchResultInput } from "@/lib/api/contracts";
+import type {
+  MatchChomboEventInput,
+  MatchResultInput,
+} from "@/lib/api/contracts";
 
 const listMatchesRequest =
   apiClient.api.leagues[":leagueId"].seasons[":seasonId"].sessions[":sessionId"]
@@ -56,6 +59,8 @@ export const createMatch = async (input: {
   sessionId: string;
   playedAt: string;
   results: MatchResultInput;
+  chomboEvents: MatchChomboEventInput;
+  offTableKyotakuCount: number;
 }) =>
   executeApiRequest<CreateMatchResponse>(() =>
     createMatchRequest({
@@ -64,7 +69,12 @@ export const createMatch = async (input: {
         seasonId: input.seasonId,
         sessionId: input.sessionId,
       },
-      json: { playedAt: input.playedAt, results: input.results },
+      json: {
+        playedAt: input.playedAt,
+        results: input.results,
+        chomboEvents: input.chomboEvents,
+        offTableKyotakuCount: input.offTableKyotakuCount,
+      },
     })
   );
 

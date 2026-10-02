@@ -12,7 +12,7 @@
 - リーグ作成、詳細、編集
 - リーグ詳細内のシーズン一覧
 - シーズン作成、詳細、編集
-- BE API契約に基づく`rule`、member、active season、standings、league/season recordsの表示
+- BE API契約に基づく`rule`（チョンボ点数・卓外供託可否を含む）、member、active season、standings、league/season recordsの表示
 - API hooks、表示adapter、フォーム送信、loading/error/empty/retry状態
 - 未接続button、mock参照、旧シーズン編集route、編集後の派生値表示の整理
 
@@ -27,7 +27,7 @@
 ### 隣接仕様との契約
 
 - `frontend-foundation-ui` のHono `AppType`由来型、共通API client、`{ data }`/ErrorEnvelope、Cookie認証、AsyncState、UI primitives、AppShellを利用する。
-- `backend-foundation` のcamelCase DTO、ISO 8601日時、opaque ID、league embedded `rule`、`rule.uma`の合計0 invariant、リーグ/シーズンrouteとstatusを正本として利用する。
+- `backend-foundation` のcamelCase DTO、ISO 8601日時、opaque ID、league embedded `rule`、`rule.uma`の合計0 invariant、チョンボ点数・卓外供託可否、リーグ/シーズンrouteとstatusを正本として利用する。
 - `backend-integrity-lifecycle` のactive season一意性、rule lock、BEが計算したstandings/records、削除後の派生値をそのまま表示し、FE側で再計算しない。
 - 下流の`frontend-session-match`はシーズン詳細から既存のSession開始routeへ遷移できることだけを受け取り、Session/Match画面の実装は所有しない。
 
@@ -55,11 +55,11 @@
 
 ### Requirement 3: リーグ作成フォーム
 
-3.1 When 利用者がリーグ作成画面を表示するとき, the League-Season Feature shall リーグ名、メンバー候補、gameType、okaのstartingPoints/returnPoints、umaの順位別値を入力できるフォームを表示する。
+3.1 When 利用者がリーグ作成画面を表示するとき, the League-Season Feature shall リーグ名、メンバー候補、gameType、okaのstartingPoints/returnPoints、umaの順位別値、チョンボ点数、卓外供託の可否を入力できるフォームを表示する。
 
 3.2 When 利用者がメンバー検索を実行するとき, the League-Season Feature shall BEのユーザー検索結果だけを候補として表示し、追加済み候補の重複追加を防ぎ、検索中・該当なし・検索失敗を区別する。
 
-3.3 When gameTypeがsanmaまたはyonmaである状態, the League-Season Feature shall sanmaではuma.fourthをnull、yonmaではuma.fourthを入力値として送信し、BE契約にないruleフィールドを追加しない。
+3.3 When gameTypeがsanmaまたはyonmaである状態, the League-Season Feature shall sanmaではuma.fourthをnull、yonmaではuma.fourthを入力値として送信し、チョンボ点数と卓外供託可否を含むBE契約上のruleフィールドだけを送信する。
 
 3.4 When 利用者がリーグ作成または編集フォームでrule.umaを入力するとき, the League-Season Feature shall `uma.first`、`uma.second`、`uma.third`と、yonmaの場合の`uma.fourth`の合計が0になることを事前検証し、合計が0でない場合はAPIを呼び出さず入力エラーを表示する。
 
@@ -71,7 +71,7 @@
 
 4.1 When 利用者がリーグ編集画面を表示するとき, the League-Season Feature shall BEのLeagueDetailを読み込み、リーグ名、現在のメンバー、ruleをフォームへ初期表示する。
 
-4.2 When 利用者がリーグ設定を更新するとき, the League-Season Feature shall BEが許可するname、memberUserIds、ruleだけを`PATCH /api/leagues/:leagueId`へ送信し、正本Match後はruleを変更せずnameまたはmemberUserIdsの更新だけを許可する。
+4.2 When 利用者がリーグ設定を更新するとき, the League-Season Feature shall BEが許可するname、memberUserIds、ruleだけを`PATCH /api/leagues/:leagueId`へ送信し、正本Match後はチョンボ点数・卓外供託可否を含むruleを変更せずnameまたはmemberUserIdsの更新だけを許可する。
 
 4.3 If 正本Match後のrule更新、またはメンバー・rule更新がBEの競合/validation条件に該当する場合, the League-Season Feature shall BEのconflictまたはvalidation errorを安全な利用者向けメッセージとして表示し、mockによる代替更新を行わない。
 
@@ -132,5 +132,5 @@
 - 現在の`/`をホーム兼リーグ一覧の正規入口とし、独立した`/league`一覧routeは新設しない。Headerのリーグ導線は`frontend-foundation-ui`のAppShellへ`/`を再検証付きで渡す。
 - `POST /api/leagues/:leagueId/seasons`のstatus省略時はBEの現行契約どおりactiveとして扱う。別activeがある場合はBEのconflictを表示し、自動archived化や別seasonの自動昇格は行わない。
 - `rule.uma`の数値フィールド合計0は、ユーザー確認済みの`backend-foundation`正本契約として扱う。FEは事前検証を行うが、BEのvalidationを最終的な正とし、FEとBEの判定が異なる場合はBEの`validation_error`を表示する。
-- リーグにMatchが存在する場合のrule編集はBEのrule lockを正とし、UIでは編集不可またはconflictを説明する。既存Matchの再計算をFEで行わない。
+- リーグにMatchが存在する場合のrule編集はBEのrule lockを正とし、UIでは編集不可またはconflictを説明する。追加されるrule項目も同じlockを適用し、既存Matchの再計算をFEで行わない。
 - シーズンメンバーは作成時のBE snapshotであり、編集画面では表示のみとする。メンバー差し替えが必要な場合は別のBE/FE仕様を起こす。

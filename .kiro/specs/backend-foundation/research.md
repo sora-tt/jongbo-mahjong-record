@@ -63,3 +63,25 @@
 - Match作成後のrule更新可否と履歴のrule固定は後続BE仕様で決める。
 - `scoreCalculation` は現行の公開Domain/API契約に含まれないため本仕様では採用しない。可変丸め方式を導入する場合は要件を再開する。
 - productionでの既存データ移行手順は、データ量とバックアップ運用を確認した別計画で決める。
+
+## ISSUE-99 追加調査（2026-10-01）
+
+### 対象と根拠
+
+- [Issue #99](https://github.com/sora-tt/jongbo-mahjong-record/issues/99) はチョンボと最終局の供託を卓外点棒として扱う要求である。
+- [PR #104](https://github.com/sora-tt/jongbo-mahjong-record/pull/104) を設計の基準とし、fixed/floatingCount uma、League rule、最初のMatch後のrule lockを維持する。
+- 現行の `backend/src/domain/league/types.ts` と `backend/src/domain/shared/scoring.ts` を確認した。計算はraw scoreからrank/pointを決め、点数合計0を検証する構成であり、ruleにはPR #104のdiscriminated unionがある。
+
+### 設計判断
+
+- 採用: API/保存では `chomboEvents[]` と `offTableKyotakuCount` を別fieldにし、同一ユーザーの複数chombo eventを発生ごとに保持する。League ruleには非負整数の `chomboPenaltyPoints` とbooleanの `allowOffTableKyotaku` を含める。
+- 採用: collection/indexを追加せず、Match正本、埋め込みLeague rule、既存scope別UserStatsへ追加する。旧Match/Statsは読取時に空配列/0、旧ruleは0/falseへ正規化し、過去結果は再計算しない。
+- 一般化: 個別の罰符を一つの曖昧な合計fieldへ畳まず、発生者・供託本数を公開境界で分け、後続BE仕様だけが計算時の外卓要因として統合する。
+
+### PR #104との影響
+
+主な重複点は `LeagueRule`、League schema/repository、Match schema/repository、scoring、League rule editor、Match formである。作業ブランチをPR #104のheadから開始したため、その差分を前提に段階的に拡張する。PR #104より前のdevelopへ設計や実装を移す場合は、uma union・rawScore returnPoints判定・rule lockとの再baseが必要である。
+
+### 互換性リスク
+
+旧Leagueのfield defaultは既存結果を守るが、すでにMatchがあるLeagueはrule lockのため新設定を利用者が後から編集できない。既存Leagueへ有効化が必要なら、通常rule updateでlockを迂回せず、別途承認された移行手順を使う。

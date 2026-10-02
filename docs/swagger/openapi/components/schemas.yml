@@ -193,7 +193,7 @@ components:
           type: string
           description: リーグ説明
         rule:
-          $ref: '#/components/schemas/Rule'
+          $ref: '#/components/schemas/RuleInput'
         members:
           type: array
           description: メンバー一覧
@@ -211,7 +211,7 @@ components:
           type: string
           description: リーグ説明
         rule:
-          $ref: '#/components/schemas/Rule'
+          $ref: '#/components/schemas/RuleInput'
         members:
           type: array
           description: メンバー一覧
@@ -379,7 +379,7 @@ components:
     Match:
       type: object
       description: 対局の基本情報
-      required: [id, leagueId, seasonId, tableId, playedAt, results, createdAt, updatedAt]
+      required: [id, leagueId, seasonId, tableId, playedAt, results, chomboEvents, offTableKyotakuCount, createdAt, updatedAt]
       properties:
         id:
           type: string
@@ -401,6 +401,15 @@ components:
           type: string
           format: date-time
           description: 対局日時
+        chomboEvents:
+          type: array
+          description: チョンボ発生ごとの違反者。重複は複数回の発生を表す
+          items:
+            $ref: '#/components/schemas/ChomboEvent'
+        offTableKyotakuCount:
+          type: integer
+          minimum: 0
+          description: 卓外へ出た供託棒の本数
         results:
           type: array
           description: 各プレイヤーの結果
@@ -446,6 +455,15 @@ components:
           maximum: 4
           description: 着順（1〜4 位）
 
+    ChomboEvent:
+      type: object
+      description: 1 回のチョンボ発生
+      required: [offenderUserId]
+      properties:
+        offenderUserId:
+          type: string
+          description: チョンボしたユーザー ID
+
     # 詳細型
     MatchDetail:
       allOf:
@@ -481,6 +499,15 @@ components:
           maxItems: 4
           items:
             $ref: '#/components/schemas/MatchResultInput'
+        chomboEvents:
+          type: array
+          description: チョンボ発生の一覧。同一ユーザーの複数回発生を許可
+          items:
+            $ref: '#/components/schemas/ChomboEvent'
+        offTableKyotakuCount:
+          type: integer
+          minimum: 0
+          description: 卓外へ出た供託棒の本数
 
     UpdateMatchRequest:
       type: object
@@ -501,6 +528,15 @@ components:
           description: 更新後の対局結果
           items:
             $ref: '#/components/schemas/MatchResultInput'
+        chomboEvents:
+          type: array
+          description: 更新後のチョンボ発生一覧
+          items:
+            $ref: '#/components/schemas/ChomboEvent'
+        offTableKyotakuCount:
+          type: integer
+          minimum: 0
+          description: 更新後の卓外供託棒数
 
     MatchResultInput:
       type: object
@@ -550,7 +586,7 @@ components:
     MemberStats:
       type: object
       description: メンバーの成績情報（共通）
-      required: [totalPoints, matchesCount, rankCounts]
+      required: [totalPoints, matchesCount, rankCounts, chomboCount]
       properties:
         totalPoints:
           type: number
@@ -560,6 +596,10 @@ components:
           type: integer
           minimum: 0
           description: 対局数
+        chomboCount:
+          type: integer
+          minimum: 0
+          description: チョンボ発生回数
         rankCounts:
           $ref: '#/components/schemas/RankCounts'
         rank:
@@ -733,7 +773,7 @@ components:
     Rule:
       type: object
       description: ルール設定
-      required: [gameType, uma, oka, scoreCalculation]
+      required: [gameType, uma, oka, scoreCalculation, chomboPenaltyPoints, allowOffTableKyotaku]
       properties:
         id:
           type: string
@@ -760,6 +800,36 @@ components:
           description: 点数計算方法
           enum: [decimal, fiveDropSixUp, round, floor, ceil]
           example: decimal
+        chomboPenaltyPoints:
+          type: integer
+          minimum: 0
+          description: チョンボ 1 回あたりに offender の point から減算する値
+        allowOffTableKyotaku:
+          type: boolean
+          description: 卓外供託の入力を許可するか
+
+    RuleInput:
+      type: object
+      description: ルール設定。外卓項目を省略した場合は0/falseで扱う
+      required: [gameType, uma, oka]
+      properties:
+        gameType:
+          type: string
+          enum: [sanma, yonma]
+        uma:
+          $ref: '#/components/schemas/Uma'
+        oka:
+          $ref: '#/components/schemas/Oka'
+        scoreCalculation:
+          type: string
+          enum: [decimal, fiveDropSixUp, round, floor, ceil]
+        chomboPenaltyPoints:
+          type: integer
+          minimum: 0
+          default: 0
+        allowOffTableKyotaku:
+          type: boolean
+          default: false
 
     Uma:
       type: object

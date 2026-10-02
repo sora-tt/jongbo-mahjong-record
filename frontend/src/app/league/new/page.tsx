@@ -42,6 +42,8 @@ const NewLeaguePage: React.FC = () => {
     handleRemoveMember,
     handleGameTypeChange,
     handleOkaSettingChange,
+    handleChomboPenaltyPointsChange,
+    handleAllowOffTableKyotakuChange,
     handleModeChange,
     handleFixedUmaChange,
     handleFloatingCountUmaChange,
@@ -244,6 +246,8 @@ const NewLeaguePage: React.FC = () => {
                 mode={ruleSettings.mode}
                 fixedUma={ruleSettings.fixedUma}
                 floatingCountUma={ruleSettings.floatingCountUma}
+                chomboPenaltyPoints={ruleSettings.chomboPenaltyPoints}
+                allowOffTableKyotaku={ruleSettings.allowOffTableKyotaku}
                 showErrorSummary={showUmaErrors}
                 submitError={submitError}
                 errorSummaryFocusToken={errorSummaryFocusToken}
@@ -251,6 +255,8 @@ const NewLeaguePage: React.FC = () => {
                 onModeChange={handleModeChange}
                 onFixedUmaChange={handleFixedUmaChange}
                 onFloatingCountUmaChange={handleFloatingCountUmaChange}
+                onChomboPenaltyPointsChange={handleChomboPenaltyPointsChange}
+                onAllowOffTableKyotakuChange={handleAllowOffTableKyotakuChange}
               />
             </div>
           </section>

@@ -4,19 +4,22 @@
 
 ### Summary
 
-現行の `SessionService`、`MatchService`、`SeasonService`、`LeagueService`、`StatsRebuilder`、scoring/aggregation domain、Firestore repositoryを拡張し、canonical Matchを唯一の対局結果ソースとするライフサイクルを構成する。Sessionの固定参加者と三麻/四麻制約を境界で検証し、Match writeをtransactionで直列化し、派生Season/League/UserStatsを冪等rebuildする。公開APIのroute、DTO、認証、status、ErrorEnvelope、保存collection/pathは `backend-foundation` の契約を利用し、再定義しない。
+現行の `MatchService`、scoring/aggregation domain、`StatsRebuilder`を拡張し、チョンボと卓外供託をMatchの外卓入力として扱う。PR #104のfixed/floatingCount順位点、raw score順位、League rule lockは維持し、raw score合計とpoint合計を記録済み外卓要因に照合する。Match上のチョンボ発生者からscope別`chomboCount`を再構築する。公開API/保存shapeは`backend-foundation`の契約を利用する。
 
 ### Goals
 
 - SessionメンバーとMatch参加者を固定し、三麻/四麻、wind、raw scoreを正本書き込み前に検証する。
 - League ruleを最初のMatch登録時に固定し、同時Match createでも重複しないmatchIndexを割り当てる。
 - rank/pointをraw scoreとembedded ruleから決定し、同じ入力に同じ結果を返す。
+- raw score合計とpoint合計にチョンボ罰符・卓外供託による差分を反映し、ルール外の差分は拒否する。
+- Matchのチョンボ発生者ごとの記録からoverall/league/seasonの`chomboCount`を再構築する。
 - Match、Session、Season、Leagueの削除・状態変更後に派生値とuser_statsを再構築する。
 - 集計失敗を隠さず、canonical Matchを保持したままrepair/rebuildで復旧できるようにする。
 
 ### Non-Goals
 
 - `backend-foundation` が定めたDB/API/auth境界、snake_case保存とcamelCase DTO、Hono RPC/AppType、ErrorEnvelopeの再設計。
+- League rule、Match外卓入力、UserStatsの公開DTOおよびFirestore field shapeの再定義。
 - 新しいrule master、`scoreCalculation`、FE画面・adapter、FE側の点数/順位/統計計算。
 - リアルタイムイベント、外部queue、完全な複数端末同時編集、承認なしの既存本番データ移行。
 
@@ -25,6 +28,8 @@
 ### This spec owns
 
 - Sessionの固定member snapshot、League ruleとのgameType整合、Match参加者/wind/raw score検証。
+- chombo/kyotakuを用いたraw score・point合計検証と、チョンボ罰符の結果反映。
+- canonical Matchのチョンボ発生記録からのscope別`chomboCount`集計。
 - raw scoreからrank/pointを決めるdomain計算と、Match結果の不変性・決定性に関する契約。
 - Session内matchIndexのtransactional allocation、最初のMatch後のrule lock、active season遷移の競合制御。
 - canonical Matchを起点とするSession/Season/League/overall/user_statsのrebuildとscope cleanup。
@@ -33,7 +38,7 @@
 ### Out of Boundary
 
 - Firestoreのcollection/path、公開APIのrequest/response DTO、session cookie、認証middleware、ErrorEnvelope、status、OpenAPIの再定義。
-- League ruleそのものの新規フィールド、scoreCalculation、独立rule master。
+- `backend-foundation`所有のLeague rule/Match/UserStats field shape、`scoreCalculation`、独立rule master。
 - FEの入力UI、表示順の個別画面仕様、FEでの集計複製。
 - 本番既存データの自動backfill、重複データの無承認削除、移行・rollbackの実行。
 
@@ -143,30 +148,34 @@ type MatchInputResult = {
   rawScore: number;
 };
 
+type ChomboEvent = { offenderUserId: string };
+
+type MatchExternalInput = {
+  chomboEvents: ReadonlyArray<ChomboEvent>;
+  offTableKyotakuCount: number;
+};
+
 type ScoredMatchResult = MatchInputResult & {
   userName: string;
   rank: number;
   point: number;
 };
 
-type MatchCalculationContext = {
-  gameType: "sanma" | "yonma";
-  startingPoints: number;
-  returnPoints: number;
-  uma: {
-    first: number;
-    second: number;
-    third: number;
-    fourth: number | null;
-  };
-};
+type MatchCalculationContext = LeagueRule; // PR #104 fixed/floatingCount union
 ```
 
 - Match create/update requestは`rank`と`point`を受け取らず、保存・返却するrank/pointはraw scoreからBEが算出する。
-- raw scoreはintegerとして扱い、合計は`startingPoints × playerCount`と一致させる。
+- raw scoreはintegerとして扱い、合計は`startingPoints × playerCount - 1000 × offTableKyotakuCount`と一致させる。卓外供託が0本なら従来の持ち点合計と一致する。
+- `chomboPenaltyPoints`は1回ごとの減点幅を表す非負整数としてLeague ruleに保存する。各チョンボeventについてoffenderのpointから同額を減算し、0は減点なしで発生記録・回数集計だけを行う。
+- チョンボ罰符はrawScore、rank、浮き人数判定を変更しない。pointはPR #104のuma/oka/raw score計算後にoffender別罰符を反映する。
+- 卓外供託は棒数として記録し、raw scoreの合計差分を通じてpoint合計へ反映する。pointへ二重に減算しない。
+- 期待point合計は`-(chomboEvents.length × chomboPenaltyPoints + offTableKyotakuCount)`で、丸め許容差0.2以内で照合する。外卓項目がない場合は従来どおり0を要求する。
+- `allowOffTableKyotaku`がfalseで供託本数が正、またはchombo eventのoffenderがSession memberでない場合は正本write前に`validation_error`とする。
+- chomboEventsは同じoffenderUserIdの重複を許す。1要素を1回として扱い、`UserStats.chomboCount`はscope内の全要素数を合計する。
+- Match updateで外卓フィールドが省略された場合は既存値を保持し、明示値があればresultsと合わせて再計算する。Match delete/update後の集計はcanonical Match event配列から再構築する。
 - sanmaはeast/south/west、yonmaはeast/south/west/northを一度ずつ要求する。
-- 同点はcompetition rankingとし、同順位帯にまたがるumaの平均を各同点者へ配分する。pointは既存のoka/uma規則で小数第1位へ丸める。
-- `ScoredMatchResult`のpoint合計が許容丸め誤差を超えて0から外れる場合は保存しない。
+- 同点はcompetition rankingとし、同順位帯にまたがるumaの平均を各同点者へ配分する。浮き人数判定はPR #104どおりrawScoreがreturnPointsを超える場合とし、pointは小数第1位へ丸める。
+- `ScoredMatchResult`のpoint合計が期待外卓合計から許容丸め誤差を超えて外れる場合は保存しない。
 
 ### Match index and rule lock
 
@@ -202,10 +211,10 @@ standingの同点順は`totalPoints` descending、`userName`の日本語locale�
 | Component | Intent | Requirements | Key dependency | Contracts |
 |---|---|---|---|---|
 | Session Integrity | fixed members、gameType、membership、wind setを検証する | 1.1-1.4, 6.3 | Season/League repositories | Service, State |
-| Match Scoring | raw score、rank、point、tieを決定する | 2.1-2.5 | embedded League rule | Service, Type |
+| Match Scoring | 外卓明細を検証しraw score、rank、pointを決定する | 2.1-2.7 | embedded League rule、Session members | Service, Type |
 | Canonical Lifecycle | transaction、rule lock、index、deleteを調整する | 3.1-3.4, 4.1-4.4, 6.1-6.2 | Firestore repositories | Service, State |
-| Aggregate Calculators | Season/League/overallの派生値を純粋計算する | 5.1-5.5, 7.2, 7.4 | canonical Match | Type, Batch |
-| Rebuild Coordinator | scope別batch、stale cleanup、冪等再実行を行う | 4.1-5.4, 7.1-7.4, 8.1-8.2 | all repositories | Service, Batch |
+| Aggregate Calculators | Season/League/overallの派生値とchomboCountを純粋計算する | 5.1-5.5, 7.2, 7.4-7.5 | canonical Match | Type, Batch |
+| Rebuild Coordinator | scope別batch、stale cleanup、冪等再実行を行う | 4.1-5.4, 7.1-7.5, 8.1-8.2 | all repositories | Service, Batch |
 | Repair Entry Point | 公開APIを増やさず手動/CI repairを起動する | 8.1-8.2 | Rebuild Coordinator | Service, Batch |
 | Integrity Test Suite | 単体・Emulator・integrationで契約を検証する | 1.1-8.3 | all components | Test |
 
@@ -239,11 +248,15 @@ interface MatchScoringService {
     rule: MatchCalculationContext;
     sessionMembers: readonly { userId: string; userName: string }[];
     results: readonly MatchInputResult[];
-  }): ReadonlyArray<ScoredMatchResult>;
+    external: MatchExternalInput;
+  }): {
+    results: ReadonlyArray<ScoredMatchResult>;
+    expectedPointTotal: number;
+  };
 }
 ```
 
-計算関数はrequestにrank/pointを要求せず、userId/windの完全一致、raw score合計、allowed wind、rank、tie uma、point丸め、point totalを順に検証する。既存の計算結果を変える場合は要件再検証と downstream revalidation が必要である。
+計算関数はrequestにrank/pointを要求せず、userId/windの完全一致、外卓設定、外卓調整後raw score合計、rank、tie uma、point丸め、期待point totalを順に検証する。PR #104のfloatingCount判定・uma/oka式は既存結果を保つ。MatchServiceがcanonical Match上位fieldへ保存する`external`内容とresult pointsは一つの計算結果として書き込む。
 
 ### Canonical Lifecycle
 
@@ -330,7 +343,7 @@ interface AggregateCalculator {
 | Condition | ErrorCode | Canonical write |
 |---|---|---|
 | Session count/member/wind mismatch | `validation_error` | none |
-| raw score total/rank/point invariant mismatch | `validation_error` | none |
+| kyotaku is disallowed, offender is outside Session, or raw/point total differs from external formula | `validation_error` | none |
 | rule update after first Match | `conflict` | none |
 | second active Season | `conflict` | none |
 | missing League/Season/Session/Match | `not_found` | none |
@@ -343,23 +356,28 @@ interface AggregateCalculator {
 | Component | Path | Responsibility |
 |---|---|---|
 | Session Integrity | `backend/src/application/services/sessionService.ts` | Session member count、重複、Season membership、固定 snapshotの適用 |
-| Match Scoring | `backend/src/application/services/matchService.ts` | Session完全一致、rule取得、scoring、canonical lifecycle呼び出し |
+| Match Scoring | `backend/src/application/services/matchService.ts` | 既存Matchと外卓入力をmergeし、Session完全一致、rule取得、scoring、canonical writeを行う |
 | Canonical Lifecycle | `backend/src/application/services/seasonService.ts` | active transition、Season delete後のrebuild起動 |
 | Canonical Lifecycle | `backend/src/application/services/leagueService.ts` | rule lock確認、member変更境界、League delete後のrebuild起動 |
 | Rebuild Coordinator | `backend/src/application/services/statsRebuilder.ts` | scope rebuild、親scope更新、stale stats cleanup |
-| Match Scoring | `backend/src/domain/shared/scoring.ts` | gameType/wind/raw score/rank/tie/pointの純粋計算 |
-| Aggregate Calculators | `backend/src/domain/shared/aggregation.ts` | deterministic order、Season/League/UserStats projection |
+| Match Scoring | `backend/src/domain/shared/scoring.ts` | PR #104のgameType/floatingCount/wind/rank/tie/point計算に外卓補正を追加 |
+| Aggregate Calculators | `backend/src/domain/shared/aggregation.ts` | deterministic order、Season/League/UserStats projection、発生件数ベースchomboCount |
 | Session Integrity | `backend/src/domain/session/repository.ts` | transaction対応のSession/Match count repository契約 |
-| Canonical Lifecycle | `backend/src/domain/match/repository.ts` | transaction対応のMatch create/update/delete契約 |
+| Canonical Lifecycle | `backend/src/domain/match/repository.ts` | transaction対応のMatch create/update/deleteを既存foundation型で呼び出す |
 | Canonical Lifecycle | `backend/src/domain/league/repository.ts` | rule lock、active cache、League statistics契約 |
 | Canonical Lifecycle | `backend/src/domain/season/repository.ts` | active transition、statistics、subtree delete契約 |
 | Canonical Lifecycle | `backend/src/infrastructure/firestore/repositories/sessionRepository.ts` | Session document競合点とcountの保存 |
-| Canonical Lifecycle | `backend/src/infrastructure/firestore/repositories/matchRepository.ts` | transactionでのindex allocationとcanonical Match write |
+| Canonical Lifecycle | `backend/src/infrastructure/firestore/repositories/matchRepository.ts` | transactionでのindex allocationと外卓fieldを含むcanonical Match write |
 | Canonical Lifecycle | `backend/src/infrastructure/firestore/repositories/leagueRepository.ts` | rule lock、active cache、League projectionの保存 |
 | Canonical Lifecycle | `backend/src/infrastructure/firestore/repositories/seasonRepository.ts` | Season projection、active status、deleteの保存 |
-| Rebuild Coordinator | `backend/src/infrastructure/firestore/repositories/userStatsRepository.ts` | deterministic user_stats ID upsertとscope cleanup |
+| Rebuild Coordinator | `backend/src/infrastructure/firestore/repositories/userStatsRepository.ts` | foundationのUserStats contractに従うdeterministic upsertとscope cleanup |
 | Session Integrity | `backend/src/presentation/schemas/session.ts` | 上流API入力型を保ちながら境界検証へ接続 |
-| Match Scoring | `backend/src/presentation/schemas/match.ts` | 既存Match DTO schemaとdomain validationの接続 |
+| Match Scoring | `backend/src/presentation/schemas/match.ts` | 上流schema入力からMatchServiceの外卓検証へ接続 |
+| Integrity Test Suite | `backend/src/application/services/sessionService.test.ts` | Session member固定、人数、重複、membershipの検証 |
+| Integrity Test Suite | `backend/src/application/services/matchService.test.ts` | Match external input、rule lock、canonical write/rebuild handoff |
+| Integrity Test Suite | `backend/src/domain/shared/scoring.test.ts` | 外卓raw total、chombo penalty、kyotaku、rank/point expected sum |
+| Integrity Test Suite | `backend/src/domain/shared/aggregation.test.ts` | chomboCountのscope別再構築 |
+| Integrity Test Suite | `backend/src/infrastructure/firestore/repositories/lifecycle.emulator.test.ts`、`backend/src/infrastructure/firestore/repositories/matchRepository.emulator.test.ts` | transaction、lifecycle、Match外卓fieldの永続化 |
 
 ### New files to add
 
@@ -368,11 +386,7 @@ interface AggregateCalculator {
 | Canonical Lifecycle | `backend/src/application/services/lifecycleRebuildCoordinator.ts` | scopeと親scopeのrebuild順序、失敗報告、repair呼び出し |
 | Session Integrity | `backend/src/domain/shared/integrity.ts` | Session/Matchの人数、重複、membership、wind setの純粋検証 |
 | Repair Entry Point | `backend/src/scripts/repairStats.ts` | 公開APIを増やさないscope指定repair/rebuild起動 |
-| Integrity Test Suite | `backend/test/integrity/session-match.test.ts` | Session固定、三麻/四麻、participant/wind/raw score検証 |
-| Integrity Test Suite | `backend/test/integrity/scoring.test.ts` | rank、同点uma、oka、point rounding、total invariant |
-| Integrity Test Suite | `backend/test/integrity/lifecycle.test.ts` | concurrent index、rule lock、active season、削除 lifecycle |
-| Integrity Test Suite | `backend/test/integrity/aggregation.test.ts` | deterministic ordering、Season/League/overall、sanma null |
-| Integrity Test Suite | `backend/test/integrity/repair.test.ts` | rebuild idempotency、stale cleanup、failure retry |
+| Integrity Test Suite | `backend/src/application/services/statsRebuilder.test.ts` | rebuild idempotency、stale cleanup、failure retry |
 
 `backend-foundation` が所有する composition root、公開 route、auth middleware、OpenAPI契約は本仕様のファイル構造に追加しない。既存 service/repositoryの変更は上表の責務内に限定する。
 
@@ -389,6 +403,7 @@ interface AggregateCalculator {
 ### Migration safety
 
 - production dataを自動でrewrite、renumber、rule再計算、duplicate削除しない。
+- 旧League ruleの互換値は0/falseとして読み、Match履歴のscoringは再計算しない。既存Match後のrule lockを越えて新設定を変更する場合は、承認済みの運用migration計画を別に作る。
 - 既存Matchのpoint/rankに契約違反がある場合はrepair reportに記録し、既定値で補正せず承認済みmigrationへ送る。
 - 新しい非公開 lifecycle metadataを追加する場合はsnake_case保存、mapper非露出、backend-foundationの保存契約再検証を完了条件に含める。
 - deleteの途中失敗ではcanonical sourceの存在を確認し、再実行時にrecursive deleteとrebuildが重複副作用を作らないようにする。
@@ -399,10 +414,11 @@ interface AggregateCalculator {
 |---|---|---|
 | Session invariant unit | gameType count、duplicate/membership、fixed members、三麻/四麻 wind | 1.1-1.4, 6.3 |
 | Scoring unit | raw score total、rank再計算、同点competition ranking、uma/oka、rounding、zero-sum | 2.1-2.5 |
+| External scoring unit | kyotaku 0/1/複数棒、chombo 0/複数回、同一offender再発、ルール不許可、期待raw/point合計 | 2.1-2.7 |
 | Transaction integration | 同時Match createのunique index、delete後の欠番、rule lock、index不変 | 3.1-3.4 |
 | Lifecycle integration | Match/Session/Season/League create/update/delete後の親scope rebuildとactive cache | 4.1-4.4, 6.1-6.2 |
 | Aggregate contract | deterministic match order、standing/progression/record、League/overall projection | 5.1-5.5 |
-| UserStats contract | logical ID、sanma fourth null、rates/streak、stale cleanup、重複なし | 7.1-7.4 |
+| UserStats contract | logical ID、sanma fourth null、rates/streak、chomboCount、stale cleanup、重複なし | 7.1-7.5 |
 | Failure and repair | canonical write後rebuild失敗、standard internal error、同一scope再実行の収束 | 8.1-8.2 |
 | Downstream handoff | existing DTO/status/ErrorEnvelope/AppType、FEがBE計算値だけを利用可能 | 8.3 |
 
@@ -425,11 +441,14 @@ interface AggregateCalculator {
 
 | Requirement | Summary | Components | Interfaces / Flows |
 |---|---|---|---|
-| 1.1-1.4 | Session固定、gameType、membership、Match参加者完全一致 | Session Integrity, Match Scoring | Session create → Match validation |
-| 2.1-2.5 | wind/raw score検証、rank/point決定、同点、丸め | Match Scoring | scoring contract |
-| 3.1-3.4 | rule lock、transactional index、欠番、index不変 | Canonical Lifecycle | Match create/update/delete flow |
-| 4.1-4.4 | Match/Session/Season/League deleteと親scope rebuild | Canonical Lifecycle, Rebuild Coordinator | lifecycle flow |
-| 5.1-5.5 | Season/League/overall projectionと決定的順序 | Aggregate Calculators, Rebuild Coordinator | canonical Match → projections |
-| 6.1-6.3 | active season一意性、cache、member履歴 | Canonical Lifecycle, Session Integrity | season/member transition |
-| 7.1-7.4 | user_stats logical ID、sanma null、rates、stale cleanup | Aggregate Calculators, Rebuild Coordinator | stats upsert/cleanup |
-| 8.1-8.3 | failure error、repair/rebuild、downstream contract | Rebuild Coordinator, Repair Entry Point, Integrity Test Suite | repair flow and handoff |
+| 1.1, 1.2, 1.3, 1.4 | Session固定、gameType、membership、Match参加者完全一致 | Session Integrity, Match Scoring | Session create → Match validation |
+| 2.1, 2.2, 2.3, 2.4, 2.5 | raw score・pointの外卓差分検証、rank/point決定、同点、丸め | Match Scoring | Match input → external score calculation |
+| 2.6-2.7 | offenderごとのチョンボ発生、kyotaku設定適合 | Match Scoring, Canonical Contracts | Match create/update validation |
+| 2.6, 2.7 | offenderごとのチョンボ発生、kyotaku設定適合 | Match Scoring, Canonical Contracts | Match create/update validation |
+| 3.1, 3.2, 3.3, 3.4 | rule lock、transactional index、欠番、index不変 | Canonical Lifecycle | Match create/update/delete flow |
+| 4.1, 4.2, 4.3, 4.4 | Match/Session/Season/League deleteと親scope rebuild | Canonical Lifecycle, Rebuild Coordinator | lifecycle flow |
+| 5.1, 5.2, 5.3, 5.4, 5.5 | Season/League/overall projectionと決定的順序 | Aggregate Calculators, Rebuild Coordinator | canonical Match → projections |
+| 6.1, 6.2, 6.3 | active season一意性、cache、member履歴 | Canonical Lifecycle, Session Integrity | season/member transition |
+| 7.1, 7.2, 7.3, 7.4 | user_stats logical ID、sanma null、rates、stale cleanup | Aggregate Calculators, Rebuild Coordinator | stats upsert/cleanup |
+| 7.5 | canonical Match発生記録からscope別chomboCountを再構築 | Aggregate Calculators, Rebuild Coordinator | Match event → UserStats projections |
+| 8.1, 8.2, 8.3 | failure error、repair/rebuild、downstream contract | Rebuild Coordinator, Repair Entry Point, Integrity Test Suite | repair flow and handoff |

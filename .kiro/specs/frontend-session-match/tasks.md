@@ -11,9 +11,9 @@
 
 - [ ] 1.2 (P) Match feature APIとBE結果adapterを整備する
   - Match list/create/detail/update/deleteのrequest/response型をAppTypeから導出し、共通client/parserを利用する。
-  - `matchIndex`、`rank`、`point`、`rawScore`、wind、userName、playedAtをresponseのread-only値として保持し、FE計算や欠番補正を追加しない。
-  - 完了時、Match list/detail/create/edit/deleteが同じfeature API境界で型検証され、rank/pointの表示値がBE response由来になる。
-  - _Requirements: 3.4, 4.1, 4.2, 4.3, 4.4, 4.5, 5.2, 6.1, 6.2_
+  - `matchIndex`、`rank`、`point`、`rawScore`、wind、userName、playedAtに加え、`chomboEvents`と`offTableKyotakuCount`をrequest/response adapterで別fieldとして保持する。
+  - 完了時、Match list/detail/create/edit/deleteが同じfeature API境界で型検証され、rank/pointと記録済み外卓項目がBE response由来になる。
+  - _Requirements: 3.4, 3.7, 3.8, 4.1, 4.2, 4.3, 4.4, 4.5, 5.2, 6.1, 6.2_
   - _Boundary: Match Feature API_
 
 ## 2. Participant modelとSessionフロー
@@ -54,41 +54,51 @@
 ## 4. 共通Matchフォームとmutation
 
 - [ ] 4.1 (P) initial/additional/editの共通form modelを実装する
-  - mode、fixed Session members、gameType別wind、playedAt、raw score文字列、submitting/errorを共通契約へまとめる。
-  - edit modeではparticipant/wind controlをread-onlyにし、初回・追加・編集が同じraw score parserとfield errorを使う。
-  - 完了時、3画面に別々のrank計算、participant state、score validationが存在せず、editで参加者変更を送信できない。
-  - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.6, 4.4, 5.2_
+  - mode、fixed Session members、gameType別wind、playedAt、raw score、チョンボ発生行、供託有無/本数、submitting/errorを共通form stateへまとめる。
+  - edit modeではparticipant/windと既存外卓値をread-onlyにし、チョンボ行・供託欄は既存UIに沿って必要な範囲だけ追加する。
+  - 完了時、初回・追加・編集で同じform契約を使い、同一userのチョンボ複数行を保持でき、editから参加者・外卓値を変更できない。
+  - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.6, 3.7, 3.8, 3.9, 4.4, 5.2_
   - _Boundary: Common Match Form, Participant Model_
 
 - [ ] 4.2 raw score validationとBE入力mappingを接続する
-  - startingPointsとplayerCountに基づく整数・必須・合計制約を表示し、入力不正時はAPIを呼ばない。
+  - startingPointsとplayerCountに基づく整数・必須・合計制約を表示し、供託1本ごとにraw score合計の期待値を1000減らす。チョンボ回数はraw score合計を変えない。
+  - チョンボ行のoffenderはSession memberに限定し、同じuserの複数発生を許可する。供託入力はLeague ruleが許可する時だけ表示し、ありの場合は正の整数を要求する。
   - rank/pointをform stateや表示用計算で生成せず、AppTypeが要求する入力だけをtyped APIへ渡し、BEのvalidation errorを最終結果として表示する。
-  - 完了時、同点を含む入力でFEがrankを決めず、Match responseのcomputed rank/pointが表示modelへ到達する。
+  - 完了時、外卓入力とraw score合計がBE契約どおりmappingされ、入力不正時は送信されず、FEがrank/pointを決めない。
   - _Depends: 1.2, 2.1, 4.1_
-  - _Requirements: 3.3, 3.4, 3.5, 4.1, 4.4, 6.2, 6.4_
+  - _Requirements: 3.3, 3.4, 3.5, 3.7, 3.8, 4.1, 4.4, 6.2, 6.4_
   - _Boundary: Common Match Form, Match Feature API_
 
 - [ ] 4.3 初回・追加・編集のsubmitと再取得を接続する
-  - initial/additionalはSession membersと完全一致するresultsをPOSTし、editはplayedAt/raw scoreのPATCHだけを実行する。
+  - initial/additionalはSession membersと完全一致するresultsと別fieldのchomboEvents/offTableKyotakuCountをPOSTし、editはplayedAt/raw scoreだけをPATCHして外卓fieldを省略する。
   - mutation中の二重submitを防ぎ、成功後にSession detail、Match list、必要なMatch detailを取得してからroute表示を確定する。失敗時は入力を保持する。
-  - 完了時、別参加者の登録は既存Sessionの再利用ではなく新Session開始へ、成功結果はBEのmatchIndex/rank/pointを含む再取得値へつながる。
+  - 完了時、外卓項目がMatch DTOに別々に保存され、edit requestでは既存値を保持したままBE算出結果を再取得して表示する。
   - _Depends: 1.2, 2.2, 4.1, 4.2_
-  - _Requirements: 3.5, 3.6, 4.1, 4.4, 4.5, 5.1, 6.3, 6.4_
+  - _Requirements: 3.5, 3.6, 3.7, 3.8, 4.1, 4.4, 4.5, 5.1, 6.3, 6.4_
   - _Boundary: Common Match Form, Match Feature API, Route Integration_
+
+- [ ] 4.4 初回Match作成失敗時に今回のSessionだけをrollbackする
+  - 初回Match用に同じ送信で作成したSessionの後、Match createが失敗した場合はそのSessionだけをDELETEする。
+  - 既存SessionやMatchを削除せず、Match失敗と入力値を利用者へ保持して表示する。
+  - 完了時、新規Sessionを使う初回Match失敗で作成Sessionだけが消え、既存Session利用時はrollback deleteが発生しない。
+  - _Depends: 2.2, 4.3_
+  - _Requirements: 2.6_
+  - _Boundary: Session Feature API, Match Feature API, Route Integration_
 
 ## 5. Match一覧・詳細・結果・削除
 
 - [ ] 5.1 Match一覧とBE結果表示を実装する
   - Session detail/resultでMatch DTOのplayedAt、matchIndex、participant、wind、rawScore、BE rank、BE pointを表示する。
+  - BEが返すchomboEventsの発生回数と各offender、offTableKyotakuCountを同じMatch記録の外卓項目として表示する。
   - API配列と`matchIndex`をそのまま扱い、削除後の欠番を詰めず、pointの合算やFE順位で表示値を上書きしない。
-  - 完了時、Match一覧にはBE返却値と欠番が見える形で表示され、正常な空配列は未対局emptyとして表示される。
+  - 完了時、Match一覧・詳細にBE返却のrank/pointと外卓記録が表示され、正常な空配列は未対局emptyとして表示される。
   - _Depends: 1.2, 3.2_
   - _Requirements: 4.2, 4.3, 5.2, 5.3, 6.2, 6.3_
   - _Boundary: Match Views_
 
 - [ ] 5.2 Match一覧内の詳細展開とedit初期値を接続する
-  - 専用Match detail routeは新設せず、既存resultsのMatch行または結果カードを展開してBE responseのSession members、wind、rawScore、playedAt、rank、pointをread-only表示する。
-  - 編集操作だけは既存の`matches/[matchId]/edit`へ遷移し、initial valuesはBE responseから作り、rank/pointは編集入力にしない。
+  - 専用Match detail routeは新設せず、既存resultsのMatch行または結果カードを展開してBE responseのSession members、wind、rawScore、playedAt、rank、point、chomboEvents、offTableKyotakuCountを表示する。
+  - 編集操作だけは既存の`matches/[matchId]/edit`へ遷移し、外卓項目はread-only表示に留め、PATCHから省略する。initial valuesはBE responseから作り、rank/pointは編集入力にしない。
   - 完了時、対象Matchが見つからない場合はsuccess/emptyとせずnot_found ErrorStateを表示し、editでparticipant集合とmatchIndexが変わらない。
   - _Depends: 1.2, 4.1, 4.3_
   - _Requirements: 3.1, 3.2, 4.2, 4.4, 5.1, 5.3, 6.2, 6.4_

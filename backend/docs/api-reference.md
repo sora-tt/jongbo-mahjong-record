@@ -277,6 +277,7 @@ x-id-token: <ID_TOKEN>
     "seasonName": "2026シーズン春夏",
     "totalPoints": 100,
     "totalMatchCount": 10,
+    "chomboCount": 2,
     "averageRank": 2.3,
     "currentRank": 1,
     "firstCount": 3,
@@ -359,7 +360,9 @@ x-id-token: <ID_TOKEN>
     "oka": {
       "startingPoints": 25000,
       "returnPoints": 30000
-    }
+    },
+    "chomboPenaltyPoints": 0,
+    "allowOffTableKyotaku": false
   },
   "memberUserIds": ["0002", "0003", "0004"]
 }
@@ -384,7 +387,9 @@ x-id-token: <ID_TOKEN>
       "oka": {
         "startingPoints": 25000,
         "returnPoints": 30000
-      }
+      },
+      "chomboPenaltyPoints": 0,
+      "allowOffTableKyotaku": false
     },
     "memberCount": 4,
     "totalMatchCount": 0,
@@ -426,6 +431,8 @@ x-id-token: <ID_TOKEN>
 
 floatingCountのresponseも同じ5行とmodeを含みます。浮き人数はraw scoreが返し点以上の参加者数です。modeとgameTypeの不整合、欠落行、非整数、行合計不一致はHTTP 400で共通ErrorEnvelopeを返します。
 
+League ruleには`chomboPenaltyPoints`（チョンボ1回あたりに本人のpointから減算する非負整数）と`allowOffTableKyotaku`（卓外供託入力の可否）を含めます。旧形式のrule requestで省略した場合は`0`と`false`として正規化し、既存保存データに値がない場合も同じ既定値で読み取ります。
+
 ### GET /api/leagues/:leagueId
 
 概要:
@@ -445,8 +452,16 @@ floatingCountのresponseも同じ5行とmodeを含みます。浮き人数はraw
     "name": "雀望リーグ",
     "rule": {
       "gameType": "yonma",
-      "uma": { "first": 20, "second": 10, "third": -10, "fourth": -20 },
-      "oka": { "startingPoints": 25000, "returnPoints": 30000 }
+      "uma": {
+        "mode": "fixed",
+        "first": 20,
+        "second": 10,
+        "third": -10,
+        "fourth": -20
+      },
+      "oka": { "startingPoints": 25000, "returnPoints": 30000 },
+      "chomboPenaltyPoints": 20,
+      "allowOffTableKyotaku": true
     },
     "memberCount": 9,
     "totalMatchCount": 28,
@@ -1036,6 +1051,8 @@ floatingCountのresponseも同じ5行とmodeを含みます。浮き人数はraw
 ```json
 {
   "playedAt": "2026-03-15T10:00:00.000Z",
+  "chomboEvents": [],
+  "offTableKyotakuCount": 0,
   "results": [
     {
       "userId": "0001",
@@ -1072,6 +1089,8 @@ floatingCountのresponseも同じ5行とmodeを含みます。浮き人数はraw
     "sessionId": "demo-session",
     "matchIndex": 1,
     "playedAt": "2026-03-15T10:00:00.000Z",
+    "chomboEvents": [],
+    "offTableKyotakuCount": 0,
     "results": [
       {
         "userId": "0001",
@@ -1087,6 +1106,8 @@ floatingCountのresponseも同じ5行とmodeを含みます。浮き人数はraw
   }
 }
 ```
+
+Match responseには`chomboEvents`と`offTableKyotakuCount`が含まれます。`chomboEvents`は1要素をチョンボ1回として扱い、同一ユーザーの重複を許可します。`offenderUserId`はSession参加者に限ります。`offTableKyotakuCount`は非負整数で、League ruleが許可しているときだけ正数を指定できます。旧Matchは空配列と0本として返されます。Match updateでfieldを省略すると既存値を保持し、空配列または0を明示すると消去できます。
 
 ### GET /api/leagues/:leagueId/seasons/:seasonId/sessions/:sessionId/matches/:matchId
 

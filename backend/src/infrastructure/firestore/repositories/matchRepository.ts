@@ -104,6 +104,8 @@ export class FirestoreMatchRepository implements MatchRepository {
     sessionId: string;
     playedAt: string;
     results: MatchResult[];
+    chomboEvents?: Array<{ offenderUserId: string }>;
+    offTableKyotakuCount?: number;
   }): Promise<Match> {
     const collection = this.collection(
       params.leagueId,
@@ -157,6 +159,8 @@ export class FirestoreMatchRepository implements MatchRepository {
         match_index: lastMatchIndex + 1,
         played_at: toTimestamp(params.playedAt),
         results: this.toResultsDoc(params.results),
+        chombo_events: this.toChomboEventsDoc(params.chomboEvents ?? []),
+        off_table_kyotaku_count: params.offTableKyotakuCount ?? 0,
         created_at: now,
         updated_at: now,
       });
@@ -180,6 +184,8 @@ export class FirestoreMatchRepository implements MatchRepository {
     matchId: string;
     playedAt?: string;
     results?: MatchResult[];
+    chomboEvents?: Array<{ offenderUserId: string }>;
+    offTableKyotakuCount?: number;
   }): Promise<Match> {
     const ref = this.collection(
       params.leagueId,
@@ -196,14 +202,13 @@ export class FirestoreMatchRepository implements MatchRepository {
       patch.played_at = toTimestamp(params.playedAt);
     }
     if (params.results !== undefined) {
-      patch.results = params.results.map((result) => ({
-        user_id: result.userId,
-        user_name: result.userName,
-        wind: result.wind,
-        rank: result.rank,
-        raw_score: result.rawScore,
-        point: result.point,
-      }));
+      patch.results = this.toResultsDoc(params.results);
+    }
+    if (params.chomboEvents !== undefined) {
+      patch.chombo_events = this.toChomboEventsDoc(params.chomboEvents);
+    }
+    if (params.offTableKyotakuCount !== undefined) {
+      patch.off_table_kyotaku_count = params.offTableKyotakuCount;
     }
 
     await ref.update(patch);
@@ -283,6 +288,10 @@ export class FirestoreMatchRepository implements MatchRepository {
     }));
   }
 
+  private toChomboEventsDoc(events: Array<{ offenderUserId: string }>) {
+    return events.map((event) => ({ offender_user_id: event.offenderUserId }));
+  }
+
   private map(
     leagueId: string,
     seasonId: string,
@@ -320,6 +329,21 @@ export class FirestoreMatchRepository implements MatchRepository {
         } satisfies MatchResult;
       },
     );
+    const chomboEvents = (
+      data.chombo_events === undefined
+        ? []
+        : requiredArray(data.chombo_events, "matches.chombo_events")
+    ).map((value) => {
+      const event = requiredObject(value, "matches.chombo_events[]");
+      return {
+        offenderUserId: asOpaqueId(
+          requiredString(
+            event.offender_user_id,
+            "matches.chombo_events[].offender_user_id",
+          ),
+        ),
+      };
+    });
 
     return {
       id: asOpaqueId(matchId),
@@ -329,6 +353,14 @@ export class FirestoreMatchRepository implements MatchRepository {
       matchIndex: requiredNumber(data.match_index, "matches.match_index"),
       playedAt: toIsoString(data.played_at),
       results,
+      chomboEvents,
+      offTableKyotakuCount:
+        data.off_table_kyotaku_count === undefined
+          ? 0
+          : requiredNumber(
+              data.off_table_kyotaku_count,
+              "matches.off_table_kyotaku_count",
+            ),
       createdAt: toIsoString(data.created_at),
       updatedAt: toIsoString(data.updated_at),
     };

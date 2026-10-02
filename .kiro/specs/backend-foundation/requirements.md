@@ -10,7 +10,7 @@ BEを利用するFE実装者と運用者は、永続データ定義、API、認�
 
 - users、leagues、league members、seasons、sessions、matches、user stats の正本データ契約
 - リーグ内に保存する `rule` の形、識別子、統計一意性、日時・nullの扱い
-- `rule.uma` の合計0不変条件とLeague作成・更新時のBE検証
+- `rule.uma` の合計0不変条件、Leagueごとのチョンボ点数・卓外供託設定と作成・更新時のBE検証
 - session cookie を中心とした認証、CORS、保護APIの認証境界
 - Health/Auth/Users/Leagues/Seasons/Sessions/Matches APIのDTO、成功・エラー・204契約
 - OpenAPI、Swagger、API reference、auth design、seed、index、Firestore Rules、契約テスト
@@ -24,7 +24,7 @@ BEを利用するFE実装者と運用者は、永続データ定義、API、認�
 
 ### 隣接仕様との契約
 
-- `backend-integrity-lifecycle` は、本仕様が定めるリーグ内 `rule` とAPI DTOを入力契約として、Match/Sessionの業務制約・計算・集計・削除・active seasonの整合性を決める。
+- `backend-integrity-lifecycle` は、本仕様が定めるリーグ内 `rule`（`gameType`、`uma`、`oka`、チョンボ点数、卓外供託可否）とAPI DTOを入力契約として、Match/Sessionの業務制約・計算・集計・削除・active seasonの整合性を決める。
 - `frontend-foundation-ui` は、本仕様のcamelCase DTO、認証Cookie、エラー envelope、OpenAPI/Hono RPC型、`rule.uma` 合計0の判定条件とvalidation detailsを参照する。FEは入力表示時に同じ制約を検証するが、BE検証を代替しない。
 - 既存データのバックアップ、互換読み取り、移行実行は別途承認された移行計画がない限り本仕様の実装作業に含めない。
 
@@ -34,11 +34,13 @@ BEを利用するFE実装者と運用者は、永続データ定義、API、認�
 
 1.1 When 対象エンティティが保存され、その後APIから読み出されるとき, the Backend Foundation shall エンティティの識別子、親子関係、必須値、nullable値を同じ意味で保持し、実装箇所ごとの別解釈を発生させない。
 
-1.2 When リーグのルールが保存または返却されるとき, the Backend Foundation shall `rule` をリーグ自身に属する値として扱い、`gameType`、`uma`、`oka` を含む一つの契約として返却する。
+1.2 When リーグのルールが保存または返却されるとき, the Backend Foundation shall `rule` をリーグ自身に属する値として扱い、`gameType`、`uma`、`oka`、チョンボ点数、卓外供託の可否を含む一つの契約として返却する。
 
 1.3 When 永続データとAPI DTOの間で値が変換されるとき, the Backend Foundation shall 永続データのsnake_caseとAPI・Domain DTOのcamelCaseを対応づけ、日時をISO 8601文字列として返却する。
 
 1.4 When Emulatorまたはseedから基準データが投入されるとき, the Backend Foundation shall 本番相当の正本データ契約、nullable規則、識別子関係と矛盾しないデータを生成する。
+
+1.5 When Matchの作成・取得DTOを扱うとき, the Backend Foundation shall チョンボ発生ごとのユーザーと卓外供託の入力を互いに区別して受け渡し、同じMatchの記録として保持できる契約を提供する。
 
 ### Requirement 2: 識別子と個人成績の一意性
 
@@ -49,6 +51,8 @@ BEを利用するFE実装者と運用者は、永続データ定義、API、認�
 2.3 When 新しい対象エンティティが作成されるとき, the Backend Foundation shall クライアントが依存できる不透明な文字列識別子を発行し、既存データの識別子を移行計画なしに変更しない。
 
 2.4 If 既存データの正本化に移行が必要な状態, the Backend Foundation shall バックアップ、互換性確認、ロールバック方針が承認されるまで破壊的な書き換えを実行しない。
+
+2.5 When 個人成績を返却するとき, the Backend Foundation shall overall・League・Seasonそれぞれのscopeでチョンボ回数を表現できる契約を提供する。
 
 ### Requirement 3: 認証ライフサイクル
 
@@ -114,6 +118,7 @@ BEを利用するFE実装者と運用者は、永続データ定義、API、認�
 
 - `rule` はbriefで指定された現行契約に合わせ、`gameType`、`uma`、`oka` のみを正本フィールドとする。seedにのみ存在する `scoreCalculation` は本仕様のAPI/Domain契約へ追加しない。可変の丸め方式が必要になった場合は `backend-integrity-lifecycle` の再要件化対象とする。
 - `rule.uma` の合計は、四麻では4値、三麻では非nullの3値を合計し、厳密に0とする。`uma.fourth` のnull意味は既存の三麻契約を踏襲する。
+- 既存Leagueで新しいチョンボ点数・卓外供託可否が未保存の場合の互換読取、初期値、seedとデータ更新方法は設計で定義する。承認された移行計画なしに既存Leagueを一括書換えしない。
 - 新規IDの文字列形式は公開契約にせず不透明値とする。seed済みの既存IDは保持し、規則的な接頭辞を必要とする `user_stats` の正本キーだけを別途明示する。
 - FEはFirestoreへ直接アクセスせずBE APIを利用する前提から、本番Rulesは直接クライアントアクセスをデフォルト拒否とする。直接アクセスを導入する場合は認可行列を再要件化する。
 - リーグのruleを既存Match作成後に変更できるか、その場合に履歴を旧ruleで保持するかは本仕様では決めない。APIの形は固定するが、変更可否と再集計方針は `backend-integrity-lifecycle` の開始条件とする。

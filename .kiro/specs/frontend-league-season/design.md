@@ -4,7 +4,7 @@
 
 ### Summary
 
-ホームをリーグ一覧の正規入口とし、リーグ・シーズンのAPI取得、フォーム送信、表示adapter、request状態をfeature境界へ集約する。`frontend-foundation-ui`の共通client、Hono由来型、AsyncState、UI primitives、AppShellを利用し、`backend-foundation`と`backend-integrity-lifecycle`が定めるDTO・status・派生値をそのまま画面へ渡す。既存の旧domain/mockを対象routeの正本から外し、シーズン編集の旧routeと未接続buttonを整理する。
+ホームをリーグ一覧の正規入口とし、リーグ・シーズンのAPI取得、フォーム送信、表示adapter、request状態をfeature境界へ集約する。`frontend-foundation-ui`の共通client、Hono由来型、AsyncState、UI primitives、AppShellを利用し、`backend-foundation`と`backend-integrity-lifecycle`が定めるDTO・status・派生値をそのまま画面へ渡す。ISSUE-99ではリーグrule editor/summaryへチョンボ罰符と卓外供託可否を追加し、PR #104のuma modeと既存rule lockを引き継ぐ。
 
 ### Goals
 
@@ -12,6 +12,7 @@
 - LeagueSummary、LeagueDetail、SeasonSummary、SeasonDetailのAPI型をHono `AppType`から参照する。
 - `rule`、member、active season、standings、records、nullable値、ISO日時を表示用に変換するだけで保持する。
 - League create/editでは`rule.uma`の合計0を事前検証し、BEの`validation_error`を最終判定として表示する。
+- League create/editとdetailでは`chomboPenaltyPoints`と`allowOffTableKyotaku`を、追加rule項目として既存UIに沿って入力・表示する。
 - 共通のloading/error/empty/retry、401 handoff、mutation中の二重送信防止、stale request防止を全対象画面へ適用する。
 - 既存のシーズン編集mockと`console.log`、詳細画面の未接続更新button、誤った旧編集routeをなくす。
 
@@ -29,7 +30,7 @@
 
 - ホーム兼リーグ一覧と、リーグ・シーズンのroute entry、page composition、feature UI。
 - `src/features/league` と `src/features/season` のAPI wrapper、型参照、表示adapter、hooks、form state、validation。
-- LeagueSummary/Detail、SeasonSummary/Detail、members、rule、activeSeason、standings、recordsの表示とmutation後の再取得。
+- LeagueSummary/Detail、SeasonSummary/Detail、members、rule（`chomboPenaltyPoints`、`allowOffTableKyotaku`を含む）、activeSeason、standings、recordsの表示とmutation後の再取得。
 - 画面固有のloading/error/empty/retry、validation error、403/404/409表示、成功後の遷移。
 - 旧シーズン編集routeの正規routeへの整理、対象routeからのmock・console出力・未接続操作の除去。
 
@@ -38,6 +39,7 @@
 - `frontend-foundation-ui`が所有する共通transport、Hono client生成、ErrorEnvelope parser、Auth boundary、AsyncState primitive、UI primitive、Header/AppShell本体。
 - `backend-foundation`が所有する保存形式、公開DTO、認証、status、OpenAPI、members APIの意味。
 - `backend-integrity-lifecycle`が所有するrule lock、active seasonの一意性、standings/records/point progressionの計算、削除後rebuild。
+- 新rule値をMatch入力へ反映する処理とチョンボ・卓外供託のMatch UI。後者は`frontend-session-match`が所有する。
 - Session・Match routeと業務ロジック、統計画面、チャートの新規UX。
 - シーズン作成後にmember snapshotを変更する操作。編集画面ではmembersを読み取り専用で表示する。
 
@@ -55,7 +57,7 @@
 ### Revalidation Triggers
 
 - League/Seasonのroute、request body、response DTO、`status`、ErrorCode、HTTP statusの変更。
-- `rule.gameType`、`rule.uma`、`rule.uma`合計0 invariant、`rule.oka`、activeSeason、member snapshot、standing/record/nullの変更。
+- `rule.gameType`、`rule.uma`（fixed/floatingCount）、`rule.uma`合計0 invariant、`rule.oka`、`rule.chomboPenaltyPoints`、`rule.allowOffTableKyotaku`、activeSeason、member snapshot、standing/record/nullの変更。
 - `AppType`の公開位置、共通client、ApiError、AsyncState、UI primitive、AppShellの変更。
 - ルート構成、ホームの正規入口、Session開始route、認証・認可境界の変更。
 - `rule.uma`合計0 invariantのBE schema/domain validation、`validation_error` code/message/details、FEの事前検証、契約テストの変更。
@@ -135,9 +137,9 @@ sequenceDiagram
 | Season create | `POST /api/leagues/:leagueId/seasons` | `CreateSeasonInput` → 201 `SeasonDetail` | create success |
 | Season update | `PATCH /api/leagues/:leagueId/seasons/:seasonId` | `{ name?: string; status?: SeasonStatus }` → 200 `SeasonDetail` | edit success |
 
-Feature API modules derive response and request aliases with `InferResponseType`/`InferRequestType` from the foundation client. `LeagueSummary` includes `id`、`name`、`memberCount`、`totalMatchCount`、nullable `activeSeason`、nullable `myStanding`、`createdAt`、`updatedAt`。`LeagueDetail` additionally includes `rule`、members、nullable `leagueRecords`。`SeasonSummary` includes `id`、`leagueId`、`name`、`status`、memberCount、totalMatchCount、timestamps。`SeasonDetail` additionally includes members、BE `standings`、`pointProgressions`、nullable `seasonRecords`、nullable `latestPlayedAt`。
+Feature API modules derive response and request aliases with `InferResponseType`/`InferRequestType` from the foundation client. `LeagueSummary` includes `id`、`name`、`memberCount`、`totalMatchCount`、nullable `activeSeason`、nullable `myStanding`、`createdAt`、`updatedAt`。`LeagueDetail` additionally includes `rule`（PR #104 `uma.mode`とISSUE-99 `chomboPenaltyPoints`/`allowOffTableKyotaku`を含む）、members、nullable `leagueRecords`。`SeasonSummary` includes `id`、`leagueId`、`name`、`status`、memberCount、totalMatchCount、timestamps。`SeasonDetail` additionally includes members、BE `standings`、`pointProgressions`、nullable `seasonRecords`、nullable `latestPlayedAt`。
 
-`PATCH /api/leagues/:leagueId/seasons/:seasonId` はname/statusだけを許可する。membersは作成時のsnapshotであり、memberUserIdsをseason update payloadへ追加しない。リーグruleはembedded `gameType`、`uma.first/second/third/fourth`、`oka.startingPoints/returnPoints`を利用し、sanmaのfourthはnull、yonmaのfourthはnumberとする。`rule.uma`の数値フィールド合計は0でなければならず、sanmaのnullであるfourthは合計に加えない。このinvariantはBEがschema/domain境界で検証し、FEは同じ条件を事前検証するが、BEの`validation_error`を最終的な正とする。古い`ruleId`、`scoreCalc`、`mode`などの旧domainフィールドはfeature契約へ持ち込まない。
+`PATCH /api/leagues/:leagueId/seasons/:seasonId` はname/statusだけを許可する。membersは作成時のsnapshotであり、memberUserIdsをseason update payloadへ追加しない。League ruleはembedded `gameType`、PR #104の`uma.mode`（`fixed`/`floatingCount`）、`oka.startingPoints/returnPoints`に、ISSUE-99の`chomboPenaltyPoints`と`allowOffTableKyotaku`を加えたBE DTOを利用する。sanmaのfixed uma fourthはnull、yonmaはnumber、floatingCount umaは0〜4人浮きの各順位点を保持する。`rule.uma`の各有効順位点合計は0でなければならず、FEはBEと同じ対象値を事前検証する。チョンボ罰符は0以上の整数、卓外供託可否はbooleanとして編集し、BEの`validation_error`を最終判定とする。既存の`ruleId`、`scoreCalc`などはfeature契約へ持ち込まない。
 
 ### Adapter policy
 
@@ -164,7 +166,7 @@ Adapterは次を行わない。
 | Season Feature API | Season endpointと型付きmutationを提供する | 5.1-5.4, 6.1-6.4, 7.1-7.4, 8.1-8.2 | Foundation API client | API, Type |
 | League/Season Adapter | DTOを検証済みview modelへ変換する | 1.1, 2.1-2.3, 6.1-6.2, 8.2 | AppType aliases | Type, Service |
 | Request Hooks | loading/error/empty/retry/stale requestを管理する | 1.2, 3.2-3.4, 4.4, 5.2-5.4, 7.4, 8.3-8.4 | AsyncState | State |
-| League UI and Forms | Home、League detail、create/editを表示する | 1.1-1.4, 2.1-2.4, 3.1-3.6, 4.1-4.4, 9.4 | UI primitives、AppShell | UI |
+| League UI and Forms | Home、League detail、create/editを表示し、PR #104 umaとISSUE-99 rule fieldsを編集・表示する | 1.1-1.4, 2.1-2.4, 3.1-3.6, 4.1-4.4, 9.4 | UI primitives、AppShell | UI |
 | Season UI and Forms | Season list、detail、create/editを表示する | 5.1-5.4, 6.1-6.4, 7.1-7.4, 9.4 | UI primitives、AppShell | UI |
 | Route Integration | 正規route、navigation、下流遷移を接続する | 1.4, 6.3-6.4, 9.1, 9.3-9.4 | Next App Router、Session route | UI, State |
 | Migration Validation | mock/console/未接続操作と契約を検証する | 8.1-8.4, 9.1-9.4 | typecheck、lint、build | Test |
@@ -194,13 +196,13 @@ interface SeasonFeatureApi {
 }
 ```
 
-`LeagueId`と`SeasonId`はfoundationのbranded IDを利用する。`CreateLeagueInput`、`UpdateLeagueInput`、`CreateSeasonInput`、`UpdateSeasonInput`はendpointの`InferRequestType`から導出する。`UpdateSeasonInput`にmemberUserIdsを持たせない。API wrapperは共通parser、credentials、ApiError、204方針を再実装しない。
+`LeagueId`と`SeasonId`はfoundationのbranded IDを利用する。`CreateLeagueInput`、`UpdateLeagueInput`、`CreateSeasonInput`、`UpdateSeasonInput`はendpointの`InferRequestType`から導出する。League rule payloadは`chomboPenaltyPoints`と`allowOffTableKyotaku`を含むBE型をそのまま使い、FE独自のAPI DTOを定義しない。`UpdateSeasonInput`にmemberUserIdsを持たせない。API wrapperは共通parser、credentials、ApiError、204方針を再実装しない。
 
 ### Request hooks
 
 - `useLeagueList`はホームの一覧、retry、empty判定、401 handoffを扱う。
 - `useLeagueDetail`はLeagueDetailとSeasonSummaryの取得、再取得、record/season listの表示用stateを扱う。
-- `useLeagueForm`はcreate/edit共通の入力state、member search、rule入力、client validation、submit stateを扱う。
+- `useLeagueForm`はcreate/edit共通の入力state、member search、PR #104 umaを含むrule入力、client validation、submit stateを扱う。ISSUE-99の2項目もrule draftへ保持する。
 - `useSeasonList`はリーグ詳細内のSeasonSummary listとempty判定を扱う。
 - `useSeasonDetail`はSeasonDetail、standings/recordsのnull、既存Session開始routeへのnavigation、再取得を扱う。
 - `useSeasonForm`はcreateのmember selectionと、editのname/statusだけを扱う。editではmembersを変更可能なstateにしない。
@@ -214,6 +216,8 @@ interface SeasonFeatureApi {
 | 空のname、season参加者0人、型変換不能なnumber | APIを呼ばずfield/form error | なし |
 | sanmaでfourth入力、yonmaでfourth欠落 | 入力状態を修正可能にする | 送信前に契約形へ変換 |
 | `rule.uma`の数値合計が0以外 | APIを呼ばず、uma合計が0になるようfield/form errorを表示 | BEでも同じinvariantを検証 |
+| `chomboPenaltyPoints`が負数・非整数・未入力 | APIを呼ばず、0以上の整数を入力するようfield errorを表示 | Zod/domain境界でも非負整数を検証 |
+| `allowOffTableKyotaku`未選択 | draft初期値のbooleanを適用し、rule payloadへbooleanを送る | APIはbooleanを受け付ける |
 | validation error | API detailsを安全なfield/form messageへ表示 | `validation_error` |
 | 未認証 | Auth boundaryへ委譲してloginへ遷移 | `authentication_error`/401 |
 | 権限なし・対象なし | 画面内error stateと戻る/retry | `forbidden`/`not_found` |
@@ -242,7 +246,7 @@ FEのfield validationは送信前の利用者体験を改善するためのも�
 
 - Homeは一覧loading、API error/retry、empty、カード導線を持つ。
 - League detailはdetailとseason listを表示し、records/activeSeason nullをempty表示する。season listが空でも作成導線を表示する。
-- League formはcreate/editを共通化し、editの初期値をAPIから取得する。`rule.uma`の合計0を事前検証し、Match存在後のrule lockはread-only表示またはBE conflict表示で扱う。BE validation errorはFEの事前検証より優先して表示する。
+- League formはcreate/editを共通化し、editの初期値をAPIから取得する。新規draftの`chomboPenaltyPoints`は未入力で始め、利用者が0以上の整数（0を含む）を明示し、`allowOffTableKyotaku`はfalseを初期値とする。既存rule editorの末尾へ「チョンボ罰符（pt）」整数欄と「卓外供託を許可」選択を追加し、既存の余白・入力部品・配置を保つ。detail summaryにも両値を追加表示する。`rule.uma`の合計0と罰符の非負整数を事前検証し、Match存在後は追加2項目も既存rule全体と同様にread-onlyにする。BE validation errorはFEの事前検証より優先する。
 - Season createは`GET /members`のcurrent league membersを選択肢とし、statusはactiveを既定値として送信可能にする。既存activeとの競合は自動archived化しない。
 - Season detailはBEのstanding、record、最新日時を表示し、対局記録buttonは既存Session開始routeへ遷移する。point progression chartの新規仕様は追加しない。
 - Season editはname/statusだけを編集可能にし、membersはsnapshot表示とする。成功後はSeasonDetailを再取得し、変更後のactive表示を反映する。
@@ -268,6 +272,13 @@ FEのfield validationは送信前の利用者体験を改善するためのも�
 
 | Component | Path | Responsibility |
 |---|---|---|
+| ISSUE-99 League rule draft | `frontend/src/features/league/model/rule-draft.ts` | draft、API型への変換、legacy response default後の初期値に新rule fieldを保持 |
+| ISSUE-99 League rule editor | `frontend/src/features/league/ui/league-rule-editor.tsx` | 既存editor末尾へチョンボ罰符と卓外供託可否を追加 |
+| ISSUE-99 League rule summary | `frontend/src/features/league/ui/league-rule-summary.tsx` | League detailへ新rule値を追加表示 |
+| ISSUE-99 League create route | `frontend/src/app/league/new/hooks/index.ts` | 作成payloadに両fieldを含める |
+| ISSUE-99 League edit route | `frontend/src/app/league/[leagueId]/edit/hooks/index.ts` | detailからdraft初期化、rule lockの下で両fieldを更新 |
+| ISSUE-99 Rule validation | `frontend/src/features/league/model/rule-draft.test.ts`, `frontend/src/features/league/ui/league-rule-editor.test.ts`, `frontend/src/features/league/ui/league-rule-summary.test.tsx` | 非負整数、boolean payload、既存UIでの入力・表示の回帰を確認 |
+| Migration Validation | `frontend/package.json`, `frontend/tsconfig.json` | 既存typecheck/lint/build entryとHono API type境界を確認 |
 | Home route | `frontend/src/app/page.tsx` | Home feature UIと共通AppShellの接続 |
 | Home hook | `frontend/src/app/hooks/index.ts` | 既存home取得処理をfeature hookへ移行 |
 | League routes | `frontend/src/app/league/new/*` | League create formをfeatureへ接続 |
@@ -285,6 +296,7 @@ FEのfield validationは送信前の利用者体験を改善するためのも�
 - `frontend/src/lib/api/*`の共通transport/parser変更は`frontend-foundation-ui`の所有であり、このspecはleague/season endpointのfeature入口だけを所有する。
 - `frontend/src/components/ui/*`、`frontend/src/components/common/container/header/*`、`frontend/src/components/layout/*`のprimitive・Header本体は変更せず、提供されたAPIを利用する。
 - `frontend/src/mocks/league*`、`frontend/src/mocks/league-season*`、`frontend/src/types/domain/league*`の全削除は行わず、対象本番routeのimportを外す。
+- Main/PR #104の既存League formとrule summaryの構成・スタイルを維持し、新fieldだけを既存のcontrolとspacingで追加する。独立画面や大幅なレイアウト変更は行わない。
 
 ## 8. Integration and Migration Notes
 
@@ -305,6 +317,7 @@ FEのfield validationは送信前の利用者体験を改善するためのも�
 - APIにないseason member updateをUIから送らず、既存mockをfallbackにしない。
 - BEが返すactive season、standing、record、point progressionの値をFEで再計算しない。
 - rule lockやactive season conflict時に入力を捨てず、ユーザーが修正または戻れる状態を残す。
+- 旧League ruleに新fieldがなく、すでにMatchが存在する場合は既定値`0/false`のままlockされる。該当Leagueで新ruleを使う必要があれば、本仕様のlockを迂回せず、運用用の承認済みmigration手順を別途用意する。
 - 旧domain型がSession/Match/統計の後続画面で必要な場合があるため、対象routeの利用停止と全削除を分離する。
 
 ## 9. Testing and Validation Strategy
@@ -323,7 +336,7 @@ FEのfield validationは送信前の利用者体験を改善するためのも�
 
 ## 10. Open Questions / Risks
 
-- `backend-foundation`の実装・契約テストが`rule.uma`合計0 invariantと`validation_error`のmessage/detailsを公開することが、FE実装の前提となる。FEは事前検証を持つが、BE判定を最終的な正として扱う。
+- `backend-foundation`の実装・契約テストが`rule.uma`合計0 invariant、新rule fieldのvalidation、`validation_error`を公開することが、FE実装の前提となる。FEは事前検証を持つが、BE判定を最終的な正として扱う。
 - upstream foundationのAppShellがleague navigationを`/`へ切り替えるタイミングがずれる場合、対象featureのroute smokeとnavigation設定を同時に再検証する。
 - upstream BE docsの一部に旧rule master表現が残る場合があるが、本specは承認済み`backend-foundation`のembedded rule、camelCase DTO、Hono `AppType`を優先する。
 - `PATCH`後にBE rebuildが非同期化された場合、mutation直後の再取得が古い派生値を返す可能性があるため、BEの完了契約と再取得タイミングを再検証する。
@@ -333,9 +346,9 @@ FEのfield validationは送信前の利用者体験を改善するためのも�
 | Requirement | Summary | Components | Interfaces / Flows |
 |---|---|---|---|
 | 1.1, 1.2, 1.3, 1.4 | HomeのAPI一覧、状態、empty、導線 | League Feature API, Request Hooks, League UI, Route Integration | `GET /api/leagues` → home cards |
-| 2.1, 2.2, 2.3, 2.4 | League detail、records、active season、season list empty | League Feature API, League Adapter, League UI | league detail + season list flow |
-| 3.1, 3.2, 3.3, 3.4, 3.5, 3.6 | League create/edit form、member search、rule.uma合計0事前検証、BE validation error、submit | League Feature API, Request Hooks, League UI and Forms | form validation → `POST/PATCH /api/leagues` → `validation_error` or detail |
-| 4.1, 4.2, 4.3, 4.4 | League edit、rule conflict、再取得、二重送信 | League Feature API, Request Hooks, League UI and Forms | detail → `PATCH /api/leagues/:leagueId` → refetch |
+| 2.1, 2.2, 2.3, 2.4 | League detail、ISSUE-99のrule summary、records、active season、season list empty | League Feature API, League Adapter, League UI | league detail + season list flow |
+| 3.1, 3.2, 3.3, 3.4, 3.5, 3.6 | League create rule fields、PR #104 uma、member search、rule validation、BE error、submit | League Feature API, Request Hooks, League UI and Forms | form validation → `POST/PATCH /api/leagues` → `validation_error` or detail |
+| 4.1, 4.2, 4.3, 4.4 | League edit rule fields初期化、Match後lock、競合、再取得、二重送信 | League Feature API, Request Hooks, League UI and Forms | detail → `PATCH /api/leagues/:leagueId` → refetch |
 | 5.1, 5.2, 5.3, 5.4 | Season list/create、members、active conflict | Season Feature API, Request Hooks, Season UI and Forms | list/members → `POST /api/leagues/:leagueId/seasons` |
 | 6.1, 6.2, 6.3, 6.4 | Season detail、BE standings、empty、navigation/error | Season Feature API, Season Adapter, Season UI, Route Integration | `GET /api/leagues/:leagueId/seasons/:seasonId` |
 | 7.1, 7.2, 7.3, 7.4 | Season edit name/status、snapshot、再取得、errors | Season Feature API, Request Hooks, Season UI and Forms | detail → season `PATCH` → refetch |
