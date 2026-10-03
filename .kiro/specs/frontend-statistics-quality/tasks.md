@@ -122,7 +122,7 @@
   - _Requirements: 8.1, 8.3_
   - _Boundary: Statistics rebuild integration_
 
-- [ ] 2.9 固定scope・任意期間のsummary readerを実装する
+- [x] 2.9 固定scope・任意期間のsummary readerを実装する
   - summary取得の最初にtarget access policyを確認し、許可後にsnapshotまたはprojectionを読む。
   - 日付指定なしでは固定scope snapshotを使い、任意期間だけprojectionから同じ集計を作る。
   - ready/empty/uncomputedを区別し、固定scope本人表示の統計readをUserStats 1 documentに抑える。

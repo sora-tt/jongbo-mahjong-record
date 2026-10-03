@@ -337,6 +337,52 @@ test("returns null standing for overall or when the target is outside scope", ()
   assert.equal(absent.byGameType[1]?.summary.currentStanding, null);
 });
 
+test("preserves and validates saved scope standing for a period summary", () => {
+  const matches = [
+    match({ id: "period-standing", rank: 1, rawScore: 50_000, finalPoint: 40 }),
+  ];
+  const currentStanding = {
+    rank: 2,
+    totalPoints: 120,
+    pointsBehindAbove: 5,
+    pointsAheadBelow: 8,
+    source: "season" as const,
+  };
+  const snapshot = buildPersonalStatisticsSnapshot({
+    targetUserId: asOpaqueId("user-1"),
+    scopeType: "season",
+    matches,
+    basicStats: basicStats(matches, currentStanding.rank),
+    currentStanding: null,
+    persistedCurrentStanding: currentStanding,
+  });
+
+  assert.deepEqual(snapshot.all.currentStanding, currentStanding);
+  assert.deepEqual(
+    snapshot.byGameType[0]?.summary.currentStanding,
+    currentStanding,
+  );
+  assert.deepEqual(
+    snapshot.byGameType[1]?.summary.currentStanding,
+    currentStanding,
+  );
+  assert.throws(
+    () =>
+      buildPersonalStatisticsSnapshot({
+        targetUserId: asOpaqueId("user-1"),
+        scopeType: "season",
+        matches,
+        basicStats: basicStats(matches, currentStanding.rank),
+        currentStanding: null,
+        persistedCurrentStanding: {
+          ...currentStanding,
+          source: "activeSeason",
+        },
+      }),
+    /standing source does not match statistics scope/,
+  );
+});
+
 test("leaves one neighbor gap null at the top and bottom of standings", () => {
   const matches = [
     match({ id: "standing-edge", rank: 2, rawScore: 30_000, finalPoint: 0 }),

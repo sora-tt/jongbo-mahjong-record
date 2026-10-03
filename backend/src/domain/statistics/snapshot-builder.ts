@@ -43,6 +43,8 @@ export type PersonalStatisticsSnapshotBuildInput = {
   matches: readonly SnapshotMatchInput[];
   basicStats: BasicStatistics;
   currentStanding: CurrentStandingInput | null;
+  /** Scope-level standing reused when only a date-filtered summary is rebuilt. */
+  persistedCurrentStanding?: PersonalStatisticsSnapshot["all"]["currentStanding"];
 };
 
 const toFullProjection = (match: SnapshotMatchInput): UserMatchStatistics =>
@@ -179,6 +181,42 @@ const assertCurrentRankMatches = (
   }
 };
 
+const resolvePersistedCurrentStanding = (
+  input: PersonalStatisticsSnapshotBuildInput,
+): PersonalStatisticsSnapshot["all"]["currentStanding"] => {
+  const currentStanding = input.persistedCurrentStanding;
+  if (currentStanding === undefined) {
+    return resolveCurrentStanding(input);
+  }
+  if (currentStanding === null) {
+    return null;
+  }
+
+  const expectedSource =
+    input.scopeType === "season" ? "season" : "activeSeason";
+  if (
+    input.scopeType === "overall" ||
+    currentStanding.source !== expectedSource
+  ) {
+    throw new TypeError("standing source does not match statistics scope");
+  }
+  if (
+    !Number.isInteger(currentStanding.rank) ||
+    currentStanding.rank < 1 ||
+    !Number.isFinite(currentStanding.totalPoints) ||
+    (currentStanding.pointsBehindAbove !== null &&
+      (!Number.isFinite(currentStanding.pointsBehindAbove) ||
+        currentStanding.pointsBehindAbove < 0)) ||
+    (currentStanding.pointsAheadBelow !== null &&
+      (!Number.isFinite(currentStanding.pointsAheadBelow) ||
+        currentStanding.pointsAheadBelow < 0))
+  ) {
+    throw new TypeError("persisted current standing contains invalid values");
+  }
+
+  return currentStanding;
+};
+
 const buildSummaryValues = (
   matches: readonly UserMatchStatistics[],
   currentStanding: PersonalStatisticsSnapshot["all"]["currentStanding"],
@@ -227,7 +265,7 @@ export const buildPersonalStatisticsSnapshot = (
   });
 
   assertBasicStatisticsMatch(matches, input.basicStats);
-  const currentStanding = resolveCurrentStanding(input);
+  const currentStanding = resolvePersistedCurrentStanding(input);
   assertCurrentRankMatches(
     input.scopeType,
     input.basicStats.currentRank,
