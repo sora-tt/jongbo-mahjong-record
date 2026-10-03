@@ -33,6 +33,21 @@ export type RebuildReport = {
   userCount: number;
 };
 
+export type RebuildAllReport = {
+  scope: { type: "all" };
+  matchCount: number;
+  userCount: number;
+};
+
+type PreparedSeasonRebuild = {
+  league: Awaited<ReturnType<LeagueRepository["get"]>>;
+  season: Awaited<ReturnType<SeasonRepository["get"]>>;
+  sessions: Awaited<ReturnType<SessionRepository["list"]>>;
+  rule: Awaited<ReturnType<LeagueRepository["getRule"]>>;
+  orderedMatches: Match[];
+  projectionRows: UserMatchStatisticsDraft[];
+};
+
 export class StatsRebuilder {
   constructor(
     private readonly leagueRepository: LeagueRepository,
@@ -86,6 +101,22 @@ export class StatsRebuilder {
     leagueId: string,
     seasonId: string,
   ): Promise<RebuildReport> {
+    const prepared = await this.prepareSeasonRebuild(leagueId, seasonId);
+    await this.replaceSeasonProjection(
+      leagueId,
+      seasonId,
+      prepared.projectionRows,
+    );
+    const report = await this.rebuildSeasonScope(prepared);
+    await this.rebuildLeagueScope(leagueId);
+    await this.rebuildOverallScope();
+    return report;
+  }
+
+  private async prepareSeasonRebuild(
+    leagueId: string,
+    seasonId: string,
+  ): Promise<PreparedSeasonRebuild> {
     const [league, season, sessions, rule, seasonMatches] = await Promise.all([
       this.leagueRepository.get(leagueId),
       this.seasonRepository.get(leagueId, seasonId),
@@ -111,8 +142,13 @@ export class StatsRebuilder {
         session: { id: session.id, label: session.tableLabel },
       });
     });
-    await this.replaceSeasonProjection(leagueId, seasonId, projectionRows);
+    return { league, season, sessions, rule, orderedMatches, projectionRows };
+  }
 
+  private async rebuildSeasonScope(
+    prepared: PreparedSeasonRebuild,
+  ): Promise<RebuildReport> {
+    const { league, season, sessions, rule, orderedMatches } = prepared;
     const standings = buildStandings(
       season.members,
       orderedMatches,
@@ -129,35 +165,37 @@ export class StatsRebuilder {
     );
 
     await this.seasonRepository.updateStatistics({
-      leagueId,
-      seasonId,
+      leagueId: league.id,
+      seasonId: season.id,
       totalMatchCount: orderedMatches.length,
       standings,
       pointProgressions,
       seasonRecords,
     });
 
+    const matchCountBySessionId = new Map<string, number>();
+    orderedMatches.forEach((match) => {
+      matchCountBySessionId.set(
+        match.sessionId,
+        (matchCountBySessionId.get(match.sessionId) ?? 0) + 1,
+      );
+    });
     await Promise.all(
-      sessions.map(async (session) => {
-        const sessionMatches = await this.matchRepository.list(
-          leagueId,
-          seasonId,
+      sessions.map((session) =>
+        this.sessionRepository.setTotalMatchCount(
+          league.id,
+          season.id,
           session.id,
-        );
-        await this.sessionRepository.setTotalMatchCount(
-          leagueId,
-          seasonId,
-          session.id,
-          sessionMatches.length,
-        );
-      }),
+          matchCountBySessionId.get(session.id) ?? 0,
+        ),
+      ),
     );
 
     const resultsByUser = collectUserResults(orderedMatches);
     const chomboCountByUserId = collectUserChomboCounts(orderedMatches);
     await this.rebuildUserStats("season", {
-      leagueId,
-      seasonId,
+      leagueId: league.id,
+      seasonId: season.id,
       leagueName: league.name,
       seasonName: season.name,
       members: season.members,
@@ -168,10 +206,8 @@ export class StatsRebuilder {
       currentStanding: { source: "season", standings },
     });
 
-    await this.rebuildLeagueScope(leagueId);
-    await this.rebuildOverallScope();
     return {
-      scope: { type: "season", leagueId, seasonId },
+      scope: { type: "season", leagueId: league.id, seasonId: season.id },
       matchCount: orderedMatches.length,
       userCount: resultsByUser.size,
     };
@@ -258,6 +294,58 @@ export class StatsRebuilder {
       { scopeType: "overall", leagueId: null, seasonId: null },
     ]);
     return this.rebuildOverallScope();
+  }
+
+  async rebuildAll(): Promise<RebuildAllReport> {
+    const leagues = await this.leagueRepository.list();
+    const seasonsByLeague = await Promise.all(
+      leagues.map(async (league) => ({
+        leagueId: league.id,
+        seasons: await this.seasonRepository.list(league.id),
+      })),
+    );
+    const scopes = [
+      ...seasonsByLeague.flatMap(({ leagueId, seasons }) =>
+        seasons.map((season) => ({
+          scopeType: "season" as const,
+          leagueId,
+          seasonId: season.id,
+        })),
+      ),
+      ...leagues.map((league) => ({
+        scopeType: "league" as const,
+        leagueId: league.id,
+        seasonId: null,
+      })),
+      { scopeType: "overall" as const, leagueId: null, seasonId: null },
+    ];
+    await this.markUncomputedScopes(scopes);
+
+    const preparedSeasons: PreparedSeasonRebuild[] = [];
+    for (const { leagueId, seasons } of seasonsByLeague) {
+      for (const season of seasons) {
+        const prepared = await this.prepareSeasonRebuild(leagueId, season.id);
+        await this.replaceSeasonProjection(
+          leagueId,
+          season.id,
+          prepared.projectionRows,
+        );
+        preparedSeasons.push(prepared);
+      }
+    }
+
+    for (const prepared of preparedSeasons) {
+      await this.rebuildSeasonScope(prepared);
+    }
+    for (const league of leagues) {
+      await this.rebuildLeagueScope(league.id);
+    }
+    const overallReport = await this.rebuildOverallScope();
+    return {
+      scope: { type: "all" },
+      matchCount: overallReport.matchCount,
+      userCount: overallReport.userCount,
+    };
   }
 
   private async rebuildOverallScope(): Promise<RebuildReport> {

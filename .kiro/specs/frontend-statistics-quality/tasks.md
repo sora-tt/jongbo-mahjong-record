@@ -106,7 +106,7 @@
   - _Requirements: 8.1, 8.3_
   - _Boundary: StatsRebuilder Lifecycle Integration_
 
-- [ ] 2.7 全件repairをprojection-firstで再構築する
+- [x] 2.7 全件repairをprojection-firstで再構築する
   - repair開始時に全対象scopeをversion 0へ無効化し、通常再構築のprojection/rollup helperを再利用する。
   - すべてのseason/league projectionを作り終えてから、scope rollupとsnapshotを再構築・公開する。
   - 失敗したscopeをreadyにせず、全件repairを繰り返しても同じ結果に収束する。
