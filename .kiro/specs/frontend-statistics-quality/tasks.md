@@ -246,7 +246,7 @@
   - _Requirements: 2.1, 2.3, 6.1, 6.2, 6.3, 6.4, 6.5_
   - _Boundary: Statistics Breakdown UI_
 
-- [ ] 4.9 (P) 対局履歴と追加読込を実装する
+- [x] 4.9 (P) 対局履歴と追加読込を実装する
   - 登録済み日時・league/season・session・形式・同卓者・席・順位・素点・最終pointを最新順に表示する。
   - 追加読込はopaque cursorを使い、重複・欠落なく次ページを追加する。
   - 局単位情報を推測せず、ready/empty/uncomputedを区別する。
