@@ -214,7 +214,7 @@
   - _Requirements: 2.1, 8.4, 9.6, 9.7, 9.8, 10.1, 10.2, 10.3_
   - _Boundary: StatisticsSubjectSelector_
 
-- [ ] 4.5 (P) summaryと順位成績のoverviewを実装する
+- [x] 4.5 (P) summaryと順位成績のoverviewを実装する
   - 対局数、総合point、平均順位、トップ率を優先KPIとして表示する。
   - 順位回数・率、形式別順位、scope順位と直上/直下との差を表示する。
   - 指標名・単位・集計対局数を示し、三麻の4位や未確定順位を実績として表示しない。

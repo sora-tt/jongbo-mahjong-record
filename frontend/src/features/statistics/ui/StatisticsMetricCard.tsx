@@ -6,12 +6,14 @@ type Props = {
   label: string;
   value: React.ReactNode;
   unit?: string;
+  description?: React.ReactNode;
 };
 
 export const StatisticsMetricCard: React.FC<Props> = ({
   label,
   value,
   unit,
+  description,
 }) => (
   <Card bodyClassName="min-h-28 text-center">
     <p className="text-sm font-medium text-text-muted">{label}</p>
@@ -19,5 +21,8 @@ export const StatisticsMetricCard: React.FC<Props> = ({
       {value}
       {unit ? <span className="ml-1 text-sm font-medium">{unit}</span> : null}
     </p>
+    {description ? (
+      <p className="mt-2 text-xs text-text-muted">{description}</p>
+    ) : null}
   </Card>
 );
