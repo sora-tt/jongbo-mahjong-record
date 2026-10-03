@@ -190,7 +190,7 @@
   - _Requirements: 1.2, 1.3, 2.3, 8.2, 8.3, 9.1, 10.1_
   - _Boundary: Statistics API Client and Adapter_
 
-- [ ] 4.2 statistics hookへ対象者選択とquery lifecycleを実装する
+- [x] 4.2 statistics hookへ対象者選択とquery lifecycleを実装する
   - viewer/target、scope、期間、game type、active tabを保持し、cache keyにviewer/target IDと統計条件を含める。
   - target切替では期間・game typeを維持し、summaryと表示中viewを取得してhistory cursorをリセットする。古い応答を破棄する。
   - members候補はscopeごとに初回取得してcacheし、一覧取得失敗時も本人の成績を表示してselector再試行を可能にする。
