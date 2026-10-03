@@ -148,7 +148,7 @@
 
 ## 3. 認証付き統計API
 
-- [ ] 3.1 statistics queryのscope・期間・dimension・page validationを実装する
+- [x] 3.1 statistics queryのscope・期間・dimension・page validationを実装する
   - overall/league/seasonそれぞれのID条件、日時順、game type、dimension、groupBy、window、limit、cursorを検証する。
   - 期間をfrom込み/toなしとし、履歴は既定50/最大100、推移windowは10/20/50に制限する。
   - 不正queryが統計repositoryへ届く前に共通validation errorになる。
