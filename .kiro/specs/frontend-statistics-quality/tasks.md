@@ -90,7 +90,7 @@
   - _Requirements: 5.5, 5.6, 6.2, 7.1, 8.2_
   - _Boundary: UserMatchStatistics projection_
 
-- [ ] 2.5 bounded personal statistics snapshotを組み立てる
+- [x] 2.5 bounded personal statistics snapshotを組み立てる
   - 基本集計、形式別順位、スコア、record、streak、直近成績、参加session数、順位前後差を固定scope snapshotへまとめる。
   - overall/三麻/四麻のsliceを作り、全推移・可変長の相手/session行・履歴をsnapshotへ格納しない。
   - 既存UserStats値と同じ確定Match入力から再現可能なsnapshotを生成する。
