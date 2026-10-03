@@ -223,6 +223,18 @@ test("statistics OpenAPI uses valid OpenAPI 3.0 nullable schemas", () => {
   assert.ok(properties);
   const records = properties.records?.properties;
   assert.ok(records);
+  assert.deepEqual(properties.scoreByGameType, {
+    type: "array",
+    items: { $ref: "#/components/schemas/StatisticsScoreByGameType" },
+  });
+  assert.deepEqual(
+    (schemas.StatisticsScoreByGameType?.properties ?? {}).rawScore,
+    { $ref: "#/components/schemas/StatisticsNumericSummary" },
+  );
+  assert.deepEqual(
+    (schemas.StatisticsScoreByGameType?.properties ?? {}).finalPoint,
+    { $ref: "#/components/schemas/StatisticsFinalPointSummary" },
+  );
 
   for (const property of [
     "highestRawScore",

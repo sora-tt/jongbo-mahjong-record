@@ -269,6 +269,15 @@ const statisticsSchemas = {
       },
     ],
   },
+  StatisticsScoreByGameType: {
+    type: "object",
+    properties: {
+      gameType: { type: "string", enum: ["sanma", "yonma"] },
+      rawScore: statisticsComponentRef("StatisticsNumericSummary"),
+      finalPoint: statisticsComponentRef("StatisticsFinalPointSummary"),
+    },
+    required: ["gameType", "rawScore", "finalPoint"],
+  },
   StatisticsScoreByRank: {
     type: "object",
     properties: {
@@ -412,6 +421,10 @@ const statisticsSchemas = {
         type: "array",
         items: statisticsComponentRef("StatisticsFormatSummary"),
       },
+      scoreByGameType: {
+        type: "array",
+        items: statisticsComponentRef("StatisticsScoreByGameType"),
+      },
       rawScore: statisticsComponentRef("StatisticsNumericSummary"),
       finalPoint: statisticsComponentRef("StatisticsFinalPointSummary"),
       scoreByRank: {
@@ -460,6 +473,7 @@ const statisticsSchemas = {
       "timeZone",
       "totals",
       "byGameType",
+      "scoreByGameType",
       "rawScore",
       "finalPoint",
       "scoreByRank",

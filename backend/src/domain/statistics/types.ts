@@ -90,6 +90,16 @@ export type NumericSummary = {
   populationStandardDeviation: number | null;
 };
 
+export type StatisticsScoreByGameType = {
+  gameType: StatisticsGameType;
+  rawScore: NumericSummary;
+  finalPoint: NumericSummary & {
+    positive: RateCount;
+    negative: RateCount;
+    even: RateCount;
+  };
+};
+
 export type FormatSummary = {
   gameType: StatisticsGameType;
   matchCount: number;
@@ -142,6 +152,7 @@ export type PersonalStatisticsSummary = {
     chomboCount: number;
   };
   byGameType: FormatSummary[];
+  scoreByGameType: StatisticsScoreByGameType[];
   rawScore: NumericSummary;
   finalPoint: NumericSummary & {
     positive: RateCount;
@@ -267,7 +278,7 @@ export type PersonalStatisticsResult =
 
 export type PersonalStatisticsSnapshotValues = Omit<
   PersonalStatisticsSummary,
-  "status" | "scope" | "generatedAt" | "timeZone"
+  "status" | "scope" | "generatedAt" | "timeZone" | "scoreByGameType"
 >;
 
 export type PersonalStatisticsSnapshot = {

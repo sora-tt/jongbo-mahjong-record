@@ -180,6 +180,18 @@ export class PersonalStatisticsSummaryReader {
         )
       : statsRecord.personalStatisticsSnapshot;
     const values = selectSnapshotValues(snapshot, query.gameType);
+    const scoreByGameType = snapshot.byGameType
+      .filter(
+        ({ gameType }) =>
+          query.gameType === undefined ||
+          query.gameType === "all" ||
+          query.gameType === gameType,
+      )
+      .map(({ gameType, summary }) => ({
+        gameType,
+        rawScore: summary.rawScore,
+        finalPoint: summary.finalPoint,
+      }));
 
     return {
       status: values.totals.totalMatchCount === 0 ? "empty" : "ready",
@@ -187,6 +199,7 @@ export class PersonalStatisticsSummaryReader {
       generatedAt: statsRecord.stats.updatedAt,
       timeZone: TIME_ZONE,
       ...values,
+      scoreByGameType,
     };
   }
 

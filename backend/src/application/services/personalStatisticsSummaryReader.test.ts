@@ -237,6 +237,17 @@ test("fixed-scope summary reads one snapshot document and selects the saved game
     allSummary.byGameType.map(({ gameType }) => gameType),
     ["sanma", "yonma"],
   );
+  assert.deepEqual(
+    allSummary.scoreByGameType.map(({ gameType, rawScore, finalPoint }) => ({
+      gameType,
+      rawScoreCount: rawScore.matchCount,
+      finalPointCount: finalPoint.matchCount,
+    })),
+    [
+      { gameType: "sanma", rawScoreCount: 1, finalPointCount: 1 },
+      { gameType: "yonma", rawScoreCount: 1, finalPointCount: 1 },
+    ],
+  );
 
   const sanmaSummary = await fixture.reader.getSummary(
     overallQuery({ gameType: "sanma" }),
@@ -247,6 +258,13 @@ test("fixed-scope summary reads one snapshot document and selects the saved game
   assert.deepEqual(
     sanmaSummary.byGameType.map(({ gameType }) => gameType),
     ["sanma"],
+  );
+  assert.deepEqual(
+    sanmaSummary.scoreByGameType.map(({ gameType, finalPoint }) => ({
+      gameType,
+      matchCount: finalPoint.matchCount,
+    })),
+    [{ gameType: "sanma", matchCount: 1 }],
   );
   assert.equal(fixture.statsReadCount, 2);
   assert.equal(fixture.projectionReadCount, 0);
