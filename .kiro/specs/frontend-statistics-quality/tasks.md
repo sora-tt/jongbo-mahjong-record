@@ -238,7 +238,7 @@
   - _Requirements: 2.1, 2.3, 5.1, 5.2, 5.3, 5.4, 9.4_
   - _Boundary: Statistics Trend UI_
 
-- [ ] 4.8 (P) 条件別成績のselectorと表を実装する
+- [x] 4.8 (P) 条件別成績のselectorと表を実装する
   - 期間/曜日/時間帯/席/相手/sessionの切り口を一つずつ選べるようにする。
   - 対象名、形式、対局数、割合の分母、相手/sessionの追加読込を表示する。
   - 相手差・席・sessionの行を同じscope/target条件のまま閲覧できる。
