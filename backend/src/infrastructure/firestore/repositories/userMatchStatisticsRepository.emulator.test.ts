@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import test from "node:test";
+import type { UserMatchStatisticsRepository } from "@/domain/statistics/repository.js";
 import { asIsoDateString, asOpaqueId } from "@/domain/shared/types.js";
 import type { UserMatchStatistics } from "@/domain/statistics/types.js";
 import { getDb } from "@/infrastructure/firestore/client.js";
@@ -394,6 +395,309 @@ test(
       await Promise.all([
         repository.deleteLeague(asOpaqueId(leagueId)),
         repository.deleteLeague(asOpaqueId(otherLeagueId)),
+      ]);
+    }
+  },
+);
+
+const projection = (input: {
+  userId: string;
+  leagueId: string;
+  seasonId: string;
+  sessionId: string;
+  matchId: string;
+  matchIndex: number;
+  playedAt: string;
+  gameType?: "sanma" | "yonma";
+  finalPoint?: number;
+}): UserMatchStatistics => {
+  const gameType = input.gameType ?? "yonma";
+  const playerCount = gameType === "sanma" ? 3 : 4;
+  return {
+    id: asOpaqueId(`row-${input.userId}-${input.matchId}`),
+    userId: asOpaqueId(input.userId),
+    userName: input.userId,
+    leagueId: asOpaqueId(input.leagueId),
+    leagueName: input.leagueId,
+    seasonId: asOpaqueId(input.seasonId),
+    seasonName: input.seasonId,
+    sessionId: asOpaqueId(input.sessionId),
+    sessionLabel: input.sessionId,
+    matchId: asOpaqueId(input.matchId),
+    matchIndex: input.matchIndex,
+    playedAt: asIsoDateString(input.playedAt),
+    gameType,
+    playerCount,
+    wind: gameType === "sanma" ? "east" : "north",
+    rank: playerCount,
+    rawScore: 25_000,
+    finalPoint: input.finalPoint ?? 0,
+    chomboCount: 0,
+    opponents: [],
+    updatedAt: asIsoDateString(input.playedAt),
+  };
+};
+
+test(
+  "replaces projections idempotently, prunes stale rows, and pages history in stable filtered order",
+  { skip: !emulatorAvailable },
+  async () => {
+    const db = getDb();
+    const repository: UserMatchStatisticsRepository =
+      new FirestoreUserMatchStatisticsRepository(db);
+    const suffix = randomUUID();
+    const leagueId = `statistics-repository-${suffix}`;
+    const otherLeagueId = `statistics-repository-other-${suffix}`;
+    const seasonId = `season-${suffix}`;
+    const otherSeasonId = `other-season-${suffix}`;
+    const userId = `user-${suffix}`;
+    const otherUserId = `other-user-${suffix}`;
+    const playedAt = "2026-01-01T00:00:00.000Z";
+
+    const orderedRows = [
+      projection({
+        userId,
+        leagueId,
+        seasonId,
+        sessionId: "session-b",
+        matchId: "match-z",
+        matchIndex: 2,
+        playedAt,
+        finalPoint: 20,
+      }),
+      projection({
+        userId,
+        leagueId,
+        seasonId,
+        sessionId: "session-b",
+        matchId: "match-a",
+        matchIndex: 2,
+        playedAt,
+        finalPoint: 10,
+      }),
+      projection({
+        userId,
+        leagueId,
+        seasonId,
+        sessionId: "session-b",
+        matchId: "match-middle",
+        matchIndex: 1,
+        playedAt,
+      }),
+      projection({
+        userId,
+        leagueId,
+        seasonId,
+        sessionId: "session-a",
+        matchId: "match-session-a",
+        matchIndex: 1,
+        playedAt,
+      }),
+    ];
+    const filteredOutRows = [
+      projection({
+        userId,
+        leagueId,
+        seasonId,
+        sessionId: "session-b",
+        matchId: "match-before-range",
+        matchIndex: 3,
+        playedAt: "2025-12-31T23:59:59.000Z",
+      }),
+      projection({
+        userId,
+        leagueId,
+        seasonId,
+        sessionId: "session-c",
+        matchId: "match-sanma",
+        matchIndex: 1,
+        playedAt,
+        gameType: "sanma",
+      }),
+      projection({
+        userId: otherUserId,
+        leagueId,
+        seasonId,
+        sessionId: "session-b",
+        matchId: "match-other-user",
+        matchIndex: 4,
+        playedAt,
+      }),
+    ];
+    const seasonRows = [...orderedRows, ...filteredOutRows];
+    const otherSeasonRow = projection({
+      userId,
+      leagueId,
+      seasonId: otherSeasonId,
+      sessionId: "session-other-season",
+      matchId: "match-other-season",
+      matchIndex: 1,
+      playedAt,
+    });
+    const otherLeagueRow = projection({
+      userId,
+      leagueId: otherLeagueId,
+      seasonId,
+      sessionId: "session-other-league",
+      matchId: "match-other-league",
+      matchIndex: 1,
+      playedAt,
+    });
+
+    try {
+      await repository.replaceSeason({ leagueId, seasonId, rows: seasonRows });
+      await repository.replaceSeason({ leagueId, seasonId, rows: seasonRows });
+      await repository.replaceSeason({
+        leagueId,
+        seasonId: otherSeasonId,
+        rows: [otherSeasonRow],
+      });
+      await repository.replaceSeason({
+        leagueId: otherLeagueId,
+        seasonId,
+        rows: [otherLeagueRow],
+      });
+
+      const query = {
+        scopeType: "season" as const,
+        leagueId: asOpaqueId(leagueId),
+        seasonId: asOpaqueId(seasonId),
+        userId,
+        from: asIsoDateString("2026-01-01T00:00:00.000Z"),
+        to: asIsoDateString("2026-01-02T00:00:00.000Z"),
+        gameType: "yonma" as const,
+        limit: 2,
+      };
+      const firstPage = await repository.listPage(query);
+      assert.equal(firstPage.status, "ready");
+      assert.deepEqual(
+        firstPage.items.map(({ match: item }) => item.matchId),
+        ["match-z", "match-a"],
+      );
+      assert.ok(firstPage.nextCursor);
+
+      const secondPage = await repository.listPage({
+        ...query,
+        cursor: firstPage.nextCursor,
+      });
+      assert.equal(secondPage.status, "ready");
+      assert.deepEqual(
+        secondPage.items.map(({ match: item }) => item.matchId),
+        ["match-middle", "match-session-a"],
+      );
+      assert.equal(secondPage.nextCursor, null);
+      await assert.rejects(
+        repository.listPage({
+          ...query,
+          gameType: "sanma",
+          cursor: firstPage.nextCursor,
+        }),
+        /cursor does not match query/,
+      );
+
+      const updatedFirstRow = { ...orderedRows[0]!, finalPoint: 99 };
+      await repository.replaceSeason({
+        leagueId,
+        seasonId,
+        rows: [updatedFirstRow, ...orderedRows.slice(1), ...filteredOutRows],
+      });
+      const afterIdempotentUpdate = await repository.listForScope({
+        scopeType: "season",
+        leagueId: asOpaqueId(leagueId),
+        seasonId: asOpaqueId(seasonId),
+        userId,
+      });
+      assert.equal(afterIdempotentUpdate.length, 6);
+      assert.equal(
+        afterIdempotentUpdate.find(({ matchId }) => matchId === "match-z")
+          ?.finalPoint,
+        99,
+      );
+
+      await repository.replaceSeason({
+        leagueId,
+        seasonId,
+        rows: [updatedFirstRow, filteredOutRows[2]!],
+      });
+      assert.deepEqual(
+        (
+          await repository.listForScope({
+            scopeType: "season",
+            leagueId: asOpaqueId(leagueId),
+            seasonId: asOpaqueId(seasonId),
+            userId,
+          })
+        ).map(({ matchId }) => matchId),
+        ["match-z"],
+      );
+      assert.deepEqual(
+        (
+          await repository.listForScope({
+            scopeType: "season",
+            leagueId: asOpaqueId(leagueId),
+            seasonId: asOpaqueId(seasonId),
+            userId: otherUserId,
+          })
+        ).map(({ matchId }) => matchId),
+        ["match-other-user"],
+      );
+      assert.deepEqual(
+        (
+          await repository.listForScope({
+            scopeType: "league",
+            leagueId: asOpaqueId(leagueId),
+            userId,
+          })
+        ).map(({ matchId }) => matchId),
+        ["match-other-season", "match-z"],
+      );
+      assert.deepEqual(
+        (await repository.listForScope({ scopeType: "overall", userId })).map(
+          ({ matchId }) => matchId,
+        ),
+        ["match-other-season", "match-other-league", "match-z"],
+      );
+
+      await repository.deleteSeason(leagueId, seasonId);
+      assert.deepEqual(
+        await repository.listForScope({
+          scopeType: "season",
+          leagueId: asOpaqueId(leagueId),
+          seasonId: asOpaqueId(seasonId),
+          userId,
+        }),
+        [],
+      );
+      assert.deepEqual(
+        (
+          await repository.listForScope({
+            scopeType: "league",
+            leagueId: asOpaqueId(leagueId),
+            userId,
+          })
+        ).map(({ matchId }) => matchId),
+        ["match-other-season"],
+      );
+
+      await repository.deleteLeague(leagueId);
+      assert.deepEqual(
+        await repository.listForScope({
+          scopeType: "league",
+          leagueId: asOpaqueId(leagueId),
+          userId,
+        }),
+        [],
+      );
+      assert.deepEqual(
+        (await repository.listForScope({ scopeType: "overall", userId })).map(
+          ({ matchId }) => matchId,
+        ),
+        ["match-other-league"],
+      );
+    } finally {
+      await Promise.all([
+        repository.deleteLeague(leagueId),
+        repository.deleteLeague(otherLeagueId),
       ]);
     }
   },

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { getDb } from "@/infrastructure/firestore/client.js";
+import type { UserMatchStatisticsRepository } from "@/domain/statistics/repository.js";
 import { FirestoreLeagueRepository } from "@/infrastructure/firestore/repositories/leagueRepository.js";
 import { FirestoreSeasonRepository } from "@/infrastructure/firestore/repositories/seasonRepository.js";
 import { FirestoreMatchRepository } from "@/infrastructure/firestore/repositories/matchRepository.js";
@@ -195,8 +196,45 @@ test(
     const sessionRepository = new FirestoreSessionRepository(db);
     const matchRepository = new FirestoreMatchRepository(db);
     const userStatsRepository = new FirestoreUserStatsRepository(db);
-    const userMatchStatisticsRepository =
+    const baseUserMatchStatisticsRepository: UserMatchStatisticsRepository =
       new FirestoreUserMatchStatisticsRepository(db);
+    let projectionReplacementCount = 0;
+    const userMatchStatisticsRepository: UserMatchStatisticsRepository = {
+      replaceSeason: async (input) => {
+        if (projectionReplacementCount > 0) {
+          const scopes = [
+            {
+              scopeType: "season" as const,
+              leagueId: input.leagueId,
+              seasonId: input.seasonId,
+            },
+            { scopeType: "league" as const, leagueId: input.leagueId },
+            { scopeType: "overall" as const },
+          ];
+          for (const scope of scopes) {
+            for (const userId of ["0001", "0002", "0003", "0004"]) {
+              const stats = await userStatsRepository.getWithPersonalStatistics(
+                { userId, ...scope },
+              );
+              assert.equal(
+                stats?.personalStatisticsVersion,
+                0,
+                `${scope.scopeType} must be uncomputed before projection replacement`,
+              );
+            }
+          }
+        }
+        await baseUserMatchStatisticsRepository.replaceSeason(input);
+        projectionReplacementCount += 1;
+      },
+      deleteSeason: (leagueId, seasonId) =>
+        baseUserMatchStatisticsRepository.deleteSeason(leagueId, seasonId),
+      deleteLeague: (leagueId) =>
+        baseUserMatchStatisticsRepository.deleteLeague(leagueId),
+      listForScope: (query) =>
+        baseUserMatchStatisticsRepository.listForScope(query),
+      listPage: (query) => baseUserMatchStatisticsRepository.listPage(query),
+    };
     const statsRebuilder = new StatsRebuilder(
       leagueRepository,
       seasonRepository,
@@ -336,6 +374,19 @@ test(
           userId: "0001",
         });
       assert.equal(projectionsAfterCreate.length, 2);
+      const snapshotAfterCreate =
+        await userStatsRepository.getWithPersonalStatistics({
+          userId: "0001",
+          scopeType: "season",
+          leagueId: league.id,
+          seasonId: season.id,
+        });
+      assert.equal(snapshotAfterCreate?.personalStatisticsVersion, 1);
+      assert.equal(
+        snapshotAfterCreate?.personalStatisticsSnapshot?.all.totals
+          .totalMatchCount,
+        2,
+      );
       const updatedSecondMatch = await matchService.updateMatch(
         "0001",
         league.id,

@@ -280,7 +280,7 @@
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 4.8, 5.1, 5.2, 5.3, 5.4, 6.1, 6.2, 6.3, 6.4, 6.5, 7.1, 7.2, 7.3_
   - _Boundary: Statistics Aggregation Tests_
 
-- [ ] 5.2 Firestore emulatorでprojection/rebuild/repair/deleteを検証する
+- [x] 5.2 Firestore emulatorでprojection/rebuild/repair/deleteを検証する
   - repositoryのupsert/prune/cursorとMatch create/update/delete後の結果を確認する。
   - 通常rebuildはscopeを先にversion 0にし、成功時だけversion 1を公開する。
   - full repairは全projection後にscope summaryを公開し、削除後に孤立scope/projectionが残らない。
