@@ -14,6 +14,7 @@ const createRepositories = () => {
   const membershipCalls: Array<[string, string, string]> = [];
   const leagueRepository = {
     get: async () => ({}),
+    exists: async () => true,
     areMembers: async (
       leagueId: string,
       viewerUserId: string,
@@ -22,11 +23,12 @@ const createRepositories = () => {
       membershipCalls.push([leagueId, viewerUserId, targetUserId]);
       return true;
     },
-  } as unknown as Pick<LeagueRepository, "get" | "areMembers">;
+  } as unknown as Pick<LeagueRepository, "get" | "exists" | "areMembers">;
   const seasonRepository = {
     get: async () => ({}),
+    exists: async () => true,
     areMembers: async () => true,
-  } as unknown as Pick<SeasonRepository, "get" | "areMembers">;
+  } as unknown as Pick<SeasonRepository, "get" | "exists" | "areMembers">;
   const userStatsRepository = {
     getWithPersonalStatistics: async () => null,
   } as unknown as Pick<UserStatsRepository, "getWithPersonalStatistics">;

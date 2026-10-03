@@ -33,6 +33,8 @@ test(
     ]);
 
     try {
+      assert.equal(await repository.exists(leagueId), true);
+      assert.equal(await repository.exists(`missing-${leagueId}`), false);
       assert.equal(
         await repository.areMembers(leagueId, viewerUserId, targetUserId),
         true,
@@ -84,6 +86,11 @@ test(
     ]);
 
     try {
+      assert.equal(await repository.exists(leagueId, seasonId), true);
+      assert.equal(
+        await repository.exists(leagueId, `missing-${seasonId}`),
+        false,
+      );
       assert.equal(
         await repository.areMembers(
           leagueId,

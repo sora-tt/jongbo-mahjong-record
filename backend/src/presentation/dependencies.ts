@@ -25,8 +25,8 @@ import type { UserStatsRepository } from "@/domain/user/repository.js";
 export type Services = ReturnType<typeof createDependencies>["services"];
 
 type StatisticsServiceRepositories = {
-  leagueRepository: Pick<LeagueRepository, "get" | "areMembers">;
-  seasonRepository: Pick<SeasonRepository, "get" | "areMembers">;
+  leagueRepository: Pick<LeagueRepository, "get" | "exists" | "areMembers">;
+  seasonRepository: Pick<SeasonRepository, "get" | "exists" | "areMembers">;
   userStatsRepository: Pick<UserStatsRepository, "getWithPersonalStatistics">;
   userMatchStatisticsRepository: Pick<
     UserMatchStatisticsRepository,

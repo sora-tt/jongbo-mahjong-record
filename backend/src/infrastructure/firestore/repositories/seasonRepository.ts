@@ -68,6 +68,16 @@ export class FirestoreSeasonRepository implements SeasonRepository {
     );
   }
 
+  async exists(leagueId: string, seasonId: string): Promise<boolean> {
+    const snapshot = await this.db
+      .collection("leagues")
+      .doc(leagueId)
+      .collection("seasons")
+      .doc(seasonId)
+      .get();
+    return snapshot.exists;
+  }
+
   async create(
     leagueId: string,
     input: CreateSeasonInput,

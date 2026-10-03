@@ -208,6 +208,15 @@ test("reader access errors remain standard 403 and 404 error envelopes", async (
       code: "forbidden",
     },
     {
+      service: "personalStatisticsSummaryReader" as const,
+      error: new AppError("league not found", 404, "not_found", {
+        leagueId: "missing-league",
+      }),
+      path: "/api/users/target-1/statistics?scopeType=league&leagueId=missing-league",
+      status: 404,
+      code: "not_found",
+    },
+    {
       service: "personalStatisticsMatchHistoryReader" as const,
       error: new AppError("season not found", 404, "not_found", {
         seasonId: "season-1",

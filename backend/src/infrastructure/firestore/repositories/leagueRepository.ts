@@ -132,6 +132,11 @@ export class FirestoreLeagueRepository implements LeagueRepository {
     };
   }
 
+  async exists(leagueId: string): Promise<boolean> {
+    const snapshot = await this.db.collection("leagues").doc(leagueId).get();
+    return snapshot.exists;
+  }
+
   async getRule(leagueId: string): Promise<LeagueRule> {
     const snapshot = await this.db.collection("leagues").doc(leagueId).get();
     if (!snapshot.exists) {

@@ -21,6 +21,8 @@ export type UpdateSeasonInput = {
 export interface SeasonRepository {
   list(leagueId: string): Promise<SeasonSummary[]>;
   get(leagueId: string, seasonId: string): Promise<SeasonDetail>;
+  /** Checks season existence without mapping its detail. */
+  exists(leagueId: string, seasonId: string): Promise<boolean>;
   create(
     leagueId: string,
     input: CreateSeasonInput,

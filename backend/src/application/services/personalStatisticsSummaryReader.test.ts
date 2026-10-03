@@ -15,6 +15,7 @@ import { NotFoundError } from "@/domain/shared/errors.js";
 import { asIsoDateString, asOpaqueId } from "@/domain/shared/types.js";
 import { buildPersonalStatisticsSnapshot } from "@/domain/statistics/snapshot-builder.js";
 import { StatisticsTargetAccessError } from "@/domain/statistics/errors.js";
+import { StatisticsTargetAccessService } from "@/application/services/statisticsTargetAccessService.js";
 import { PersonalStatisticsSummaryReader } from "@/application/services/personalStatisticsSummaryReader.js";
 
 const viewerUserId = asOpaqueId("viewer-1");
@@ -383,6 +384,64 @@ test("missing scope entity returns existing 404 before statistics reads", async 
   assert.deepEqual(seasonFixture.events, ["access", "season"]);
   assert.equal(seasonFixture.statsReadCount, 0);
   assert.equal(seasonFixture.projectionReadCount, 0);
+});
+
+test("missing league or season for another target returns 404 before stats and projection reads", async () => {
+  const events: string[] = [];
+  const leagueRepository = {
+    areMembers: async () => {
+      events.push("leagueMembers");
+      return false;
+    },
+    exists: async () => {
+      events.push("leagueExists");
+      return false;
+    },
+    get: async () => {
+      events.push("leagueGet");
+      throw new NotFoundError("league not found", { leagueId });
+    },
+  } as unknown as LeagueRepository;
+  const seasonRepository = {
+    areMembers: async () => {
+      events.push("seasonMembers");
+      return false;
+    },
+    exists: async () => {
+      events.push("seasonExists");
+      return false;
+    },
+    get: async () => {
+      events.push("seasonGet");
+      throw new NotFoundError("season not found", { leagueId, seasonId });
+    },
+  } as unknown as SeasonRepository;
+  const userStatsRepository = {
+    getWithPersonalStatistics: async () => {
+      events.push("stats");
+      return null;
+    },
+  } as unknown as UserStatsRepository;
+  const projectionRepository = {
+    listForScope: async () => {
+      events.push("projection");
+      return [];
+    },
+  } as unknown as UserMatchStatisticsRepository;
+  const reader = new PersonalStatisticsSummaryReader(
+    new StatisticsTargetAccessService(leagueRepository, seasonRepository),
+    userStatsRepository,
+    projectionRepository,
+    leagueRepository,
+    seasonRepository,
+  );
+
+  await assert.rejects(reader.getSummary(leagueQuery()), NotFoundError);
+  assert.deepEqual(events, ["leagueMembers", "leagueExists"]);
+
+  events.length = 0;
+  await assert.rejects(reader.getSummary(seasonQuery()), NotFoundError);
+  assert.deepEqual(events, ["seasonMembers", "seasonExists"]);
 });
 
 test("fixed-scope missing snapshot is uncomputed and does not scan projections", async () => {
