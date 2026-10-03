@@ -198,7 +198,7 @@
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 8.4, 9.1, 9.2, 9.3, 10.1, 10.2, 10.3_
   - _Boundary: Statistics Page Hook and Query Cache_
 
-- [ ] 4.3 (P) scope/期間/ゲーム形式filterを実装する
+- [x] 4.3 (P) scope/期間/ゲーム形式filterを実装する
   - 全体/league/season、期間、全て/三麻/四麻を共通filterとして表示する。
   - filter変更はすべての統計領域へ同じscope条件を適用する。
   - 既存mainのSelect/Buttonとdesign tokenで選択中条件を表示する。
