@@ -206,7 +206,7 @@
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 6.4, 8.4_
   - _Boundary: Statistics Scope Filter UI_
 
-- [ ] 4.4 (P) league/season参加者の表示対象selectorを実装する
+- [x] 4.4 (P) league/season参加者の表示対象selectorを実装する
   - league/season時だけ既存members APIの候補を表示し、本人を初期選択にする。
   - target名を識別でき、候補一覧のloading/error/retryと本人表示を扱う。
   - overallでは他人を選べず、選択targetがscope外になった時は本人に戻す。
