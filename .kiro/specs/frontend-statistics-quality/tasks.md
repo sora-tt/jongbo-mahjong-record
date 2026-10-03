@@ -164,7 +164,7 @@
   - _Requirements: 8.1, 9.8, 10.2_
   - _Boundary: Statistics Service Composition_
 
-- [ ] 3.3 認証付きsummary/analysis/history endpointsを登録する
+- [x] 3.3 認証付きsummary/analysis/history endpointsを登録する
   - 3つのstatistics endpointでpath user IDをtarget、auth uidをviewerとしてreaderへ渡す。
   - 他人のtarget access checkはreader内で統一し、統計データ読取前に実行する。routeで二重のmembership policyを実装しない。
   - success envelope、validation/error envelope、403/404とready/empty/uncomputedを契約どおり返す。
