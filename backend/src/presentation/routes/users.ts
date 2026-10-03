@@ -100,7 +100,7 @@ export const buildUsersRouter = (services: Services) => {
       },
     );
 
-  router
+  const statisticsRouter = new Hono<AppBindings>()
     .get(
       "/:userId/statistics",
       validateQuery(statisticsScopeQuerySchema),
@@ -156,5 +156,5 @@ export const buildUsersRouter = (services: Services) => {
       },
     );
 
-  return router;
+  return router.route("/", statisticsRouter);
 };

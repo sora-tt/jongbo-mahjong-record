@@ -172,7 +172,7 @@
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 8.3, 9.1, 9.2, 9.8, 10.2_
   - _Boundary: Statistics HTTP Routes_
 
-- [ ] 3.4 OpenAPIとAppTypeへ統計API契約を公開する
+- [x] 3.4 OpenAPIとAppTypeへ統計API契約を公開する
   - summary/analysis/historyのquery・response・error statusをOpenAPIへ登録する。
   - FEからHono AppType経由でrequest/response型を導出できる。
   - dimension union、status、cursor、target pathの契約がendpoint定義と一致する。

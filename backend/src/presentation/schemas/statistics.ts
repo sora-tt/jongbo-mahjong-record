@@ -29,41 +29,111 @@ const isDateRangeOrdered = (query: { from?: string; to?: string }) =>
 
 const createStatisticsScopeQuerySchema = <TEndpoint extends z.ZodRawShape>(
   endpointFields: TEndpoint,
-) =>
-  z
-    .union([
-      z.strictObject({
-        ...scopeFilterShape,
-        ...endpointFields,
-        scopeType: z.literal("overall"),
-        leagueId: z.never().optional(),
-        seasonId: z.never().optional(),
-      }),
-      z.strictObject({
-        ...scopeFilterShape,
-        ...endpointFields,
-        scopeType: z.literal("league"),
-        leagueId: opaqueIdQuerySchema,
-        seasonId: z.never().optional(),
-      }),
-      z.strictObject({
-        ...scopeFilterShape,
-        ...endpointFields,
-        scopeType: z.literal("season"),
-        leagueId: opaqueIdQuerySchema,
-        seasonId: opaqueIdQuerySchema,
-      }),
-    ])
-    .refine(
-      (query) => {
-        const range = query as { from?: IsoDateString; to?: IsoDateString };
-        return isDateRangeOrdered({ from: range.from, to: range.to });
-      },
-      {
-        message: "from must be less than or equal to to",
-        path: ["to"],
-      },
-    );
+) => {
+  type ScopeQueryOutput = {
+    from?: IsoDateString;
+    to?: IsoDateString;
+    gameType?: "all" | "sanma" | "yonma";
+    scopeType: "overall" | "league" | "season";
+    leagueId?: ReturnType<typeof asOpaqueId>;
+    seasonId?: ReturnType<typeof asOpaqueId>;
+  } & { [Key in keyof TEndpoint]: z.output<TEndpoint[Key]> };
+
+  const schema = z.strictObject({
+    ...scopeFilterShape,
+    ...endpointFields,
+    scopeType: z.enum(["overall", "league", "season"]),
+    leagueId: opaqueIdQuerySchema.optional(),
+    seasonId: opaqueIdQuerySchema.optional(),
+  });
+
+  return schema
+    .superRefine((value, context) => {
+      const query = value as ScopeQueryOutput;
+      if (!isDateRangeOrdered({ from: query.from, to: query.to })) {
+        context.addIssue({
+          code: "custom",
+          message: "from must be less than or equal to to",
+          path: ["to"],
+        });
+      }
+
+      if (query.scopeType === "overall") {
+        if (query.leagueId !== undefined) {
+          context.addIssue({
+            code: "custom",
+            message: "leagueId is not allowed for overall scope",
+            path: ["leagueId"],
+          });
+        }
+        if (query.seasonId !== undefined) {
+          context.addIssue({
+            code: "custom",
+            message: "seasonId is not allowed for overall scope",
+            path: ["seasonId"],
+          });
+        }
+      } else if (query.scopeType === "league") {
+        if (query.leagueId === undefined) {
+          context.addIssue({
+            code: "custom",
+            message: "leagueId is required when scopeType is league",
+            path: ["leagueId"],
+          });
+        }
+        if (query.seasonId !== undefined) {
+          context.addIssue({
+            code: "custom",
+            message: "seasonId is not allowed for league scope",
+            path: ["seasonId"],
+          });
+        }
+      } else {
+        if (query.leagueId === undefined) {
+          context.addIssue({
+            code: "custom",
+            message: "leagueId is required when scopeType is season",
+            path: ["leagueId"],
+          });
+        }
+        if (query.seasonId === undefined) {
+          context.addIssue({
+            code: "custom",
+            message: "seasonId is required when scopeType is season",
+            path: ["seasonId"],
+          });
+        }
+      }
+    })
+    .transform((value) => {
+      const query = value as ScopeQueryOutput;
+      const { scopeType, leagueId, seasonId, ...filtersAndEndpoint } = query;
+
+      if (scopeType === "overall") {
+        return { ...filtersAndEndpoint, scopeType };
+      }
+      if (scopeType === "league") {
+        return {
+          ...filtersAndEndpoint,
+          scopeType,
+          leagueId: asRequiredId(leagueId),
+        };
+      }
+      return {
+        ...filtersAndEndpoint,
+        scopeType,
+        leagueId: asRequiredId(leagueId),
+        seasonId: asRequiredId(seasonId),
+      };
+    });
+};
+
+const asRequiredId = (value: string | undefined) => {
+  if (value === undefined) {
+    throw new TypeError("validated statistics scope is missing an ID");
+  }
+  return asOpaqueId(value);
+};
 
 export const statisticsScopeQuerySchema = createStatisticsScopeQuerySchema(
   {},
@@ -88,9 +158,10 @@ const breakdownDimensionSchema = z.enum([
 const statisticsAnalysisBaseSchema = createStatisticsScopeQuerySchema({
   dimension: breakdownDimensionSchema,
   groupBy: z.enum(["day", "month", "year"]).optional(),
-  windowSize: urlIntegerSchema.pipe(
-    z.union([z.literal(10), z.literal(20), z.literal(50)]),
-  ),
+  windowSize: z
+    .enum(["10", "20", "50"])
+    .transform(Number)
+    .pipe(z.union([z.literal(10), z.literal(20), z.literal(50)])),
   limit: pageLimitSchema.optional(),
   cursor: cursorQuerySchema.optional(),
 });
