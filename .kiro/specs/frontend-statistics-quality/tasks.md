@@ -254,7 +254,7 @@
   - _Requirements: 2.1, 2.3, 5.5, 5.6_
   - _Boundary: Statistics Match History UI_
 
-- [ ] 4.10 (P) 概要/分析/対局履歴のaccessible tabsを実装する
+- [x] 4.10 (P) 概要/分析/対局履歴のaccessible tabsを実装する
   - 3つのトップレベルtabとpanelを結び、選択状態を支援技術へ公開する。
   - キーボードでtabを移動・選択でき、focus位置を視認できる。
   - filterと表示対象者の選択をtab移動後も保持する。
