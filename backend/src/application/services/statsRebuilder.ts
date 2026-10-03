@@ -296,6 +296,28 @@ export class StatsRebuilder {
     return this.rebuildOverallScope();
   }
 
+  async prepareSeasonDeletion(
+    leagueId: string,
+    seasonId: string,
+  ): Promise<void> {
+    await this.markUncomputedScopes(
+      seasonLeagueOverallScopes(leagueId, seasonId),
+    );
+  }
+
+  async prepareLeagueDeletion(leagueId: string): Promise<void> {
+    const seasons = await this.seasonRepository.list(leagueId);
+    await this.markUncomputedScopes([
+      ...seasons.map((season) => ({
+        scopeType: "season" as const,
+        leagueId,
+        seasonId: season.id,
+      })),
+      { scopeType: "league", leagueId, seasonId: null },
+      { scopeType: "overall", leagueId: null, seasonId: null },
+    ]);
+  }
+
   async rebuildAll(): Promise<RebuildAllReport> {
     const leagues = await this.leagueRepository.list();
     const seasonsByLeague = await Promise.all(
@@ -381,16 +403,22 @@ export class StatsRebuilder {
   }
 
   async clearSeasonStats(leagueId: string, seasonId: string): Promise<void> {
-    await this.userStatsRepository.deleteMissingScopeStats({
-      scopeType: "season",
-      leagueId,
-      seasonId,
-      keepUserIds: [],
-    });
+    await Promise.all([
+      this.userMatchStatisticsRepository.deleteSeason(leagueId, seasonId),
+      this.userStatsRepository.deleteMissingScopeStats({
+        scopeType: "season",
+        leagueId,
+        seasonId,
+        keepUserIds: [],
+      }),
+    ]);
   }
 
   async clearLeagueStats(leagueId: string): Promise<void> {
-    await this.userStatsRepository.deleteStatsForLeague(leagueId);
+    await Promise.all([
+      this.userMatchStatisticsRepository.deleteLeague(leagueId),
+      this.userStatsRepository.deleteStatsForLeague(leagueId),
+    ]);
   }
 
   private async markUncomputedScopes(

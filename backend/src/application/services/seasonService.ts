@@ -115,6 +115,7 @@ export class SeasonService {
 
   async deleteSeason(userId: string, leagueId: string, seasonId: string) {
     await this.assertSeasonMembership(userId, leagueId, seasonId);
+    await this.statsRebuilder.prepareSeasonDeletion(leagueId, seasonId);
     await this.seasonRepository.delete(leagueId, seasonId);
     await this.statsRebuilder.clearSeasonStats(leagueId, seasonId);
     await this.statsRebuilder.rebuildLeague(leagueId);

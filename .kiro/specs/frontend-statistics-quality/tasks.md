@@ -114,7 +114,7 @@
   - _Requirements: 8.1, 8.3_
   - _Boundary: Statistics rebuild integration_
 
-- [ ] 2.8 League/Season削除時に関連する統計read modelを消去する
+- [x] 2.8 League/Season削除時に関連する統計read modelを消去する
   - League/Season削除経路から対象projectionとUserStats scope snapshotを削除する。
   - Season削除時は残るLeague/overall scopeを再構築し、League削除時は削除対象のscope以外を維持する。
   - 削除後に履歴・統計APIが孤立したprojectionやscopeを返さない。

@@ -10,6 +10,8 @@ import { FirestoreUserMatchStatisticsRepository } from "@/infrastructure/firesto
 import { FirestoreUserRepository } from "@/infrastructure/firestore/repositories/userRepository.js";
 import { StatsRebuilder } from "@/application/services/statsRebuilder.js";
 import { MatchService } from "@/application/services/matchService.js";
+import { LeagueService } from "@/application/services/leagueService.js";
+import { SeasonService } from "@/application/services/seasonService.js";
 import { asOpaqueId } from "@/domain/shared/types.js";
 
 const emulatorAvailable = Boolean(process.env.FIRESTORE_EMULATOR_HOST);
@@ -745,6 +747,27 @@ test(
       userStatsRepository,
       userMatchStatisticsRepository,
     );
+    const seasonService = new SeasonService(
+      leagueRepository,
+      seasonRepository,
+      matchRepository,
+      statsRebuilder,
+    );
+    const leagueService = new LeagueService(
+      leagueRepository,
+      userRepository,
+      statsRebuilder,
+    );
+    let createdTestUser = false;
+    if ((await userRepository.getByIds(["0001"])).length === 0) {
+      await userRepository.upsertProfile({
+        userId: "0001",
+        email: null,
+        name: "岩田",
+        username: "lifecycle-delete-user",
+      });
+      createdTestUser = true;
+    }
     const league = await leagueRepository.create({
       name: "delete lifecycle test",
       rule: {
@@ -762,6 +785,7 @@ test(
       },
       memberUserIds: ["0001"],
     });
+    let siblingLeagueId: string | null = null;
     const members = [{ userId: asOpaqueId("0001"), userName: "岩田" }];
     const season = await seasonRepository.create(
       league.id,
@@ -834,17 +858,19 @@ test(
           seasonId: season.id,
         }),
       );
-
-      await sessionRepository.delete(league.id, season.id, session.id);
-      await statsRebuilder.rebuildSeason(league.id, season.id);
       assert.equal(
-        (await seasonRepository.get(league.id, season.id)).totalMatchCount,
-        0,
+        (
+          await userMatchStatisticsRepository.listForScope({
+            scopeType: "season",
+            leagueId: league.id,
+            seasonId: season.id,
+            userId: "0001",
+          })
+        ).length,
+        1,
       );
 
-      await seasonRepository.delete(league.id, season.id);
-      await statsRebuilder.clearSeasonStats(league.id, season.id);
-      await statsRebuilder.rebuildLeague(league.id);
+      await seasonService.deleteSeason("0001", league.id, season.id);
       assert.equal(
         await userStatsRepository.get({
           userId: "0001",
@@ -854,14 +880,85 @@ test(
         }),
         null,
       );
+      assert.deepEqual(
+        await userMatchStatisticsRepository.listForScope({
+          scopeType: "season",
+          leagueId: league.id,
+          seasonId: season.id,
+          userId: "0001",
+        }),
+        [],
+      );
+      assert.equal(
+        (
+          await userStatsRepository.get({
+            userId: "0001",
+            scopeType: "league",
+            leagueId: league.id,
+          })
+        )?.totalMatchCount,
+        0,
+      );
+      assert.equal(
+        (
+          await userStatsRepository.get({
+            userId: "0001",
+            scopeType: "overall",
+          })
+        )?.totalMatchCount,
+        0,
+      );
 
-      await leagueRepository.delete(league.id);
-      await statsRebuilder.clearLeagueStats(league.id);
-      await statsRebuilder.rebuildOverall();
+      const siblingLeague = await leagueRepository.create({
+        name: "unrelated lifecycle league",
+        rule: makeFixedRule(),
+        memberUserIds: ["0001"],
+      });
+      siblingLeagueId = siblingLeague.id;
+      await statsRebuilder.rebuildLeague(siblingLeague.id);
+
+      await leagueService.deleteLeague("0001", league.id);
+      assert.deepEqual(
+        await userMatchStatisticsRepository.listForScope({
+          scopeType: "league",
+          leagueId: league.id,
+          userId: "0001",
+        }),
+        [],
+      );
+      assert.equal(
+        await userStatsRepository.get({
+          userId: "0001",
+          scopeType: "league",
+          leagueId: league.id,
+        }),
+        null,
+      );
+      assert.ok(
+        await userStatsRepository.get({
+          userId: "0001",
+          scopeType: "overall",
+        }),
+      );
+      assert.ok(
+        await userStatsRepository.get({
+          userId: "0001",
+          scopeType: "league",
+          leagueId: siblingLeague.id,
+        }),
+      );
     } finally {
       await db.recursiveDelete(db.collection("leagues").doc(league.id));
       await userStatsRepository.deleteStatsForLeague(league.id);
       await userMatchStatisticsRepository.deleteLeague(league.id);
+      if (siblingLeagueId) {
+        await db.recursiveDelete(db.collection("leagues").doc(siblingLeagueId));
+        await userStatsRepository.deleteStatsForLeague(siblingLeagueId);
+        await userMatchStatisticsRepository.deleteLeague(siblingLeagueId);
+      }
+      if (createdTestUser) {
+        await db.collection("users").doc("0001").delete();
+      }
     }
   },
 );

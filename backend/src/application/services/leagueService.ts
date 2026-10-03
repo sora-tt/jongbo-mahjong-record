@@ -73,6 +73,7 @@ export class LeagueService {
 
   async deleteLeague(userId: string, leagueId: string) {
     await this.assertLeagueMembership(userId, leagueId);
+    await this.statsRebuilder.prepareLeagueDeletion(leagueId);
     await this.leagueRepository.delete(leagueId);
     await this.statsRebuilder.clearLeagueStats(leagueId);
     await this.statsRebuilder.rebuildOverall();

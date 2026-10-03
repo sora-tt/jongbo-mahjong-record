@@ -51,9 +51,15 @@ const makeFixture = (
     failProjection?: boolean;
     failSeasonRollup?: boolean;
     failPublishScope?: string;
+    seasonIds?: string[];
   } = {},
 ) => {
   const events: string[] = [];
+  const invalidatedScopes: Array<{
+    scopeType: string;
+    leagueId: string | null;
+    seasonId: string | null;
+  }> = [];
   const scopeVersions = new Map<string, number>(
     ["season", "league", "overall"].flatMap((scopeType) =>
       members.map((member) => [scopeKey(scopeType, member.userId), 1] as const),
@@ -142,7 +148,12 @@ const makeFixture = (
   } as unknown as LeagueRepository;
   const seasonRepository = {
     get: async () => season,
-    list: async () => [{ id: seasonId, name: season.name, status: "active" }],
+    list: async () =>
+      (options.seasonIds ?? [seasonId]).map((id, index) => ({
+        id: asOpaqueId(id),
+        name: index === 0 ? season.name : `シーズン${index + 1}`,
+        status: index === 0 ? ("active" as const) : ("archived" as const),
+      })),
     updateStatistics: async () => {
       events.push("rollup:season");
       if (options.failSeasonRollup) throw new Error("season rollup failed");
@@ -162,7 +173,14 @@ const makeFixture = (
     listAll: async () => matches,
   } as unknown as MatchRepository;
   const userStatsRepository = {
-    markScopesUncomputed: async (scopes: Array<{ scopeType: string }>) => {
+    markScopesUncomputed: async (
+      scopes: Array<{
+        scopeType: string;
+        leagueId: string | null;
+        seasonId: string | null;
+      }>,
+    ) => {
+      invalidatedScopes.push(...structuredClone(scopes));
       scopes.forEach((scope) => {
         events.push(`invalidate:${scope.scopeType}`);
         members.forEach((member) => {
@@ -203,8 +221,18 @@ const makeFixture = (
       if (version === 1) events.push(`publish:${key.scopeType}`);
       return `${key.scopeType}_${key.userId}`;
     },
-    deleteMissingScopeStats: async () => undefined,
-    deleteStatsForLeague: async () => undefined,
+    deleteMissingScopeStats: async (params: {
+      scopeType: string;
+      leagueId: string | null;
+      seasonId: string | null;
+    }) => {
+      events.push(
+        `delete-stats:${params.scopeType}:${params.leagueId ?? "-"}:${params.seasonId ?? "-"}`,
+      );
+    },
+    deleteStatsForLeague: async (targetLeagueId: string) => {
+      events.push(`delete-stats:league:${targetLeagueId}`);
+    },
     get: async () => null,
     getWithPersonalStatistics: async () => null,
   } as unknown as UserStatsRepository;
@@ -216,6 +244,21 @@ const makeFixture = (
       replaceCount += 1;
       if (shouldFailProjection) throw new Error("projection failed");
       projectionRows = input.rows;
+    },
+    deleteSeason: async (targetLeagueId: string, targetSeasonId: string) => {
+      events.push(
+        `delete-projection:season:${targetLeagueId}:${targetSeasonId}`,
+      );
+      projectionRows = projectionRows.filter(
+        (row) =>
+          row.leagueId !== targetLeagueId || row.seasonId !== targetSeasonId,
+      );
+    },
+    deleteLeague: async (targetLeagueId: string) => {
+      events.push(`delete-projection:league:${targetLeagueId}`);
+      projectionRows = projectionRows.filter(
+        (row) => row.leagueId !== targetLeagueId,
+      );
     },
     listForScope: async (query: {
       scopeType: string;
@@ -242,6 +285,7 @@ const makeFixture = (
   return {
     rebuilder,
     events,
+    invalidatedScopes,
     scopeVersions,
     published,
     get projectionRows() {
@@ -260,6 +304,46 @@ const makeFixture = (
     },
   };
 };
+
+test("clears season and league projections together with their saved scopes", async () => {
+  const fixture = makeFixture();
+
+  await fixture.rebuilder.clearSeasonStats(leagueId, seasonId);
+  await fixture.rebuilder.clearLeagueStats(leagueId);
+
+  assert.deepEqual(fixture.events, [
+    `delete-projection:season:${leagueId}:${seasonId}`,
+    `delete-stats:season:${leagueId}:${seasonId}`,
+    `delete-projection:league:${leagueId}`,
+    `delete-stats:league:${leagueId}`,
+  ]);
+});
+
+test("prepares season deletion by invalidating its season and parent scopes", async () => {
+  const fixture = makeFixture();
+
+  await fixture.rebuilder.prepareSeasonDeletion(leagueId, seasonId);
+
+  assert.deepEqual(fixture.invalidatedScopes, [
+    { scopeType: "season", leagueId, seasonId },
+    { scopeType: "league", leagueId, seasonId: null },
+    { scopeType: "overall", leagueId: null, seasonId: null },
+  ]);
+});
+
+test("prepares league deletion by invalidating all seasons and parent scopes", async () => {
+  const secondSeasonId = asOpaqueId("season-2");
+  const fixture = makeFixture({ seasonIds: [seasonId, secondSeasonId] });
+
+  await fixture.rebuilder.prepareLeagueDeletion(leagueId);
+
+  assert.deepEqual(fixture.invalidatedScopes, [
+    { scopeType: "season", leagueId, seasonId },
+    { scopeType: "season", leagueId, seasonId: secondSeasonId },
+    { scopeType: "league", leagueId, seasonId: null },
+    { scopeType: "overall", leagueId: null, seasonId: null },
+  ]);
+});
 
 test("invalidates every affected scope before ordered projections and publishes snapshots in dependency order", async () => {
   const laterMatch: Match = {
