@@ -475,7 +475,9 @@ test("OpenAPI publishes the canonical auth and match request contracts", async (
   assert.deepEqual(
     document.components.schemas.LeagueRuleInput.oneOf?.map(({ $ref }) => $ref),
     [
-      "#/components/schemas/LeagueRule",
+      "#/components/schemas/FixedSanmaLeagueRuleInput",
+      "#/components/schemas/FixedYonmaLeagueRuleInput",
+      "#/components/schemas/FloatingCountYonmaLeagueRuleInput",
       "#/components/schemas/LegacyFixedSanmaLeagueRule",
       "#/components/schemas/LegacyFixedYonmaLeagueRule",
     ],
@@ -565,6 +567,8 @@ test("OpenAPI publishes the canonical auth and match request contracts", async (
       "/api/leagues/{leagueId}/seasons/{seasonId}/sessions/{sessionId}/matches/{matchId}"
     ].patch?.requestBody?.content?.["application/json"]?.schema;
   assert.deepEqual(Object.keys(matchPatchSchema?.properties ?? {}).sort(), [
+    "chomboEvents",
+    "offTableKyotakuCount",
     "playedAt",
     "results",
   ]);
