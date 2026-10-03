@@ -262,7 +262,7 @@
   - _Requirements: 2.1, 2.2, 2.3, 9.6, 9.7_
   - _Boundary: Statistics View Tabs_
 
-- [ ] 4.11 個人成績pageを既存mainデザインと状態へ統合する
+- [x] 4.11 個人成績pageを既存mainデザインと状態へ統合する
   - 既存AppShell、中央max-w-md、余白、2列KPI、共通Card/Table/Select/Button、色tokenを踏襲する。
   - 全領域を3 tabsと共通filterへ配置し、選択中target名を識別できるようにする。
   - loading/error/empty/uncomputed/ready、320px表示、各操作のkeyboard focus、全指標名・値の読み上げを成立させる。

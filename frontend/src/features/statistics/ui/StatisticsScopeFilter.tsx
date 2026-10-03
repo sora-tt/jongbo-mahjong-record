@@ -22,6 +22,7 @@ import type { StatisticsScopeFilters } from "@/features/statistics/model/query-c
 type Props = {
   scope: StatisticsScopeFilters;
   scopeOptions: readonly StatisticsScopeOption[];
+  children?: React.ReactNode;
   onChangeScope: (scope: StatisticsScopeFilters) => void;
   onChangeDateRange: (from?: string, to?: string) => void;
   onChangeGameType: (gameType: StatisticsScopeFilters["gameType"]) => void;
@@ -36,6 +37,7 @@ const gameTypeOptions = [
 export const StatisticsScopeFilter: React.FC<Props> = ({
   scope,
   scopeOptions,
+  children,
   onChangeScope,
   onChangeDateRange,
   onChangeGameType,
@@ -203,6 +205,7 @@ export const StatisticsScopeFilter: React.FC<Props> = ({
             ))}
           </div>
         </fieldset>
+        {children}
       </div>
     </Card>
   );

@@ -2,187 +2,308 @@
 
 import * as React from "react";
 
-import { StatisticsMetricCard } from "@/features/statistics/ui/StatisticsMetricCard";
+import { MatchHistory } from "@/features/statistics/ui/MatchHistory";
+import { PersonalRecords } from "@/features/statistics/ui/PersonalRecords";
+import { ScoreBreakdown } from "@/features/statistics/ui/ScoreBreakdown";
+import { StatisticsBreakdowns } from "@/features/statistics/ui/StatisticsBreakdowns";
+import { StatisticsOverview } from "@/features/statistics/ui/StatisticsOverview";
+import { StatisticsScopeFilter } from "@/features/statistics/ui/StatisticsScopeFilter";
+import { StatisticsSubjectSelector } from "@/features/statistics/ui/StatisticsSubjectSelector";
+import { StatisticsTrend } from "@/features/statistics/ui/StatisticsTrend";
+import { StatisticsViewTabs } from "@/features/statistics/ui/StatisticsViewTabs";
 
 import { AppShell } from "@/components/layout/app-shell";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { LoadingState } from "@/components/ui/loading-state";
-import { Select } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeadCell,
-  TableRow,
-} from "@/components/ui/table";
 
 import { useStatistics } from "./hooks";
+import {
+  getStatisticsPagePanelState,
+  getStatisticsPagePeriodLabel,
+  getStatisticsPageScopeOptions,
+  getStatisticsPageSubjectLabel,
+  normalizeStatisticsPageQueryStatus,
+} from "./model/page";
 
-const formatDecimal = (value: number | null, digits: number) =>
-  value === null ? "未集計" : value.toFixed(digits);
-
-const getTopTwoRate = (stats: {
-  totalMatchCount: number;
-  firstCount: number;
-  secondCount: number;
-}) => {
-  if (stats.totalMatchCount === 0) {
-    return null;
-  }
-
-  return ((stats.firstCount + stats.secondCount) / stats.totalMatchCount) * 100;
-};
-
-const StatisticsPage: React.FC = () => {
-  const {
-    userName,
-    joiningLeagueSeasons,
-    selectedLeagueSeasonId,
-    selectedStats,
-    isLoading,
-    initialError,
-    statsError,
-    statsStatus,
-    isStatsLoading,
-    onChangeLeagueSeason,
-    onDisplayButtonClick,
-    retry,
-    retryStats,
-  } = useStatistics();
-
-  if (isLoading) {
+const getScopeLabel = (
+  scope: ReturnType<typeof useStatistics>["scope"],
+  scopeOptions: ReturnType<typeof getStatisticsPageScopeOptions>
+) => {
+  if (scope.scopeType === "overall") return "全体";
+  if (scope.scopeType === "league") {
     return (
-      <AppShell mainClassName="min-h-screen bg-background font-jp">
-        <LoadingState
-          label="個人成績を読み込んでいます…"
-          className="min-h-[calc(100vh-4rem)]"
-        />
-      </AppShell>
+      scopeOptions.find((option) => option.leagueId === scope.leagueId)
+        ?.leagueName ?? "選択中のリーグ"
     );
   }
 
   return (
+    scopeOptions.find(
+      (option) =>
+        option.leagueId === scope.leagueId && option.seasonId === scope.seasonId
+    )?.seasonName ?? "選択中のシーズン"
+  );
+};
+
+const getGameTypeLabel = (
+  gameType: ReturnType<typeof useStatistics>["scope"]["gameType"]
+) => {
+  if (gameType === "sanma") return "三麻";
+  if (gameType === "yonma") return "四麻";
+  return "全ての形式";
+};
+
+const StatisticsPage: React.FC = () => {
+  const statistics = useStatistics();
+  const scopeOptions = React.useMemo(
+    () => getStatisticsPageScopeOptions(statistics.joiningLeagueSeasons),
+    [statistics.joiningLeagueSeasons]
+  );
+  const subjectLabel = getStatisticsPageSubjectLabel({
+    viewerUserId: statistics.viewerUserId,
+    targetUserId: statistics.targetUserId,
+    viewerName: statistics.userName,
+    members: statistics.members,
+  });
+  const scopeLabel = getScopeLabel(statistics.scope, scopeOptions);
+  const periodLabel = getStatisticsPagePeriodLabel(statistics.scope);
+  const summaryState = getStatisticsPagePanelState(
+    statistics.summaryStatus,
+    statistics.summary,
+    statistics.summaryError
+  );
+  const analysisState = getStatisticsPagePanelState(
+    statistics.analysisStatus,
+    statistics.analysis,
+    statistics.analysisError
+  );
+
+  const summaryPanel = (
+    <section
+      aria-labelledby="statistics-overview-panel-heading"
+      className="space-y-4"
+    >
+      <h2 id="statistics-overview-panel-heading" className="sr-only">
+        成績の概要
+      </h2>
+      {statistics.initialError ? (
+        <ErrorState
+          message={statistics.initialError}
+          onRetry={statistics.retry}
+        />
+      ) : statistics.isLoading ? (
+        <LoadingState
+          label="個人成績を読み込んでいます…"
+          className="min-h-40"
+        />
+      ) : summaryState.kind === "idle" ? (
+        <p
+          className="rounded-control border border-border bg-surface-muted p-4 text-sm text-text-muted"
+          role="status"
+        >
+          表示対象の成績を準備しています。
+        </p>
+      ) : summaryState.kind === "loading" ? (
+        <LoadingState
+          label="概要の成績を読み込んでいます…"
+          className="min-h-40"
+        />
+      ) : summaryState.kind === "error" ? (
+        <ErrorState
+          message={summaryState.message}
+          onRetry={statistics.retrySummary}
+        />
+      ) : summaryState.kind === "uncomputed" ? (
+        <EmptyState
+          title="統計がまだ計算されていません"
+          description="対象範囲の成績集計が完了すると、概要を表示します。"
+        />
+      ) : summaryState.kind === "empty" ? (
+        <EmptyState
+          title="対局結果がありません"
+          description="選択した対象範囲に登録済みの対局結果はありません。"
+        />
+      ) : summaryState.data.status === "uncomputed" ? (
+        <EmptyState
+          title="統計がまだ計算されていません"
+          description="対象範囲の成績集計が完了すると、概要を表示します。"
+        />
+      ) : (
+        <>
+          <StatisticsOverview summary={summaryState.data} />
+          <ScoreBreakdown summary={summaryState.data} />
+          <PersonalRecords summary={summaryState.data} />
+        </>
+      )}
+    </section>
+  );
+
+  const analysisPanel = (
+    <section
+      aria-labelledby="statistics-analysis-panel-heading"
+      className="space-y-4"
+    >
+      <h2 id="statistics-analysis-panel-heading" className="sr-only">
+        成績分析
+      </h2>
+      {statistics.initialError ? (
+        <ErrorState
+          message={statistics.initialError}
+          onRetry={statistics.retry}
+        />
+      ) : statistics.isLoading ? (
+        <LoadingState label="分析の準備をしています…" className="min-h-40" />
+      ) : analysisState.kind === "idle" ? (
+        <p
+          className="rounded-control border border-border bg-surface-muted p-4 text-sm text-text-muted"
+          role="status"
+        >
+          表示対象の分析を準備しています。
+        </p>
+      ) : analysisState.kind === "loading" ? (
+        <LoadingState
+          label="成績分析を読み込んでいます…"
+          className="min-h-40"
+        />
+      ) : analysisState.kind === "error" ? (
+        <ErrorState
+          message={analysisState.message}
+          onRetry={statistics.retryAnalysis}
+        />
+      ) : analysisState.kind === "uncomputed" ? (
+        <EmptyState
+          title="統計がまだ計算されていません"
+          description="対象範囲の成績集計が完了すると、推移や条件別成績を表示します。"
+        />
+      ) : analysisState.kind === "empty" ? (
+        <EmptyState
+          title="分析できる対局結果がありません"
+          description="選択した対象範囲に登録済みの対局結果はありません。"
+        />
+      ) : analysisState.data.status === "uncomputed" ? (
+        <EmptyState
+          title="統計がまだ計算されていません"
+          description="対象範囲の成績集計が完了すると、推移や条件別成績を表示します。"
+        />
+      ) : (
+        <>
+          <StatisticsTrend
+            analysis={analysisState.data}
+            summary={statistics.summary}
+            windowSize={statistics.windowSize}
+            groupBy={statistics.groupBy}
+            scopeLabel={scopeLabel}
+            onChangeWindowSize={statistics.onChangeWindowSize}
+          />
+          <StatisticsBreakdowns
+            analysis={analysisState.data}
+            dimension={statistics.dimension}
+            groupBy={statistics.groupBy}
+            subjectLabel={subjectLabel}
+            scopeLabel={scopeLabel}
+            loadingMore={statistics.isLoadingMoreAnalysis}
+            loadMoreError={statistics.analysisMoreError}
+            onChangeDimension={statistics.onChangeDimension}
+            onChangeGroupBy={statistics.onChangeGroupBy}
+            onLoadMore={statistics.loadMoreAnalysis}
+          />
+        </>
+      )}
+    </section>
+  );
+
+  const historyPanel = (
+    <section
+      aria-labelledby="statistics-history-panel-heading"
+      className="space-y-4"
+    >
+      <h2 id="statistics-history-panel-heading" className="sr-only">
+        対局履歴
+      </h2>
+      {statistics.initialError ? (
+        <ErrorState
+          message={statistics.initialError}
+          onRetry={statistics.retry}
+        />
+      ) : statistics.isLoading ? (
+        <LoadingState
+          label="対局履歴の準備をしています…"
+          className="min-h-40"
+        />
+      ) : (
+        <MatchHistory
+          history={statistics.history}
+          status={normalizeStatisticsPageQueryStatus(statistics.historyStatus)}
+          subjectLabel={subjectLabel}
+          scopeLabel={scopeLabel}
+          historyError={statistics.historyError}
+          isLoadingMore={statistics.isLoadingMoreHistory}
+          onLoadMore={() => void statistics.loadMoreHistory()}
+          onRetry={statistics.retryHistory}
+        />
+      )}
+    </section>
+  );
+
+  return (
     <AppShell mainClassName="min-h-screen bg-background font-jp">
       <div className="mx-auto flex max-w-md flex-col gap-6 px-4 py-8">
-        <header>
+        <header className="space-y-2">
           <h1 className="text-2xl font-bold text-foreground">
-            {userName}さんの個人成績
+            {subjectLabel === "本人" || !subjectLabel
+              ? "個人成績"
+              : `${subjectLabel}さんの個人成績`}
           </h1>
+          <p className="text-sm text-text-muted" aria-live="polite">
+            表示対象: {subjectLabel} / 範囲: {scopeLabel} / 期間: {periodLabel}{" "}
+            / 形式: {getGameTypeLabel(statistics.scope.gameType)}
+          </p>
         </header>
 
-        {initialError ? (
-          <ErrorState message={initialError} onRetry={retry} />
-        ) : joiningLeagueSeasons.length === 0 ? (
-          <EmptyState
-            title="参加中のシーズンがありません"
-            description="シーズンに参加すると個人成績を確認できます。"
+        {statistics.initialError ? (
+          <ErrorState
+            message={statistics.initialError}
+            onRetry={statistics.retry}
+          />
+        ) : statistics.isLoading ? (
+          <LoadingState
+            label="表示条件を読み込んでいます…"
+            className="min-h-32"
           />
         ) : (
-          <section>
-            <h2 className="text-xl font-bold text-text-muted">シーズン選択</h2>
-            <div className="mt-2 flex items-center gap-2">
-              <Select
-                aria-label="シーズン選択"
-                containerClassName="min-w-0 flex-1"
-                value={selectedLeagueSeasonId}
-                onChange={onChangeLeagueSeason}
-              >
-                <option value="">シーズンを選択してください</option>
-                {joiningLeagueSeasons.map((season) => (
-                  <option key={season.id} value={season.id}>
-                    {season.leagueName} - {season.seasonName}
-                  </option>
-                ))}
-              </Select>
-              <Button
-                onClick={onDisplayButtonClick}
-                disabled={!selectedLeagueSeasonId || isStatsLoading}
-                loading={isStatsLoading}
-              >
-                表示
-              </Button>
-            </div>
-          </section>
-        )}
-
-        {statsError ? (
-          <ErrorState message={statsError} onRetry={retryStats} />
-        ) : null}
-        {statsStatus === "loading" ? (
-          <LoadingState label="個人成績を読み込んでいます…" />
-        ) : statsStatus === "uncomputed" ? (
-          <EmptyState
-            title="統計がまだ計算されていません"
-            description="対局が登録されると、BEで集計された個人成績が表示されます。"
-          />
-        ) : statsStatus === "idle" && joiningLeagueSeasons.length > 0 ? (
-          <EmptyState title="シーズンを選択して成績を表示してください" />
-        ) : null}
-
-        {statsStatus === "success" && selectedStats ? (
           <>
-            <div className="grid grid-cols-2 gap-4">
-              <StatisticsMetricCard
-                label="総対局数"
-                value={selectedStats.totalMatchCount}
-                unit="局"
+            <StatisticsScopeFilter
+              scope={statistics.scope}
+              scopeOptions={scopeOptions}
+              onChangeScope={statistics.onChangeScope}
+              onChangeDateRange={statistics.onChangeDateRange}
+              onChangeGameType={statistics.onChangeGameType}
+            >
+              <StatisticsSubjectSelector
+                scopeType={statistics.scope.scopeType}
+                viewerUserId={statistics.viewerUserId}
+                targetUserId={statistics.targetUserId}
+                userName={statistics.userName}
+                members={statistics.members}
+                membersStatus={statistics.membersStatus}
+                membersError={statistics.membersError}
+                onChangeTarget={statistics.onChangeTarget}
+                retryMembers={statistics.retryMembers}
               />
-              <StatisticsMetricCard
-                label="総合pt"
-                value={formatDecimal(selectedStats.totalPoints, 2)}
-                unit="pt"
-              />
-              <StatisticsMetricCard
-                label="平均順位"
-                value={formatDecimal(selectedStats.averageRank, 2)}
-                unit="位"
-              />
-              <StatisticsMetricCard
-                label="連対率"
-                value={formatDecimal(getTopTwoRate(selectedStats), 2)}
-                unit="%"
-              />
-            </div>
+            </StatisticsScopeFilter>
 
-            <Card title="各順位回数" bodyClassName="overflow-x-auto">
-              <Table caption="順位別成績">
-                <TableHead>
-                  <TableRow>
-                    <TableHeadCell className="text-left">順位</TableHeadCell>
-                    <TableHeadCell className="text-left">回数</TableHeadCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {[
-                    ["1位", selectedStats.firstCount, selectedStats.firstRate],
-                    [
-                      "2位",
-                      selectedStats.secondCount,
-                      selectedStats.secondRate,
-                    ],
-                    ["3位", selectedStats.thirdCount, selectedStats.thirdRate],
-                    [
-                      "4位",
-                      selectedStats.fourthCount,
-                      selectedStats.fourthRate,
-                    ],
-                  ].map(([label, count]) => (
-                    <TableRow key={label}>
-                      <TableCell className="text-left">{label}</TableCell>
-                      <TableCell className="text-left">
-                        {count ?? "-"}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </Card>
+            <StatisticsViewTabs
+              activeView={statistics.activeView}
+              onActiveViewChange={statistics.onChangeActiveView}
+              panels={{
+                overview: summaryPanel,
+                analysis: analysisPanel,
+                history: historyPanel,
+              }}
+            />
           </>
-        ) : null}
+        )}
       </div>
     </AppShell>
   );

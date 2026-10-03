@@ -17,6 +17,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { ErrorState } from "@/components/ui/error-state";
 import { Select } from "@/components/ui/select";
 import {
   Table,
@@ -48,6 +49,7 @@ type Props = {
   subjectLabel?: string;
   scopeLabel?: string;
   loadingMore?: boolean;
+  loadMoreError?: string | null;
   onChangeDimension: (dimension: StatisticsBreakdownDimension) => void;
   onChangeGroupBy: (groupBy: StatisticsBreakdownGroupBy) => void;
   onLoadMore: (cursor: string) => void;
@@ -262,6 +264,7 @@ export const StatisticsBreakdowns: React.FC<Props> = ({
   subjectLabel,
   scopeLabel,
   loadingMore = false,
+  loadMoreError,
   onChangeDimension,
   onChangeGroupBy,
   onLoadMore,
@@ -351,6 +354,17 @@ export const StatisticsBreakdowns: React.FC<Props> = ({
             選択した条件に該当する成績はありません。
           </p>
         )}
+
+        {loadMoreError ? (
+          <ErrorState
+            message={loadMoreError}
+            onRetry={
+              model.nextCursor === null
+                ? undefined
+                : () => onLoadMore(model.nextCursor as string)
+            }
+          />
+        ) : null}
 
         {model.status === "ready" &&
         model.nextCursor !== null &&

@@ -2,6 +2,7 @@ import * as React from "react";
 
 import { useRouter } from "next/navigation";
 
+import { mergeStatisticsAnalysisPages } from "@/app/stats/model/page";
 import {
   getCurrentUser,
   getPersonalStatisticsAnalysis,
@@ -163,6 +164,11 @@ export const useStatistics = () => {
     );
   const [historyError, setHistoryError] = React.useState<string | null>(null);
   const [isLoadingMoreHistory, setIsLoadingMoreHistory] = React.useState(false);
+  const [analysisMoreError, setAnalysisMoreError] = React.useState<
+    string | null
+  >(null);
+  const [isLoadingMoreAnalysis, setIsLoadingMoreAnalysis] =
+    React.useState(false);
   const [membersState, setMembersState] = React.useState<MembersState>({
     key: null,
     status: "idle",
@@ -175,6 +181,10 @@ export const useStatistics = () => {
   const [membersRetryCount, setMembersRetryCount] = React.useState(0);
   const summaryRequestKeyRef = React.useRef("");
   const analysisRequestKeyRef = React.useRef("");
+  const analysisRequestId = React.useRef(0);
+  const analysisLoadingLifecycle = React.useRef(
+    createHistoryLoadingLifecycle()
+  );
   const historyBaseKeyRef = React.useRef("");
   const historyRequestId = React.useRef(0);
   const historyLoadingLifecycle = React.useRef(createHistoryLoadingLifecycle());
@@ -465,6 +475,10 @@ export const useStatistics = () => {
     ) {
       return;
     }
+    const analysisLoading = analysisLoadingLifecycle.current;
+    const requestId = analysisRequestId.current + 1;
+    analysisRequestId.current = requestId;
+    setAnalysisMoreError(null);
 
     const cached =
       queryCache.current.get<
@@ -477,7 +491,10 @@ export const useStatistics = () => {
         data: cached,
         error: null,
       });
-      return;
+      return () => {
+        analysisRequestId.current += 1;
+        if (analysisLoading.cancel()) setIsLoadingMoreAnalysis(false);
+      };
     }
 
     let isActive = true;
@@ -514,7 +531,8 @@ export const useStatistics = () => {
             analysisQueryKey,
             analysisRequestKeyRef.current,
             isActive
-          )
+          ) ||
+          analysisRequestId.current !== requestId
         )
           return;
         setAnalysisState({
@@ -530,7 +548,8 @@ export const useStatistics = () => {
             analysisQueryKey,
             analysisRequestKeyRef.current,
             isActive
-          )
+          ) ||
+          analysisRequestId.current !== requestId
         )
           return;
         if (loadError instanceof ApiError && loadError.status === 401) {
@@ -546,6 +565,8 @@ export const useStatistics = () => {
 
     return () => {
       isActive = false;
+      analysisRequestId.current += 1;
+      if (analysisLoading.cancel()) setIsLoadingMoreAnalysis(false);
     };
   }, [
     analysisQueryKey,
@@ -1037,6 +1058,99 @@ export const useStatistics = () => {
               error: null,
             };
 
+  const loadMoreAnalysis = React.useCallback(
+    async (cursor: string) => {
+      const currentAnalysis = visibleAnalysisState.data;
+      const analysisLoading = analysisLoadingLifecycle.current;
+      if (
+        !currentAnalysis ||
+        currentAnalysis.status !== "ready" ||
+        currentAnalysis.breakdown.nextCursor !== cursor ||
+        visibleAnalysisState.key !== analysisQueryKey ||
+        analysisLoading.isLoading()
+      ) {
+        return;
+      }
+
+      const requestId = analysisRequestId.current + 1;
+      analysisRequestId.current = requestId;
+      const loadingGeneration = analysisLoading.start();
+      setIsLoadingMoreAnalysis(true);
+      setAnalysisMoreError(null);
+
+      try {
+        const nextPageKey = createStatisticsQueryKey({
+          ...selection,
+          view: "analysis",
+          cursor,
+        });
+        const nextPage = await queryCache.current.fetch(
+          nextPageKey,
+          async () => {
+            const response = await getPersonalStatisticsAnalysis({
+              targetUserId: selection.targetUserId,
+              query: {
+                ...apiScope,
+                dimension: selection.dimension,
+                ...(selection.dimension === "period"
+                  ? { groupBy: selection.groupBy }
+                  : {}),
+                windowSize: `${selection.windowSize}` as "10" | "20" | "50",
+                cursor,
+              },
+            });
+            return toPersonalStatisticsAnalysisView(
+              response,
+              selection.targetUserId
+            );
+          }
+        );
+
+        if (
+          requestId !== analysisRequestId.current ||
+          analysisRequestKeyRef.current !== analysisQueryKey
+        ) {
+          return;
+        }
+        const mergedAnalysis = mergeStatisticsAnalysisPages(
+          currentAnalysis,
+          nextPage
+        );
+        queryCache.current.set(analysisQueryKey, mergedAnalysis);
+        setAnalysisState({
+          key: analysisQueryKey,
+          status: getResultStatus(mergedAnalysis),
+          data: mergedAnalysis,
+          error: null,
+        });
+      } catch (loadError: unknown) {
+        if (
+          requestId === analysisRequestId.current &&
+          analysisRequestKeyRef.current === analysisQueryKey
+        ) {
+          if (loadError instanceof ApiError && loadError.status === 401) {
+            router.replace("/login");
+          }
+          setAnalysisMoreError(
+            getApiErrorMessage(loadError, DEFAULT_QUERY_ERROR_MESSAGE)
+          );
+        }
+      } finally {
+        if (analysisLoading.finish(loadingGeneration)) {
+          setIsLoadingMoreAnalysis(false);
+        }
+      }
+    },
+    [
+      apiScope,
+      analysisQueryKey,
+      router,
+      selection,
+      visibleAnalysisState.data,
+      visibleAnalysisState.key,
+    ]
+  );
+
   return {
     // Existing fields remain available until the page integration task adopts the new model.
     userName,
@@ -1066,6 +1180,8 @@ export const useStatistics = () => {
     analysis: visibleAnalysisState.data,
     analysisStatus: visibleAnalysisState.status,
     analysisError: visibleAnalysisState.error,
+    analysisMoreError,
+    isLoadingMoreAnalysis,
     history: visibleHistoryState.data,
     historyStatus: visibleHistoryState.status,
     historyError: historyError ?? visibleHistoryState.error,
@@ -1082,6 +1198,7 @@ export const useStatistics = () => {
     onChangeGroupBy,
     onChangeWindowSize,
     loadMoreHistory,
+    loadMoreAnalysis,
     retrySummary,
     retryAnalysis,
     retryHistory,
