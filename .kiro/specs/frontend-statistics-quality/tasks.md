@@ -130,7 +130,7 @@
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 3.1, 3.2, 3.3, 3.4, 3.5, 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 4.8, 7.1, 7.2, 8.3, 9.1_
   - _Boundary: PersonalStatisticsSummary Reader_
 
-- [ ] 2.10 選択dimensionのanalysis readerを実装する
+- [x] 2.10 選択dimensionのanalysis readerを実装する
   - analysis前にtarget access policyを確認し、許可後に対象scopeのprojectionを読む。
   - 選択された期間/曜日/時間帯/席/相手/session内訳と直近windowの推移を一つのresponseで返す。
   - readiness、分母、相手/sessionのcursorを維持し、他targetの結果を返さない。
