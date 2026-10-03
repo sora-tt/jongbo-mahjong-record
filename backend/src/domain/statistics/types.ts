@@ -70,7 +70,7 @@ export type StatisticsAnalysisQuery = StatisticsScope &
 
 export type StatisticsMatchHistoryQuery = StatisticsScope &
   StatisticsReadIdentity & {
-    limit: number;
+    limit?: number;
     /** Opaque continuation token for the next history page. */
     cursor?: string;
   };

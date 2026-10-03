@@ -138,7 +138,7 @@
   - _Requirements: 1.2, 1.3, 1.4, 5.1, 5.2, 5.3, 5.4, 6.1, 6.2, 6.3, 6.4, 6.5, 8.3, 9.1_
   - _Boundary: PersonalStatisticsAnalysis Reader_
 
-- [ ] 2.11 cursor付き対局履歴readerを実装する
+- [x] 2.11 cursor付き対局履歴readerを実装する
   - 履歴取得前にtarget access policyを確認し、許可後にtarget・scope・日時・形式でprojectionを読む。
   - 既定50/最大100件とopaque cursorを使い、ページ順とfilterを継続する。
   - ready/empty/uncomputedを区別し、記録済み対局情報だけを返す。
