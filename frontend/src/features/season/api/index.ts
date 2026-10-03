@@ -9,6 +9,8 @@ const fetchLeagueSeasonsRequest =
 const createSeasonRequest = apiClient.api.leagues[":leagueId"].seasons.$post;
 const fetchSeasonDetailRequest =
   apiClient.api.leagues[":leagueId"].seasons[":seasonId"].$get;
+const fetchSeasonMembersRequest =
+  apiClient.api.leagues[":leagueId"].seasons[":seasonId"].members.$get;
 const updateSeasonRequest =
   apiClient.api.leagues[":leagueId"].seasons[":seasonId"].$patch;
 
@@ -21,6 +23,9 @@ type CreateSeasonResponse = InferResponseType<
 >["data"];
 type FetchSeasonDetailResponse = InferResponseType<
   typeof fetchSeasonDetailRequest
+>["data"];
+type FetchSeasonMembersResponse = InferResponseType<
+  typeof fetchSeasonMembersRequest
 >["data"];
 type UpdateSeasonResponse = InferResponseType<
   typeof updateSeasonRequest
@@ -36,6 +41,11 @@ export const fetchLeagueSeasons = async (leagueId: string) =>
 export const fetchSeasonDetail = async (leagueId: string, seasonId: string) =>
   executeApiRequest<FetchSeasonDetailResponse>(() =>
     fetchSeasonDetailRequest({ param: { leagueId, seasonId } })
+  );
+
+export const fetchSeasonMembers = async (leagueId: string, seasonId: string) =>
+  executeApiRequest<FetchSeasonMembersResponse>(() =>
+    fetchSeasonMembersRequest({ param: { leagueId, seasonId } })
   );
 
 export const createSeason = async (

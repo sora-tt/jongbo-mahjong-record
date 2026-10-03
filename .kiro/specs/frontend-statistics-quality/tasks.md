@@ -182,7 +182,7 @@
 
 ## 4. 個人成績画面
 
-- [ ] 4.1 AppType由来のtyped API wrapperとview adapterを整備する
+- [x] 4.1 AppType由来のtyped API wrapperとview adapterを整備する
   - summary/analysis/historyと既存league/season members APIを共通client経由で呼ぶ。
   - nullable、status、対象ID、配列順、cursorをview modelへ保つ。
   - FEに順位・point・割合・集計の再計算を追加しない。
