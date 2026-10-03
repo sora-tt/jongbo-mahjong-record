@@ -272,7 +272,7 @@
 
 ## 5. acceptance criteriaと性能の検証
 
-- [ ] 5.1 (P) 集計規則のunit testsを追加する
+- [x] 5.1 (P) 集計規則のunit testsを追加する
   - 三麻/四麻、分母、中央値、母標準偏差、符号分布、直近window、timezone、record/streak、席/相手/sessionの境界を検証する。
   - 0/1/2件、同時刻・session順、同順位、三麻のラスを含む期待値が固定される。
   - 既存node:test実行経路から対象suiteを実行できる。

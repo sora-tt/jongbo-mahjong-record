@@ -237,6 +237,29 @@ test("groups calendar statistics by Tokyo day, weekday, and time with explicit e
     from: "2026-01-01T15:00:00.000Z",
     to: "2026-01-05T15:00:00.000Z",
   });
+  const calendarMetrics = (calendarRows: typeof daily.rows) =>
+    calendarRows.map(
+      ({
+        key,
+        gameType,
+        matchCount,
+        denominator,
+        totalPoints,
+        averageRank,
+        topRate,
+        rankCounts,
+      }) => ({
+        key,
+        gameType,
+        matchCount,
+        denominator,
+        totalPoints,
+        averageRank,
+        topRate,
+        rankCounts,
+      }),
+    );
+
   assert.deepEqual(
     daily.rows.map(({ key, gameType, matchCount }) => ({
       key,
@@ -254,10 +277,67 @@ test("groups calendar statistics by Tokyo day, weekday, and time with explicit e
       { key: "2026-01-05", gameType: "yonma", matchCount: 0 },
     ],
   );
-  assert.deepEqual(daily.rows[0]?.rankCounts, [
-    { rank: 1, count: 0 },
-    { rank: 2, count: 1 },
-    { rank: 3, count: 0 },
+  assert.deepEqual(calendarMetrics(daily.rows), [
+    {
+      key: "2026-01-02",
+      gameType: "sanma",
+      matchCount: 1,
+      denominator: 1,
+      totalPoints: 5,
+      averageRank: 2,
+      topRate: 0,
+      rankCounts: [
+        { rank: 1, count: 0 },
+        { rank: 2, count: 1 },
+        { rank: 3, count: 0 },
+      ],
+    },
+    {
+      key: "2026-01-02",
+      gameType: "yonma",
+      matchCount: 1,
+      denominator: 1,
+      totalPoints: -10,
+      averageRank: 4,
+      topRate: 0,
+      rankCounts: [
+        { rank: 1, count: 0 },
+        { rank: 2, count: 0 },
+        { rank: 3, count: 0 },
+        { rank: 4, count: 1 },
+      ],
+    },
+    ...["2026-01-03", "2026-01-04", "2026-01-05"].flatMap((key) => [
+      {
+        key,
+        gameType: "sanma" as const,
+        matchCount: 0,
+        denominator: 0,
+        totalPoints: 0,
+        averageRank: null,
+        topRate: null,
+        rankCounts: [
+          { rank: 1, count: 0 },
+          { rank: 2, count: 0 },
+          { rank: 3, count: 0 },
+        ],
+      },
+      {
+        key,
+        gameType: "yonma" as const,
+        matchCount: 0,
+        denominator: 0,
+        totalPoints: 0,
+        averageRank: null,
+        topRate: null,
+        rankCounts: [
+          { rank: 1, count: 0 },
+          { rank: 2, count: 0 },
+          { rank: 3, count: 0 },
+          { rank: 4, count: 0 },
+        ],
+      },
+    ]),
   ]);
   assert.equal(daily.rows[2]?.averageRank, null);
 
@@ -280,6 +360,54 @@ test("groups calendar statistics by Tokyo day, weekday, and time with explicit e
     )?.matchCount,
     1,
   );
+  assert.deepEqual(
+    calendarMetrics(weekdays.rows.filter(({ matchCount }) => matchCount > 0)),
+    [
+      {
+        key: "thu",
+        gameType: "sanma",
+        matchCount: 1,
+        denominator: 1,
+        totalPoints: 10,
+        averageRank: 1,
+        topRate: 1,
+        rankCounts: [
+          { rank: 1, count: 1 },
+          { rank: 2, count: 0 },
+          { rank: 3, count: 0 },
+        ],
+      },
+      {
+        key: "fri",
+        gameType: "sanma",
+        matchCount: 1,
+        denominator: 1,
+        totalPoints: 5,
+        averageRank: 2,
+        topRate: 0,
+        rankCounts: [
+          { rank: 1, count: 0 },
+          { rank: 2, count: 1 },
+          { rank: 3, count: 0 },
+        ],
+      },
+      {
+        key: "fri",
+        gameType: "yonma",
+        matchCount: 1,
+        denominator: 1,
+        totalPoints: -10,
+        averageRank: 4,
+        topRate: 0,
+        rankCounts: [
+          { rank: 1, count: 0 },
+          { rank: 2, count: 0 },
+          { rank: 3, count: 0 },
+          { rank: 4, count: 1 },
+        ],
+      },
+    ],
+  );
 
   const timeOfDay = aggregateCalendarStatistics(rows, "timeOfDay");
   assert.equal(timeOfDay.rows.length, 8);
@@ -288,6 +416,54 @@ test("groups calendar statistics by Tokyo day, weekday, and time with explicit e
       ({ key, gameType }) => key === "00-05" && gameType === "yonma",
     )?.matchCount,
     1,
+  );
+  assert.deepEqual(
+    calendarMetrics(timeOfDay.rows.filter(({ matchCount }) => matchCount > 0)),
+    [
+      {
+        key: "00-05",
+        gameType: "yonma",
+        matchCount: 1,
+        denominator: 1,
+        totalPoints: -10,
+        averageRank: 4,
+        topRate: 0,
+        rankCounts: [
+          { rank: 1, count: 0 },
+          { rank: 2, count: 0 },
+          { rank: 3, count: 0 },
+          { rank: 4, count: 1 },
+        ],
+      },
+      {
+        key: "12-17",
+        gameType: "sanma",
+        matchCount: 1,
+        denominator: 1,
+        totalPoints: 5,
+        averageRank: 2,
+        topRate: 0,
+        rankCounts: [
+          { rank: 1, count: 0 },
+          { rank: 2, count: 1 },
+          { rank: 3, count: 0 },
+        ],
+      },
+      {
+        key: "18-23",
+        gameType: "sanma",
+        matchCount: 1,
+        denominator: 1,
+        totalPoints: 10,
+        averageRank: 1,
+        topRate: 1,
+        rankCounts: [
+          { rank: 1, count: 1 },
+          { rank: 2, count: 0 },
+          { rank: 3, count: 0 },
+        ],
+      },
+    ],
   );
   assert.equal(
     timeOfDay.rows.find(
@@ -311,12 +487,86 @@ test("groups calendar statistics by Tokyo day, weekday, and time with explicit e
     ],
   );
   assert.deepEqual(
-    aggregateCalendarStatistics(rows, "period", { groupBy: "year" }).rows.map(
-      ({ key, gameType, matchCount }) => ({ key, gameType, matchCount }),
-    ),
+    calendarMetrics(monthly.rows.filter(({ matchCount }) => matchCount > 0)),
+    [
+      {
+        key: "2026-01",
+        gameType: "sanma",
+        matchCount: 2,
+        denominator: 2,
+        totalPoints: 15,
+        averageRank: 1.5,
+        topRate: 0.5,
+        rankCounts: [
+          { rank: 1, count: 1 },
+          { rank: 2, count: 1 },
+          { rank: 3, count: 0 },
+        ],
+      },
+      {
+        key: "2026-01",
+        gameType: "yonma",
+        matchCount: 1,
+        denominator: 1,
+        totalPoints: -10,
+        averageRank: 4,
+        topRate: 0,
+        rankCounts: [
+          { rank: 1, count: 0 },
+          { rank: 2, count: 0 },
+          { rank: 3, count: 0 },
+          { rank: 4, count: 1 },
+        ],
+      },
+    ],
+  );
+
+  const yearly = aggregateCalendarStatistics(rows, "period", {
+    groupBy: "year",
+  });
+  assert.deepEqual(
+    yearly.rows.map(({ key, gameType, matchCount }) => ({
+      key,
+      gameType,
+      matchCount,
+    })),
     [
       { key: "2026", gameType: "sanma", matchCount: 2 },
       { key: "2026", gameType: "yonma", matchCount: 1 },
+    ],
+  );
+  assert.deepEqual(
+    calendarMetrics(yearly.rows.filter(({ matchCount }) => matchCount > 0)),
+    [
+      {
+        key: "2026",
+        gameType: "sanma",
+        matchCount: 2,
+        denominator: 2,
+        totalPoints: 15,
+        averageRank: 1.5,
+        topRate: 0.5,
+        rankCounts: [
+          { rank: 1, count: 1 },
+          { rank: 2, count: 1 },
+          { rank: 3, count: 0 },
+        ],
+      },
+      {
+        key: "2026",
+        gameType: "yonma",
+        matchCount: 1,
+        denominator: 1,
+        totalPoints: -10,
+        averageRank: 4,
+        topRate: 0,
+        rankCounts: [
+          { rank: 1, count: 0 },
+          { rank: 2, count: 0 },
+          { rank: 3, count: 0 },
+          { rank: 4, count: 1 },
+        ],
+      },
     ],
   );
 });
@@ -346,6 +596,35 @@ test("aggregates recent 10, 20, and 50 matches from the newest end", () => {
       { windowSize: 20, matchCount: 20, totalPoints: 230 },
       { windowSize: 50, matchCount: 21, totalPoints: 231 },
     ],
+  );
+
+  assert.deepEqual(
+    aggregateRecentResults(rows.slice(0, 1)).map(
+      ({ windowSize, matchCount, totalPoints }) => ({
+        windowSize,
+        matchCount,
+        totalPoints,
+      }),
+    ),
+    [10, 20, 50].map((windowSize) => ({
+      windowSize,
+      matchCount: 1,
+      totalPoints: 1,
+    })),
+  );
+  assert.deepEqual(
+    aggregateRecentResults(rows.slice(0, 2)).map(
+      ({ windowSize, matchCount, totalPoints }) => ({
+        windowSize,
+        matchCount,
+        totalPoints,
+      }),
+    ),
+    [10, 20, 50].map((windowSize) => ({
+      windowSize,
+      matchCount: 2,
+      totalPoints: 3,
+    })),
   );
 });
 

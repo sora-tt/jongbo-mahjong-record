@@ -187,3 +187,69 @@ test("returns null ratios when a game type has no matches and omits sanma fourth
   });
   assert.deepEqual(empty.scoreByRank, []);
 });
+
+test("fixes expected score and rank values for zero, one, and two matches", () => {
+  const empty = aggregateRankAndScoreStatistics([]);
+  assert.equal(empty.totalMatchCount, 0);
+  assert.equal(empty.rawScore.median, null);
+  assert.equal(empty.rawScore.populationStandardDeviation, null);
+  assert.deepEqual(empty.finalPoint.even, {
+    count: 0,
+    denominator: 0,
+    rate: null,
+  });
+
+  const one = aggregateRankAndScoreStatistics([
+    projection("one", "sanma", 3, 3, 20_000, 0),
+  ]);
+  assert.equal(one.rawScore.matchCount, 1);
+  assert.equal(one.rawScore.median, 20_000);
+  assert.equal(one.rawScore.populationStandardDeviation, null);
+  assert.equal(one.finalPoint.median, 0);
+  assert.equal(one.finalPoint.populationStandardDeviation, null);
+  assert.deepEqual(one.finalPoint.even, {
+    count: 1,
+    denominator: 1,
+    rate: 1,
+  });
+  assert.deepEqual(
+    one.byGameType[0]?.ranks.map(({ rank }) => rank),
+    [1, 2, 3],
+  );
+  assert.equal(one.byGameType[0]?.lastRate, 1);
+
+  const two = aggregateRankAndScoreStatistics([
+    projection("two-a", "yonma", 4, 2, 10_000, -10),
+    projection("two-b", "yonma", 4, 2, 30_000, 10),
+  ]);
+  assert.equal(two.totalMatchCount, 2);
+  assert.equal(two.rawScore.average, 20_000);
+  assert.equal(two.rawScore.median, 20_000);
+  assert.equal(two.rawScore.populationStandardDeviation, 10_000);
+  assert.equal(two.finalPoint.average, 0);
+  assert.equal(two.finalPoint.median, 0);
+  assert.equal(two.finalPoint.populationStandardDeviation, 10);
+  assert.deepEqual(two.finalPoint.positive, {
+    count: 1,
+    denominator: 2,
+    rate: 0.5,
+  });
+  assert.deepEqual(two.finalPoint.negative, {
+    count: 1,
+    denominator: 2,
+    rate: 0.5,
+  });
+  assert.deepEqual(two.finalPoint.even, {
+    count: 0,
+    denominator: 2,
+    rate: 0,
+  });
+  assert.equal(two.byGameType[0]?.averageRank, 2);
+  assert.deepEqual(two.byGameType[0]?.ranks[1], {
+    rank: 2,
+    count: 2,
+    rate: 1,
+  });
+  assert.equal(two.byGameType[0]?.topTwoRate, 1);
+  assert.equal(two.byGameType[0]?.lastRate, 0);
+});
