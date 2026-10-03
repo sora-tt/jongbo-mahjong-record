@@ -230,7 +230,7 @@
   - _Requirements: 2.1, 2.3, 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 4.8, 7.1, 7.2, 7.3_
   - _Boundary: Score Breakdown and Personal Records UI_
 
-- [ ] 4.7 (P) 推移・暦別・直近成績のanalysis viewを実装する
+- [x] 4.7 (P) 推移・暦別・直近成績のanalysis viewを実装する
   - 累計point、日/月/年、曜日、時間帯、日別順位分布と直近10/20/50戦を表示する。
   - 直近windowを全体成績と区別し、選択期間・形式を特定できる。
   - chartに凡例・単位・値の確認操作を付け、同じ値を表または読み上げ可能なtextでも提供する。
