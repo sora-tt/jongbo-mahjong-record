@@ -12,7 +12,13 @@ import type { LeagueRepository } from "@/domain/league/repository.js";
 import type { SeasonMember } from "@/domain/season/types.js";
 import type { SeasonRepository } from "@/domain/season/repository.js";
 import type { SessionRepository } from "@/domain/session/repository.js";
-import type { ScopeType } from "@/domain/shared/types.js";
+import { asOpaqueId, type ScopeType } from "@/domain/shared/types.js";
+import { buildUserMatchStatisticsProjections } from "@/domain/statistics/projection-builder.js";
+import type {
+  UserMatchStatisticsDraft,
+  UserMatchStatisticsRepository,
+} from "@/domain/statistics/repository.js";
+import { buildPersonalStatisticsSnapshot } from "@/domain/statistics/snapshot-builder.js";
 import type { UserStatsRepository } from "@/domain/user/repository.js";
 
 export type RebuildScope =
@@ -34,6 +40,7 @@ export class StatsRebuilder {
     private readonly sessionRepository: SessionRepository,
     private readonly matchRepository: MatchRepository,
     private readonly userStatsRepository: UserStatsRepository,
+    private readonly userMatchStatisticsRepository: UserMatchStatisticsRepository,
   ) {}
 
   async rebuildSession(
@@ -41,6 +48,9 @@ export class StatsRebuilder {
     seasonId: string,
     sessionId: string,
   ): Promise<RebuildReport> {
+    await this.markUncomputedScopes(
+      seasonLeagueOverallScopes(leagueId, seasonId),
+    );
     const matches = sortMatches(
       await this.matchRepository.list(leagueId, seasonId, sessionId),
     );
@@ -50,7 +60,7 @@ export class StatsRebuilder {
       sessionId,
       matches.length,
     );
-    await this.rebuildSeason(leagueId, seasonId);
+    await this.rebuildSeasonPhases(leagueId, seasonId);
     return {
       scope: { type: "session", leagueId, seasonId, sessionId },
       matchCount: matches.length,
@@ -66,6 +76,16 @@ export class StatsRebuilder {
     leagueId: string,
     seasonId: string,
   ): Promise<RebuildReport> {
+    await this.markUncomputedScopes(
+      seasonLeagueOverallScopes(leagueId, seasonId),
+    );
+    return this.rebuildSeasonPhases(leagueId, seasonId);
+  }
+
+  private async rebuildSeasonPhases(
+    leagueId: string,
+    seasonId: string,
+  ): Promise<RebuildReport> {
     const [league, season, sessions, rule, seasonMatches] = await Promise.all([
       this.leagueRepository.get(leagueId),
       this.seasonRepository.get(leagueId, seasonId),
@@ -74,6 +94,25 @@ export class StatsRebuilder {
       this.matchRepository.listBySeason(leagueId, seasonId),
     ]);
     const orderedMatches = sortMatches(seasonMatches);
+    const sessionById = new Map(
+      sessions.map((session) => [session.id, session]),
+    );
+    const projectionRows = orderedMatches.flatMap((match) => {
+      const session = sessionById.get(match.sessionId);
+      if (!session) {
+        throw new TypeError(
+          `statistics projection cannot find session ${match.sessionId}`,
+        );
+      }
+      return buildUserMatchStatisticsProjections({
+        match,
+        league: { id: league.id, name: league.name },
+        season: { id: season.id, name: season.name },
+        session: { id: session.id, label: session.tableLabel },
+      });
+    });
+    await this.replaceSeasonProjection(leagueId, seasonId, projectionRows);
+
     const standings = buildStandings(
       season.members,
       orderedMatches,
@@ -126,9 +165,11 @@ export class StatsRebuilder {
       resultsByUser,
       chomboCountByUserId,
       playerCount: playerCountForGameType(rule.gameType),
+      currentStanding: { source: "season", standings },
     });
 
-    await this.rebuildLeague(leagueId);
+    await this.rebuildLeagueScope(leagueId);
+    await this.rebuildOverallScope();
     return {
       scope: { type: "season", leagueId, seasonId },
       matchCount: orderedMatches.length,
@@ -137,6 +178,20 @@ export class StatsRebuilder {
   }
 
   async rebuildLeague(leagueId: string): Promise<RebuildReport> {
+    await this.markUncomputedScopes([
+      {
+        scopeType: "league",
+        leagueId,
+        seasonId: null,
+      },
+      { scopeType: "overall", leagueId: null, seasonId: null },
+    ]);
+    const report = await this.rebuildLeagueScope(leagueId);
+    await this.rebuildOverallScope();
+    return report;
+  }
+
+  private async rebuildLeagueScope(leagueId: string): Promise<RebuildReport> {
     const [league, seasons, rule, leagueMatches] = await Promise.all([
       this.leagueRepository.get(leagueId),
       this.seasonRepository.list(leagueId),
@@ -158,15 +213,22 @@ export class StatsRebuilder {
       leagueRecords: buildLeagueRecords(orderedMatches),
     });
 
-    const activeStandings = activeSeason
-      ? buildStandings(
-          (await this.seasonRepository.get(leagueId, activeSeason.id)).members,
-          sortMatches(
-            await this.matchRepository.listBySeason(leagueId, activeSeason.id),
-          ),
-          rule.gameType,
-        )
-      : [];
+    const activeSeasonData = activeSeason
+      ? await this.seasonRepository.get(leagueId, activeSeason.id)
+      : null;
+    const activeStandings =
+      activeSeasonData && activeSeason
+        ? buildStandings(
+            activeSeasonData.members,
+            sortMatches(
+              await this.matchRepository.listBySeason(
+                leagueId,
+                activeSeason.id,
+              ),
+            ),
+            rule.gameType,
+          )
+        : [];
     const resultsByUser = collectUserResults(orderedMatches);
     const chomboCountByUserId = collectUserChomboCounts(orderedMatches);
     await this.rebuildUserStats("league", {
@@ -179,9 +241,11 @@ export class StatsRebuilder {
       resultsByUser,
       chomboCountByUserId,
       playerCount: playerCountForGameType(rule.gameType),
+      currentStanding: activeSeasonData
+        ? { source: "activeSeason", standings: activeStandings }
+        : null,
     });
 
-    await this.rebuildOverall();
     return {
       scope: { type: "league", leagueId },
       matchCount: orderedMatches.length,
@@ -190,6 +254,13 @@ export class StatsRebuilder {
   }
 
   async rebuildOverall(): Promise<RebuildReport> {
+    await this.markUncomputedScopes([
+      { scopeType: "overall", leagueId: null, seasonId: null },
+    ]);
+    return this.rebuildOverallScope();
+  }
+
+  private async rebuildOverallScope(): Promise<RebuildReport> {
     const [allMatches, currentMembers] = await Promise.all([
       this.matchRepository.listAll(),
       this.leagueRepository.listAllMembers(),
@@ -211,6 +282,7 @@ export class StatsRebuilder {
       chomboCountByUserId,
       playerCount: 4,
       playerCountByUser,
+      currentStanding: null,
     });
 
     return {
@@ -233,6 +305,28 @@ export class StatsRebuilder {
     await this.userStatsRepository.deleteStatsForLeague(leagueId);
   }
 
+  private async markUncomputedScopes(
+    scopes: Array<{
+      scopeType: ScopeType;
+      leagueId: string | null;
+      seasonId: string | null;
+    }>,
+  ): Promise<void> {
+    await this.userStatsRepository.markScopesUncomputed(scopes);
+  }
+
+  private async replaceSeasonProjection(
+    leagueId: string,
+    seasonId: string,
+    rows: UserMatchStatisticsDraft[],
+  ): Promise<void> {
+    await this.userMatchStatisticsRepository.replaceSeason({
+      leagueId,
+      seasonId,
+      rows,
+    });
+  }
+
   private async rebuildUserStats(
     scopeType: ScopeType,
     params: {
@@ -241,11 +335,23 @@ export class StatsRebuilder {
       leagueName: string | null;
       seasonName: string | null;
       members: SeasonMember[];
-      standings: Array<{ rank: number; userId: string }>;
+      standings: Array<{
+        rank: number;
+        userId: string;
+        totalPoints: number;
+      }>;
       resultsByUser: Map<string, MatchResult[]>;
       chomboCountByUserId: Map<string, number>;
       playerCount: number;
       playerCountByUser?: Map<string, number>;
+      currentStanding: {
+        source: "season" | "activeSeason";
+        standings: Array<{
+          rank: number;
+          userId: string;
+          totalPoints: number;
+        }>;
+      } | null;
     },
   ) {
     const rankMap = new Map(
@@ -253,8 +359,15 @@ export class StatsRebuilder {
     );
     const members = mergeMembers(params.members, params.resultsByUser);
 
+    const prepared: Array<{
+      member: SeasonMember;
+      stats: ReturnType<typeof buildUserStats>;
+      personalStatisticsSnapshot: ReturnType<
+        typeof buildPersonalStatisticsSnapshot
+      >;
+    }> = [];
     for (const memberChunk of chunk(members, 400)) {
-      await Promise.all(
+      const preparedChunk = await Promise.all(
         memberChunk.map(async (member) => {
           const results = params.resultsByUser.get(member.userId) ?? [];
           const stats = buildUserStats({
@@ -273,18 +386,21 @@ export class StatsRebuilder {
               params.playerCountByUser?.get(member.userId) ??
               params.playerCount,
           });
-
-          await this.userStatsRepository.upsert(
-            {
-              userId: member.userId,
-              scopeType,
-              leagueId: params.leagueId,
-              seasonId: params.seasonId,
-            },
-            stats,
-          );
+          const projections =
+            await this.userMatchStatisticsRepository.listForScope(
+              statisticsScopeQuery(scopeType, member.userId, params),
+            );
+          const personalStatisticsSnapshot = buildPersonalStatisticsSnapshot({
+            targetUserId: asOpaqueId(member.userId),
+            scopeType,
+            matches: projections,
+            basicStats: stats,
+            currentStanding: params.currentStanding,
+          });
+          return { member, stats, personalStatisticsSnapshot };
         }),
       );
+      prepared.push(...preparedChunk);
     }
 
     await this.userStatsRepository.deleteMissingScopeStats({
@@ -293,6 +409,50 @@ export class StatsRebuilder {
       seasonId: params.seasonId,
       keepUserIds: members.map((member) => member.userId),
     });
+
+    try {
+      for (const preparedChunk of chunk(prepared, 400)) {
+        const publishResults = await Promise.allSettled(
+          preparedChunk.map(({ member, stats, personalStatisticsSnapshot }) =>
+            this.userStatsRepository.upsert(
+              {
+                userId: member.userId,
+                scopeType,
+                leagueId: params.leagueId,
+                seasonId: params.seasonId,
+              },
+              {
+                ...stats,
+                personalStatisticsVersion: 1,
+                personalStatisticsSnapshot,
+              },
+            ),
+          ),
+        );
+        const failedPublish = publishResults.find(
+          (result) => result.status === "rejected",
+        );
+        if (failedPublish?.status === "rejected") {
+          throw failedPublish.reason;
+        }
+      }
+    } catch (error) {
+      try {
+        await this.userStatsRepository.markScopesUncomputed([
+          {
+            scopeType,
+            leagueId: params.leagueId,
+            seasonId: params.seasonId,
+          },
+        ]);
+      } catch (invalidationError) {
+        throw new AggregateError(
+          [error, invalidationError],
+          "failed to publish and invalidate personal statistics scope",
+        );
+      }
+      throw error;
+    }
   }
 }
 
@@ -351,6 +511,41 @@ const mergeMembers = (
 
 const playerCountForGameType = (gameType: "sanma" | "yonma") =>
   gameType === "sanma" ? 3 : 4;
+
+const seasonLeagueOverallScopes = (leagueId: string, seasonId: string) => [
+  { scopeType: "season" as const, leagueId, seasonId },
+  { scopeType: "league" as const, leagueId, seasonId: null },
+  { scopeType: "overall" as const, leagueId: null, seasonId: null },
+];
+
+const statisticsScopeQuery = (
+  scopeType: ScopeType,
+  userId: string,
+  params: { leagueId: string | null; seasonId: string | null },
+) => {
+  if (scopeType === "overall") {
+    return { scopeType: "overall" as const, userId: asOpaqueId(userId) };
+  }
+  if (scopeType === "league") {
+    if (params.leagueId === null) {
+      throw new TypeError("league statistics require a league ID");
+    }
+    return {
+      scopeType: "league" as const,
+      leagueId: asOpaqueId(params.leagueId),
+      userId: asOpaqueId(userId),
+    };
+  }
+  if (params.leagueId === null || params.seasonId === null) {
+    throw new TypeError("season statistics require league and season IDs");
+  }
+  return {
+    scopeType: "season" as const,
+    leagueId: asOpaqueId(params.leagueId),
+    seasonId: asOpaqueId(params.seasonId),
+    userId: asOpaqueId(userId),
+  };
+};
 
 const chunk = <T>(items: T[], size: number): T[][] => {
   const chunks: T[][] = [];

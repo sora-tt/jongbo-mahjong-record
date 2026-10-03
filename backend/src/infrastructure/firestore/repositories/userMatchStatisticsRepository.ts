@@ -7,7 +7,10 @@ import {
   type Query,
 } from "firebase-admin/firestore";
 import { asIsoDateString, asOpaqueId } from "@/domain/shared/types.js";
-import type { UserMatchStatisticsRepository } from "@/domain/statistics/repository.js";
+import type {
+  UserMatchStatisticsDraft,
+  UserMatchStatisticsRepository,
+} from "@/domain/statistics/repository.js";
 import type {
   StatisticsMatchPage,
   StatisticsScope,
@@ -284,7 +287,7 @@ export const buildUserMatchStatisticsId = (
     )
     .digest("hex")}`;
 
-const toFirestoreData = (row: UserMatchStatistics, id: string) => ({
+const toFirestoreData = (row: UserMatchStatisticsDraft, id: string) => ({
   id,
   user_id: row.userId,
   user_name: row.userName,

@@ -6,6 +6,7 @@ import { FirestoreSeasonRepository } from "@/infrastructure/firestore/repositori
 import { FirestoreMatchRepository } from "@/infrastructure/firestore/repositories/matchRepository.js";
 import { FirestoreSessionRepository } from "@/infrastructure/firestore/repositories/sessionRepository.js";
 import { FirestoreUserStatsRepository } from "@/infrastructure/firestore/repositories/userStatsRepository.js";
+import { FirestoreUserMatchStatisticsRepository } from "@/infrastructure/firestore/repositories/userMatchStatisticsRepository.js";
 import { FirestoreUserRepository } from "@/infrastructure/firestore/repositories/userRepository.js";
 import { StatsRebuilder } from "@/application/services/statsRebuilder.js";
 import { MatchService } from "@/application/services/matchService.js";
@@ -192,12 +193,15 @@ test(
     const sessionRepository = new FirestoreSessionRepository(db);
     const matchRepository = new FirestoreMatchRepository(db);
     const userStatsRepository = new FirestoreUserStatsRepository(db);
+    const userMatchStatisticsRepository =
+      new FirestoreUserMatchStatisticsRepository(db);
     const statsRebuilder = new StatsRebuilder(
       leagueRepository,
       seasonRepository,
       sessionRepository,
       matchRepository,
       userStatsRepository,
+      userMatchStatisticsRepository,
     );
     const matchService = new MatchService(
       leagueRepository,
@@ -267,6 +271,26 @@ test(
           { rank: 4, point: -23 },
         ],
       );
+      const firstProjection = await userMatchStatisticsRepository.listForScope({
+        scopeType: "season",
+        leagueId: league.id,
+        seasonId: season.id,
+        userId: "0001",
+      });
+      assert.equal(firstProjection.length, 1);
+      const firstSnapshot = await userStatsRepository.getWithPersonalStatistics(
+        {
+          userId: "0001",
+          scopeType: "season",
+          leagueId: league.id,
+          seasonId: season.id,
+        },
+      );
+      assert.equal(firstSnapshot?.personalStatisticsVersion, 1);
+      assert.equal(
+        firstSnapshot?.personalStatisticsSnapshot?.all.totals.totalMatchCount,
+        1,
+      );
 
       await assert.rejects(
         leagueRepository.update(league.id, {
@@ -302,6 +326,34 @@ test(
         },
       );
       const secondMatchResults = secondMatch.results;
+      const projectionsAfterCreate =
+        await userMatchStatisticsRepository.listForScope({
+          scopeType: "season",
+          leagueId: league.id,
+          seasonId: season.id,
+          userId: "0001",
+        });
+      assert.equal(projectionsAfterCreate.length, 2);
+      const updatedSecondMatch = await matchService.updateMatch(
+        "0001",
+        league.id,
+        season.id,
+        session.id,
+        secondMatch.id,
+        { playedAt: "2026-01-01T00:03:00.000Z" },
+      );
+      const projectionsAfterUpdate =
+        await userMatchStatisticsRepository.listForScope({
+          scopeType: "season",
+          leagueId: league.id,
+          seasonId: season.id,
+          userId: "0001",
+        });
+      assert.equal(
+        projectionsAfterUpdate.find(({ matchId }) => matchId === secondMatch.id)
+          ?.playedAt,
+        updatedSecondMatch.playedAt,
+      );
       const expectedStandingsBeforeDelete = firstMatch.results
         .map((firstResult) => {
           const secondResult = secondMatchResults.find(
@@ -336,6 +388,17 @@ test(
         season.id,
         session.id,
         firstMatch.id,
+      );
+      const projectionsAfterDelete =
+        await userMatchStatisticsRepository.listForScope({
+          scopeType: "season",
+          leagueId: league.id,
+          seasonId: season.id,
+          userId: "0001",
+        });
+      assert.deepEqual(
+        projectionsAfterDelete.map(({ matchId }) => matchId),
+        [secondMatch.id],
       );
 
       assert.equal((await leagueRef.get()).data()?.rule_locked, true);
@@ -400,6 +463,19 @@ test(
         session.id,
         secondMatch.id,
       );
+      const emptySnapshot = await userStatsRepository.getWithPersonalStatistics(
+        {
+          userId: "0001",
+          scopeType: "season",
+          leagueId: league.id,
+          seasonId: season.id,
+        },
+      );
+      assert.equal(emptySnapshot?.personalStatisticsVersion, 1);
+      assert.equal(
+        emptySnapshot?.personalStatisticsSnapshot?.all.totals.totalMatchCount,
+        0,
+      );
       assert.equal((await leagueRef.get()).data()?.rule_locked, true);
       assert.equal(
         (await sessionRepository.get(league.id, season.id, session.id))
@@ -415,6 +491,7 @@ test(
     } finally {
       await db.recursiveDelete(leagueRef);
       await userStatsRepository.deleteStatsForLeague(league.id);
+      await userMatchStatisticsRepository.deleteLeague(league.id);
     }
   },
 );
@@ -430,12 +507,15 @@ test(
     const sessionRepository = new FirestoreSessionRepository(db);
     const matchRepository = new FirestoreMatchRepository(db);
     const userStatsRepository = new FirestoreUserStatsRepository(db);
+    const userMatchStatisticsRepository =
+      new FirestoreUserMatchStatisticsRepository(db);
     const statsRebuilder = new StatsRebuilder(
       leagueRepository,
       seasonRepository,
       sessionRepository,
       matchRepository,
       userStatsRepository,
+      userMatchStatisticsRepository,
     );
     const matchService = new MatchService(
       leagueRepository,
@@ -541,6 +621,7 @@ test(
     } finally {
       await db.recursiveDelete(leagueRef);
       await userStatsRepository.deleteStatsForLeague(league.id);
+      await userMatchStatisticsRepository.deleteLeague(league.id);
     }
   },
 );
@@ -654,12 +735,15 @@ test(
     const sessionRepository = new FirestoreSessionRepository(db);
     const matchRepository = new FirestoreMatchRepository(db);
     const userStatsRepository = new FirestoreUserStatsRepository(db);
+    const userMatchStatisticsRepository =
+      new FirestoreUserMatchStatisticsRepository(db);
     const statsRebuilder = new StatsRebuilder(
       leagueRepository,
       seasonRepository,
       sessionRepository,
       matchRepository,
       userStatsRepository,
+      userMatchStatisticsRepository,
     );
     const league = await leagueRepository.create({
       name: "delete lifecycle test",
@@ -777,6 +861,7 @@ test(
     } finally {
       await db.recursiveDelete(db.collection("leagues").doc(league.id));
       await userStatsRepository.deleteStatsForLeague(league.id);
+      await userMatchStatisticsRepository.deleteLeague(league.id);
     }
   },
 );

@@ -344,6 +344,45 @@ export class FirestoreUserStatsRepository implements UserStatsRepository {
     return statsId;
   }
 
+  async markScopesUncomputed(
+    scopes: Array<{
+      scopeType: ScopeType;
+      leagueId: string | null;
+      seasonId: string | null;
+    }>,
+  ): Promise<void> {
+    if (scopes.length === 0) return;
+    const snapshots = await Promise.all(
+      scopes.map(({ scopeType, leagueId, seasonId }) =>
+        this.db
+          .collection("user_stats")
+          .where("scope_type", "==", scopeType)
+          .where("league_id", "==", leagueId)
+          .where("season_id", "==", seasonId)
+          .get(),
+      ),
+    );
+    const affectedDocs = new Map(
+      snapshots.flatMap((snapshot) =>
+        snapshot.docs.map((doc) => [doc.id, doc] as const),
+      ),
+    );
+    const docs = [...affectedDocs.values()];
+
+    const updatedAt = Timestamp.now();
+    for (let offset = 0; offset < docs.length; offset += 400) {
+      const batch = this.db.batch();
+      docs.slice(offset, offset + 400).forEach((doc) => {
+        batch.update(doc.ref, {
+          personal_statistics_version: 0,
+          personal_statistics: null,
+          updated_at: updatedAt,
+        });
+      });
+      await batch.commit();
+    }
+  }
+
   async deleteMissingSeasonStats(
     leagueId: string,
     seasonId: string,
@@ -363,16 +402,16 @@ export class FirestoreUserStatsRepository implements UserStatsRepository {
     seasonId: string | null;
     keepUserIds: string[];
   }): Promise<void> {
-    const snapshot = await this.db.collection("user_stats").get();
-    const staleDocs = snapshot.docs.filter((doc) => {
-      const data = doc.data();
-      return (
-        data.scope_type === params.scopeType &&
-        (data.league_id ?? null) === params.leagueId &&
-        (data.season_id ?? null) === params.seasonId &&
-        !params.keepUserIds.includes(String(data.user_id))
-      );
-    });
+    const snapshot = await this.db
+      .collection("user_stats")
+      .where("scope_type", "==", params.scopeType)
+      .where("league_id", "==", params.leagueId)
+      .where("season_id", "==", params.seasonId)
+      .get();
+    const keepUserIds = new Set(params.keepUserIds);
+    const staleDocs = snapshot.docs.filter(
+      (doc) => !keepUserIds.has(String(doc.data().user_id)),
+    );
 
     await Promise.all(staleDocs.map((doc) => doc.ref.delete()));
   }

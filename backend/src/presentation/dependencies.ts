@@ -5,6 +5,7 @@ import { FirestoreSeasonRepository } from "@/infrastructure/firestore/repositori
 import { FirestoreSessionRepository } from "@/infrastructure/firestore/repositories/sessionRepository.js";
 import { FirestoreUserRepository } from "@/infrastructure/firestore/repositories/userRepository.js";
 import { FirestoreUserStatsRepository } from "@/infrastructure/firestore/repositories/userStatsRepository.js";
+import { FirestoreUserMatchStatisticsRepository } from "@/infrastructure/firestore/repositories/userMatchStatisticsRepository.js";
 import { LeagueService } from "@/application/services/leagueService.js";
 import { MatchService } from "@/application/services/matchService.js";
 import { AuthService } from "@/application/services/authService.js";
@@ -24,12 +25,15 @@ export const createDependencies = () => {
   const sessionRepository = new FirestoreSessionRepository(db);
   const matchRepository = new FirestoreMatchRepository(db);
   const userStatsRepository = new FirestoreUserStatsRepository(db);
+  const userMatchStatisticsRepository =
+    new FirestoreUserMatchStatisticsRepository(db);
   const statsRebuilder = new StatsRebuilder(
     leagueRepository,
     seasonRepository,
     sessionRepository,
     matchRepository,
     userStatsRepository,
+    userMatchStatisticsRepository,
   );
 
   return {

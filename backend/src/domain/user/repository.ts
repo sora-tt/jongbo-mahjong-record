@@ -47,6 +47,13 @@ export interface UserStatsRepository {
     },
     data: UserStatsUpsertData,
   ): Promise<string>;
+  markScopesUncomputed(
+    scopes: Array<{
+      scopeType: ScopeType;
+      leagueId: string | null;
+      seasonId: string | null;
+    }>,
+  ): Promise<void>;
   deleteMissingScopeStats(params: {
     scopeType: ScopeType;
     leagueId: string | null;

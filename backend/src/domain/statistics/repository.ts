@@ -4,12 +4,14 @@ import type {
   UserMatchStatistics,
 } from "@/domain/statistics/types.js";
 
+export type UserMatchStatisticsDraft = Omit<UserMatchStatistics, "id">;
+
 export interface UserMatchStatisticsRepository {
   /** Replaces every projection in a season with the supplied current rows. */
   replaceSeason(input: {
     leagueId: string;
     seasonId: string;
-    rows: UserMatchStatistics[];
+    rows: UserMatchStatisticsDraft[];
   }): Promise<void>;
 
   deleteSeason(leagueId: string, seasonId: string): Promise<void>;

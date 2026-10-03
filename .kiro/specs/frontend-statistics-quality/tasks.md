@@ -98,7 +98,7 @@
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 4.8, 7.1, 7.2, 7.3, 8.3_
   - _Boundary: PersonalStatisticsSnapshot Builder_
 
-- [ ] 2.6 通常のMatch再構築にprojectionとsnapshotを統合する
+- [x] 2.6 通常のMatch再構築にprojectionとsnapshotを統合する
   - Match create/update/deleteで影響するscopeを先にversion 0へ無効化し、projection生成と既存rollup/snapshot再構築を段階別helperとして実行する。
   - 各scopeのprojectionとrollupが成功した後にだけ、そのscopeのsnapshotとversion 1を公開する。
   - 途中失敗したscopeはversion 0を保ち、再試行で同じprojectionとsnapshotに収束する。
