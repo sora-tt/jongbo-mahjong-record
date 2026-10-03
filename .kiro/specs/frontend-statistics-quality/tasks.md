@@ -156,7 +156,7 @@
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 5.2, 5.5, 6.4, 8.3_
   - _Boundary: Statistics Query Schemas_
 
-- [ ] 3.2 統計service/repositoryをHTTP composition rootへ接続する
+- [x] 3.2 統計service/repositoryをHTTP composition rootへ接続する
   - target access、summary/analysis/history reader、既存repositoryをサービス構成に登録する。
   - Hono routeから認証利用者IDとpathのtarget IDを別々に利用できる依存契約にする。
   - Composition rootから各readerへ同じ共有repository/access serviceが渡される。

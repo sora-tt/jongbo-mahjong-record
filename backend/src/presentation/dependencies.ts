@@ -12,9 +12,65 @@ import { AuthService } from "@/application/services/authService.js";
 import { SeasonService } from "@/application/services/seasonService.js";
 import { SessionService } from "@/application/services/sessionService.js";
 import { StatsRebuilder } from "@/application/services/statsRebuilder.js";
+import { PersonalStatisticsAnalysisReader } from "@/application/services/personalStatisticsAnalysisReader.js";
+import { PersonalStatisticsMatchHistoryReader } from "@/application/services/personalStatisticsMatchHistoryReader.js";
+import { PersonalStatisticsSummaryReader } from "@/application/services/personalStatisticsSummaryReader.js";
+import { StatisticsTargetAccessService } from "@/application/services/statisticsTargetAccessService.js";
 import { UserService } from "@/application/services/userService.js";
+import type { LeagueRepository } from "@/domain/league/repository.js";
+import type { SeasonRepository } from "@/domain/season/repository.js";
+import type { UserMatchStatisticsRepository } from "@/domain/statistics/repository.js";
+import type { UserStatsRepository } from "@/domain/user/repository.js";
 
 export type Services = ReturnType<typeof createDependencies>["services"];
+
+type StatisticsServiceRepositories = {
+  leagueRepository: Pick<LeagueRepository, "get" | "areMembers">;
+  seasonRepository: Pick<SeasonRepository, "get" | "areMembers">;
+  userStatsRepository: Pick<UserStatsRepository, "getWithPersonalStatistics">;
+  userMatchStatisticsRepository: Pick<
+    UserMatchStatisticsRepository,
+    "listForScope" | "listPage"
+  >;
+};
+
+export const createStatisticsServices = ({
+  leagueRepository,
+  seasonRepository,
+  userStatsRepository,
+  userMatchStatisticsRepository,
+}: StatisticsServiceRepositories) => {
+  const statisticsTargetAccessService = new StatisticsTargetAccessService(
+    leagueRepository,
+    seasonRepository,
+  );
+
+  return {
+    statisticsTargetAccessService,
+    personalStatisticsSummaryReader: new PersonalStatisticsSummaryReader(
+      statisticsTargetAccessService,
+      userStatsRepository,
+      userMatchStatisticsRepository,
+      leagueRepository,
+      seasonRepository,
+    ),
+    personalStatisticsAnalysisReader: new PersonalStatisticsAnalysisReader(
+      statisticsTargetAccessService,
+      userStatsRepository,
+      userMatchStatisticsRepository,
+      leagueRepository,
+      seasonRepository,
+    ),
+    personalStatisticsMatchHistoryReader:
+      new PersonalStatisticsMatchHistoryReader(
+        statisticsTargetAccessService,
+        userStatsRepository,
+        userMatchStatisticsRepository,
+        leagueRepository,
+        seasonRepository,
+      ),
+  };
+};
 
 export const createDependencies = () => {
   const db = getDb();
@@ -35,6 +91,12 @@ export const createDependencies = () => {
     userStatsRepository,
     userMatchStatisticsRepository,
   );
+  const statisticsServices = createStatisticsServices({
+    leagueRepository,
+    seasonRepository,
+    userStatsRepository,
+    userMatchStatisticsRepository,
+  });
 
   return {
     statsRebuilder,
@@ -65,6 +127,7 @@ export const createDependencies = () => {
         matchRepository,
         statsRebuilder,
       ),
+      ...statisticsServices,
     },
   };
 };
