@@ -484,6 +484,55 @@ test("verification confirmation route rejects missing action codes", async () =>
   assert.equal(body.error.code, "validation_error");
 });
 
+test("verification email route enforces resend cooldowns", async () => {
+  const mockAuth = {
+    verifySessionCookie: async () => ({
+      uid: "user-cooldown",
+      email: "cooldown@example.com",
+      email_verified: false,
+    }),
+    getUser: async () => ({
+      uid: "user-cooldown",
+      email: "cooldown@example.com",
+      emailVerified: false,
+    }),
+    generateEmailVerificationLink: async () =>
+      "http://127.0.0.1:3000/verify-email?mode=verify&oobCode=next-code",
+  };
+
+  const app = new Hono().route(
+    "/api/auth",
+    buildAuthRouter({ getAdminAuth: () => mockAuth as never }),
+  );
+
+  const firstResponse = await app.request("/api/auth/verification-email", {
+    method: "POST",
+    headers: {
+      Cookie: "jongbo_session=mock-session-cookie",
+    },
+  });
+  const firstBody = (await firstResponse.json()) as {
+    data: { sent: boolean; retryAfterSeconds?: number };
+  };
+
+  assert.equal(firstResponse.status, 200);
+  assert.equal(firstBody.data.sent, true);
+
+  const secondResponse = await app.request("/api/auth/verification-email", {
+    method: "POST",
+    headers: {
+      Cookie: "jongbo_session=mock-session-cookie",
+    },
+  });
+  const secondBody = (await secondResponse.json()) as {
+    error: { code: string; details: { retryAfterSeconds?: number } };
+  };
+
+  assert.equal(secondResponse.status, 429);
+  assert.equal(secondBody.error.code, "rate_limited");
+  assert.ok((secondBody.error.details.retryAfterSeconds ?? 0) > 0);
+});
+
 test("CORS only allows configured origins and credentials", async () => {
   const app = createApp();
   const allowed = await app.request("/api/health", {

@@ -1,4 +1,4 @@
-import { UnauthorizedError } from "@/domain/shared/errors.js";
+import { AppError, UnauthorizedError } from "@/domain/shared/errors.js";
 import { getAdminAuth } from "@/infrastructure/firebase/client.js";
 import type { AppBindings } from "@/presentation/bindings.js";
 import { SESSION_COOKIE_NAME } from "@/presentation/session.js";
@@ -39,6 +39,12 @@ export const requireAuth: MiddlewareHandler<AppBindings> = async (c, next) => {
     );
   } catch {
     throw new UnauthorizedError("invalid authentication session");
+  }
+
+  if (decodedToken.email_verified === false) {
+    throw new AppError("email is not verified", 403, "email_not_verified", {
+      uid: decodedToken.uid,
+    });
   }
 
   c.set("authUser", {
