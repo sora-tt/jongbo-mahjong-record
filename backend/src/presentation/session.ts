@@ -18,7 +18,10 @@ export const getSessionMaxAgeSeconds = () => {
 export const getSessionCookieOptions = () => ({
   path: "/",
   httpOnly: true,
-  sameSite: "Lax" as const,
+  sameSite:
+    process.env.NODE_ENV === "production"
+      ? ("None" as const)
+      : ("Lax" as const),
   secure: process.env.NODE_ENV === "production",
   maxAge: getSessionMaxAgeSeconds(),
 });

@@ -42,3 +42,32 @@ test("session cookie max age accepts a positive environment override", () => {
     }
   }
 });
+
+test("production session cookies allow cross-site browser requests", () => {
+  const previousNodeEnv = process.env.NODE_ENV;
+  const previousSessionMaxAge = process.env.SESSION_COOKIE_MAX_AGE_SECONDS;
+  process.env.NODE_ENV = "production";
+  delete process.env.SESSION_COOKIE_MAX_AGE_SECONDS;
+
+  try {
+    assert.deepEqual(getSessionCookieOptions(), {
+      path: "/",
+      httpOnly: true,
+      sameSite: "None",
+      secure: true,
+      maxAge: 60 * 60 * 24 * 5,
+    });
+  } finally {
+    if (previousNodeEnv === undefined) {
+      delete process.env.NODE_ENV;
+    } else {
+      process.env.NODE_ENV = previousNodeEnv;
+    }
+
+    if (previousSessionMaxAge === undefined) {
+      delete process.env.SESSION_COOKIE_MAX_AGE_SECONDS;
+    } else {
+      process.env.SESSION_COOKIE_MAX_AGE_SECONDS = previousSessionMaxAge;
+    }
+  }
+});
