@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   description: "麻雀のリーグ・対局・成績を記録するアプリ",
 };
 
-export const RootLayout: React.FC<RootLayoutProps> = ({ children }) => {
+const RootLayout: React.FC<RootLayoutProps> = ({ children }) => {
   return (
     <html lang="ja">
       <body>

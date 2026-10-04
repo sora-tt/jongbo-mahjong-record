@@ -2,6 +2,13 @@
 
 import * as React from "react";
 
+import {
+  getStatisticsPagePanelState,
+  getStatisticsPagePeriodLabel,
+  getStatisticsPageScopeOptions,
+  getStatisticsPageSubjectLabel,
+  normalizeStatisticsPageQueryStatus,
+} from "@/features/statistics/model/page";
 import { MatchHistory } from "@/features/statistics/ui/MatchHistory";
 import { PersonalRecords } from "@/features/statistics/ui/PersonalRecords";
 import { ScoreBreakdown } from "@/features/statistics/ui/ScoreBreakdown";
@@ -18,13 +25,6 @@ import { ErrorState } from "@/components/ui/error-state";
 import { LoadingState } from "@/components/ui/loading-state";
 
 import { useStatistics } from "./hooks";
-import {
-  getStatisticsPagePanelState,
-  getStatisticsPagePeriodLabel,
-  getStatisticsPageScopeOptions,
-  getStatisticsPageSubjectLabel,
-  normalizeStatisticsPageQueryStatus,
-} from "./model/page";
 
 const getScopeLabel = (
   scope: ReturnType<typeof useStatistics>["scope"],
@@ -54,8 +54,16 @@ const getGameTypeLabel = (
   return "全ての形式";
 };
 
-const StatisticsPage: React.FC = () => {
-  const statistics = useStatistics();
+type StatisticsPageContentProps = {
+  useStatisticsHook?: typeof useStatistics;
+  includeAppShell?: boolean;
+};
+
+export const StatisticsPageContent: React.FC<StatisticsPageContentProps> = ({
+  useStatisticsHook = useStatistics,
+  includeAppShell = true,
+}) => {
+  const statistics = useStatisticsHook();
   const scopeOptions = React.useMemo(
     () => getStatisticsPageScopeOptions(statistics.joiningLeagueSeasons),
     [statistics.joiningLeagueSeasons]
@@ -246,67 +254,75 @@ const StatisticsPage: React.FC = () => {
     </section>
   );
 
-  return (
-    <AppShell mainClassName="min-h-screen bg-background font-jp">
-      <div className="mx-auto flex max-w-md flex-col gap-6 px-4 py-8">
-        <header className="space-y-2">
-          <h1 className="text-2xl font-bold text-foreground">
-            {subjectLabel === "本人" || !subjectLabel
-              ? "個人成績"
-              : `${subjectLabel}さんの個人成績`}
-          </h1>
-          <p className="text-sm text-text-muted" aria-live="polite">
-            表示対象: {subjectLabel} / 範囲: {scopeLabel} / 期間: {periodLabel}{" "}
-            / 形式: {getGameTypeLabel(statistics.scope.gameType)}
-          </p>
-        </header>
+  const pageContent = (
+    <div className="mx-auto flex max-w-md flex-col gap-6 px-4 py-8">
+      <header className="space-y-2">
+        <h1 className="text-2xl font-bold text-foreground">
+          {subjectLabel === "本人" || !subjectLabel
+            ? "個人成績"
+            : `${subjectLabel}さんの個人成績`}
+        </h1>
+        <p className="text-sm text-text-muted" aria-live="polite">
+          表示対象: {subjectLabel} / 範囲: {scopeLabel} / 期間: {periodLabel} /
+          形式: {getGameTypeLabel(statistics.scope.gameType)}
+        </p>
+      </header>
 
-        {statistics.initialError ? (
-          <ErrorState
-            message={statistics.initialError}
-            onRetry={statistics.retry}
-          />
-        ) : statistics.isLoading ? (
-          <LoadingState
-            label="表示条件を読み込んでいます…"
-            className="min-h-32"
-          />
-        ) : (
-          <>
-            <StatisticsScopeFilter
-              scope={statistics.scope}
-              scopeOptions={scopeOptions}
-              onChangeScope={statistics.onChangeScope}
-              onChangeDateRange={statistics.onChangeDateRange}
-              onChangeGameType={statistics.onChangeGameType}
-            >
-              <StatisticsSubjectSelector
-                scopeType={statistics.scope.scopeType}
-                viewerUserId={statistics.viewerUserId}
-                targetUserId={statistics.targetUserId}
-                userName={statistics.userName}
-                members={statistics.members}
-                membersStatus={statistics.membersStatus}
-                membersError={statistics.membersError}
-                onChangeTarget={statistics.onChangeTarget}
-                retryMembers={statistics.retryMembers}
-              />
-            </StatisticsScopeFilter>
-
-            <StatisticsViewTabs
-              activeView={statistics.activeView}
-              onActiveViewChange={statistics.onChangeActiveView}
-              panels={{
-                overview: summaryPanel,
-                analysis: analysisPanel,
-                history: historyPanel,
-              }}
+      {statistics.initialError ? (
+        <ErrorState
+          message={statistics.initialError}
+          onRetry={statistics.retry}
+        />
+      ) : statistics.isLoading ? (
+        <LoadingState
+          label="表示条件を読み込んでいます…"
+          className="min-h-32"
+        />
+      ) : (
+        <>
+          <StatisticsScopeFilter
+            scope={statistics.scope}
+            scopeOptions={scopeOptions}
+            onChangeScope={statistics.onChangeScope}
+            onChangeDateRange={statistics.onChangeDateRange}
+            onChangeGameType={statistics.onChangeGameType}
+          >
+            <StatisticsSubjectSelector
+              scopeType={statistics.scope.scopeType}
+              viewerUserId={statistics.viewerUserId}
+              targetUserId={statistics.targetUserId}
+              userName={statistics.userName}
+              members={statistics.members}
+              membersStatus={statistics.membersStatus}
+              membersError={statistics.membersError}
+              onChangeTarget={statistics.onChangeTarget}
+              retryMembers={statistics.retryMembers}
             />
-          </>
-        )}
-      </div>
+          </StatisticsScopeFilter>
+
+          <StatisticsViewTabs
+            activeView={statistics.activeView}
+            onActiveViewChange={statistics.onChangeActiveView}
+            panels={{
+              overview: summaryPanel,
+              analysis: analysisPanel,
+              history: historyPanel,
+            }}
+          />
+        </>
+      )}
+    </div>
+  );
+
+  return includeAppShell ? (
+    <AppShell mainClassName="min-h-screen bg-background font-jp">
+      {pageContent}
     </AppShell>
+  ) : (
+    pageContent
   );
 };
+
+const StatisticsPage: React.FC = () => <StatisticsPageContent />;
 
 export default StatisticsPage;
