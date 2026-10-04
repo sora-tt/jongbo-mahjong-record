@@ -56,26 +56,26 @@ const trimTrailingSlash = (value: string) => value.replace(/\/$/, "");
 export const getApiBaseUrl = () => {
   const configuredBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
 
+  if (configuredBaseUrl) {
+    if (typeof window === "undefined") {
+      return trimTrailingSlash(configuredBaseUrl);
+    }
+
+    const apiUrl = new URL(configuredBaseUrl);
+    const appHostname = window.location.hostname;
+
+    if (LOCAL_HOSTS.has(apiUrl.hostname) && LOCAL_HOSTS.has(appHostname)) {
+      apiUrl.hostname = appHostname;
+    }
+
+    return trimTrailingSlash(apiUrl.toString());
+  }
+
   if (typeof window !== "undefined" && process.env.NODE_ENV === "production") {
     return window.location.origin;
   }
 
-  if (!configuredBaseUrl) {
-    return DEFAULT_LOCAL_API_BASE_URL;
-  }
-
-  if (typeof window === "undefined") {
-    return trimTrailingSlash(configuredBaseUrl);
-  }
-
-  const apiUrl = new URL(configuredBaseUrl);
-  const appHostname = window.location.hostname;
-
-  if (LOCAL_HOSTS.has(apiUrl.hostname) && LOCAL_HOSTS.has(appHostname)) {
-    apiUrl.hostname = appHostname;
-  }
-
-  return trimTrailingSlash(apiUrl.toString());
+  return DEFAULT_LOCAL_API_BASE_URL;
 };
 
 class ApiTransportError extends Error {
