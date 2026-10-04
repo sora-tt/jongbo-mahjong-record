@@ -16,7 +16,7 @@ import {
   getVerificationAction,
 } from "@/lib/auth/verification";
 
-const VerifyEmailPage: React.FC = () => {
+const VerifyEmailPageContent: React.FC = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [status, setStatus] = React.useState<
@@ -204,6 +204,27 @@ const VerifyEmailPage: React.FC = () => {
         ) : null}
       </section>
     </main>
+  );
+};
+
+const VerifyEmailPage: React.FC = () => {
+  return (
+    <React.Suspense
+      fallback={
+        <main className="flex min-h-screen items-center justify-center bg-background px-4 py-10 text-foreground">
+          <section className="w-full max-w-lg rounded-surface border border-border bg-white p-6 shadow-sm sm:p-8">
+            <h1 className="text-center text-2xl font-bold text-foreground">
+              認証を確認しています
+            </h1>
+            <div className="mt-6 space-y-4 text-sm text-text-muted">
+              <p>認証リンクの確認をしています。しばらくお待ちください。</p>
+            </div>
+          </section>
+        </main>
+      }
+    >
+      <VerifyEmailPageContent />
+    </React.Suspense>
   );
 };
 
