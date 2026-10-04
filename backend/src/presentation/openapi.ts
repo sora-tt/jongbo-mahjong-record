@@ -137,6 +137,38 @@ export const openApiDocument = {
         },
       },
     },
+    "/api/auth/verify-email": {
+      post: {
+        tags: ["Auth"],
+        summary: "confirm a verification action code",
+        requestBody: {
+          required: true,
+          content: jsonContent({
+            type: "object",
+            properties: {
+              oobCode: { type: "string" },
+            },
+            required: ["oobCode"],
+          }),
+        },
+        responses: {
+          "200": {
+            description: "verification confirmed",
+            content: jsonContent(
+              dataResponse({
+                type: "object",
+                properties: {
+                  verified: { type: "boolean" },
+                  email: { type: "string" },
+                  verifiedAt: { type: "string", format: "date-time" },
+                },
+                required: ["verified", "email", "verifiedAt"],
+              }),
+            ),
+          },
+        },
+      },
+    },
     "/api/users": {
       get: {
         tags: ["Users"],

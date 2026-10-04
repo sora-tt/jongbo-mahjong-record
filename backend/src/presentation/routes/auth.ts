@@ -37,12 +37,45 @@ type AuthRouterDependencies = {
   getAdminAuth?: typeof getAdminAuth;
 };
 
+type AuthWithActionCode = ReturnType<typeof getAdminAuth> & {
+  applyActionCode?: (oobCode: string) => Promise<{
+    data?: { email?: string | null };
+  }>;
+};
+
 export const buildAuthRouter = (
   dependencies: AuthRouterDependencies = { getAdminAuth },
 ) => {
   const resolveAdminAuth = dependencies.getAdminAuth ?? getAdminAuth;
 
-  return new Hono<AppBindings>()
+  const router = new Hono<AppBindings>().onError((error, c) => {
+    if (error instanceof AppError) {
+      return c.json(
+        {
+          error: {
+            code: error.code,
+            message: error.message,
+            details: error.details ?? {},
+          },
+        },
+        error.status as 400 | 401 | 403 | 404 | 409 | 500,
+      );
+    }
+
+    console.error(error);
+    return c.json(
+      {
+        error: {
+          code: "internal_error",
+          message: "internal server error",
+          details: {},
+        },
+      },
+      500,
+    );
+  });
+
+  return router
     .post("/session", async (c) => {
       const idToken = c.req.header("x-id-token")?.trim();
       if (!idToken) {
@@ -158,6 +191,78 @@ export const buildAuthRouter = (
           email: currentEmail,
           verificationUrl: emailVerificationLink,
           expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+        },
+        200,
+      );
+    })
+    .post("/verify-email", async (c) => {
+      const sessionCookie = getCookie(c, SESSION_COOKIE_NAME);
+      if (sessionCookie) {
+        try {
+          await withTimeout(
+            resolveAdminAuth().verifySessionCookie(sessionCookie, false),
+            8000,
+          );
+        } catch {
+          throw new UnauthorizedError("invalid authentication session");
+        }
+      }
+
+      let requestBody: Record<string, unknown> = {};
+      try {
+        requestBody = (await c.req.json()) as Record<string, unknown>;
+      } catch {
+        requestBody = {};
+      }
+
+      const queryCode = c.req.query("oobCode")?.trim();
+      const bodyCode =
+        typeof requestBody.oobCode === "string"
+          ? requestBody.oobCode.trim()
+          : undefined;
+      const oobCode = queryCode || bodyCode;
+
+      if (!oobCode) {
+        throw new ValidationError("oobCode is required");
+      }
+
+      const adminAuth = resolveAdminAuth() as AuthWithActionCode;
+      if (typeof adminAuth.applyActionCode !== "function") {
+        throw new AppError(
+          "email verification is not supported in this environment",
+          500,
+          "internal_error",
+          { oobCode },
+        );
+      }
+
+      let actionCodeResult: { data?: { email?: string | null } };
+      try {
+        actionCodeResult = await withTimeout(
+          adminAuth.applyActionCode(oobCode),
+          8000,
+        );
+      } catch {
+        throw new ValidationError("invalid or expired verification code", {
+          oobCode,
+        });
+      }
+
+      const verifiedEmail =
+        typeof actionCodeResult?.data?.email === "string"
+          ? actionCodeResult.data.email.trim()
+          : null;
+
+      if (!verifiedEmail) {
+        throw new ValidationError("verification code did not include an email");
+      }
+
+      return ok(
+        c,
+        {
+          verified: true,
+          email: verifiedEmail,
+          verifiedAt: new Date().toISOString(),
         },
         200,
       );

@@ -409,6 +409,81 @@ test("verification email route sends a link for an unverified user", async () =>
   );
 });
 
+test("verification confirmation route accepts a valid action code and marks the user as verified", async () => {
+  const mockAuth = {
+    verifySessionCookie: async () => ({
+      uid: "user-123",
+      email: "user@example.com",
+      email_verified: false,
+    }),
+    applyActionCode: async (oobCode: string) => {
+      assert.equal(oobCode, "test-oob-code");
+      return { data: { email: "user@example.com" } };
+    },
+    getUser: async () => ({
+      uid: "user-123",
+      email: "user@example.com",
+      emailVerified: false,
+    }),
+  };
+
+  const app = new Hono().route(
+    "/api/auth",
+    buildAuthRouter({ getAdminAuth: () => mockAuth as never }),
+  );
+
+  const response = await app.request("/api/auth/verify-email", {
+    method: "POST",
+    headers: {
+      Cookie: "jongbo_session=mock-session-cookie",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ oobCode: "test-oob-code" }),
+  });
+  const body = (await response.json()) as {
+    data: {
+      verified: boolean;
+      email: string;
+      verifiedAt: string;
+    };
+  };
+
+  assert.equal(response.status, 200);
+  assert.equal(body.data.verified, true);
+  assert.equal(body.data.email, "user@example.com");
+  assert.ok(!Number.isNaN(Date.parse(body.data.verifiedAt)));
+});
+
+test("verification confirmation route rejects missing action codes", async () => {
+  const mockAuth = {
+    verifySessionCookie: async () => ({
+      uid: "user-123",
+      email: "user@example.com",
+      email_verified: false,
+    }),
+  };
+
+  const app = new Hono().route(
+    "/api/auth",
+    buildAuthRouter({ getAdminAuth: () => mockAuth as never }),
+  );
+
+  const response = await app.request("/api/auth/verify-email", {
+    method: "POST",
+    headers: {
+      Cookie: "jongbo_session=mock-session-cookie",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({}),
+  });
+  const body = (await response.json()) as {
+    error: { code: string };
+  };
+
+  assert.equal(response.status, 400);
+  assert.equal(body.error.code, "validation_error");
+});
+
 test("CORS only allows configured origins and credentials", async () => {
   const app = createApp();
   const allowed = await app.request("/api/health", {
@@ -521,7 +596,9 @@ test("OpenAPI publishes the canonical auth and match request contracts", async (
   assert.deepEqual(
     document.components.schemas.LeagueRuleInput.oneOf?.map(({ $ref }) => $ref),
     [
-      "#/components/schemas/LeagueRule",
+      "#/components/schemas/FixedSanmaLeagueRuleInput",
+      "#/components/schemas/FixedYonmaLeagueRuleInput",
+      "#/components/schemas/FloatingCountYonmaLeagueRuleInput",
       "#/components/schemas/LegacyFixedSanmaLeagueRule",
       "#/components/schemas/LegacyFixedYonmaLeagueRule",
     ],
@@ -611,6 +688,8 @@ test("OpenAPI publishes the canonical auth and match request contracts", async (
       "/api/leagues/{leagueId}/seasons/{seasonId}/sessions/{sessionId}/matches/{matchId}"
     ].patch?.requestBody?.content?.["application/json"]?.schema;
   assert.deepEqual(Object.keys(matchPatchSchema?.properties ?? {}).sort(), [
+    "chomboEvents",
+    "offTableKyotakuCount",
     "playedAt",
     "results",
   ]);
