@@ -122,6 +122,43 @@ const clearVerificationEmailResendState = (uid?: string) => {
   verificationEmailResendState.delete(uid);
 };
 
+const normalizeAbsoluteOrigin = (value: string) => {
+  const trimmed = value.trim().replace(/\/+$/, "");
+  if (!trimmed) {
+    return "";
+  }
+
+  return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+};
+
+const getFrontendAppUrl = () => {
+  const configuredUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
+  if (configuredUrl) {
+    return configuredUrl.replace(/\/+$/, "");
+  }
+
+  const productionUrl = normalizeAbsoluteOrigin(
+    process.env.VERCEL_PROJECT_PRODUCTION_URL ?? "",
+  );
+  if (productionUrl) {
+    return productionUrl;
+  }
+
+  const vercelBranchUrl = normalizeAbsoluteOrigin(
+    process.env.VERCEL_BRANCH_URL ?? "",
+  );
+  if (vercelBranchUrl) {
+    return vercelBranchUrl;
+  }
+
+  const vercelUrl = normalizeAbsoluteOrigin(process.env.VERCEL_URL ?? "");
+  if (vercelUrl) {
+    return vercelUrl;
+  }
+
+  return "http://127.0.0.1:3000";
+};
+
 type AuthRouterDependencies = {
   getAdminAuth?: typeof getAdminAuth;
 };
@@ -256,7 +293,7 @@ export const buildAuthRouter = (
       const now = Date.now();
       assertVerificationEmailCanResend(uid, now);
 
-      const verificationUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? "http://127.0.0.1:3000"}/verify-email`;
+      const verificationUrl = `${getFrontendAppUrl()}/verify-email`;
 
       let emailVerificationLink: string;
       try {

@@ -409,6 +409,78 @@ test("verification email route sends a link for an unverified user", async () =>
   );
 });
 
+test("verification email route uses the production frontend URL from Vercel env vars", async () => {
+  const previousAppUrl = process.env.NEXT_PUBLIC_APP_URL;
+  const previousVercelProjectProductionUrl =
+    process.env.VERCEL_PROJECT_PRODUCTION_URL;
+  const previousVercelUrl = process.env.VERCEL_URL;
+
+  delete process.env.NEXT_PUBLIC_APP_URL;
+  process.env.VERCEL_PROJECT_PRODUCTION_URL =
+    "jongbo-mahjong-record.vercel.app";
+  delete process.env.VERCEL_URL;
+
+  try {
+    const mockAuth = {
+      verifySessionCookie: async () => ({
+        uid: "prod-user-123",
+        email: "prod@example.com",
+        email_verified: false,
+      }),
+      getUser: async () => ({
+        uid: "prod-user-123",
+        email: "prod@example.com",
+        emailVerified: false,
+      }),
+      generateEmailVerificationLink: async (
+        email: string,
+        options: { url: string },
+      ) =>
+        `${options.url}?mode=verify&oobCode=prod-code&email=${encodeURIComponent(email)}`,
+    };
+
+    const app = new Hono().route(
+      "/api/auth",
+      buildAuthRouter({ getAdminAuth: () => mockAuth as never }),
+    );
+
+    const response = await app.request("/api/auth/verification-email", {
+      method: "POST",
+      headers: {
+        Cookie: "jongbo_session=mock-session-cookie",
+      },
+    });
+    const body = (await response.json()) as {
+      data: { verificationUrl: string };
+    };
+
+    assert.equal(response.status, 200);
+    assert.match(
+      body.data.verificationUrl,
+      /^https:\/\/jongbo-mahjong-record\.vercel\.app\/verify-email\?mode=verify/,
+    );
+  } finally {
+    if (previousAppUrl === undefined) {
+      delete process.env.NEXT_PUBLIC_APP_URL;
+    } else {
+      process.env.NEXT_PUBLIC_APP_URL = previousAppUrl;
+    }
+
+    if (previousVercelProjectProductionUrl === undefined) {
+      delete process.env.VERCEL_PROJECT_PRODUCTION_URL;
+    } else {
+      process.env.VERCEL_PROJECT_PRODUCTION_URL =
+        previousVercelProjectProductionUrl;
+    }
+
+    if (previousVercelUrl === undefined) {
+      delete process.env.VERCEL_URL;
+    } else {
+      process.env.VERCEL_URL = previousVercelUrl;
+    }
+  }
+});
+
 test("verification confirmation route accepts a valid action code and marks the user as verified", async () => {
   const mockAuth = {
     verifySessionCookie: async () => ({
