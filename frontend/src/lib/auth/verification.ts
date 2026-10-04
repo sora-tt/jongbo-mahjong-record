@@ -7,9 +7,13 @@ export const getAuthRedirectTarget = (emailVerified: boolean) =>
   emailVerified ? "/" : "/verify-email";
 
 export const getVerificationAction = (search: string): VerificationAction => {
-  const params = new URLSearchParams(
-    search.startsWith("?") ? search.slice(1) : search
-  );
+  const source = search.startsWith("?")
+    ? search.slice(1)
+    : search.includes("://")
+      ? new URL(search).search.slice(1)
+      : search;
+
+  const params = new URLSearchParams(source);
 
   return {
     mode: params.get("mode") ?? "",

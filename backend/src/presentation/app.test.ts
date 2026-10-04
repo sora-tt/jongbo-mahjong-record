@@ -533,6 +533,101 @@ test("verification email route enforces resend cooldowns", async () => {
   assert.ok((secondBody.error.details.retryAfterSeconds ?? 0) > 0);
 });
 
+test("issue 84 acceptance: verification flow handles pending, rate-limited, and verified states", async () => {
+  const mockAuth = {
+    verifySessionCookie: async () => ({
+      uid: "issue84-acceptance-user",
+      email: "issue84@example.com",
+      email_verified: false,
+    }),
+    getUser: async () => ({
+      uid: "issue84-acceptance-user",
+      email: "issue84@example.com",
+      emailVerified: false,
+    }),
+    generateEmailVerificationLink: async () =>
+      "http://127.0.0.1:3000/verify-email?mode=verify&oobCode=valid-oob-code",
+    applyActionCode: async (oobCode: string) => {
+      if (oobCode !== "valid-oob-code") {
+        throw new Error("invalid verification code");
+      }
+      return { data: { email: "issue84@example.com" } };
+    },
+  };
+
+  const app = new Hono().route(
+    "/api/auth",
+    buildAuthRouter({ getAdminAuth: () => mockAuth as never }),
+  );
+
+  const sendResponse = await app.request("/api/auth/verification-email", {
+    method: "POST",
+    headers: {
+      Cookie: "jongbo_session=mock-session-cookie",
+    },
+  });
+  assert.equal(sendResponse.status, 200);
+
+  const rateLimitedResponse = await app.request(
+    "/api/auth/verification-email",
+    {
+      method: "POST",
+      headers: {
+        Cookie: "jongbo_session=mock-session-cookie",
+      },
+    },
+  );
+  const rateLimitedBody = (await rateLimitedResponse.json()) as {
+    error: { code: string; details: { retryAfterSeconds?: number } };
+  };
+  assert.equal(rateLimitedResponse.status, 429);
+  assert.equal(rateLimitedBody.error.code, "rate_limited");
+  assert.ok((rateLimitedBody.error.details.retryAfterSeconds ?? 0) > 0);
+
+  const missingCodeResponse = await app.request("/api/auth/verify-email", {
+    method: "POST",
+    headers: {
+      Cookie: "jongbo_session=mock-session-cookie",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({}),
+  });
+  const missingCodeBody = (await missingCodeResponse.json()) as {
+    error: { code: string };
+  };
+  assert.equal(missingCodeResponse.status, 400);
+  assert.equal(missingCodeBody.error.code, "validation_error");
+
+  const invalidCodeResponse = await app.request("/api/auth/verify-email", {
+    method: "POST",
+    headers: {
+      Cookie: "jongbo_session=mock-session-cookie",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ oobCode: "invalid-oob-code" }),
+  });
+  const invalidCodeBody = (await invalidCodeResponse.json()) as {
+    error: { code: string };
+  };
+  assert.equal(invalidCodeResponse.status, 400);
+  assert.equal(invalidCodeBody.error.code, "validation_error");
+
+  const validCodeResponse = await app.request("/api/auth/verify-email", {
+    method: "POST",
+    headers: {
+      Cookie: "jongbo_session=mock-session-cookie",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ oobCode: "valid-oob-code" }),
+  });
+  const validCodeBody = (await validCodeResponse.json()) as {
+    data: { verified: boolean; email: string };
+  };
+  assert.equal(validCodeResponse.status, 200);
+  assert.equal(validCodeBody.data.verified, true);
+  assert.equal(validCodeBody.data.email, "issue84@example.com");
+});
+
 test("CORS only allows configured origins and credentials", async () => {
   const app = createApp();
   const allowed = await app.request("/api/health", {
