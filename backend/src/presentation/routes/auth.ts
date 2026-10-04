@@ -37,6 +37,8 @@ const VERIFICATION_EMAIL_COOLDOWN_MS = 60_000;
 const VERIFICATION_EMAIL_MAX_ATTEMPTS_PER_DAY = 5;
 const VERIFICATION_EMAIL_WINDOW_MS = 24 * 60 * 60 * 1000;
 
+// This rate-limit state is intentionally kept in memory and resets when a server
+// instance restarts, which is expected in serverless deployments.
 const verificationEmailResendState = new Map<
   string,
   { count: number; lastSentAt: number; windowStartedAt: number }
@@ -131,27 +133,53 @@ const normalizeAbsoluteOrigin = (value: string) => {
   return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
 };
 
-const getFrontendAppUrl = () => {
-  const configuredUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
-  if (configuredUrl) {
-    return configuredUrl.replace(/\/+$/, "");
+const getPreferredFrontendUrl = (value?: string) => {
+  const normalized = normalizeAbsoluteOrigin(value ?? "");
+  if (!normalized) {
+    return "";
   }
 
-  const productionUrl = normalizeAbsoluteOrigin(
-    process.env.VERCEL_PROJECT_PRODUCTION_URL ?? "",
+  try {
+    const { hostname } = new URL(normalized);
+    const isLoopbackHost =
+      hostname === "localhost" ||
+      hostname === "0.0.0.0" ||
+      hostname === "[::1]" ||
+      /^127(?:\.\d{1,3}){3}$/.test(hostname);
+
+    if (isLoopbackHost) {
+      return "";
+    }
+  } catch {
+    return "";
+  }
+
+  return normalized;
+};
+
+const getFrontendAppUrl = () => {
+  const configuredUrl = getPreferredFrontendUrl(
+    process.env.NEXT_PUBLIC_APP_URL,
+  );
+  if (configuredUrl) {
+    return configuredUrl;
+  }
+
+  const productionUrl = getPreferredFrontendUrl(
+    process.env.VERCEL_PROJECT_PRODUCTION_URL,
   );
   if (productionUrl) {
     return productionUrl;
   }
 
-  const vercelBranchUrl = normalizeAbsoluteOrigin(
-    process.env.VERCEL_BRANCH_URL ?? "",
+  const vercelBranchUrl = getPreferredFrontendUrl(
+    process.env.VERCEL_BRANCH_URL,
   );
   if (vercelBranchUrl) {
     return vercelBranchUrl;
   }
 
-  const vercelUrl = normalizeAbsoluteOrigin(process.env.VERCEL_URL ?? "");
+  const vercelUrl = getPreferredFrontendUrl(process.env.VERCEL_URL);
   if (vercelUrl) {
     return vercelUrl;
   }
