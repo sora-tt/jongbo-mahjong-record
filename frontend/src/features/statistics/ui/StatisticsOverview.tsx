@@ -151,7 +151,6 @@ const FormatSummaryCard: React.FC<{ format: FormatSummary }> = ({ format }) => {
           description={denominatorDescription}
         />
       </div>
-      <RankDistribution format={format} />
     </section>
   );
 };
@@ -265,6 +264,10 @@ export const StatisticsOverview: React.FC<Props> = ({ summary }) => {
           description="対象条件に該当する対局結果が登録されていません。"
         />
       )}
+
+      {overview.formatDetails.map((format) => (
+        <RankDistribution key={format.gameType} format={format} />
+      ))}
 
       <section aria-label="その他の基本成績" className="space-y-3">
         <h3 className="font-semibold text-foreground">その他の基本成績</h3>
