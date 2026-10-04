@@ -35,6 +35,10 @@ export const loginToApp = async (input: {
   const idToken = await credential.user.getIdToken();
   await createSession(idToken);
 
+  if (!credential.user.emailVerified) {
+    return "/verify-email" as const;
+  }
+
   // Do not block redirect on profile sync. Home page has a repair path.
   void (async () => {
     try {
@@ -57,7 +61,7 @@ export const loginToApp = async (input: {
     }
   })();
 
-  return null;
+  return "/" as const;
 };
 
 export const signupToApp = async (input: {
@@ -86,7 +90,7 @@ export const signupToApp = async (input: {
     }
   })();
 
-  return null;
+  return "/verify-email" as const;
 };
 
 export const logoutFromApp = async () => {

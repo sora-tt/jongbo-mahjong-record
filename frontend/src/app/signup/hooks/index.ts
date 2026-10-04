@@ -28,13 +28,13 @@ export const useSignupPage = () => {
     setIsSubmitting(true);
 
     try {
-      await signupToApp({
+      const nextPath = await signupToApp({
         email,
         password,
         name,
         username,
       });
-      router.replace("/");
+      router.replace(nextPath);
     } catch (submitError) {
       setError(
         submitError instanceof Error

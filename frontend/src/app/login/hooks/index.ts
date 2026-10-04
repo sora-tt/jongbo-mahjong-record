@@ -18,8 +18,8 @@ export const useLoginPage = () => {
     setIsSubmitting(true);
 
     try {
-      await loginToApp({ email, password });
-      router.replace("/");
+      const nextPath = await loginToApp({ email, password });
+      router.replace(nextPath);
     } catch (submitError) {
       setError(
         submitError instanceof Error
