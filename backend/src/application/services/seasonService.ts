@@ -8,6 +8,7 @@ import type {
 import {
   AppError,
   ConflictError,
+  NotFoundError,
   ValidationError,
 } from "@/domain/shared/errors.js";
 import { asOpaqueId } from "@/domain/shared/types.js";
@@ -49,8 +50,12 @@ export class SeasonService {
   }
 
   async listSeasonMembers(userId: string, leagueId: string, seasonId: string) {
-    await this.assertSeasonMembership(userId, leagueId, seasonId);
-    return this.seasonRepository.listMembers(leagueId, seasonId);
+    await this.assertLeagueMembership(userId, leagueId);
+    const members = await this.seasonRepository.listMembers(leagueId, seasonId);
+    if (!members.some((member) => member.userId === userId)) {
+      throw new AppError("forbidden", 403, "forbidden", { leagueId, seasonId });
+    }
+    return members;
   }
 
   async createSeason(
@@ -122,8 +127,15 @@ export class SeasonService {
   }
 
   private async assertLeagueMembership(userId: string, leagueId: string) {
-    const members = await this.leagueRepository.listMembers(leagueId);
-    if (!members.some((member) => member.userId === userId)) {
+    const isMember = await this.leagueRepository.areMembers(
+      leagueId,
+      userId,
+      userId,
+    );
+    if (!isMember) {
+      if (!(await this.leagueRepository.exists(leagueId))) {
+        throw new NotFoundError("league not found", { leagueId });
+      }
       throw new AppError("forbidden", 403, "forbidden", { leagueId });
     }
   }
@@ -134,8 +146,16 @@ export class SeasonService {
     seasonId: string,
   ) {
     await this.assertLeagueMembership(userId, leagueId);
-    const members = await this.seasonRepository.listMembers(leagueId, seasonId);
-    if (!members.some((member) => member.userId === userId)) {
+    const isMember = await this.seasonRepository.areMembers(
+      leagueId,
+      seasonId,
+      userId,
+      userId,
+    );
+    if (!isMember) {
+      if (!(await this.seasonRepository.exists(leagueId, seasonId))) {
+        throw new NotFoundError("season not found", { leagueId, seasonId });
+      }
       throw new AppError("forbidden", 403, "forbidden", { leagueId, seasonId });
     }
   }

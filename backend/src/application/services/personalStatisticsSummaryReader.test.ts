@@ -184,21 +184,15 @@ const makeReaderFixture = (
     },
   } as unknown as UserMatchStatisticsRepository;
   const leagueRepository = {
-    get: async () => {
+    exists: async () => {
       events.push("league");
-      if (options.missingLeague) {
-        throw new NotFoundError("league not found", { leagueId });
-      }
-      return {};
+      return !options.missingLeague;
     },
   } as unknown as LeagueRepository;
   const seasonRepository = {
-    get: async () => {
+    exists: async () => {
       events.push("season");
-      if (options.missingSeason) {
-        throw new NotFoundError("season not found", { leagueId, seasonId });
-      }
-      return {};
+      return !options.missingSeason;
     },
   } as unknown as SeasonRepository;
 
@@ -397,10 +391,6 @@ test("missing league or season for another target returns 404 before stats and p
       events.push("leagueExists");
       return false;
     },
-    get: async () => {
-      events.push("leagueGet");
-      throw new NotFoundError("league not found", { leagueId });
-    },
   } as unknown as LeagueRepository;
   const seasonRepository = {
     areMembers: async () => {
@@ -410,10 +400,6 @@ test("missing league or season for another target returns 404 before stats and p
     exists: async () => {
       events.push("seasonExists");
       return false;
-    },
-    get: async () => {
-      events.push("seasonGet");
-      throw new NotFoundError("season not found", { leagueId, seasonId });
     },
   } as unknown as SeasonRepository;
   const userStatsRepository = {

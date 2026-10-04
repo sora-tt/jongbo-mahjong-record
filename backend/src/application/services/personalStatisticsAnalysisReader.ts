@@ -22,6 +22,7 @@ import {
 } from "@/domain/statistics/temporal-aggregation.js";
 import { StatisticsTargetAccessService } from "@/application/services/statisticsTargetAccessService.js";
 import type { UserStatsRepository } from "@/domain/user/repository.js";
+import { NotFoundError } from "@/domain/shared/errors.js";
 
 const TIME_ZONE = "Asia/Tokyo" as const;
 const DEFAULT_BREAKDOWN_PAGE_SIZE = 20;
@@ -305,8 +306,8 @@ export class PersonalStatisticsAnalysisReader {
       UserMatchStatisticsRepository,
       "listForScope"
     >,
-    private readonly leagueRepository: Pick<LeagueRepository, "get">,
-    private readonly seasonRepository: Pick<SeasonRepository, "get">,
+    private readonly leagueRepository: Pick<LeagueRepository, "exists">,
+    private readonly seasonRepository: Pick<SeasonRepository, "exists">,
   ) {}
 
   async getAnalysis(
@@ -395,9 +396,20 @@ export class PersonalStatisticsAnalysisReader {
     query: StatisticsAnalysisQuery,
   ): Promise<void> {
     if (query.scopeType === "league") {
-      await this.leagueRepository.get(query.leagueId);
+      if (!(await this.leagueRepository.exists(query.leagueId))) {
+        throw new NotFoundError("league not found", {
+          leagueId: query.leagueId,
+        });
+      }
     } else if (query.scopeType === "season") {
-      await this.seasonRepository.get(query.leagueId, query.seasonId);
+      if (
+        !(await this.seasonRepository.exists(query.leagueId, query.seasonId))
+      ) {
+        throw new NotFoundError("season not found", {
+          leagueId: query.leagueId,
+          seasonId: query.seasonId,
+        });
+      }
     }
   }
 }

@@ -120,17 +120,15 @@ const makeFixture = (
     },
   };
   const leagueRepository = {
-    get: async () => {
+    exists: async () => {
       events.push("league");
-      if (options.missingLeague) throw new NotFoundError("league not found");
-      return {};
+      return !options.missingLeague;
     },
   };
   const seasonRepository = {
-    get: async () => {
+    exists: async () => {
       events.push("season");
-      if (options.missingSeason) throw new NotFoundError("season not found");
-      return {};
+      return !options.missingSeason;
     },
   };
   const reader = new PersonalStatisticsMatchHistoryReader(
@@ -146,8 +144,8 @@ const makeFixture = (
       UserMatchStatisticsRepository,
       "listPage"
     >,
-    leagueRepository as unknown as Pick<LeagueRepository, "get">,
-    seasonRepository as unknown as Pick<SeasonRepository, "get">,
+    leagueRepository as unknown as Pick<LeagueRepository, "exists">,
+    seasonRepository as unknown as Pick<SeasonRepository, "exists">,
   );
   return {
     reader,

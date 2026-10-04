@@ -288,7 +288,7 @@
   - _Requirements: 5.5, 8.1, 8.3_
   - _Boundary: Projection Repository and Lifecycle Tests_
 
-- [ ] 5.3 API validation・response・target access testsを追加する
+- [x] 5.3 API validation・response・target access testsを追加する
   - scope/date/dimension/pageの不正値、404、uncomputed/empty/ready、共通ErrorEnvelopeを検証する。
   - 同scopeのviewer/targetを許可し、overall他人とscope外targetを403で拒否する。
   - access拒否時にUserStats/projection repositoryが呼び出されないことを確認する。
@@ -296,7 +296,7 @@
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 8.3, 9.1, 9.2, 9.8, 10.1, 10.2_
   - _Boundary: Statistics Service and Route Contract Tests_
 
-- [ ] 5.4 frontend request flow・accessibility・responsive表示を検証する
+- [x] 5.4 frontend request flow・accessibility・responsive表示を検証する
   - 初回summary、analysis/historyのlazy load、scope roster cache、target変更時のfilter維持と古い結果破棄を確認する。
   - selectorの失敗時に本人表示と再試行が使え、scope外へ移動したtargetが本人へ戻る。
   - 320px、keyboard操作、chartの表/text代替、tabsの読み上げ、指標名と値を既存frontend build/dev環境で確認する。
@@ -304,7 +304,7 @@
   - _Requirements: 1.2, 1.4, 2.1, 8.4, 9.1, 9.2, 9.3, 9.4, 9.5, 9.6, 9.7, 10.1, 10.2, 10.3_
   - _Boundary: Statistics Frontend Contract and Accessibility Tests_
 
-- [ ] 5.5 read数・response bytes・p95を経路別に測定する
+- [x] 5.5 read数・response bytes・p95を経路別に測定する
   - self fixed summary、他人のsummaryとmembership read、任意期間/analysis、history、初回roster fetchを同じ再現データで比較する。
   - Firestore document read数、response bytes、p95を別々に記録し、固定scope snapshotとprojection scanの負荷を区別する。
   - 数値SLOは新設せず、測定結果を性能判断に使える形で残す。

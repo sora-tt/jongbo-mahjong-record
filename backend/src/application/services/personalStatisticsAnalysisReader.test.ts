@@ -142,21 +142,15 @@ const makeFixture = (
     },
   } as unknown as UserMatchStatisticsRepository;
   const leagueRepository = {
-    get: async () => {
+    exists: async () => {
       events.push("league");
-      if (options.missingLeague) {
-        throw new NotFoundError("league not found", { leagueId });
-      }
-      return {};
+      return !options.missingLeague;
     },
   } as unknown as LeagueRepository;
   const seasonRepository = {
-    get: async () => {
+    exists: async () => {
       events.push("season");
-      if (options.missingSeason) {
-        throw new NotFoundError("season not found", { leagueId, seasonId });
-      }
-      return {};
+      return !options.missingSeason;
     },
   } as unknown as SeasonRepository;
 

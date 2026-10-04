@@ -9,6 +9,7 @@ import type {
 import type { IsoDateString } from "@/domain/shared/types.js";
 import { StatisticsTargetAccessService } from "@/application/services/statisticsTargetAccessService.js";
 import type { UserStatsRepository } from "@/domain/user/repository.js";
+import { NotFoundError } from "@/domain/shared/errors.js";
 
 const TIME_ZONE = "Asia/Tokyo" as const;
 const DEFAULT_HISTORY_PAGE_SIZE = 50;
@@ -123,8 +124,8 @@ export class PersonalStatisticsMatchHistoryReader {
       UserMatchStatisticsRepository,
       "listPage"
     >,
-    private readonly leagueRepository: Pick<LeagueRepository, "get">,
-    private readonly seasonRepository: Pick<SeasonRepository, "get">,
+    private readonly leagueRepository: Pick<LeagueRepository, "exists">,
+    private readonly seasonRepository: Pick<SeasonRepository, "exists">,
   ) {}
 
   async getMatchHistory(
@@ -163,9 +164,20 @@ export class PersonalStatisticsMatchHistoryReader {
     query: StatisticsMatchHistoryQuery,
   ): Promise<void> {
     if (query.scopeType === "league") {
-      await this.leagueRepository.get(query.leagueId);
+      if (!(await this.leagueRepository.exists(query.leagueId))) {
+        throw new NotFoundError("league not found", {
+          leagueId: query.leagueId,
+        });
+      }
     } else if (query.scopeType === "season") {
-      await this.seasonRepository.get(query.leagueId, query.seasonId);
+      if (
+        !(await this.seasonRepository.exists(query.leagueId, query.seasonId))
+      ) {
+        throw new NotFoundError("season not found", {
+          leagueId: query.leagueId,
+          seasonId: query.seasonId,
+        });
+      }
     }
   }
 }

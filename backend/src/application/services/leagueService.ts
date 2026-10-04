@@ -3,7 +3,11 @@ import type {
   LeagueRepository,
   UpdateLeagueInput,
 } from "@/domain/league/repository.js";
-import { AppError, ValidationError } from "@/domain/shared/errors.js";
+import {
+  AppError,
+  NotFoundError,
+  ValidationError,
+} from "@/domain/shared/errors.js";
 import { validateLeagueRule } from "@/domain/league/rule.js";
 import type { UserRepository } from "@/domain/user/repository.js";
 import type { StatsRebuilder } from "@/application/services/statsRebuilder.js";
@@ -80,8 +84,15 @@ export class LeagueService {
   }
 
   async assertLeagueMembership(userId: string, leagueId: string) {
-    const members = await this.leagueRepository.listMembers(leagueId);
-    if (!members.some((member) => member.userId === userId)) {
+    const isMember = await this.leagueRepository.areMembers(
+      leagueId,
+      userId,
+      userId,
+    );
+    if (!isMember) {
+      if (!(await this.leagueRepository.exists(leagueId))) {
+        throw new NotFoundError("league not found", { leagueId });
+      }
       throw new AppError("forbidden", 403, "forbidden", { leagueId });
     }
   }

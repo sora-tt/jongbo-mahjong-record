@@ -18,6 +18,7 @@
     "repair:stats:emulator": "USE_FIRESTORE_EMULATOR=true FIRESTORE_EMULATOR_HOST=127.0.0.1:8081 FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099 GOOGLE_CLOUD_PROJECT=jongbo-local tsx src/scripts/rebuildStats.ts",
     "emulator": "NODE_NO_WARNINGS=1 firebase emulators:start --project jongbo-local",
     "dev:emulator": "USE_FIRESTORE_EMULATOR=true FIRESTORE_EMULATOR_HOST=127.0.0.1:8081 FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099 GOOGLE_CLOUD_PROJECT=jongbo-local tsx watch src/presentation/server.ts",
+    "measure:stats:emulator": "USE_FIRESTORE_EMULATOR=true FIRESTORE_EMULATOR_HOST=127.0.0.1:8081 GOOGLE_CLOUD_PROJECT=jongbo-local tsx src/scripts/measurePersonalStatisticsPerformance.ts",
     "seed": "USE_FIRESTORE_EMULATOR=true FIRESTORE_EMULATOR_HOST=127.0.0.1:8081 FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099 GOOGLE_CLOUD_PROJECT=jongbo-local tsx src/scripts/seedFirestore.ts"
   },
   "dependencies": {
