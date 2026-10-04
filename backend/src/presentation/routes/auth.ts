@@ -33,6 +33,95 @@ const withTimeout = async <T>(promise: Promise<T>, ms: number): Promise<T> => {
   }
 };
 
+const VERIFICATION_EMAIL_COOLDOWN_MS = 60_000;
+const VERIFICATION_EMAIL_MAX_ATTEMPTS_PER_DAY = 5;
+const VERIFICATION_EMAIL_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+const verificationEmailResendState = new Map<
+  string,
+  { count: number; lastSentAt: number; windowStartedAt: number }
+>();
+
+const getVerificationResendRetryAfterSeconds = (
+  uid: string,
+  now: number,
+): number => {
+  const state = verificationEmailResendState.get(uid);
+  if (!state) {
+    return 0;
+  }
+
+  const cooldownRemaining =
+    VERIFICATION_EMAIL_COOLDOWN_MS - (now - state.lastSentAt);
+  if (cooldownRemaining > 0) {
+    return Math.ceil(cooldownRemaining / 1000);
+  }
+
+  const windowRemaining =
+    VERIFICATION_EMAIL_WINDOW_MS - (now - state.windowStartedAt);
+  return Math.max(1, Math.ceil(windowRemaining / 1000));
+};
+
+const assertVerificationEmailCanResend = (uid: string, now = Date.now()) => {
+  const state = verificationEmailResendState.get(uid);
+  if (!state) {
+    return;
+  }
+
+  const isWithinCooldown =
+    now - state.lastSentAt < VERIFICATION_EMAIL_COOLDOWN_MS;
+  const isWithinWindow =
+    now - state.windowStartedAt < VERIFICATION_EMAIL_WINDOW_MS;
+
+  if (isWithinCooldown) {
+    throw new AppError(
+      "verification email was sent too recently",
+      429,
+      "rate_limited",
+      {
+        uid,
+        retryAfterSeconds: getVerificationResendRetryAfterSeconds(uid, now),
+      },
+    );
+  }
+
+  if (
+    isWithinWindow &&
+    state.count >= VERIFICATION_EMAIL_MAX_ATTEMPTS_PER_DAY
+  ) {
+    throw new AppError(
+      "verification email resend limit exceeded",
+      429,
+      "rate_limited",
+      {
+        uid,
+        retryAfterSeconds: getVerificationResendRetryAfterSeconds(uid, now),
+      },
+    );
+  }
+};
+
+const recordVerificationEmailResend = (uid: string, now = Date.now()) => {
+  const previous = verificationEmailResendState.get(uid);
+  const isSameWindow =
+    previous !== undefined &&
+    now - previous.windowStartedAt < VERIFICATION_EMAIL_WINDOW_MS;
+
+  verificationEmailResendState.set(uid, {
+    count: previous && isSameWindow ? previous.count + 1 : 1,
+    lastSentAt: now,
+    windowStartedAt: previous && isSameWindow ? previous.windowStartedAt : now,
+  });
+};
+
+const clearVerificationEmailResendState = (uid?: string) => {
+  if (!uid) {
+    return;
+  }
+
+  verificationEmailResendState.delete(uid);
+};
+
 type AuthRouterDependencies = {
   getAdminAuth?: typeof getAdminAuth;
 };
@@ -164,6 +253,9 @@ export const buildAuthRouter = (
         });
       }
 
+      const now = Date.now();
+      assertVerificationEmailCanResend(uid, now);
+
       const verificationUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? "http://127.0.0.1:3000"}/verify-email`;
 
       let emailVerificationLink: string;
@@ -184,22 +276,26 @@ export const buildAuthRouter = (
         );
       }
 
+      recordVerificationEmailResend(uid, now);
+
       return ok(
         c,
         {
           sent: true,
           email: currentEmail,
           verificationUrl: emailVerificationLink,
-          expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+          retryAfterSeconds: Math.ceil(VERIFICATION_EMAIL_COOLDOWN_MS / 1000),
+          expiresAt: new Date(now + 30 * 60 * 1000).toISOString(),
         },
         200,
       );
     })
     .post("/verify-email", async (c) => {
       const sessionCookie = getCookie(c, SESSION_COOKIE_NAME);
+      let sessionUser: { uid: string } | null = null;
       if (sessionCookie) {
         try {
-          await withTimeout(
+          sessionUser = await withTimeout(
             resolveAdminAuth().verifySessionCookie(sessionCookie, false),
             8000,
           );
@@ -256,6 +352,8 @@ export const buildAuthRouter = (
       if (!verifiedEmail) {
         throw new ValidationError("verification code did not include an email");
       }
+
+      clearVerificationEmailResendState(sessionUser?.uid);
 
       return ok(
         c,
