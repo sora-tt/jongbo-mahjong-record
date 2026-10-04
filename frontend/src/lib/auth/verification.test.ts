@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { getApiBaseUrl } from "@/lib/api/core";
 import {
   getAuthRedirectTarget,
   getVerificationAction,
@@ -24,6 +25,58 @@ test("parses verification action and retry text from query params", () => {
   });
 
   assert.equal(getRetryMessage(90), "90秒後に再送信できます");
+});
+
+test("prefers the configured API base URL in production", () => {
+  const previousWindow = (
+    globalThis as typeof globalThis & {
+      window?: { location: { origin: string; hostname: string } };
+    }
+  ).window;
+  const previousEnvDescriptor = Object.getOwnPropertyDescriptor(process, "env");
+
+  Object.defineProperty(process, "env", {
+    value: {
+      ...process.env,
+      NEXT_PUBLIC_API_BASE_URL: "https://api.example.com",
+      NODE_ENV: "production",
+    },
+    configurable: true,
+    enumerable: true,
+    writable: true,
+  });
+
+  Object.defineProperty(globalThis, "window", {
+    value: {
+      location: {
+        origin: "https://app.example.com",
+        hostname: "app.example.com",
+      },
+    },
+    configurable: true,
+  });
+
+  try {
+    assert.equal(getApiBaseUrl(), "https://api.example.com");
+  } finally {
+    if (previousEnvDescriptor) {
+      Object.defineProperty(process, "env", previousEnvDescriptor);
+    } else {
+      delete (process as { env?: unknown }).env;
+    }
+
+    if (previousWindow === undefined) {
+      Object.defineProperty(globalThis, "window", {
+        value: undefined,
+        configurable: true,
+      });
+    } else {
+      Object.defineProperty(globalThis, "window", {
+        value: previousWindow,
+        configurable: true,
+      });
+    }
+  }
 });
 
 test("issue 84 acceptance: verified and unverified state transitions are consistent", () => {
