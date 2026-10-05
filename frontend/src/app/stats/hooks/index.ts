@@ -1,7 +1,9 @@
 import * as React from "react";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
+import { fetchLeagueDetail, fetchLeagues } from "@/features/league/api";
+import { toLeagueSummary } from "@/features/league/model/adapter";
 import {
   getCurrentUser,
   getPersonalStatisticsAnalysis,
@@ -20,6 +22,11 @@ import {
   toUserStats,
 } from "@/features/statistics/model/adapter";
 import { mergeStatisticsAnalysisPages } from "@/features/statistics/model/page";
+import {
+  buildStatisticsHref,
+  parseStatisticsRouteContext,
+  type StatisticsRouteContext,
+} from "@/features/statistics/model/page";
 import {
   createStatisticsQueryCache,
   createStatisticsQueryKey,
@@ -57,6 +64,8 @@ type StatisticsHookApi = {
   listJoiningSeasons: typeof listJoiningSeasons;
   listStatisticsLeagueMembers: typeof listStatisticsLeagueMembers;
   listStatisticsSeasonMembers: typeof listStatisticsSeasonMembers;
+  getLeagueDetail?: typeof fetchLeagueDetail;
+  listLeagues?: typeof fetchLeagues;
 };
 
 const defaultStatisticsHookApi: StatisticsHookApi = {
@@ -68,6 +77,8 @@ const defaultStatisticsHookApi: StatisticsHookApi = {
   listJoiningSeasons,
   listStatisticsLeagueMembers,
   listStatisticsSeasonMembers,
+  getLeagueDetail: fetchLeagueDetail,
+  listLeagues: fetchLeagues,
 };
 
 export type StatsStatus =
@@ -98,6 +109,14 @@ type MembersState = {
   key: string | null;
   status: "idle" | "loading" | "ready" | "error";
   data: StatisticsMemberOption[];
+  error: string | null;
+};
+type AnalysisViewData = ReturnType<typeof toPersonalStatisticsAnalysisView>;
+type SupplementalAnalysisDimension = "seat";
+type SupplementalAnalysisState = {
+  key: string | null;
+  status: "idle" | "loading" | "ready" | "error";
+  data: Partial<Record<SupplementalAnalysisDimension, AnalysisViewData>>;
   error: string | null;
 };
 
@@ -146,10 +165,18 @@ const loadScopeMembers = async (
 
 export const createUseStatistics = (
   api: StatisticsHookApi = defaultStatisticsHookApi,
-  useRouterHook: typeof useRouter = useRouter
+  useRouterHook: typeof useRouter = useRouter,
+  useSearchParamsHook: typeof useSearchParams = useSearchParams
 ) => {
   const useStatistics = () => {
     const router = useRouterHook();
+    const searchParams = useSearchParamsHook();
+    const routeSearch =
+      searchParams?.toString() ??
+      (typeof window === "undefined" ? "" : window.location.search);
+    const normalizedRouteSearch = routeSearch.startsWith("?")
+      ? routeSearch.slice(1)
+      : routeSearch;
     const queryCache = React.useRef(createStatisticsQueryCache());
     const [viewerUserId, setViewerUserId] = React.useState("");
     const [userId, setUserId] = React.useState("");
@@ -157,6 +184,21 @@ export const createUseStatistics = (
     const [joiningLeagueSeasons, setJoiningLeagueSeasons] = React.useState<
       JoiningSeasonOption[]
     >([]);
+    const [joiningLeagues, setJoiningLeagues] = React.useState<
+      Array<ReturnType<typeof toLeagueSummary>>
+    >([]);
+    const [hubDataStatus, setHubDataStatus] = React.useState<
+      "loading" | "ready" | "error"
+    >("loading");
+    const [routeContext, setRouteContext] =
+      React.useState<StatisticsRouteContext>({
+        isContextMode: false,
+        scope: { scopeType: "overall", gameType: "all" },
+        targetUserId: null,
+        activeView: "overview",
+        scopeLabel: "",
+        returnTo: null,
+      });
     const [selectedLeagueSeasonId, setSelectedLeagueSeasonId] =
       React.useState("");
     const [selectedStats, setSelectedStats] = React.useState<ReturnType<
@@ -185,6 +227,13 @@ export const createUseStatistics = (
       React.useState<
         QueryState<ReturnType<typeof toPersonalStatisticsAnalysisView>>
       >(initialQueryState);
+    const [supplementalAnalysisState, setSupplementalAnalysisState] =
+      React.useState<SupplementalAnalysisState>({
+        key: null,
+        status: "idle",
+        data: {},
+        error: null,
+      });
     const [historyState, setHistoryState] =
       React.useState<
         QueryState<ReturnType<typeof toStatisticsMatchHistoryView>>
@@ -203,13 +252,19 @@ export const createUseStatistics = (
       data: [],
       error: null,
     });
+    const [startingPointsByLeagueId, setStartingPointsByLeagueId] =
+      React.useState<Record<string, number>>({});
     const [summaryRetryCount, setSummaryRetryCount] = React.useState(0);
     const [analysisRetryCount, setAnalysisRetryCount] = React.useState(0);
     const [historyRetryCount, setHistoryRetryCount] = React.useState(0);
     const [membersRetryCount, setMembersRetryCount] = React.useState(0);
+    const startingPointRequests = React.useRef(
+      new Map<string, Promise<number | null>>()
+    );
     const summaryRequestKeyRef = React.useRef("");
     const analysisRequestKeyRef = React.useRef("");
     const analysisRequestId = React.useRef(0);
+    const supplementalAnalysisKeyRef = React.useRef("");
     const analysisLoadingLifecycle = React.useRef(
       createHistoryLoadingLifecycle()
     );
@@ -220,7 +275,29 @@ export const createUseStatistics = (
     );
     const statsRequestId = React.useRef(0);
     const selectionRef = React.useRef(selection);
+    const localNavigationSearchRef = React.useRef<string | null>(null);
     selectionRef.current = selection;
+
+    const syncRoute = React.useCallback(
+      (nextSelection: StatisticsSelection) => {
+        if (!routeContext.isContextMode) return;
+        const href = buildStatisticsHref({
+          scope: nextSelection.scope,
+          targetUserId: nextSelection.targetUserId,
+          activeView: nextSelection.activeView,
+          scopeLabel: routeContext.scopeLabel,
+          returnTo: routeContext.returnTo,
+        });
+        const nextSearch = href.split("?")[1] ?? "";
+        if (nextSearch === normalizedRouteSearch) {
+          localNavigationSearchRef.current = null;
+          return;
+        }
+        localNavigationSearchRef.current = nextSearch;
+        router.replace(href, { scroll: false });
+      },
+      [normalizedRouteSearch, routeContext, router]
+    );
 
     const scopeKey = createStatisticsScopeKey(selection.scope);
     const canLoadCurrentTarget = canLoadStatisticsTarget(selection, scopeKey, {
@@ -236,6 +313,21 @@ export const createUseStatistics = (
       ...selection,
       view: "analysis",
     });
+    const supplementalDimensions = React.useMemo<
+      SupplementalAnalysisDimension[]
+    >(
+      () => (selection.activeView === "comparisons" ? ["seat"] : []),
+      [selection.activeView]
+    );
+    const supplementalAnalysisKey = JSON.stringify([
+      selection.viewerUserId,
+      selection.targetUserId,
+      scopeKey,
+      selection.scope.from ?? "",
+      selection.scope.to ?? "",
+      selection.scope.gameType,
+      ...supplementalDimensions,
+    ]);
     const historyBaseQueryKey = createStatisticsQueryKey({
       ...selection,
       view: "history",
@@ -250,16 +342,27 @@ export const createUseStatistics = (
     summaryRequestKeyRef.current = summaryQueryKey;
     analysisRequestKeyRef.current = analysisQueryKey;
     historyBaseKeyRef.current = historyBaseQueryKey;
+    supplementalAnalysisKeyRef.current = supplementalAnalysisKey;
 
     React.useEffect(() => {
       let isActive = true;
 
       const load = async () => {
+        if (localNavigationSearchRef.current === normalizedRouteSearch) {
+          localNavigationSearchRef.current = null;
+          return;
+        }
+        const requestedRoute = parseStatisticsRouteContext(
+          normalizedRouteSearch
+        );
+        setRouteContext(requestedRoute);
         setIsLoading(true);
         setInitialError(null);
         setUserId("");
         setUserName("");
         setJoiningLeagueSeasons([]);
+        setJoiningLeagues([]);
+        setHubDataStatus("loading");
         setSelectedLeagueSeasonId("");
         setSelectedStats(null);
         setStatsError(null);
@@ -271,21 +374,60 @@ export const createUseStatistics = (
           if (!isActive) return;
 
           const id = String(me.id);
+          const requestedTargetUserId =
+            requestedRoute.scope.scopeType === "overall"
+              ? id
+              : (requestedRoute.targetUserId ?? id);
+          const normalizedRoute = {
+            ...requestedRoute,
+            targetUserId: requestedTargetUserId,
+          };
           setViewerUserId(id);
           setUserId(id);
           setUserName(me.name);
+          setRouteContext(normalizedRoute);
           setSelection((current) => ({
             ...current,
             viewerUserId: id,
-            targetUserId: id,
+            targetUserId: requestedTargetUserId,
+            scope: requestedRoute.scope,
+            activeView: requestedRoute.activeView,
+            dimension:
+              requestedRoute.activeView === "comparisons"
+                ? "opponent"
+                : "period",
+            groupBy:
+              requestedRoute.activeView === "trend" ? "month" : current.groupBy,
           }));
 
-          void api
-            .listJoiningSeasons(id)
-            .then((seasons) => {
-              if (!isActive) return;
+          if (
+            requestedRoute.isContextMode &&
+            requestedRoute.scope.scopeType === "overall" &&
+            requestedRoute.targetUserId &&
+            requestedRoute.targetUserId !== id
+          ) {
+            const href = buildStatisticsHref({
+              scope: requestedRoute.scope,
+              targetUserId: id,
+              activeView: requestedRoute.activeView,
+              scopeLabel: requestedRoute.scopeLabel,
+              returnTo: requestedRoute.returnTo,
+            });
+            localNavigationSearchRef.current = href.split("?")[1] ?? "";
+            router.replace(href, { scroll: false });
+          }
+
+          if (requestedRoute.isContextMode) {
+            setHubDataStatus("ready");
+          } else {
+            const [seasonsResult, leaguesResult] = await Promise.allSettled([
+              api.listJoiningSeasons(id),
+              api.listLeagues?.() ?? Promise.resolve([]),
+            ]);
+            if (!isActive) return;
+            if (seasonsResult.status === "fulfilled") {
               setJoiningLeagueSeasons(
-                seasons.map((season) => {
+                seasonsResult.value.map((season) => {
                   const option = toJoiningSeason(season);
                   return {
                     ...option,
@@ -293,10 +435,17 @@ export const createUseStatistics = (
                   };
                 })
               );
-            })
-            .catch(() => {
-              // The legacy season selector is independent from the statistics summary.
-            });
+            }
+            if (leaguesResult.status === "fulfilled") {
+              setJoiningLeagues(leaguesResult.value.map(toLeagueSummary));
+            }
+            setHubDataStatus(
+              seasonsResult.status === "fulfilled" &&
+                leaguesResult.status === "fulfilled"
+                ? "ready"
+                : "error"
+            );
+          }
         } catch (loadError) {
           if (!isActive) return;
 
@@ -318,10 +467,14 @@ export const createUseStatistics = (
       return () => {
         isActive = false;
       };
-    }, [retryCount, router]);
+    }, [retryCount, normalizedRouteSearch, router]);
 
     React.useEffect(() => {
-      if (!viewerUserId || selection.scope.scopeType === "overall") {
+      if (
+        !routeContext.isContextMode ||
+        !viewerUserId ||
+        selection.scope.scopeType === "overall"
+      ) {
         setMembersState({
           key: scopeKey,
           status: "idle",
@@ -376,17 +529,28 @@ export const createUseStatistics = (
               (member) => member.userId === currentSelection.targetUserId
             )
           ) {
-            setSelection((current) =>
-              current.targetUserId === currentSelection.targetUserId
-                ? selectStatisticsTarget(current, current.viewerUserId)
-                : current
+            const fallbackSelection = selectStatisticsTarget(
+              currentSelection,
+              currentSelection.viewerUserId
             );
+            if (
+              fallbackSelection.targetUserId !== currentSelection.targetUserId
+            ) {
+              selectionRef.current = fallbackSelection;
+              setSelection((current) =>
+                current.targetUserId === currentSelection.targetUserId
+                  ? fallbackSelection
+                  : current
+              );
+              syncRoute(fallbackSelection);
+            }
           }
         })
         .catch((membersError: unknown) => {
           if (!isActive) return;
           if (membersError instanceof ApiError && membersError.status === 401) {
             router.replace("/login");
+            return;
           }
           const currentSelection = selectionRef.current;
           const failure = resolveStatisticsMembersFailure(currentSelection);
@@ -402,11 +566,13 @@ export const createUseStatistics = (
           if (
             failure.selection.targetUserId !== currentSelection.targetUserId
           ) {
+            selectionRef.current = failure.selection;
             setSelection((current) =>
               current.targetUserId === currentSelection.targetUserId
                 ? failure.selection
                 : current
             );
+            syncRoute(failure.selection);
           }
         });
 
@@ -416,15 +582,18 @@ export const createUseStatistics = (
     }, [
       membersRetryCount,
       router,
+      routeContext.isContextMode,
       scopeKey,
       selection.scope.scopeType,
       selection.scope.leagueId,
       selection.scope.seasonId,
+      syncRoute,
       viewerUserId,
     ]);
 
     React.useEffect(() => {
-      if (!viewerUserId || !canLoadCurrentTarget) return;
+      if (!routeContext.isContextMode || !viewerUserId || !canLoadCurrentTarget)
+        return;
 
       const cached =
         queryCache.current.get<
@@ -505,14 +674,17 @@ export const createUseStatistics = (
       summaryQueryKey,
       summaryRetryCount,
       canLoadCurrentTarget,
+      routeContext.isContextMode,
       viewerUserId,
     ]);
 
     React.useEffect(() => {
       if (
+        !routeContext.isContextMode ||
         !viewerUserId ||
         !canLoadCurrentTarget ||
-        selection.activeView !== "analysis"
+        (selection.activeView !== "trend" &&
+          selection.activeView !== "comparisons")
       ) {
         return;
       }
@@ -615,6 +787,7 @@ export const createUseStatistics = (
       apiScope,
       canLoadCurrentTarget,
       router,
+      routeContext.isContextMode,
       selection.activeView,
       selection.dimension,
       selection.groupBy,
@@ -625,8 +798,130 @@ export const createUseStatistics = (
 
     React.useEffect(() => {
       if (
+        !routeContext.isContextMode ||
         !viewerUserId ||
         !canLoadCurrentTarget ||
+        supplementalDimensions.length === 0
+      ) {
+        setSupplementalAnalysisState({
+          key: supplementalAnalysisKey,
+          status: "idle",
+          data: {},
+          error: null,
+        });
+        return;
+      }
+
+      let isActive = true;
+      const cachedData: Partial<
+        Record<SupplementalAnalysisDimension, AnalysisViewData>
+      > = {};
+      const missingDimensions: SupplementalAnalysisDimension[] = [];
+      supplementalDimensions.forEach((dimension) => {
+        const key = createStatisticsQueryKey({
+          ...selection,
+          dimension,
+          groupBy: "month",
+          view: "analysis",
+        });
+        const cached = queryCache.current.get<AnalysisViewData>(key);
+        if (cached) cachedData[dimension] = cached;
+        else missingDimensions.push(dimension);
+      });
+
+      if (missingDimensions.length === 0) {
+        setSupplementalAnalysisState({
+          key: supplementalAnalysisKey,
+          status: "ready",
+          data: cachedData,
+          error: null,
+        });
+        return;
+      }
+
+      setSupplementalAnalysisState({
+        key: supplementalAnalysisKey,
+        status: "loading",
+        data: cachedData,
+        error: null,
+      });
+      const requests = missingDimensions.map(async (dimension) => {
+        const key = createStatisticsQueryKey({
+          ...selection,
+          dimension,
+          groupBy: "month",
+          view: "analysis",
+        });
+        const data = await queryCache.current.fetch(key, async () => {
+          const response = await api.getPersonalStatisticsAnalysis({
+            targetUserId: selection.targetUserId,
+            query: {
+              ...apiScope,
+              dimension,
+              windowSize: `${selection.windowSize}` as "10" | "20" | "50",
+            },
+          });
+          return toPersonalStatisticsAnalysisView(
+            response,
+            selection.targetUserId
+          );
+        });
+        return [dimension, data] as const;
+      });
+
+      void Promise.all(requests)
+        .then((entries) => {
+          if (
+            !isActive ||
+            supplementalAnalysisKeyRef.current !== supplementalAnalysisKey
+          ) {
+            return;
+          }
+          setSupplementalAnalysisState({
+            key: supplementalAnalysisKey,
+            status: "ready",
+            data: { ...cachedData, ...Object.fromEntries(entries) },
+            error: null,
+          });
+        })
+        .catch((loadError: unknown) => {
+          if (
+            !isActive ||
+            supplementalAnalysisKeyRef.current !== supplementalAnalysisKey
+          ) {
+            return;
+          }
+          if (loadError instanceof ApiError && loadError.status === 401) {
+            router.replace("/login");
+          }
+          setSupplementalAnalysisState({
+            key: supplementalAnalysisKey,
+            status: "error",
+            data: cachedData,
+            error: getApiErrorMessage(loadError, DEFAULT_QUERY_ERROR_MESSAGE),
+          });
+        });
+
+      return () => {
+        isActive = false;
+      };
+    }, [
+      analysisRetryCount,
+      apiScope,
+      canLoadCurrentTarget,
+      routeContext.isContextMode,
+      router,
+      selection,
+      supplementalAnalysisKey,
+      supplementalDimensions,
+      viewerUserId,
+    ]);
+
+    React.useEffect(() => {
+      if (
+        !viewerUserId ||
+        !canLoadCurrentTarget ||
+        !routeContext.isContextMode ||
         selection.activeView !== "history"
       ) {
         return;
@@ -735,6 +1030,7 @@ export const createUseStatistics = (
       historyBaseQueryKey,
       historyRetryCount,
       router,
+      routeContext.isContextMode,
       canLoadCurrentTarget,
       selection.activeView,
       selection.targetUserId,
@@ -754,8 +1050,9 @@ export const createUseStatistics = (
       );
     }, []);
 
-    const onChangeTarget = React.useCallback((targetUserId: string) => {
-      setSelection((current) => {
+    const onChangeTarget = React.useCallback(
+      (targetUserId: string) => {
+        const current = selectionRef.current;
         const members = queryCache.current.getMembers<StatisticsMemberOption[]>(
           createStatisticsScopeKey(current.scope)
         );
@@ -763,11 +1060,15 @@ export const createUseStatistics = (
           current.scope.scopeType === "overall" ||
           !members?.some((member) => member.userId === targetUserId)
         ) {
-          return current;
+          return;
         }
-        return selectStatisticsTarget(current, targetUserId);
-      });
-    }, []);
+        const next = selectStatisticsTarget(current, targetUserId);
+        selectionRef.current = next;
+        setSelection(next);
+        syncRoute(next);
+      },
+      [syncRoute]
+    );
 
     const onChangeDateRange = React.useCallback(
       (from?: string, to?: string) => {
@@ -795,9 +1096,23 @@ export const createUseStatistics = (
 
     const onChangeActiveView = React.useCallback(
       (activeView: StatisticsView) => {
-        setSelection((current) => ({ ...current, activeView }));
+        const current = selectionRef.current;
+        const next: StatisticsSelection = {
+          ...current,
+          activeView,
+          dimension:
+            activeView === "comparisons"
+              ? "opponent"
+              : activeView === "trend"
+                ? "period"
+                : current.dimension,
+          groupBy: activeView === "trend" ? "month" : current.groupBy,
+        };
+        selectionRef.current = next;
+        setSelection(next);
+        syncRoute(next);
       },
-      []
+      [syncRoute]
     );
 
     const onChangeDimension = React.useCallback(
@@ -1059,7 +1374,9 @@ export const createUseStatistics = (
           : {
               key: analysisQueryKey,
               status:
-                selection.activeView === "analysis" && viewerUserId
+                (selection.activeView === "trend" ||
+                  selection.activeView === "comparisons") &&
+                viewerUserId
                   ? "loading"
                   : "idle",
               data: null,
@@ -1092,6 +1409,84 @@ export const createUseStatistics = (
               data: null,
               error: null,
             };
+    const startingPointLeagueIdsKey = React.useMemo(() => {
+      const leagueIds = new Set<string>();
+      if (selection.scope.scopeType !== "overall" && selection.scope.leagueId) {
+        leagueIds.add(String(selection.scope.leagueId));
+      }
+
+      const records =
+        visibleSummaryState.data && "records" in visibleSummaryState.data
+          ? visibleSummaryState.data.records
+          : null;
+      [records?.highestRawScore, records?.lowestRawScore].forEach((record) => {
+        if (record?.match.leagueId) {
+          leagueIds.add(String(record.match.leagueId));
+        }
+      });
+
+      if (visibleHistoryState.data?.status === "ready") {
+        visibleHistoryState.data.items.forEach((item) => {
+          if (item.match.leagueId) {
+            leagueIds.add(String(item.match.leagueId));
+          }
+        });
+      }
+
+      return Array.from(leagueIds).sort().join(",");
+    }, [
+      selection.scope.leagueId,
+      selection.scope.scopeType,
+      visibleHistoryState.data,
+      visibleSummaryState.data,
+    ]);
+
+    React.useEffect(() => {
+      if (!api.getLeagueDetail) return;
+
+      const leagueIds = startingPointLeagueIdsKey
+        ? startingPointLeagueIdsKey.split(",")
+        : [];
+      const leagueIdsToLoad = leagueIds.filter(
+        (leagueId) => startingPointsByLeagueId[leagueId] == null
+      );
+      if (leagueIdsToLoad.length === 0) return;
+
+      let isActive = true;
+      void Promise.all(
+        leagueIdsToLoad.map(async (leagueId) => {
+          let request = startingPointRequests.current.get(leagueId);
+          if (!request) {
+            request = api.getLeagueDetail!(leagueId)
+              .then((league) => league.rule.oka.startingPoints)
+              .catch(() => null);
+            startingPointRequests.current.set(leagueId, request);
+            void request.then(() => {
+              if (startingPointRequests.current.get(leagueId) === request) {
+                startingPointRequests.current.delete(leagueId);
+              }
+            });
+          }
+          return { leagueId, startingPoints: await request };
+        })
+      ).then((results) => {
+        if (!isActive) return;
+        setStartingPointsByLeagueId((current) => {
+          const next = { ...current };
+          results.forEach(({ leagueId, startingPoints }) => {
+            if (startingPoints != null) next[leagueId] = startingPoints;
+          });
+          return Object.keys(next).length === Object.keys(current).length
+            ? current
+            : next;
+        });
+      });
+
+      return () => {
+        isActive = false;
+      };
+    }, [startingPointLeagueIdsKey, startingPointsByLeagueId]);
+
     const visibleMembersState =
       membersState.key === scopeKey
         ? membersState
@@ -1210,6 +1605,10 @@ export const createUseStatistics = (
       // Existing fields remain available until the page integration task adopts the new model.
       userName,
       joiningLeagueSeasons,
+      joiningLeagues,
+      hubDataStatus,
+      isContextMode: routeContext.isContextMode,
+      routeContext,
       selectedLeagueSeasonId,
       selectedStats,
       isLoading,
@@ -1241,6 +1640,7 @@ export const createUseStatistics = (
       historyStatus: visibleHistoryState.status,
       historyError: historyError ?? visibleHistoryState.error,
       isLoadingMoreHistory,
+      startingPointsByLeagueId,
       members: visibleMembersState.data,
       membersStatus: visibleMembersState.status,
       membersError: visibleMembersState.error,
@@ -1258,6 +1658,20 @@ export const createUseStatistics = (
       retryAnalysis,
       retryHistory,
       retryMembers,
+      additionalAnalyses:
+        supplementalAnalysisState.key === supplementalAnalysisKey
+          ? supplementalAnalysisState.data
+          : {},
+      additionalAnalysisStatus:
+        supplementalAnalysisState.key === supplementalAnalysisKey
+          ? supplementalAnalysisState.status
+          : selection.activeView === "comparisons"
+            ? "loading"
+            : "idle",
+      additionalAnalysisError:
+        supplementalAnalysisState.key === supplementalAnalysisKey
+          ? supplementalAnalysisState.error
+          : null,
     };
   };
 

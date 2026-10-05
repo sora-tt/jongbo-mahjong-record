@@ -7,6 +7,7 @@ import { Pencil } from "lucide-react";
 import Link from "next/link";
 
 import { LeagueRuleSummary } from "@/features/league/ui/league-rule-summary";
+import { buildStatisticsHref } from "@/features/statistics/model/page";
 
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
@@ -26,6 +27,9 @@ const LeaguePage: React.FC = () => {
     currentHighestScore,
     currentLowestScore,
     leagueSeasons,
+    members,
+    membersLoading,
+    membersError,
     loading,
     error,
     retry,
@@ -154,6 +158,51 @@ const LeaguePage: React.FC = () => {
               <p className="text-2xl font-bold text-brand-strong">{value}</p>
             </Card>
           ))}
+        </section>
+
+        <section className="space-y-4" aria-labelledby="league-members-heading">
+          <div>
+            <h2
+              id="league-members-heading"
+              className="text-xl font-bold text-foreground"
+            >
+              参加者別の成績
+            </h2>
+            <p className="mt-1 text-sm text-text-muted">
+              名前を選ぶと、このリーグの通算成績を確認できます。
+            </p>
+          </div>
+          {membersLoading ? (
+            <LoadingState label="リーグ参加者を読み込んでいます…" />
+          ) : membersError ? (
+            <ErrorState message={membersError} />
+          ) : members.length > 0 ? (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {members.map((member) => (
+                <Link
+                  key={String(member.userId)}
+                  href={buildStatisticsHref({
+                    scope: {
+                      scopeType: "league",
+                      leagueId: String(league.id),
+                      gameType: league.rule.gameType,
+                    },
+                    targetUserId: String(member.userId),
+                    scopeLabel: league.name,
+                    returnTo: `/league/${league.id}`,
+                  })}
+                  className="flex min-h-12 items-center justify-between rounded-control border border-border bg-white px-4 py-3 text-sm transition-colors hover:border-brand-300 hover:bg-brand-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                >
+                  <span className="font-medium text-foreground">
+                    {member.userName}
+                  </span>
+                  <span className="text-brand-strong">成績を見る</span>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-text-muted">参加者がいません。</p>
+          )}
         </section>
 
         <section className="space-y-4">

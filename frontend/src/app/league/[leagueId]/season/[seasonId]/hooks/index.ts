@@ -2,6 +2,8 @@ import * as React from "react";
 
 import { useParams, useRouter } from "next/navigation";
 
+import { fetchLeagueDetail } from "@/features/league/api";
+import { toLeagueDetail } from "@/features/league/model/adapter";
 import { fetchSeasonDetail } from "@/features/season/api";
 import { toSeasonDetail } from "@/features/season/model/adapter";
 import { listSessions } from "@/features/session/api";
@@ -33,6 +35,7 @@ const formatPercent = (value: number) => `${value.toFixed(2)}%`;
 export const useSeasonPage = () => {
   const router = useRouter();
   const params = useParams<{ leagueId: string; seasonId: string }>();
+  const [leagueName, setLeagueName] = React.useState("");
   const [season, setSeason] = React.useState<SeasonDetail | null>(null);
   const [sessions, setSessions] = React.useState<SessionSummary[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -56,14 +59,17 @@ export const useSeasonPage = () => {
     const load = async () => {
       setLoading(true);
       setError(null);
+      setLeagueName("");
 
       setSessionsLoading(true);
       setSessionsError(null);
 
-      const [seasonResult, sessionsResult] = await Promise.allSettled([
-        fetchSeasonDetail(leagueId, seasonId),
-        listSessions(leagueId, seasonId),
-      ]);
+      const [seasonResult, sessionsResult, leagueResult] =
+        await Promise.allSettled([
+          fetchSeasonDetail(leagueId, seasonId),
+          listSessions(leagueId, seasonId),
+          fetchLeagueDetail(leagueId),
+        ]);
 
       if (!isActive) return;
 
@@ -98,6 +104,15 @@ export const useSeasonPage = () => {
         );
       }
       setSessionsLoading(false);
+
+      if (leagueResult.status === "fulfilled") {
+        setLeagueName(toLeagueDetail(leagueResult.value).name);
+      } else if (
+        leagueResult.reason instanceof ApiError &&
+        leagueResult.reason.status === 401
+      ) {
+        router.replace("/login");
+      }
     };
 
     void load();
@@ -208,6 +223,7 @@ export const useSeasonPage = () => {
   return {
     leagueId: params.leagueId,
     seasonId: params.seasonId,
+    leagueName,
     season,
     sessions,
     titles,

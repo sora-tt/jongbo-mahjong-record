@@ -25,7 +25,7 @@ const selection: StatisticsSelection = {
     to: "2026-02-01T00:00:00.000Z",
     gameType: "sanma",
   },
-  activeView: "analysis",
+  activeView: "trend",
   dimension: "period",
   groupBy: "month",
   windowSize: 20,

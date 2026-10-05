@@ -2,104 +2,163 @@
 
 ## プロジェクト説明
 
-個人成績、順位表、日次記録、ポイント推移の画面は、旧domain型、mock、手書きresponse型、Redux、重複コンポーネントが混在している。画面ごとにnullable値、空データ、チャート色、loading/errorの扱いも異なり、FEが順位・点数・累計値を再計算してBEの正本と乖離するリスクがある。本仕様では、前段で整備したAPI境界と共通UIを利用して統計・記録表示を整理し、不要な旧実装を安全に退役させる。
+現在の個人成績画面では、選択したシーズンの対局数、総合ポイント、平均順位、連対率、順位別回数を確認できる。記録済みの対局結果には順位、素点、最終ポイント、席、対戦相手、日時、セッションが含まれるが、個人向け画面では十分に活用されていない。また、同じリーグやシーズンの参加者を選び、その人の成績へ切り替える機能がない。Issue #97では、記録済みの対局結果から読み取れる成績を広げ、必要な集計と表示を一連の機能として整える。
 
 ## スコープと境界
 
 ### 対象
 
-- 個人成績、ユーザー統計、season standings、league/season records
-- 日次記録、point progression、既存チャート
-- 三麻/四麻のnullable項目、0件、未計算状態の表示
-- stats API hooks、typed adapter、共通table/card/chart、loading/error/empty state
-- mock、手書きresponse型、旧domain型、不要Redux、重複hooks/components、未接続操作の整理
-- route、metadata、認証ガード、typecheck/lint/build/契約・画面スモーク検証
+- 全体、リーグ、シーズン、期間、三麻・四麻の条件を選んだ個人成績
+- 対局数、参加セッション数、総合ポイント、平均ポイント、平均順位、順位別回数・割合、トップ率、連対率、ラス回避率
+- 素点と最終ポイントそれぞれの平均・最高・最低・中央値・ばらつき、プラス・マイナス・同点の回数と割合
+- チョンボ回数、連続記録、最高・最低成績の対局情報
+- 対局順・期間別のポイント推移、曜日・時間帯別の成績、対局履歴
+- 席別、対戦相手別、セッション別、リーグ・シーズン・ゲーム形式別の成績
+- 上記の表示に必要なサーバー側集計と個人成績データの提供、および個人成績画面
+- 三麻・四麻、データなし、未集計、取得失敗、再試行、レスポンシブ表示とアクセシビリティ
+- 本人の成績と、同じリーグまたはシーズンの他参加者の成績の切り替え
+- 既存の個人成績、順位表、シーズン記録、日次記録、ポイント推移の動作維持
 
 ### 対象外
 
-- BE側の新しい統計指標、集計アルゴリズム、DB/API変更
-- FEでのrank、point、aggregate、statisticsの再計算
-- リアルタイムチャート、新しい分析機能
-- League/Season/Session/MatchのCRUD業務ロジック
-- 共通UI primitive、API client、Auth boundaryの再設計
+- 和了率、放銃率、リーチ率、鳴き率、平均和了打点など、局単位の牌譜・記録を必要とする指標
+- Elo等のレーティング、相手の強さによる補正、信頼区間など、独自モデルや追加の評価定義を要する指標
+- 対局順位・素点・最終ポイントを決める既存のルールや計算式の変更
+- リーグ、シーズン、セッション、対局の登録・編集業務
+- リアルタイム同期、他画面の新規分析機能、共通UI基盤の再設計
 
 ### 隣接仕様との契約
 
-- `frontend-foundation-ui` のtyped API client、AppType由来型、adapter境界、AsyncState、ErrorEnvelope、共通Table/Card/Chart、認証ガードを利用する。
-- `frontend-league-season` のSeason detailから統計表示へ渡るrouteと、League/SeasonのBE算出済みrecordsを利用する。
-- `frontend-session-match` のMatch response、固定Session member、BE算出rank/point/matchIndexを再計算せず表示する。
-- `backend-foundation` と `backend-integrity-lifecycle` のcamelCase DTO、ISO日時、nullable semantics、集計・repair/rebuild後のBE値を正本とする。
+- 対局登録で確定した順位、素点、最終ポイント、席、参加者、日時、セッションを成績の根拠とする。
+- 本機能は個人成績に必要な集計と提供を対象とするが、順位・点数そのものを決める既存ルールは変更しない。
+- 表示値は対象期間・リーグ・シーズン・ゲーム形式を明示し、三麻と四麻の成績を誤解を招く形で合算しない。
+- 共通UI、認証、API利用、シーズン・リーグの基本画面は、それぞれの既存仕様に従う。
 
 ## 要件
 
-### Requirement 1: 統計APIと表示model
+### Requirement 1: 対象範囲の選択
 
-1.1 When 統計・順位・日次記録・ポイント推移を表示するとき, the Statistics-Quality Feature shall `AppType`から導出したtyped APIと表示adapterを経由し、route componentから直接fetchしない。
+1.1 When 利用者が個人成績を開く, the Statistics-Quality Feature shall 全体、リーグ、シーズンのいずれかを選択できる状態を表示する。
 
-1.2 When API DTOを表示modelへ変換するとき, the Statistics-Quality Feature shall camelCase、opaque ID、ISO 8601、nullable値、三麻のfourth系nullを保持し、0・空文字・現在日時へ暗黙に置換しない。
+1.2 When 利用者が対象のリーグ、シーズン、または期間を変更する, the Statistics-Quality Feature shall サマリー、順位、スコア、推移、記録、条件別成績、対局履歴を同じ対象範囲に切り替えて表示する。
 
-1.3 When BEが返すrank、point、standing、record、aggregate、progressionを表示するとき, the Statistics-Quality Feature shall APIの値をそのまま表示し、FEで順位付け、合算、平均、再集計、欠損補完を行わない。
+1.3 When 対象範囲に複数のゲーム形式が含まれる, the Statistics-Quality Feature shall 三麻と四麻の成績を形式別に区別して表示し、順位率やラス回避率を異なる形式のまま合算しない。
 
-1.4 If APIの契約、status、ErrorEnvelope、型が変更された場合, the Statistics-Quality Feature shall adapter、hook、表示、契約検証の不一致をtypecheckまたはテストで検出できる構成を維持する。
+1.4 When 利用者が選択した対象範囲を表示するとき, the Statistics-Quality Feature shall 対象の全体・リーグ・シーズン・期間・ゲーム形式を画面上で確認できるようにする。
 
-### Requirement 2: 個人成績と順位表
+### Requirement 2: 個人成績画面の構成
 
-2.1 When 利用者が個人成績またはユーザー統計を表示するとき, the Statistics-Quality Feature shall BEが返した期間・対象範囲・対局数・順位・点数・記録をラベル付きで表示する。
+2.1 When 個人成績を表示するとき, the Statistics-Quality Feature shall 対象範囲・表示対象者の選択、主要成績サマリー、順位別成績、素点・最終ポイント、成績推移、自己記録、条件別成績、対局履歴をまとまりごとに閲覧できるようにする。
 
-2.2 When SeasonまたはLeagueのstandingsを表示するとき, the Statistics-Quality Feature shall BEの配列順、rank、point、member情報、nullable値を保持して表形式で表示し、FEでsortやrankの振り直しをしない。
+2.2 When 主要成績サマリーを表示するとき, the Statistics-Quality Feature shall 対局数、総合ポイント、平均順位、トップ率を優先して表示する。
 
-2.3 When standingsまたは個人成績が正常な空配列、null、未計算状態を返すとき, the Statistics-Quality Feature shall エラーと混同しないemptyまたはuncomputed stateを表示し、存在しない実績を0として表示しない。
+2.3 When 利用者が詳細成績を確認するとき, the Statistics-Quality Feature shall 指標の名称、単位、対象範囲、集計対局数を判別できる形で表示する。
 
-2.4 When stats取得が401、403、404、409、validation、transport/decode errorになるとき, the Statistics-Quality Feature shall 共通safe message、認証遷移、権限・対象エラー、再試行可能状態を区別する。
+### Requirement 3: 基本成績と順位分布
 
-### Requirement 3: 日次記録とポイント推移
+3.1 When 個人成績を表示するとき, the Statistics-Quality Feature shall 対局数、参加セッション数、総合ポイント、1対局あたりの平均最終ポイント、平均順位を表示する。
 
-3.1 When 利用者が日次記録を表示するとき, the Statistics-Quality Feature shall BEが返した日付、対局数、順位、point、recordを時系列の意味を壊さず表示し、日次値をFEで再集計しない。
+3.2 When 対象範囲に順位結果がある, the Statistics-Quality Feature shall 各順位の回数と割合、トップ率、連対率、ラス率、ラス回避率を表示し、四麻では1位から3位までの3着以内率も表示する。
 
-3.2 When 利用者がpoint progressionまたは既存チャートを表示するとき, the Statistics-Quality Feature shall BEのseries、label、nullable値、単位を共通Chart primitiveへ渡し、独自のデータ変換で意味を変更しない。
+3.3 When 順位率を表示するとき, the Statistics-Quality Feature shall 対局数を分母として示し、トップ率は1位、連対率は1位または2位、ラス率は参加人数に応じた最下位として定義し、トップ率を局単位の和了率と誤認させない名称で表示する。
 
-3.3 When seriesが空、部分的、null、三麻/四麻で項目数が異なるとき, the Statistics-Quality Feature shall 欠落値と0値を区別し、チャートを誤った連続値として描画せず説明付きempty/uncomputed stateを表示する。
+3.4 When 三麻の成績を表示するとき, the Statistics-Quality Feature shall 3位を最下位として扱い、存在しない4位の回数や割合を0として表示しない。
 
-3.4 When チャートを表示するとき, the Statistics-Quality Feature shall 色、凡例、tooltip、単位、responsive layoutを共通tokenと共通Chart primitiveへ統一し、画面ごとのハードコードを残さない。
+3.5 When 対象範囲にリーグまたはシーズンの順位がある, the Statistics-Quality Feature shall 該当順位、総合ポイント、直上・直下の順位とのポイント差を表示し、順位が未確定または対象外の場合は順位がないことを示す。
 
-### Requirement 4: 画面統合と共通状態
+### Requirement 4: 素点・最終ポイント・記録イベント
 
-4.1 When Season detail、League detail、個人stats、daily recordsのいずれかを表示するとき, the Statistics-Quality Feature shall 同じAsyncState、LoadingState、ErrorState、EmptyState、retry action、Auth boundaryを利用する。
+4.1 When スコア成績を表示するとき, the Statistics-Quality Feature shall 素点と順位点等を含む最終ポイントを異なる指標として表示する。
 
-4.2 While stats requestまたはretryが実行中である状態, the Statistics-Quality Feature shall 対象領域のloadingと再試行を表示し、古いrouteや対象の結果で現在の画面を上書きしない。
+4.2 When 対象範囲に対局結果がある, the Statistics-Quality Feature shall 素点と最終ポイントそれぞれの平均・最高・最低を表示する。
 
-4.3 When stats取得が成功したとき, the Statistics-Quality Feature shall レスポンスの対象期間、season、league、userを画面metadataへ反映し、別対象のキャッシュ・mock値を表示しない。
+4.3 When 対象範囲に1件以上の対局結果がある, the Statistics-Quality Feature shall 素点と最終ポイントそれぞれの中央値を表示する。
 
-4.4 When 主要な統計カード、表、チャートの操作または戻る操作を実行するとき, the Statistics-Quality Feature shall API再取得または明確なroute遷移を実行し、見た目だけで停止するbuttonを残さない。
+4.4 When 対象範囲に2件以上の対局結果がある, the Statistics-Quality Feature shall 対象範囲の全対局を基準とした素点と最終ポイントそれぞれの標準偏差を表示する。
 
-### Requirement 5: 旧実装の退役
+4.5 When 対象範囲に2件未満の対局結果がある, the Statistics-Quality Feature shall 標準偏差を0と見せず、算出対象外として表示する。
 
-5.1 When 新しいtyped stats APIと表示modelへ移行した後, the Statistics-Quality Feature shall 対象routeから手書きresponse型、直接fetch、mock fallback、旧domain型参照を除去する。
+4.6 When 最終ポイントの分布を表示するとき, the Statistics-Quality Feature shall プラス、マイナス、同点で終えた対局の回数と割合を区別して表示する。
 
-5.2 When 旧stats hook、重複component、不要なRedux slice/storeが他の画面から参照されていないとき, the Statistics-Quality Feature shall 参照を確認したうえで削除し、残す場合は所有範囲と理由を記録する。
+4.7 When 順位別スコアを表示するとき, the Statistics-Quality Feature shall 各順位での平均素点と平均最終ポイントを区別して表示する。
 
-5.3 When 旧実装を削除するとき, the Statistics-Quality Feature shall Session/Match、League/Season CRUD、共通基盤で利用中の型・component・storeを誤って削除しない。
+4.8 When チョンボの記録が対象範囲にある, the Statistics-Quality Feature shall チョンボ回数を個人成績として表示する。
 
-5.4 When legacy routeやmetadataが存在するとき, the Statistics-Quality Feature shall 正規route、title、認証ガード、navigationを統一し、同じ画面を二重実装しない。
+### Requirement 5: 成績推移と対局履歴
 
-### Requirement 6: 品質・アクセシビリティ・レスポンシブ
+5.1 When 利用者がポイント推移を表示するとき, the Statistics-Quality Feature shall 対局日時と同一セッション内の対局順に沿った累計最終ポイントの変化を確認できるようにする。
 
-6.1 When 統計画面を表示するとき, the Statistics-Quality Feature shall 共通spacing、typography、color token、Card/Table/Chart primitiveを利用し、ページごとの見た目の差異を最小化する。
+5.2 When 利用者が期間別成績を表示するとき, the Statistics-Quality Feature shall 日別・月別・年別・指定期間別・曜日別・時間帯別に対局数、総合ポイント、平均順位、トップ率を確認できるようにする。
 
-6.2 When 利用者がキーボード、狭いviewport、支援技術で操作するとき, the Statistics-Quality Feature shall 展開・再試行・戻る・tooltipを操作可能なfocus、label、loading/disabled状態とともに提供する。
+5.3 When 利用者が日別成績を表示するとき, the Statistics-Quality Feature shall 日ごとの対局数、総合ポイント、平均順位、順位別成績を表示する。
 
-6.3 When typecheck、lint、build、契約テスト、主要画面スモークを実行するとき, the Statistics-Quality Feature shall statsの型契約、BE値の非再計算、主要route、empty/error状態の回帰を検出できる。
+5.4 When 利用者が直近の成績を確認するとき, the Statistics-Quality Feature shall 直近10・20・50対局の成績を全体成績と区別して表示する。
 
-### Requirement 7: 境界・引き渡し
+5.5 When 対局履歴を表示するとき, the Statistics-Quality Feature shall 対局日時、リーグまたはシーズン、セッション、ゲーム形式、同卓者、席、順位、素点、最終ポイントを確認できるようにする。
 
-7.1 The Statistics-Quality Feature shall BEの集計値の正しさ、統計指標の追加、共通API client・primitiveの所有権を取り込まない。
+5.6 When 履歴中の対局結果を表示するとき, the Statistics-Quality Feature shall 登録済みの対局結果を表示し、局単位の内容を推測して追加しない。
 
-7.2 If BEから返されない新しい指標が画面要望として現れる場合, the Statistics-Quality Feature shall FEで推測・算出せず、BE契約または別仕様の再要件化対象として扱う。
+### Requirement 6: 条件別成績
 
-7.3 When upstreamのDTO、ErrorCode、status、nullable、rank/point/aggregate契約が変更されるとき, the Statistics-Quality Feature shall affected adapter、hook、表示、テストを再検証する。
+6.1 When 利用者が席別成績を表示するとき, the Statistics-Quality Feature shall 席ごとの対局数、平均順位、トップ率、平均最終ポイントを比較できるようにする。
 
-## 仮定・未決事項
+6.2 When 利用者が対戦相手別成績を表示するとき, the Statistics-Quality Feature shall 相手ごとの同卓回数、同卓回数を分母とした相手より上位だった割合、同順位の回数、相手との平均および累計ポイント差を表示する。
 
-- 既存のstats、standings、records、pointProgressionsを返すBE APIと`AppType`を正本とし、新しいendpointや統計指標は追加しない。
-- APIが値を返さない場合は未計算または対象なしとして表示し、FEで0埋め・平均・順位補完を行わない。
-- 旧Reduxやmockは、全参照を確認したうえで対象routeから除去する。別featureが利用中の場合は共通基盤へ移さず、所有範囲を明記して段階的に退役する。
+6.3 When 利用者がセッション別成績を表示するとき, the Statistics-Quality Feature shall セッションごとの対局数、総合ポイント、平均順位、トップ回数を確認できるようにする。
+
+6.4 When 利用者が条件別成績を表示するとき, the Statistics-Quality Feature shall リーグ、シーズン、ゲーム形式、期間、席、対戦相手、セッションの条件ごとに対象を識別できるようにする。
+
+6.5 When 条件別の集計結果を表示するとき, the Statistics-Quality Feature shall 各割合の分母となる対局数を併記し、母数の異なる成績を同じ確度に見せない。
+
+### Requirement 7: 自己記録と連続成績
+
+7.1 When 自己記録を表示するとき, the Statistics-Quality Feature shall 最高・最低の素点および最終ポイントと、それぞれを記録した対局日時・対象・同卓者を表示する。
+
+7.2 When 連続成績を表示するとき, the Statistics-Quality Feature shall 対局日時と同一セッション内の対局順に基づき、連続トップ、連続ラス、連続連対、連続プラス、連続マイナスの現在数と過去最長記録を区別して表示する。
+
+7.3 When 三麻または四麻の連続ラスを集計するとき, the Statistics-Quality Feature shall 各対局の参加人数に応じた最下位をラスとして扱う。
+
+### Requirement 8: 集計の更新と正確性
+
+8.1 When 対局が登録・更新・削除された後に個人成績を取得するとき, the Statistics-Quality Feature shall 変更後の対局結果を反映した集計を表示する。
+
+8.2 When 順位、素点、最終ポイントが表示されるとき, the Statistics-Quality Feature shall 対局結果として確定した値を表示し、画面表示のために別の順位付けやポイント計算を行わない。
+
+8.3 When 元データにない値、未計算値、該当なしの値を表示するとき, the Statistics-Quality Feature shall それらを0と区別して表示する。
+
+8.4 When 対象範囲または表示対象者を切り替えた後に成績が表示されるとき, the Statistics-Quality Feature shall 切り替え前の対象範囲または表示対象者の成績を残さず、現在選択されている条件の結果のみを表示する。
+
+### Requirement 9: 空状態、エラー、アクセシビリティ
+
+9.1 When 対象範囲に対局結果がない, the Statistics-Quality Feature shall 未集計・対局なし・未選択の状態を区別して案内し、実績があるように見える値を表示しない。
+
+9.2 If 成績の取得に失敗する, the Statistics-Quality Feature shall 利用者に状態を説明し、再試行できる操作を提供する。
+
+9.3 While 成績を読み込み中である, the Statistics-Quality Feature shall 読み込み中であることを明示し、別の対象範囲または表示対象者の古い成績を現在の結果として表示しない。
+
+9.4 When 推移をグラフで表示するとき, the Statistics-Quality Feature shall 凡例、単位、値を確認できる手段を提供し、色だけに頼らず同じ情報を表またはテキストでも確認できるようにする。
+
+9.5 When 個人成績を幅320 CSS pxの画面で表示するとき, the Statistics-Quality Feature shall ページ全体の横スクロールなしで全セクションを閲覧できるようにする。
+
+9.6 When 利用者がキーボードで個人成績を操作するとき, the Statistics-Quality Feature shall 全操作へ順に移動して実行できるようにし、現在のフォーカス位置を視認可能にする。
+
+9.7 When 支援技術で個人成績を閲覧するとき, the Statistics-Quality Feature shall 操作要素と成績指標の名称・値を読み上げ可能な形で提供する。
+
+9.8 When 認証された利用者が他の利用者の成績を閲覧するとき, the Statistics-Quality Feature shall 選択されたリーグまたはシーズンの参加者に限って表示を許可し、全体の対象範囲では本人の成績だけを表示する。
+
+### Requirement 10: 表示対象者の選択
+
+10.1 When 利用者がリーグまたはシーズンの成績を閲覧するとき, the Statistics-Quality Feature shall 選択中の対象範囲に属する本人または他の参加者を表示対象者として選択できるようにし、初期表示対象を認証された利用者にする。
+
+10.2 When 利用者が別の参加者を表示対象に選択するとき, the Statistics-Quality Feature shall その人の成績へ画面全体を切り替え、選択中の対象範囲・期間・ゲーム形式を維持して、表示対象者を識別できるようにする。
+
+10.3 When 対象範囲の変更により選択中の表示対象者が参加者でなくなるとき, the Statistics-Quality Feature shall 表示対象を認証された利用者へ戻し、現在の対象範囲に対する本人の成績を表示する。
+
+## 境界・未決事項
+
+- 本機能は、記録済みの対局結果から個人成績を集計し、個人成績画面で表示するために必要なサーバー側の集計・データ提供を含む。
+- 既存の順位・素点・最終ポイントを決める計算、対局入力、リーグ・シーズン管理は変更しない。
+- 牌譜がないため、和了・放銃・リーチ・鳴き・役・ドラなど局単位の指標は扱わない。
+- Elo、相手強度補正、信頼区間などは算出方法の合意がないため対象外とし、別途定義された場合に再検討する。
+- 三麻・四麻が混在する集計では、順位分布・ラス判定・席別比較をゲーム形式別に表示する。
+- 他の利用者の成績表示は、選択中のリーグまたはシーズンに所属する参加者に限定する。全体の対象範囲で他人の成績を閲覧する機能は含めない。

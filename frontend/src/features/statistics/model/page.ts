@@ -3,7 +3,119 @@ import {
   type StatisticsScopeOption,
 } from "@/features/statistics/model/scope-filter";
 
+import type {
+  StatisticsScopeFilters,
+  StatisticsView,
+} from "@/features/statistics/model/query-cache";
+
 export type StatisticsPageSeasonOption = StatisticsScopeOption & { id: string };
+
+export type StatisticsRouteContext = {
+  isContextMode: boolean;
+  scope: StatisticsScopeFilters;
+  targetUserId: string | null;
+  activeView: StatisticsView;
+  scopeLabel: string;
+  returnTo: string | null;
+};
+
+const viewValues: readonly StatisticsView[] = [
+  "overview",
+  "trend",
+  "comparisons",
+  "history",
+];
+
+const getSafeReturnPath = (value: string | null) => {
+  if (
+    !value ||
+    value.includes("\\") ||
+    value.includes("?") ||
+    value.includes("#")
+  ) {
+    return null;
+  }
+
+  try {
+    const baseUrl = "https://statistics.local.invalid";
+    const parsedUrl = new URL(value, baseUrl);
+    const isKnownRoute =
+      value === "/" ||
+      value === "/stats" ||
+      /^\/league\/[^/?#%]+(?:\/season\/[^/?#%]+)?$/.test(value);
+
+    return parsedUrl.origin === baseUrl &&
+      parsedUrl.pathname === value &&
+      isKnownRoute
+      ? value
+      : null;
+  } catch {
+    return null;
+  }
+};
+
+export const parseStatisticsRouteContext = (
+  search: string
+): StatisticsRouteContext => {
+  const params = new URLSearchParams(search);
+  const scopeTypeValue = params.get("scopeType");
+  const scopeType =
+    scopeTypeValue === "league" || scopeTypeValue === "season"
+      ? scopeTypeValue
+      : scopeTypeValue === "overall"
+        ? "overall"
+        : null;
+  const leagueId = params.get("leagueId") || undefined;
+  const seasonId = params.get("seasonId") || undefined;
+  const gameTypeValue = params.get("gameType");
+  const gameType: StatisticsScopeFilters["gameType"] =
+    gameTypeValue === "sanma" || gameTypeValue === "yonma"
+      ? gameTypeValue
+      : "all";
+  const isValidScope =
+    scopeType === "overall" ||
+    (scopeType === "league" && Boolean(leagueId)) ||
+    (scopeType === "season" && Boolean(leagueId && seasonId));
+  const returnTo = getSafeReturnPath(params.get("returnTo"));
+
+  return {
+    isContextMode: isValidScope,
+    scope: isValidScope
+      ? {
+          scopeType: scopeType ?? "overall",
+          ...(scopeType !== "overall" && leagueId ? { leagueId } : {}),
+          ...(scopeType === "season" && seasonId ? { seasonId } : {}),
+          gameType,
+        }
+      : { scopeType: "overall", gameType: "all" },
+    targetUserId: params.get("targetUserId") || null,
+    activeView: viewValues.includes(params.get("view") as StatisticsView)
+      ? (params.get("view") as StatisticsView)
+      : "overview",
+    scopeLabel: params.get("scopeLabel") ?? "",
+    returnTo,
+  };
+};
+
+export const buildStatisticsHref = (input: {
+  scope: StatisticsScopeFilters;
+  targetUserId: string;
+  activeView?: StatisticsView;
+  scopeLabel?: string;
+  returnTo?: string | null;
+}) => {
+  const params = new URLSearchParams({
+    scopeType: input.scope.scopeType,
+    gameType: input.scope.gameType,
+    targetUserId: input.targetUserId,
+    view: input.activeView ?? "overview",
+  });
+  if (input.scope.leagueId) params.set("leagueId", input.scope.leagueId);
+  if (input.scope.seasonId) params.set("seasonId", input.scope.seasonId);
+  if (input.scopeLabel) params.set("scopeLabel", input.scopeLabel);
+  if (input.returnTo) params.set("returnTo", input.returnTo);
+  return `/stats?${params.toString()}`;
+};
 
 export type StatisticsPageQueryStatus =
   | "idle"

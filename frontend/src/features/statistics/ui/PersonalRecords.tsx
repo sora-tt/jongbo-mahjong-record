@@ -1,5 +1,7 @@
 import * as React from "react";
 
+import { ChevronDown } from "lucide-react";
+
 import Link from "next/link";
 
 import {
@@ -9,6 +11,10 @@ import {
   formatStatisticsStreakCount,
   getStatisticsStreak,
 } from "@/features/statistics/model/score-records";
+import {
+  getStatisticsRawScoreTextClass,
+  getStatisticsSignedValueTextClass,
+} from "@/features/statistics/model/signed-value";
 
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -31,6 +37,7 @@ type ComputedSummary = Exclude<
 >;
 type Props = {
   summary: ComputedSummary;
+  startingPointsByLeagueId?: Readonly<Record<string, number>>;
 };
 type RecordValue = NonNullable<ComputedSummary["records"]["highestRawScore"]>;
 type StreakType = "top" | "last" | "topTwo" | "positive" | "negative";
@@ -50,7 +57,8 @@ const PersonalRecord: React.FC<{
   value: RecordValue | null;
   isFinalPoint: boolean;
   unit: string;
-}> = ({ label, value, isFinalPoint, unit }) => {
+  startingPointsByLeagueId: Readonly<Record<string, number>>;
+}> = ({ label, value, isFinalPoint, unit, startingPointsByLeagueId }) => {
   if (value === null) {
     return (
       <article className="rounded-surface border border-border p-3">
@@ -72,12 +80,18 @@ const PersonalRecord: React.FC<{
   const recordValue = isFinalPoint
     ? formatStatisticsFinalPointValue(value.value)
     : formatStatisticsScoreValue(value.value);
+  const valueClassName = isFinalPoint
+    ? getStatisticsSignedValueTextClass(value.value)
+    : getStatisticsRawScoreTextClass(
+        value.value,
+        startingPointsByLeagueId[match.leagueId]
+      );
   const resultsHref = `/league/${match.leagueId}/season/${match.seasonId}/sessions/${match.sessionId}/results`;
 
   return (
     <article className="rounded-surface border border-border p-3">
       <h3 className="text-sm font-semibold text-foreground">{label}</h3>
-      <p className="mt-2 text-xl font-bold text-brand-strong">
+      <p className={`mt-2 text-xl font-bold ${valueClassName}`}>
         {recordValue}
         <span className="ml-1 text-sm font-medium text-text-muted">{unit}</span>
       </p>
@@ -103,12 +117,26 @@ const PersonalRecord: React.FC<{
   );
 };
 
-const RecordCards: React.FC<{ summary: ComputedSummary }> = ({ summary }) => (
-  <Card
-    title="素点・最終ポイントの自己記録"
-    meta={`対象: ${summary.totals.totalMatchCount}対局`}
-  >
-    <div className="space-y-4">
+const RecordCards: React.FC<{
+  summary: ComputedSummary;
+  startingPointsByLeagueId: Readonly<Record<string, number>>;
+}> = ({ summary, startingPointsByLeagueId }) => (
+  <details className="rounded-surface border border-border bg-white">
+    <summary className="group flex min-h-16 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus">
+      <span className="min-w-0">
+        <span className="block font-semibold text-foreground">
+          素点・最終ポイントの自己記録
+        </span>
+        <span className="mt-1 block text-xs text-text-muted">
+          対象: {summary.totals.totalMatchCount}対局
+        </span>
+      </span>
+      <ChevronDown
+        className="h-5 w-5 shrink-0 text-text-muted transition-transform group-open:rotate-180"
+        aria-hidden="true"
+      />
+    </summary>
+    <div className="space-y-4 border-t border-border p-4">
       <section aria-label="素点の記録" className="space-y-3">
         <h3 className="font-semibold text-foreground">素点（点）</h3>
         <div className="space-y-3">
@@ -117,12 +145,14 @@ const RecordCards: React.FC<{ summary: ComputedSummary }> = ({ summary }) => (
             value={summary.records.highestRawScore}
             isFinalPoint={false}
             unit="点"
+            startingPointsByLeagueId={startingPointsByLeagueId}
           />
           <PersonalRecord
             label="最低素点"
             value={summary.records.lowestRawScore}
             isFinalPoint={false}
             unit="点"
+            startingPointsByLeagueId={startingPointsByLeagueId}
           />
         </div>
       </section>
@@ -134,17 +164,19 @@ const RecordCards: React.FC<{ summary: ComputedSummary }> = ({ summary }) => (
             value={summary.records.highestFinalPoint}
             isFinalPoint
             unit="pt"
+            startingPointsByLeagueId={startingPointsByLeagueId}
           />
           <PersonalRecord
             label="最低最終ポイント"
             value={summary.records.lowestFinalPoint}
             isFinalPoint
             unit="pt"
+            startingPointsByLeagueId={startingPointsByLeagueId}
           />
         </div>
       </section>
     </div>
-  </Card>
+  </details>
 );
 
 const streakDefinitions: Array<{ type: StreakType; label: string }> = [
@@ -189,7 +221,10 @@ const StreaksCard: React.FC<{ summary: ComputedSummary }> = ({ summary }) => (
   </Card>
 );
 
-export const PersonalRecords: React.FC<Props> = ({ summary }) => (
+export const PersonalRecords: React.FC<Props> = ({
+  summary,
+  startingPointsByLeagueId = {},
+}) => (
   <section aria-labelledby="statistics-records-heading" className="space-y-4">
     <h2
       id="statistics-records-heading"
@@ -211,7 +246,10 @@ export const PersonalRecords: React.FC<Props> = ({ summary }) => (
           unit="回"
           description={`対象: ${summary.totals.totalMatchCount}対局`}
         />
-        <RecordCards summary={summary} />
+        <RecordCards
+          summary={summary}
+          startingPointsByLeagueId={startingPointsByLeagueId}
+        />
         <StreaksCard summary={summary} />
       </>
     )}

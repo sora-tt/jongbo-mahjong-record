@@ -77,14 +77,12 @@ export const getStatisticsTrendContext = (input: {
         : to
           ? `${to}未満`
           : "全期間";
-  const gameTypeLabel =
-    scope.gameType === "sanma"
-      ? "三麻"
-      : scope.gameType === "yonma"
-        ? "四麻"
-        : "全ての形式";
+  const includesMultipleFormats =
+    scope.scopeType === "overall" && scope.gameType === "all";
 
-  return `${scopeLabel} / ${periodLabel} / ${gameTypeLabel}`;
+  return includesMultipleFormats
+    ? `${scopeLabel} / ${periodLabel} / 全ての形式`
+    : `${scopeLabel} / ${periodLabel}`;
 };
 
 export const getStatisticsTrendModel = (input: {
@@ -119,7 +117,7 @@ export const getStatisticsTrendModel = (input: {
       ) ?? null,
     contextLabel: scope
       ? getStatisticsTrendContext({ scope, scopeLabel: input.scopeLabel })
-      : "全体 / 全期間 / 全ての形式",
+      : "全体 / 全期間",
     windowSize: input.windowSize,
   };
 };

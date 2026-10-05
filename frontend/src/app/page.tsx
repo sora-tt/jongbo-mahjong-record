@@ -12,7 +12,8 @@ import { LoadingState } from "@/components/ui/loading-state";
 import { useHome } from "./hooks";
 
 export const Home: React.FC = () => {
-  const { userName, leagues, hasLeagues, isLoading, error, retry } = useHome();
+  const { userId, userName, leagues, hasLeagues, isLoading, error, retry } =
+    useHome();
 
   return (
     <AppShell mainClassName="min-h-screen bg-background font-jp">
@@ -39,6 +40,7 @@ export const Home: React.FC = () => {
                 <LeagueCard
                   key={league.id}
                   leagueId={league.id}
+                  userId={userId}
                   leagueName={league.name}
                   memberCount={league.memberCount}
                   totalMatchCount={league.totalMatchCount}

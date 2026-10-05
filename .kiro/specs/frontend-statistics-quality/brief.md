@@ -2,59 +2,60 @@
 
 ## Problem
 
-個人成績、順位表、日次記録、ポイント推移が旧型やmock、手書きresponseに依存している。また、画面移行後も旧domain型、Redux、重複hooks、不要コンポーネントが残ると、コードの二重化とバグが再発する。
+個人成績画面は選択したシーズンの対局数、総合ポイント、平均順位、連対率、順位別回数に限られている。対局記録には席、同卓者、日時、セッション、チョンボなどの情報もあり、最終成績から分かる内容を十分に確認できない。また、席別・対戦相手別・期間別の集計を表示するための個人成績データが不足している。
 
 ## Current State
 
-Seasonにはstandings、pointProgressions、seasonRecordsがあり、user_stats APIも存在する。一方、FEにはmock fallback、手書きfetch、旧domain型、Redux、重複UIが残る。チャートの色指定、nullable項目、空データの扱いも統一されていない。
+Seasonにはstandings、pointProgressions、seasonRecordsがあり、user_statsには対局数、ポイント、平均順位、順位別回数と率、素点、連続記録、チョンボ回数などがある。Matchには各参加者の順位・素点・最終ポイント・席、対局日時・セッション・同卓者が記録されている。一方、個人成績画面は選択したSeason scopeの一部しか表示していない。席別・対戦相手別・期間別・セッション別の集計や、対局履歴の比較表示は不足している。
 
 ## Desired Outcome
 
-統計画面がBEの `user_stats`、season standings、point progressionsを正しく表示し、FEで再集計しない。画面移行後に不要な旧型・mock・Redux・重複コードを削除し、型チェック・Lint・契約テスト・主要画面スモークテストで回帰を検知できる。
+利用者が全体、リーグ、シーズン、期間、三麻・四麻の対象を選び、順位・ポイント・素点・推移・自己記録・席別・相手別・セッション別の成績を確認できる。リーグまたはシーズンでは、同じscopeの他の参加者を選び、その人の成績へ表示を切り替えられる。表示は記録済みの対局結果を基にし、三麻と四麻を混同せず、対局結果の変更後に集計も更新される。
 
 ## Approach
 
-統計の取得と表示modelをfoundationのAPI境界に合わせ、ランキング・日次記録・チャートを共通UIで整理する。その後、参照箇所を確認しながら旧型、mock、Redux、重複hooks・コンポーネントを削除し、route・metadata・認証ガードも横断確認する。
+対局結果から個人成績に必要な集計値と内訳をサーバー側で提供し、個人成績画面では対象範囲を選んで表示する。順位・素点・最終ポイントの計算ルールは既存の値を正本とし、画面で再計算しない。情報はサマリー、順位・スコア、推移、自己記録、条件別比較、対局履歴のまとまりで整理する。
 
 ## Scope
 
 - **In**:
-  - 個人成績、season standings、日次記録、point progression
-  - season/league records表示
-  - 三麻/四麻のnullable項目、0件、未計算の表示
-  - mock fallbackと手書き型の除去
-  - 旧 `src/types/domain`、不要Redux、重複hooks/componentsの整理
-  - import、React.FC、Prettier/ESLint、route、metadataの統一
-  - API契約テスト、unit test、主要画面スモークテスト
+  - 個人成績の全体・リーグ・シーズン・期間・ゲーム形式の選択
+  - 選択中のリーグ・シーズン参加者への表示対象切り替え
+  - 順位・ポイント・素点・チョンボ・連続記録・最高最低成績
+  - 日時推移、指定期間、対局履歴
+  - 席別、同卓者別、セッション別、リーグ・シーズン別の集計と表示
+  - 上記の表示に必要なサーバー側の集計と個人成績データの提供
+  - 既存の統計、順位表、日次記録、ポイント推移との整合
+
 - **Out**:
-  - BE側の新しい統計指標
-  - FEでの集計アルゴリズム
-  - リアルタイムチャート
-  - 新機能の追加
+  - 牌譜を必要とする和了率、放銃率、リーチ率、鳴き率、和了打点など
+  - Elo等のモデル型レーティング、相手強度補正、信頼区間
+  - 順位・点数計算ルール、対局やリーグ管理の変更
+  - リアルタイム同期、共通UI基盤の再設計
 
 ## Boundary Candidates
 
-- stats API hooksと表示model
-- ranking/table/chart表示
-- nullable/empty data handling
-- legacy retirementとquality gates
+- 対局記録から個人成績を作る集計値と内訳
+- 全体・リーグ・シーズン・期間・ゲーム形式の選択
+- 成績サマリー、推移、記録、条件別比較、対局履歴の情報構成
+- 三麻・四麻、空データ、未計算、取得失敗の扱い
 
 ## Out of Boundary
 
-- 集計値の正しさは `backend-integrity-lifecycle` が担当する。
-- 共通Table/Card/Chart primitiveは `frontend-foundation-ui` を利用する。
-- 画面固有のCRUDは前段の画面仕様で完了させる。
+- 順位とポイントの採点規則は既存機能の責務とする。
+- 牌譜データがない局単位の分析や、合意されていない統計モデルは扱わない。
+- League/Season/Session/Matchの登録・編集や共通UI/API基盤の再設計は扱わない。
 
 ## Upstream / Downstream
 
-- **Upstream**: `backend-integrity-lifecycle`、`frontend-foundation-ui`、`frontend-league-season`、`frontend-session-match`
-- **Downstream**: 本リファクタ計画の完了後の通常開発
+- **Upstream**: backend-integrity-lifecycleの対局結果・既存ユーザー統計、frontend-foundation-uiの認証・共通画面基盤、frontend-league-seasonのリーグ・シーズン情報
+- **Downstream**: 個人成績画面と、将来の対局結果分析機能
 
 ## Existing Spec Touchpoints
 
-- **Extends**: なし
-- **Adjacent**: `frontend/src/app/stats/`、season detail、`frontend/src/types/`、`frontend/src/mocks/`、`frontend/src/store/`
+- **Extends**: frontend-statistics-qualityの個人成績・統計表示
+- **Adjacent**: backend-integrity-lifecycleの順位・ポイント算出と既存統計データ、frontend-foundation-uiの共通API・UI、frontend-league-seasonのリーグ・シーズン画面
 
 ## Constraints
 
-BEから返らない値を仮の0として埋めて意味を変えない。削除は参照調査後に行い、ユーザーが使う画面を壊さないことを優先する。
+記録済みの対局結果を正本とし、順位・素点・最終ポイントを画面で再計算しない。三麻と四麻の指標は意味の異なる順位を混合せず、該当なし・未計算を0と同一視しない。局単位の牌譜情報を必要とする指標は作らない。

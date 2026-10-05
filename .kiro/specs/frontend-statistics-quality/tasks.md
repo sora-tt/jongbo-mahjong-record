@@ -311,3 +311,35 @@
   - _Depends: 2.9, 2.10, 2.11, 3.3_
   - _Requirements: 1.2, 8.1, 10.1_
   - _Boundary: Statistics API Performance Validation_
+
+## 6. 承認済みモバイル成績UX改訂
+
+- [x] 6.1 成績ハブとscope対応deep linkを実装する
+  - `/stats` に参加中のアクティブシーズンを優先する入口を表示し、リーグ通算・全体成績へ遷移できる。
+  - シーズン・リーグのscope、表示対象者、タブ、戻り先をURLで復元できるようにする。
+  - _Requirements: 2.1, 2.2, 9.1, 9.2, 9.5, 9.6_
+  - _Boundary: Statistics entry page and URL state_
+
+- [x] 6.2 4カテゴリの成績画面と参加者切替シートを実装する
+  - 既存の先頭scope/期間/形式filterを除き、見出しにscopeと表示対象を示す。
+  - 「総合」「推移」「相手・席」「履歴」のaccessible tabsを実装する。
+  - 他の参加者はシートから切り替え、scope/tabを保ったままURL replaceで状態を更新する。
+  - _Depends: 6.1_
+  - _Requirements: 2.1, 2.2, 9.4, 9.5, 9.6, 9.7, 10.1_
+  - _Boundary: Statistics page composition, tabs, target switching_
+
+- [x] 6.3 概要・推移・相手/席の表示を再構成する
+  - 総合pt・対局数と順位分布を主役にし、低優先の冗長指標を外す。スコア詳細・自己記録は折りたたむ。
+  - 月別pt、曜日、時間帯、席、相手別のデータを選択dropdownなしで表示する。
+  - 選択中カテゴリのanalysisをlazy loadし、既存query cacheを再利用する。
+  - _Depends: 6.2_
+  - _Requirements: 3.1, 3.2, 4.1, 4.2, 4.3, 4.4, 4.5, 5.1, 5.2, 6.1, 6.2_
+  - _Boundary: Statistics visualizations and analysis request lifecycle_
+
+- [x] 6.4 成績への入口とコンパクトな履歴を実装する
+  - ホームのアクティブシーズン、リーグ詳細の参加者、シーズン順位表の参加者から適切な成績scopeへ移動できる。
+  - 履歴行は日付・順位・最終ptを初期表示し、詳細を開閉できる。
+  - 戻り先とブラウザバックが自然に機能する。
+  - _Depends: 6.1, 6.2_
+  - _Requirements: 6.3, 7.1, 9.1, 9.2, 9.5, 9.6_
+  - _Boundary: League/season navigation and match history_

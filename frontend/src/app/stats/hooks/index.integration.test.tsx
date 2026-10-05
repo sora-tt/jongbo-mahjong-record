@@ -183,7 +183,24 @@ const readyAnalysis = {
       cumulativePoint: 10,
     },
   ],
-  breakdown: { dimension: "period", rows: [], nextCursor: null },
+  breakdown: {
+    dimension: "period",
+    rows: [
+      {
+        key: "2026-10",
+        label: "2026年10月",
+        gameType: "yonma",
+        matchCount: 4,
+        denominator: 4,
+        totalPoints: 10,
+        averageRank: 2.5,
+        topRate: 0.25,
+        averageFinalPoint: 2.5,
+        rankCounts: [],
+      },
+    ],
+    nextCursor: null,
+  },
 } as never;
 
 const deferred = <TValue,>() => {
@@ -245,8 +262,13 @@ const createMockApi = (overrides: Partial<HookApi> = {}) => {
   return { api, calls, useRouter };
 };
 
-const createHook = (api: HookApi, useRouter: () => never) =>
-  createUseStatistics(api, useRouter as never);
+const createHook = (api: HookApi, useRouter: () => never) => {
+  dom.reconfigure({
+    url: `http://localhost/stats?scopeType=overall&targetUserId=${viewer.id}`,
+  });
+  const useSearchParams = () => new URLSearchParams(window.location.search);
+  return createUseStatistics(api, useRouter as never, useSearchParams as never);
+};
 
 afterEach(async () => {
   await setup;
@@ -266,11 +288,11 @@ test("hook loads summary first and fetches analysis/history only when selected",
   assert.equal(calls.analyses.length, 0);
   assert.equal(calls.histories.length, 0);
 
-  act(() => result.current.onChangeActiveView("analysis"));
+  act(() => result.current.onChangeActiveView("trend"));
   await waitFor(() => {
     assert.equal(result.current.analysisStatus, "uncomputed");
   });
-  assert.equal(calls.analyses.length, 1);
+  assert.equal(calls.analyses.length, 3);
   assert.equal(calls.histories.length, 0);
 
   act(() => result.current.onChangeActiveView("history"));
@@ -279,11 +301,11 @@ test("hook loads summary first and fetches analysis/history only when selected",
   });
   assert.equal(calls.histories.length, 1);
 
-  act(() => result.current.onChangeActiveView("analysis"));
+  act(() => result.current.onChangeActiveView("trend"));
   await waitFor(() => {
     assert.equal(result.current.analysisStatus, "uncomputed");
   });
-  assert.equal(calls.analyses.length, 1);
+  assert.equal(calls.analyses.length, 3);
 });
 
 test("hook caches scope rosters, keeps filters on target change and discards a stale summary", async () => {
@@ -435,7 +457,28 @@ test("ready statistics page announces metric values and exposes chart data in a 
     },
     getPersonalStatisticsAnalysis: async (input) => {
       calls.analyses.push(input);
-      return readyAnalysis;
+      if (input.query.dimension === "period") return readyAnalysis;
+      return {
+        ...(readyAnalysis as object),
+        breakdown: {
+          dimension: input.query.dimension,
+          rows: [
+            {
+              key: "mon",
+              label: input.query.dimension === "weekday" ? "月曜日" : "00–05時",
+              gameType: "yonma",
+              matchCount: 4,
+              denominator: 4,
+              totalPoints: 10,
+              averageRank: 2.5,
+              topRate: 0.25,
+              averageFinalPoint: 2.5,
+              rankCounts: [],
+            },
+          ],
+          nextCursor: null,
+        },
+      } as never;
     },
   };
   const useStatistics = createHook(api, useRouter);
@@ -448,7 +491,7 @@ test("ready statistics page announces metric values and exposes chart data in a 
   const { container } = render(<PageHarness />);
 
   await waitFor(() => {
-    assert.ok(screen.getByRole("heading", { name: "概要" }));
+    assert.ok(screen.getByRole("heading", { name: "総合" }));
   });
   assert.ok(screen.getByText("対局数"));
   assert.ok(screen.getByText("総合ポイント"));
@@ -457,30 +500,29 @@ test("ready statistics page announces metric values and exposes chart data in a 
   assert.ok(screen.getByText("+25.50"));
   assert.ok(container.querySelector(".max-w-md.px-4"));
 
-  fireEvent.keyDown(screen.getByRole("tab", { name: "概要" }), {
+  fireEvent.keyDown(screen.getByRole("tab", { name: "総合" }), {
     key: "ArrowRight",
   });
   await waitFor(() => {
     assert.ok(screen.getByRole("heading", { name: "成績推移" }));
   });
-  assert.equal(calls.analyses.length, 1);
+  assert.equal(calls.analyses.length, 3);
   assert.ok(
-    screen.getByRole("region", {
-      name: /累計最終ポイントの推移グラフ/,
+    screen.getByRole("img", {
+      name: /月別の総合ポイントを示す棒グラフ/,
     })
   );
-  const progressionTable = screen.getByRole("table", {
-    name: /表示順ごとの日時/,
+  const monthlyTable = screen.getByRole("table", {
+    name: /月ごとの対局数、総合ポイント/,
   });
-  assert.ok(progressionTable.textContent?.includes("+4 pt"));
-  assert.ok(progressionTable.textContent?.includes("+10 pt"));
+  assert.ok(monthlyTable.textContent?.includes("+10 pt"));
 });
 
 test("statistics tabs expose selected panel and move focus with arrow keys", async () => {
   await setup;
   const Harness: React.FC = () => {
     const [activeView, setActiveView] = React.useState<
-      "overview" | "analysis" | "history"
+      "overview" | "trend" | "comparisons" | "history"
     >("overview");
     return (
       <StatisticsViewTabs
@@ -488,7 +530,8 @@ test("statistics tabs expose selected panel and move focus with arrow keys", asy
         onActiveViewChange={setActiveView}
         panels={{
           overview: <p>平均順位 2.50位</p>,
-          analysis: <p>累計最終ポイント 25.0 pt</p>,
+          trend: <p>月別累計ポイント 25.0 pt</p>,
+          comparisons: <p>席・相手別成績</p>,
           history: <p>対局履歴: 20件</p>,
         }}
       />
@@ -496,20 +539,20 @@ test("statistics tabs expose selected panel and move focus with arrow keys", asy
   };
   render(<Harness />);
 
-  const overviewTab = screen.getByRole("tab", { name: "概要" });
-  const analysisTab = screen.getByRole("tab", { name: "分析" });
+  const overviewTab = screen.getByRole("tab", { name: "総合" });
+  const trendTab = screen.getByRole("tab", { name: "推移" });
   assert.equal(overviewTab.getAttribute("aria-selected"), "true");
-  assert.equal(analysisTab.getAttribute("aria-selected"), "false");
+  assert.equal(trendTab.getAttribute("aria-selected"), "false");
   assert.equal(
     screen.getByRole("tablist").getAttribute("aria-label"),
     "成績表示"
   );
 
   fireEvent.keyDown(overviewTab, { key: "ArrowRight" });
-  assert.equal(analysisTab.getAttribute("aria-selected"), "true");
-  assert.equal(document.activeElement, analysisTab);
+  assert.equal(trendTab.getAttribute("aria-selected"), "true");
+  assert.equal(document.activeElement, trendTab);
   assert.equal(
     screen.getByRole("tabpanel").textContent,
-    "累計最終ポイント 25.0 pt"
+    "月別累計ポイント 25.0 pt"
   );
 });

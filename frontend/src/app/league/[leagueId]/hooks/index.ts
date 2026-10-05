@@ -2,7 +2,7 @@ import * as React from "react";
 
 import { useParams, useRouter } from "next/navigation";
 
-import { fetchLeagueDetail } from "@/features/league/api";
+import { fetchLeagueDetail, fetchLeagueMembers } from "@/features/league/api";
 import { toLeagueDetail } from "@/features/league/model/adapter";
 import { fetchLeagueSeasons } from "@/features/season/api";
 import { toSeasonSummary } from "@/features/season/model/adapter";
@@ -20,6 +20,11 @@ export const useLeaguePage = () => {
   const [leagueSeasons, setLeagueSeasons] = React.useState<
     Array<ReturnType<typeof toSeasonSummary>>
   >([]);
+  const [members, setMembers] = React.useState<
+    Awaited<ReturnType<typeof fetchLeagueMembers>>
+  >([]);
+  const [membersLoading, setMembersLoading] = React.useState(true);
+  const [membersError, setMembersError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [retryCount, setRetryCount] = React.useState(0);
@@ -38,6 +43,8 @@ export const useLeaguePage = () => {
     const load = async () => {
       setLoading(true);
       setError(null);
+      setMembersLoading(true);
+      setMembersError(null);
 
       try {
         const [leagueDetail, seasons] = await Promise.all([
@@ -51,6 +58,30 @@ export const useLeaguePage = () => {
 
         setLeague(toLeagueDetail(leagueDetail));
         setLeagueSeasons(seasons.map(toSeasonSummary));
+        void fetchLeagueMembers(leagueId)
+          .then((leagueMembers) => {
+            if (!isActive) return;
+            setMembers(leagueMembers);
+          })
+          .catch((membersLoadError: unknown) => {
+            if (!isActive) return;
+            if (
+              membersLoadError instanceof ApiError &&
+              membersLoadError.status === 401
+            ) {
+              router.replace("/login");
+              return;
+            }
+            setMembersError(
+              getApiErrorMessage(
+                membersLoadError,
+                "リーグ参加者を取得できませんでした。"
+              )
+            );
+          })
+          .finally(() => {
+            if (isActive) setMembersLoading(false);
+          });
       } catch (loadError) {
         if (!isActive) {
           return;
@@ -94,6 +125,9 @@ export const useLeaguePage = () => {
     loading,
     error,
     leagueSeasons,
+    members,
+    membersLoading,
+    membersError,
     retry,
   };
 };

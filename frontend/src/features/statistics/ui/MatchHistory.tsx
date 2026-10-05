@@ -2,6 +2,8 @@
 
 import * as React from "react";
 
+import { ChevronDown } from "lucide-react";
+
 import {
   getStatisticsMatchHistoryModel,
   type StatisticsMatchHistoryUiStatus,
@@ -11,6 +13,10 @@ import {
   formatStatisticsFinalPointValue,
   formatStatisticsScoreValue,
 } from "@/features/statistics/model/score-records";
+import {
+  getStatisticsRawScoreTextClass,
+  getStatisticsSignedValueTextClass,
+} from "@/features/statistics/model/signed-value";
 import { getStatisticsTrendContext } from "@/features/statistics/model/trend";
 
 import { Button } from "@/components/ui/button";
@@ -32,6 +38,7 @@ type Props = {
   status: StatisticsMatchHistoryUiStatus;
   subjectLabel: string;
   scopeLabel?: string;
+  startingPointsByLeagueId?: Readonly<Record<string, number>>;
   historyError?: string | null;
   isLoadingMore?: boolean;
   onLoadMore: (cursor: string) => void;
@@ -66,83 +73,124 @@ const MatchDetail: React.FC<{
 const MatchHistoryItem: React.FC<{
   item: ReturnType<typeof getStatisticsMatchHistoryModel>["items"][number];
   subjectLabel: string;
-}> = ({ item, subjectLabel }) => {
+  showGameType: boolean;
+  startingPointsByLeagueId: Readonly<Record<string, number>>;
+}> = ({ item, subjectLabel, showGameType, startingPointsByLeagueId }) => {
   const { match } = item;
   const format = gameTypeLabels[item.gameType];
   const wind = windLabels[item.wind];
 
   return (
     <li>
-      <article className="space-y-3 rounded-surface border border-border p-3">
-        <header className="flex flex-wrap items-start justify-between gap-2">
-          <h3 className="font-semibold text-foreground">
-            {item.playedAtLabel}
-            <span className="ml-1 text-xs font-normal text-text-muted">
-              日本時間
-            </span>
-          </h3>
-          <span className="rounded-full bg-surface-muted px-2 py-1 text-xs font-medium text-text-muted">
-            {format}
-          </span>
-        </header>
-
-        <dl className="space-y-2">
-          <MatchDetail label="リーグ / シーズン">
-            {match.leagueName} / {match.seasonName}
-          </MatchDetail>
-          <MatchDetail label="セッション">
-            {match.sessionLabel ?? "名称なし"}
-          </MatchDetail>
-          <MatchDetail label="表示対象者">
-            {subjectLabel}（{item.rank}位・{wind}家）
-          </MatchDetail>
-          <MatchDetail label="素点">
-            {formatStatisticsScoreValue(item.rawScore)} 点
-          </MatchDetail>
-          <MatchDetail label="最終ポイント">
-            {formatOpponentPoint(item.finalPoint)}
-          </MatchDetail>
-        </dl>
-
-        <section aria-label={`${match.matchId}の同卓者`} className="space-y-2">
-          <h4 className="text-sm font-semibold text-foreground">同卓者</h4>
-          {item.opponents.length === 0 ? (
-            <p className="text-sm text-text-muted">同卓者情報がありません。</p>
-          ) : (
-            <div
-              aria-label={`${match.matchId}の同卓者一覧。横にスクロールできます。`}
-              className="overflow-x-auto rounded-control border border-border"
-              role="region"
-              tabIndex={0}
-            >
-              <Table
-                caption={`${format}、${match.leagueName} ${match.seasonName}、${item.playedAtLabel}の同卓者名、順位、最終ポイント`}
-                className="min-w-[17rem]"
+      <article className="rounded-surface border border-border bg-white">
+        <details className="group">
+          <summary className="flex min-h-16 cursor-pointer list-none flex-col justify-center gap-2 px-4 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus">
+            <span className="flex items-center justify-between gap-3">
+              <h3 className="text-sm font-semibold text-foreground">
+                {item.playedAtLabel}
+              </h3>
+              <span
+                className={`shrink-0 text-sm font-semibold ${getStatisticsSignedValueTextClass(item.finalPoint)}`}
               >
-                <TableHead>
-                  <TableRow>
-                    <TableHeadCell className="text-left">名前</TableHeadCell>
-                    <TableHeadCell>順位</TableHeadCell>
-                    <TableHeadCell>最終pt</TableHeadCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {item.opponents.map((opponent) => (
-                    <TableRow key={opponent.userId}>
-                      <TableCell className="max-w-28 break-words text-left">
-                        {opponent.userName || "名前未設定"}
-                      </TableCell>
-                      <TableCell>{opponent.rank}位</TableCell>
-                      <TableCell>
-                        {formatOpponentPoint(opponent.finalPoint)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </section>
+                {item.rank}位・{formatOpponentPoint(item.finalPoint)}
+              </span>
+            </span>
+            <span className="flex items-center justify-between gap-3 text-xs text-text-muted">
+              <span className="truncate">
+                {match.leagueName} / {match.seasonName}
+              </span>
+              <span className="inline-flex shrink-0 items-center gap-1">
+                詳細を見る
+                <ChevronDown
+                  className="h-4 w-4 transition-transform group-open:rotate-180"
+                  aria-hidden="true"
+                />
+              </span>
+            </span>
+          </summary>
+
+          <div className="space-y-3 border-t border-border p-4">
+            <dl className="space-y-2">
+              {showGameType ? (
+                <MatchDetail label="形式">{format}</MatchDetail>
+              ) : null}
+              <MatchDetail label="セッション">
+                {match.sessionLabel ?? "名称なし"}
+              </MatchDetail>
+              <MatchDetail label="表示対象者">
+                {subjectLabel}（{item.rank}位・{wind}家）
+              </MatchDetail>
+              <MatchDetail label="素点">
+                <span
+                  className={getStatisticsRawScoreTextClass(
+                    item.rawScore,
+                    startingPointsByLeagueId[match.leagueId]
+                  )}
+                >
+                  {formatStatisticsScoreValue(item.rawScore)} 点
+                </span>
+              </MatchDetail>
+              <MatchDetail label="最終ポイント">
+                <span
+                  className={getStatisticsSignedValueTextClass(item.finalPoint)}
+                >
+                  {formatOpponentPoint(item.finalPoint)}
+                </span>
+              </MatchDetail>
+            </dl>
+
+            <section
+              aria-label={`${match.matchId}の同卓者`}
+              className="space-y-2"
+            >
+              <h4 className="text-sm font-semibold text-foreground">同卓者</h4>
+              {item.opponents.length === 0 ? (
+                <p className="text-sm text-text-muted">
+                  同卓者情報がありません。
+                </p>
+              ) : (
+                <div
+                  aria-label={`${match.matchId}の同卓者一覧。横にスクロールできます。`}
+                  className="overflow-x-auto rounded-control border border-border"
+                  role="region"
+                  tabIndex={0}
+                >
+                  <Table
+                    caption={`${showGameType ? `${format}、` : ""}${match.leagueName} ${match.seasonName}、${item.playedAtLabel}の同卓者名、順位、最終ポイント`}
+                    className="min-w-[17rem]"
+                  >
+                    <TableHead>
+                      <TableRow>
+                        <TableHeadCell className="text-left">
+                          名前
+                        </TableHeadCell>
+                        <TableHeadCell>順位</TableHeadCell>
+                        <TableHeadCell>最終pt</TableHeadCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {item.opponents.map((opponent) => (
+                        <TableRow key={opponent.userId}>
+                          <TableCell className="max-w-28 break-words text-left">
+                            {opponent.userName || "名前未設定"}
+                          </TableCell>
+                          <TableCell>{opponent.rank}位</TableCell>
+                          <TableCell
+                            className={getStatisticsSignedValueTextClass(
+                              opponent.finalPoint
+                            )}
+                          >
+                            {formatOpponentPoint(opponent.finalPoint)}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </section>
+          </div>
+        </details>
       </article>
     </li>
   );
@@ -153,6 +201,7 @@ export const MatchHistory: React.FC<Props> = ({
   status,
   subjectLabel,
   scopeLabel,
+  startingPointsByLeagueId = {},
   historyError,
   isLoadingMore = false,
   onLoadMore,
@@ -160,6 +209,8 @@ export const MatchHistory: React.FC<Props> = ({
 }) => {
   const model = getStatisticsMatchHistoryModel({ status, history });
   const nextCursor = model.nextCursor;
+  const showGameType =
+    history?.scope.scopeType === "overall" && history.scope.gameType === "all";
   const contextLabel =
     scopeLabel ??
     (history
@@ -200,6 +251,8 @@ export const MatchHistory: React.FC<Props> = ({
                   key={item.match.matchId}
                   item={item}
                   subjectLabel={subjectLabel}
+                  showGameType={showGameType}
+                  startingPointsByLeagueId={startingPointsByLeagueId}
                 />
               ))}
             </ol>

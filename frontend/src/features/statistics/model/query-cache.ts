@@ -7,7 +7,7 @@ export type StatisticsScopeFilters = {
   gameType: "all" | "sanma" | "yonma";
 };
 
-export type StatisticsView = "overview" | "analysis" | "history";
+export type StatisticsView = "overview" | "trend" | "comparisons" | "history";
 export type StatisticsDimension =
   | "period"
   | "weekday"

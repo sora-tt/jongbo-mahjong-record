@@ -2,7 +2,8 @@ import type { StatisticsView } from "./query-cache";
 
 const statisticsViews: readonly StatisticsView[] = [
   "overview",
-  "analysis",
+  "trend",
+  "comparisons",
   "history",
 ];
 

@@ -36,6 +36,7 @@ const SeasonPage: React.FC = () => {
   const {
     leagueId,
     seasonId,
+    leagueName,
     season,
     sessions,
     titles,
@@ -105,7 +106,13 @@ const SeasonPage: React.FC = () => {
             rightText={`総対局数：${season.totalMatchCount}`}
             bodyClassName="overflow-x-auto p-4"
           >
-            <StandingsTable rows={season.standings} />
+            <StandingsTable
+              rows={season.standings}
+              leagueId={leagueId}
+              seasonId={seasonId}
+              leagueName={leagueName}
+              seasonName={season.name}
+            />
           </SectionCard>
         </section>
 

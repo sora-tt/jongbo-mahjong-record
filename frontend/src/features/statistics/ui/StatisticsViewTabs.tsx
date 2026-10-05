@@ -11,9 +11,10 @@ type Props = {
 };
 
 const viewOptions: readonly { value: StatisticsView; label: string }[] = [
-  { value: "overview", label: "概要" },
-  { value: "analysis", label: "分析" },
-  { value: "history", label: "対局履歴" },
+  { value: "overview", label: "総合" },
+  { value: "trend", label: "推移" },
+  { value: "comparisons", label: "相手・席" },
+  { value: "history", label: "履歴" },
 ];
 
 export const StatisticsViewTabs: React.FC<Props> = ({
@@ -26,7 +27,8 @@ export const StatisticsViewTabs: React.FC<Props> = ({
     Record<StatisticsView, HTMLButtonElement | null>
   >({
     overview: null,
-    analysis: null,
+    trend: null,
+    comparisons: null,
     history: null,
   });
   const tabId = (view: StatisticsView) =>
@@ -52,7 +54,7 @@ export const StatisticsViewTabs: React.FC<Props> = ({
         role="tablist"
         aria-label="成績表示"
         aria-orientation="horizontal"
-        className="grid grid-cols-3 gap-1 rounded-xl bg-surface-muted p-1"
+        className="grid grid-cols-4 gap-1 rounded-xl bg-surface-muted p-1"
       >
         {viewOptions.map(({ value, label }) => {
           const selected = activeView === value;
@@ -71,7 +73,7 @@ export const StatisticsViewTabs: React.FC<Props> = ({
               tabIndex={selected ? 0 : -1}
               onClick={() => onActiveViewChange(value)}
               onKeyDown={(event) => handleKeyDown(event, value)}
-              className={`min-h-11 rounded-lg px-2 py-2 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus sm:text-sm ${selected ? "bg-brand-50 text-brand-strong" : "text-text-muted hover:bg-background hover:text-foreground"}`}
+              className={`min-h-11 rounded-lg px-1 py-2 text-[11px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus sm:px-2 sm:text-sm ${selected ? "bg-brand-50 text-brand-strong" : "text-text-muted hover:bg-background hover:text-foreground"}`}
             >
               {label}
             </button>
