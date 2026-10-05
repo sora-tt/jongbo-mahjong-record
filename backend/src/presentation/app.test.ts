@@ -489,6 +489,88 @@ test("verification email route uses the production frontend URL from Vercel env 
   }
 });
 
+test("verification email route ignores the Vercel API host and prefers the frontend URL", async () => {
+  const previousAppUrl = process.env.NEXT_PUBLIC_APP_URL;
+  const previousVercelProjectProductionUrl =
+    process.env.VERCEL_PROJECT_PRODUCTION_URL;
+  const previousVercelBranchUrl = process.env.VERCEL_BRANCH_URL;
+  const previousVercelUrl = process.env.VERCEL_URL;
+
+  delete process.env.NEXT_PUBLIC_APP_URL;
+  process.env.VERCEL_PROJECT_PRODUCTION_URL =
+    "https://api-jongbo-mahjong-record.vercel.app";
+  process.env.VERCEL_BRANCH_URL =
+    "https://jongbo-mahjong-record-git-feat-issue-125.vercel.app";
+  delete process.env.VERCEL_URL;
+
+  try {
+    const mockAuth = {
+      verifySessionCookie: async () => ({
+        uid: "api-host-user-123",
+        email: "api-host@example.com",
+        email_verified: false,
+      }),
+      getUser: async () => ({
+        uid: "api-host-user-123",
+        email: "api-host@example.com",
+        emailVerified: false,
+      }),
+      generateEmailVerificationLink: async (
+        email: string,
+        options: { url: string },
+      ) =>
+        `${options.url}?mode=verify&oobCode=api-host-code&email=${encodeURIComponent(email)}`,
+    };
+
+    const app = new Hono().route(
+      "/api/auth",
+      buildAuthRouter({ getAdminAuth: () => mockAuth as never }),
+    );
+
+    const response = await app.request("/api/auth/verification-email", {
+      method: "POST",
+      headers: {
+        Cookie: "jongbo_session=mock-session-cookie",
+      },
+    });
+    const body = (await response.json()) as {
+      data: { verificationUrl: string };
+    };
+
+    assert.equal(response.status, 200);
+    assert.match(
+      body.data.verificationUrl,
+      /^https:\/\/jongbo-mahjong-record-git-feat-issue-125\.vercel\.app\/verify-email\?mode=verify/,
+    );
+    assert.doesNotMatch(body.data.verificationUrl, /api-jongbo-mahjong-record/);
+  } finally {
+    if (previousAppUrl === undefined) {
+      delete process.env.NEXT_PUBLIC_APP_URL;
+    } else {
+      process.env.NEXT_PUBLIC_APP_URL = previousAppUrl;
+    }
+
+    if (previousVercelProjectProductionUrl === undefined) {
+      delete process.env.VERCEL_PROJECT_PRODUCTION_URL;
+    } else {
+      process.env.VERCEL_PROJECT_PRODUCTION_URL =
+        previousVercelProjectProductionUrl;
+    }
+
+    if (previousVercelBranchUrl === undefined) {
+      delete process.env.VERCEL_BRANCH_URL;
+    } else {
+      process.env.VERCEL_BRANCH_URL = previousVercelBranchUrl;
+    }
+
+    if (previousVercelUrl === undefined) {
+      delete process.env.VERCEL_URL;
+    } else {
+      process.env.VERCEL_URL = previousVercelUrl;
+    }
+  }
+});
+
 test("verification email route prefers the deployed production URL even when localhost is configured", async () => {
   const previousAppUrl = process.env.NEXT_PUBLIC_APP_URL;
   const previousVercelProjectProductionUrl =
