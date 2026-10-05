@@ -5,16 +5,17 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 
-import {
-  confirmVerificationEmail,
-  sendVerificationEmail,
-} from "@/lib/api/auth";
+import { confirmVerificationEmail } from "@/lib/api/auth";
 import { ApiError, getApiErrorMessage } from "@/lib/api/core";
 import {
   getAuthRedirectTarget,
   getRetryMessage,
   getVerificationAction,
 } from "@/lib/auth/verification";
+import {
+  getCurrentUser,
+  sendVerificationEmail as sendFirebaseVerificationEmail,
+} from "@/lib/firebase/auth";
 
 const VerifyEmailPageContent: React.FC = () => {
   const router = useRouter();
@@ -35,16 +36,17 @@ const VerifyEmailPageContent: React.FC = () => {
     setError(null);
 
     try {
-      const response = await sendVerificationEmail();
-      const nextRetrySeconds = response.retryAfterSeconds ?? 60;
-      refreshCooldown(nextRetrySeconds);
+      await sendFirebaseVerificationEmail();
+      refreshCooldown(60);
       setStatus("pending");
     } catch (submitError) {
       const retryableError =
         submitError instanceof ApiError
           ? submitError
           : new ApiError(
-              "認証メールの送信に失敗しました",
+              submitError instanceof Error
+                ? submitError.message
+                : "認証メールの送信に失敗しました",
               null,
               null,
               {},
@@ -83,6 +85,12 @@ const VerifyEmailPageContent: React.FC = () => {
 
         try {
           await confirmVerificationEmail(action.oobCode);
+
+          const currentUser = await getCurrentUser();
+          if (currentUser) {
+            await currentUser.reload();
+          }
+
           setStatus("success");
           setError(null);
         } catch (confirmError) {
