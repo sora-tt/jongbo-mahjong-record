@@ -146,8 +146,12 @@ const getPreferredFrontendUrl = (value?: string) => {
       hostname === "0.0.0.0" ||
       hostname === "[::1]" ||
       /^127(?:\.\d{1,3}){3}$/.test(hostname);
+    const isApiHost =
+      hostname === "api" ||
+      hostname.startsWith("api.") ||
+      hostname.startsWith("api-");
 
-    if (isLoopbackHost) {
+    if (isLoopbackHost || isApiHost) {
       return "";
     }
   } catch {
