@@ -140,7 +140,8 @@ const getPreferredFrontendUrl = (value?: string) => {
   }
 
   try {
-    const { hostname } = new URL(normalized);
+    const url = new URL(normalized);
+    const hostname = url.hostname;
     const isLoopbackHost =
       hostname === "localhost" ||
       hostname === "0.0.0.0" ||
@@ -150,8 +151,26 @@ const getPreferredFrontendUrl = (value?: string) => {
       hostname === "api" ||
       hostname.startsWith("api.") ||
       hostname.startsWith("api-");
+    const isBackendVercelHost =
+      hostname === "backend" ||
+      hostname.startsWith("backend.") ||
+      hostname.includes("-backend-") ||
+      hostname.includes(".backend.");
 
-    if (isLoopbackHost || isApiHost) {
+    if (isLoopbackHost) {
+      return "";
+    }
+
+    if (isApiHost || isBackendVercelHost) {
+      const frontendHostname = hostname
+        .replace(/-backend-[A-Za-z0-9-]+(?=\.vercel\.app$)/i, "")
+        .replace(/^api[-.]/i, "");
+
+      if (frontendHostname !== hostname) {
+        url.hostname = frontendHostname;
+        return url.toString().replace(/\/+$/, "");
+      }
+
       return "";
     }
   } catch {

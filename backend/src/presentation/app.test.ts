@@ -540,9 +540,99 @@ test("verification email route ignores the Vercel API host and prefers the front
     assert.equal(response.status, 200);
     assert.match(
       body.data.verificationUrl,
-      /^https:\/\/jongbo-mahjong-record-git-feat-issue-125\.vercel\.app\/verify-email\?mode=verify/,
+      /^https:\/\/jongbo-mahjong-record\.vercel\.app\/verify-email\?mode=verify/,
     );
     assert.doesNotMatch(body.data.verificationUrl, /api-jongbo-mahjong-record/);
+    assert.doesNotMatch(
+      body.data.verificationUrl,
+      /jongbo-mahjong-record-git-/,
+    );
+  } finally {
+    if (previousAppUrl === undefined) {
+      delete process.env.NEXT_PUBLIC_APP_URL;
+    } else {
+      process.env.NEXT_PUBLIC_APP_URL = previousAppUrl;
+    }
+
+    if (previousVercelProjectProductionUrl === undefined) {
+      delete process.env.VERCEL_PROJECT_PRODUCTION_URL;
+    } else {
+      process.env.VERCEL_PROJECT_PRODUCTION_URL =
+        previousVercelProjectProductionUrl;
+    }
+
+    if (previousVercelBranchUrl === undefined) {
+      delete process.env.VERCEL_BRANCH_URL;
+    } else {
+      process.env.VERCEL_BRANCH_URL = previousVercelBranchUrl;
+    }
+
+    if (previousVercelUrl === undefined) {
+      delete process.env.VERCEL_URL;
+    } else {
+      process.env.VERCEL_URL = previousVercelUrl;
+    }
+  }
+});
+
+test("verification email route normalizes backend Vercel hosts to the frontend production URL", async () => {
+  const previousAppUrl = process.env.NEXT_PUBLIC_APP_URL;
+  const previousVercelProjectProductionUrl =
+    process.env.VERCEL_PROJECT_PRODUCTION_URL;
+  const previousVercelBranchUrl = process.env.VERCEL_BRANCH_URL;
+  const previousVercelUrl = process.env.VERCEL_URL;
+
+  delete process.env.NEXT_PUBLIC_APP_URL;
+  process.env.VERCEL_PROJECT_PRODUCTION_URL =
+    "https://api-jongbo-mahjong-record.vercel.app";
+  delete process.env.VERCEL_BRANCH_URL;
+  process.env.VERCEL_URL =
+    "https://jongbo-mahjong-record-backend-9g9cgx79u.vercel.app";
+
+  try {
+    const mockAuth = {
+      verifySessionCookie: async () => ({
+        uid: "backend-vhost-user-123",
+        email: "backend-vhost@example.com",
+        email_verified: false,
+      }),
+      getUser: async () => ({
+        uid: "backend-vhost-user-123",
+        email: "backend-vhost@example.com",
+        emailVerified: false,
+      }),
+      generateEmailVerificationLink: async (
+        email: string,
+        options: { url: string },
+      ) =>
+        `${options.url}?mode=verify&oobCode=backend-vhost-code&email=${encodeURIComponent(email)}`,
+    };
+
+    const app = new Hono().route(
+      "/api/auth",
+      buildAuthRouter({ getAdminAuth: () => mockAuth as never }),
+    );
+
+    const response = await app.request("/api/auth/verification-email", {
+      method: "POST",
+      headers: {
+        Cookie: "jongbo_session=mock-session-cookie",
+      },
+    });
+    const body = (await response.json()) as {
+      data: { verificationUrl: string };
+    };
+
+    assert.equal(response.status, 200);
+    assert.match(
+      body.data.verificationUrl,
+      /^https:\/\/jongbo-mahjong-record\.vercel\.app\/verify-email\?mode=verify/,
+    );
+    assert.doesNotMatch(body.data.verificationUrl, /api-jongbo-mahjong-record/);
+    assert.doesNotMatch(
+      body.data.verificationUrl,
+      /jongbo-mahjong-record-backend-/,
+    );
   } finally {
     if (previousAppUrl === undefined) {
       delete process.env.NEXT_PUBLIC_APP_URL;
