@@ -11,7 +11,7 @@ import { LoadingState } from "@/components/ui/loading-state";
 
 import { useHome } from "./hooks";
 
-export const Home: React.FC = () => {
+const Home: React.FC = () => {
   const { userId, userName, leagues, hasLeagues, isLoading, error, retry } =
     useHome();
 

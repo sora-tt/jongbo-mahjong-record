@@ -47,13 +47,13 @@ let renderHook!: typeof import("@testing-library/react").renderHook;
 let screen!: typeof import("@testing-library/react").screen;
 let waitFor!: typeof import("@testing-library/react").waitFor;
 let createUseStatistics!: typeof import("./index").createUseStatistics;
-let StatisticsPageContent!: typeof import("../page").StatisticsPageContent;
+let StatisticsPageContent!: typeof import("@/features/statistics/ui/StatisticsPageContent").StatisticsPageContent;
 let StatisticsViewTabs!: typeof import("@/features/statistics/ui/StatisticsViewTabs").StatisticsViewTabs;
 
 const setup = Promise.all([
   import("@testing-library/react"),
   import("./index"),
-  import("../page"),
+  import("@/features/statistics/ui/StatisticsPageContent"),
   import("@/features/statistics/ui/StatisticsViewTabs"),
 ]).then(([testingLibrary, hookModule, pageModule, tabsModule]) => {
   ({ act, cleanup, fireEvent, render, renderHook, screen, waitFor } =
