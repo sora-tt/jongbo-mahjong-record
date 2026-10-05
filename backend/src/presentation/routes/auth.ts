@@ -187,6 +187,14 @@ const getFrontendAppUrl = () => {
   return "http://127.0.0.1:3000";
 };
 
+const getFrontendAppEnvDebugInfo = () => ({
+  NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
+  VERCEL_PROJECT_PRODUCTION_URL: process.env.VERCEL_PROJECT_PRODUCTION_URL,
+  VERCEL_BRANCH_URL: process.env.VERCEL_BRANCH_URL,
+  VERCEL_URL: process.env.VERCEL_URL,
+  resolvedFrontendAppUrl: getFrontendAppUrl(),
+});
+
 type AuthRouterDependencies = {
   getAdminAuth?: typeof getAdminAuth;
 };
@@ -323,6 +331,16 @@ export const buildAuthRouter = (
 
       const verificationUrl = `${getFrontendAppUrl()}/verify-email`;
 
+      console.info(
+        "[verification-email] generating Firebase verification link",
+        {
+          uid,
+          currentEmail,
+          verificationUrl,
+          env: getFrontendAppEnvDebugInfo(),
+        },
+      );
+
       let emailVerificationLink: string;
       try {
         emailVerificationLink = await withTimeout(
@@ -332,7 +350,24 @@ export const buildAuthRouter = (
           }),
           8000,
         );
-      } catch {
+      } catch (error) {
+        console.error(
+          "[verification-email] Firebase generateEmailVerificationLink failed",
+          {
+            uid,
+            currentEmail,
+            verificationUrl,
+            env: getFrontendAppEnvDebugInfo(),
+            error:
+              error instanceof Error
+                ? {
+                    name: error.name,
+                    message: error.message,
+                    stack: error.stack,
+                  }
+                : error,
+          },
+        );
         throw new AppError(
           "failed to generate verification email",
           500,
