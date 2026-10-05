@@ -1,7 +1,12 @@
 import { createSession, deleteSession } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/core";
 import { createMe, fetchMe } from "@/lib/api/users";
-import { loginWithEmail, logout, signupWithEmail } from "@/lib/firebase/auth";
+import {
+  loginWithEmail,
+  logout,
+  sendVerificationEmail as sendFirebaseVerificationEmail,
+  signupWithEmail,
+} from "@/lib/firebase/auth";
 
 const getFallbackUsername = (email: string) =>
   email
@@ -78,6 +83,7 @@ export const signupToApp = async (input: {
   const idToken = await credential.user.getIdToken();
 
   await createSession(idToken);
+  await sendFirebaseVerificationEmail(credential.user);
 
   // Do not block redirect on profile sync. Home page will retry if needed.
   void (async () => {

@@ -2,6 +2,8 @@
 
 import * as React from "react";
 
+import { usePathname, useRouter } from "next/navigation";
+
 import { logoutFromApp } from "@/lib/auth/flows";
 import { subscribeAuthState, type FirebaseUser } from "@/lib/firebase/auth";
 import { hasFirebaseConfig } from "@/lib/firebase/client";
@@ -21,6 +23,8 @@ const AuthContext = React.createContext<AuthContextValue | null>(null);
 export const AuthProvider: React.FC<React.PropsWithChildren> = ({
   children,
 }) => {
+  const router = useRouter();
+  const pathname = usePathname();
   const [user, setUser] = React.useState<FirebaseUser | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
 
@@ -63,6 +67,18 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({
       unsubscribe?.();
     };
   }, []);
+
+  React.useEffect(() => {
+    if (!user || user.emailVerified || pathname === "/verify-email") {
+      return;
+    }
+
+    if (pathname === "/login" || pathname === "/signup") {
+      return;
+    }
+
+    router.replace("/verify-email");
+  }, [pathname, router, user]);
 
   const value = {
     user,
