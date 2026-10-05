@@ -14,6 +14,90 @@
         { "fieldPath": "league_id", "order": "ASCENDING" },
         { "fieldPath": "season_id", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "user_stats",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "scope_type", "order": "ASCENDING" },
+        { "fieldPath": "league_id", "order": "ASCENDING" },
+        { "fieldPath": "season_id", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "user_match_statistics",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "user_id", "order": "ASCENDING" },
+        { "fieldPath": "played_at", "order": "DESCENDING" },
+        { "fieldPath": "session_id", "order": "DESCENDING" },
+        { "fieldPath": "match_index", "order": "DESCENDING" },
+        { "fieldPath": "match_id", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "user_match_statistics",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "user_id", "order": "ASCENDING" },
+        { "fieldPath": "game_type", "order": "ASCENDING" },
+        { "fieldPath": "played_at", "order": "DESCENDING" },
+        { "fieldPath": "session_id", "order": "DESCENDING" },
+        { "fieldPath": "match_index", "order": "DESCENDING" },
+        { "fieldPath": "match_id", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "user_match_statistics",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "user_id", "order": "ASCENDING" },
+        { "fieldPath": "league_id", "order": "ASCENDING" },
+        { "fieldPath": "played_at", "order": "DESCENDING" },
+        { "fieldPath": "session_id", "order": "DESCENDING" },
+        { "fieldPath": "match_index", "order": "DESCENDING" },
+        { "fieldPath": "match_id", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "user_match_statistics",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "user_id", "order": "ASCENDING" },
+        { "fieldPath": "league_id", "order": "ASCENDING" },
+        { "fieldPath": "game_type", "order": "ASCENDING" },
+        { "fieldPath": "played_at", "order": "DESCENDING" },
+        { "fieldPath": "session_id", "order": "DESCENDING" },
+        { "fieldPath": "match_index", "order": "DESCENDING" },
+        { "fieldPath": "match_id", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "user_match_statistics",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "user_id", "order": "ASCENDING" },
+        { "fieldPath": "league_id", "order": "ASCENDING" },
+        { "fieldPath": "season_id", "order": "ASCENDING" },
+        { "fieldPath": "played_at", "order": "DESCENDING" },
+        { "fieldPath": "session_id", "order": "DESCENDING" },
+        { "fieldPath": "match_index", "order": "DESCENDING" },
+        { "fieldPath": "match_id", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "user_match_statistics",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "user_id", "order": "ASCENDING" },
+        { "fieldPath": "league_id", "order": "ASCENDING" },
+        { "fieldPath": "season_id", "order": "ASCENDING" },
+        { "fieldPath": "game_type", "order": "ASCENDING" },
+        { "fieldPath": "played_at", "order": "DESCENDING" },
+        { "fieldPath": "session_id", "order": "DESCENDING" },
+        { "fieldPath": "match_index", "order": "DESCENDING" },
+        { "fieldPath": "match_id", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

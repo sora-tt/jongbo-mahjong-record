@@ -1,4 +1,10 @@
-import type { JoiningSeason, User, UserStats } from "@/domain/user/types.js";
+import type {
+  JoiningSeason,
+  User,
+  UserStats,
+  UserStatsUpsertData,
+  UserStatsWithPersonalStatistics,
+} from "@/domain/user/types.js";
 import type { ScopeType } from "@/domain/shared/types.js";
 
 export interface UserRepository {
@@ -26,6 +32,12 @@ export interface UserStatsRepository {
     leagueId?: string;
     seasonId?: string;
   }): Promise<UserStats | null>;
+  getWithPersonalStatistics(params: {
+    userId: string;
+    scopeType: ScopeType;
+    leagueId?: string;
+    seasonId?: string;
+  }): Promise<UserStatsWithPersonalStatistics | null>;
   upsert(
     key: {
       userId: string;
@@ -33,8 +45,15 @@ export interface UserStatsRepository {
       leagueId: string | null;
       seasonId: string | null;
     },
-    data: Omit<UserStats, "id" | "createdAt" | "updatedAt">,
+    data: UserStatsUpsertData,
   ): Promise<string>;
+  markScopesUncomputed(
+    scopes: Array<{
+      scopeType: ScopeType;
+      leagueId: string | null;
+      seasonId: string | null;
+    }>,
+  ): Promise<void>;
   deleteMissingScopeStats(params: {
     scopeType: ScopeType;
     leagueId: string | null;

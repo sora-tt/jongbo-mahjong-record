@@ -4,8 +4,11 @@ import { FileText, Pencil, Trophy, Users } from "lucide-react";
 
 import Link from "next/link";
 
+import { buildStatisticsHref } from "@/features/statistics/model/page";
+
 type Props = {
   leagueId: string;
+  userId: string;
   leagueName: string;
   memberCount: number;
   totalMatchCount: number;
@@ -18,6 +21,7 @@ type Props = {
 
 const LeagueCard: React.FC<Props> = ({
   leagueId,
+  userId,
   leagueName,
   memberCount,
   totalMatchCount,
@@ -84,6 +88,24 @@ const LeagueCard: React.FC<Props> = ({
             <Pencil size={18} />
             <span>シーズン詳細</span>
           </Link>
+          {activeSeason && userId ? (
+            <Link
+              href={buildStatisticsHref({
+                scope: {
+                  scopeType: "season",
+                  leagueId,
+                  seasonId: activeSeason.id,
+                  gameType: "all",
+                },
+                targetUserId: userId,
+                scopeLabel: `${leagueName} / ${activeSeason.name}`,
+                returnTo: "/",
+              })}
+              className="w-full rounded-lg px-2 py-2 text-center text-sm font-medium text-brand-strong underline underline-offset-2 hover:bg-brand-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+            >
+              今シーズンの成績
+            </Link>
+          ) : null}
         </div>
       </div>
     </div>

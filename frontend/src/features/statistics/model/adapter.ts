@@ -6,6 +6,12 @@ import {
   type ApiUserStats,
 } from "@/lib/api/contracts";
 
+import type {
+  PersonalStatisticsAnalysisResponse,
+  PersonalStatisticsSummaryResponse,
+  StatisticsMatchHistoryResponse,
+} from "@/features/statistics/api";
+
 export const toUserStats = (dto: ApiUserStats) => ({
   ...dto,
   id: toId(dto.id, "userStats.id"),
@@ -14,6 +20,30 @@ export const toUserStats = (dto: ApiUserStats) => ({
   seasonId: dto.seasonId ? toId(dto.seasonId, "userStats.seasonId") : null,
   createdAt: toIsoDateTime(dto.createdAt),
   updatedAt: toIsoDateTime(dto.updatedAt),
+});
+
+export const toPersonalStatisticsSummaryView = (
+  dto: PersonalStatisticsSummaryResponse,
+  targetUserId: string
+) => ({
+  ...dto,
+  targetUserId: toId(targetUserId, "statistics.targetUserId"),
+});
+
+export const toPersonalStatisticsAnalysisView = (
+  dto: PersonalStatisticsAnalysisResponse,
+  targetUserId: string
+) => ({
+  ...dto,
+  targetUserId: toId(targetUserId, "statistics.targetUserId"),
+});
+
+export const toStatisticsMatchHistoryView = (
+  dto: StatisticsMatchHistoryResponse,
+  targetUserId: string
+) => ({
+  ...dto,
+  targetUserId: toId(targetUserId, "statistics.targetUserId"),
 });
 
 export const toJoiningSeason = (dto: ApiJoiningSeason) => ({

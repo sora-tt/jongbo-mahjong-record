@@ -23,11 +23,19 @@ export type UpdateLeagueInput = {
 export interface LeagueRepository {
   list(memberUserId?: string): Promise<LeagueSummary[]>;
   get(leagueId: string): Promise<LeagueDetail>;
+  /** Checks league existence without loading its member collection. */
+  exists(leagueId: string): Promise<boolean>;
   getRule(leagueId: string): Promise<LeagueRule>;
   create(input: CreateLeagueInput): Promise<LeagueDetail>;
   update(leagueId: string, input: UpdateLeagueInput): Promise<LeagueDetail>;
   delete(leagueId: string): Promise<void>;
   listMembers(leagueId: string): Promise<LeagueMember[]>;
+  /** Returns whether both users belong to the requested league. */
+  areMembers(
+    leagueId: string,
+    viewerUserId: string,
+    targetUserId: string,
+  ): Promise<boolean>;
   listAllMembers(): Promise<UserReference[]>;
   setActiveSeason(
     leagueId: string,

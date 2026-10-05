@@ -21,6 +21,8 @@ export type UpdateSeasonInput = {
 export interface SeasonRepository {
   list(leagueId: string): Promise<SeasonSummary[]>;
   get(leagueId: string, seasonId: string): Promise<SeasonDetail>;
+  /** Checks season existence without mapping its detail. */
+  exists(leagueId: string, seasonId: string): Promise<boolean>;
   create(
     leagueId: string,
     input: CreateSeasonInput,
@@ -33,6 +35,13 @@ export interface SeasonRepository {
   ): Promise<SeasonDetail>;
   delete(leagueId: string, seasonId: string): Promise<void>;
   listMembers(leagueId: string, seasonId: string): Promise<SeasonMember[]>;
+  /** Returns whether both users belong to the requested season. */
+  areMembers(
+    leagueId: string,
+    seasonId: string,
+    viewerUserId: string,
+    targetUserId: string,
+  ): Promise<boolean>;
   updateStatistics(params: {
     leagueId: string;
     seasonId: string;

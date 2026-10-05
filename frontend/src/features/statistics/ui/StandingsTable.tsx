@@ -1,5 +1,9 @@
 import * as React from "react";
 
+import Link from "next/link";
+
+import { buildStatisticsHref } from "@/features/statistics/model/page";
+
 import {
   Table,
   TableBody,
@@ -15,6 +19,10 @@ type StandingRow = ReturnType<typeof toStandingRows>[number];
 
 type Props = {
   rows: ReadonlyArray<StandingRow>;
+  leagueId?: string;
+  seasonId?: string;
+  leagueName?: string;
+  seasonName?: string;
 };
 
 const getTotalPointsClassName = (totalPoints: number) => {
@@ -23,7 +31,13 @@ const getTotalPointsClassName = (totalPoints: number) => {
   return "font-semibold text-text-muted";
 };
 
-export const StandingsTable: React.FC<Props> = ({ rows }) => (
+export const StandingsTable: React.FC<Props> = ({
+  rows,
+  leagueId,
+  seasonId,
+  leagueName,
+  seasonName,
+}) => (
   <Table caption="順位表">
     <TableHead>
       <TableRow>
@@ -42,7 +56,30 @@ export const StandingsTable: React.FC<Props> = ({ rows }) => (
         rows.map((row) => (
           <TableRow key={String(row.userId)}>
             <TableCell>{row.rank}</TableCell>
-            <TableCell>{row.userName}</TableCell>
+            <TableCell>
+              {leagueId && seasonId && seasonName ? (
+                <Link
+                  href={buildStatisticsHref({
+                    scope: {
+                      scopeType: "season",
+                      leagueId,
+                      seasonId,
+                      gameType: "all",
+                    },
+                    targetUserId: String(row.userId),
+                    scopeLabel: leagueName
+                      ? `${leagueName} / ${seasonName}`
+                      : seasonName,
+                    returnTo: `/league/${leagueId}/season/${seasonId}`,
+                  })}
+                  className="font-medium text-brand-strong underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                >
+                  {row.userName}
+                </Link>
+              ) : (
+                row.userName
+              )}
+            </TableCell>
             <TableCell className={getTotalPointsClassName(row.totalPoints)}>
               {row.totalPoints.toFixed(1)}
             </TableCell>

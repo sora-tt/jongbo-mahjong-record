@@ -7,6 +7,7 @@ import type {
   UserId,
   UserStatsId,
 } from "@/domain/shared/types.js";
+import type { PersonalStatisticsSnapshot } from "@/domain/statistics/types.js";
 
 export type User = {
   id: UserId;
@@ -46,6 +47,22 @@ export type UserStats = {
   loseStreak: Nullable<number>;
   createdAt: IsoDateString;
   updatedAt: IsoDateString;
+};
+
+/** A single persisted scope document and its personal statistics readiness. */
+export type UserStatsWithPersonalStatistics = {
+  stats: UserStats;
+  /** Version 0 means the expanded personal statistics have not been computed. */
+  personalStatisticsVersion: number;
+  personalStatisticsSnapshot: PersonalStatisticsSnapshot | null;
+};
+
+export type UserStatsUpsertData = Omit<
+  UserStats,
+  "id" | "createdAt" | "updatedAt"
+> & {
+  personalStatisticsVersion?: number;
+  personalStatisticsSnapshot?: PersonalStatisticsSnapshot | null;
 };
 
 export type JoiningSeason = {

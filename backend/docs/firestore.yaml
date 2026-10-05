@@ -282,6 +282,48 @@ leagues:
     created_at: timestamp
     updated_at: timestamp
 
+user_match_statistics:
+  collections:
+  fields:
+    # user × league × season × session × match で決定する投影ID
+    id: string
+    user_id: string
+    user_name: string
+    league_id: string
+    league_name: string
+    season_id: string
+    season_name: string
+    session_id: string
+    session_label:
+      type: string
+      nullable: true
+    match_id: string
+    match_index: number
+    played_at: timestamp
+    game_type:
+      type: string
+      enum: [sanma, yonma]
+    player_count:
+      type: number
+      enum: [3, 4]
+    wind:
+      type: string
+      enum: [east, south, west, north]
+    rank: number
+    raw_score: number
+    final_point: number
+    chombo_count: number
+    opponents:
+      type: array
+      items:
+        type: object
+        fields:
+          user_id: string
+          user_name: string
+          rank: number
+          final_point: number
+    updated_at: timestamp
+
 user_stats:
   collections:
   fields:
@@ -356,6 +398,626 @@ user_stats:
     lose_streak:
       type: number
       nullable: true
+
+    # 固定長の個人成績snapshot。version 1以上はsnapshotが計算済み
+    personal_statistics_version: number
+    personal_statistics:
+      type: object
+      nullable: true
+      fields:
+        all:
+          type: object
+          fields:
+            totals:
+              type: object
+              fields:
+                totalMatchCount: number
+                sessionCount: number
+                totalPoints: number
+                averageFinalPoint:
+                  type: number
+                  nullable: true
+                chomboCount: number
+            byGameType:
+              type: array
+              items:
+                type: object
+                fields:
+                  gameType:
+                    type: string
+                    enum: [sanma, yonma]
+                  matchCount: number
+                  totalPoints: number
+                  averageFinalPoint:
+                    type: number
+                    nullable: true
+                  averageRank:
+                    type: number
+                    nullable: true
+                  ranks:
+                    type: array
+                    items:
+                      type: object
+                      fields:
+                        rank: number
+                        count: number
+                        rate:
+                          type: number
+                          nullable: true
+                  topRate:
+                    type: number
+                    nullable: true
+                  topTwoRate:
+                    type: number
+                    nullable: true
+                  topThreeRate:
+                    type: number
+                    nullable: true
+                  lastRate:
+                    type: number
+                    nullable: true
+                  lastAvoidanceRate:
+                    type: number
+                    nullable: true
+            rawScore:
+              type: object
+              fields:
+                matchCount: number
+                average:
+                  type: number
+                  nullable: true
+                maximum:
+                  type: number
+                  nullable: true
+                minimum:
+                  type: number
+                  nullable: true
+                median:
+                  type: number
+                  nullable: true
+                populationStandardDeviation:
+                  type: number
+                  nullable: true
+            finalPoint:
+              type: object
+              fields:
+                matchCount: number
+                average:
+                  type: number
+                  nullable: true
+                maximum:
+                  type: number
+                  nullable: true
+                minimum:
+                  type: number
+                  nullable: true
+                median:
+                  type: number
+                  nullable: true
+                populationStandardDeviation:
+                  type: number
+                  nullable: true
+                positive:
+                  type: object
+                  fields:
+                    count: number
+                    denominator: number
+                    rate:
+                      type: number
+                      nullable: true
+                negative:
+                  type: object
+                  fields:
+                    count: number
+                    denominator: number
+                    rate:
+                      type: number
+                      nullable: true
+                even:
+                  type: object
+                  fields:
+                    count: number
+                    denominator: number
+                    rate:
+                      type: number
+                      nullable: true
+            scoreByRank:
+              type: array
+              items:
+                type: object
+                fields:
+                  gameType:
+                    type: string
+                    enum: [sanma, yonma]
+                  rank: number
+                  matchCount: number
+                  averageRawScore:
+                    type: number
+                    nullable: true
+                  averageFinalPoint:
+                    type: number
+                    nullable: true
+            records:
+              type: object
+              fields:
+                highestRawScore:
+                  type: object
+                  nullable: true
+                  fields:
+                    value: number
+                    match:
+                      type: object
+                      fields:
+                        matchId: string
+                        leagueId: string
+                        leagueName: string
+                        seasonId: string
+                        seasonName: string
+                        sessionId: string
+                        sessionLabel:
+                          type: string
+                          nullable: true
+                        playedAt: string
+                        opponents:
+                          type: array
+                          maxItems: 3
+                          items:
+                            type: object
+                            fields:
+                              userId: string
+                              userName: string
+                              rank: number
+                              finalPoint: number
+                lowestRawScore:
+                  type: object
+                  nullable: true
+                  fields:
+                    value: number
+                    match:
+                      type: object
+                      fields:
+                        matchId: string
+                        leagueId: string
+                        leagueName: string
+                        seasonId: string
+                        seasonName: string
+                        sessionId: string
+                        sessionLabel:
+                          type: string
+                          nullable: true
+                        playedAt: string
+                        opponents:
+                          type: array
+                          maxItems: 3
+                          items:
+                            type: object
+                            fields:
+                              userId: string
+                              userName: string
+                              rank: number
+                              finalPoint: number
+                highestFinalPoint:
+                  type: object
+                  nullable: true
+                  fields:
+                    value: number
+                    match:
+                      type: object
+                      fields:
+                        matchId: string
+                        leagueId: string
+                        leagueName: string
+                        seasonId: string
+                        seasonName: string
+                        sessionId: string
+                        sessionLabel:
+                          type: string
+                          nullable: true
+                        playedAt: string
+                        opponents:
+                          type: array
+                          maxItems: 3
+                          items:
+                            type: object
+                            fields:
+                              userId: string
+                              userName: string
+                              rank: number
+                              finalPoint: number
+                lowestFinalPoint:
+                  type: object
+                  nullable: true
+                  fields:
+                    value: number
+                    match:
+                      type: object
+                      fields:
+                        matchId: string
+                        leagueId: string
+                        leagueName: string
+                        seasonId: string
+                        seasonName: string
+                        sessionId: string
+                        sessionLabel:
+                          type: string
+                          nullable: true
+                        playedAt: string
+                        opponents:
+                          type: array
+                          maxItems: 3
+                          items:
+                            type: object
+                            fields:
+                              userId: string
+                              userName: string
+                              rank: number
+                              finalPoint: number
+            streaks:
+              type: array
+              items:
+                type: object
+                fields:
+                  type:
+                    type: string
+                    enum: [top, last, topTwo, positive, negative]
+                  currentCount: number
+                  longestCount: number
+            recentResults:
+              type: array
+              items:
+                type: object
+                fields:
+                  windowSize:
+                    type: number
+                    enum: [10, 20, 50]
+                  matchCount: number
+                  totalPoints: number
+                  byGameType:
+                    type: array
+                    items:
+                      type: object
+                      fields:
+                        gameType:
+                          type: string
+                          enum: [sanma, yonma]
+                        matchCount: number
+                        totalPoints: number
+                        averageFinalPoint:
+                          type: number
+                          nullable: true
+                        averageRank:
+                          type: number
+                          nullable: true
+                        ranks:
+                          type: array
+                          items:
+                            type: object
+                            fields:
+                              rank: number
+                              count: number
+                              rate:
+                                type: number
+                                nullable: true
+                        topRate:
+                          type: number
+                          nullable: true
+                        topTwoRate:
+                          type: number
+                          nullable: true
+                        topThreeRate:
+                          type: number
+                          nullable: true
+                        lastRate:
+                          type: number
+                          nullable: true
+                        lastAvoidanceRate:
+                          type: number
+                          nullable: true
+            currentStanding:
+              type: object
+              nullable: true
+              fields:
+                rank: number
+                totalPoints: number
+                pointsBehindAbove:
+                  type: number
+                  nullable: true
+                pointsAheadBelow:
+                  type: number
+                  nullable: true
+                source:
+                  type: string
+                  enum: [season, activeSeason]
+        byGameType:
+          type: array
+          items:
+            type: object
+            fields:
+              gameType:
+                type: string
+                enum: [sanma, yonma]
+              summary:
+                type: object
+                fields:
+                  totals:
+                    type: object
+                    fields:
+                      totalMatchCount: number
+                      sessionCount: number
+                      totalPoints: number
+                      averageFinalPoint:
+                        type: number
+                        nullable: true
+                      chomboCount: number
+                  rawScore:
+                    type: object
+                    fields:
+                      matchCount: number
+                      average:
+                        type: number
+                        nullable: true
+                      maximum:
+                        type: number
+                        nullable: true
+                      minimum:
+                        type: number
+                        nullable: true
+                      median:
+                        type: number
+                        nullable: true
+                      populationStandardDeviation:
+                        type: number
+                        nullable: true
+                  finalPoint:
+                    type: object
+                    fields:
+                      matchCount: number
+                      average:
+                        type: number
+                        nullable: true
+                      maximum:
+                        type: number
+                        nullable: true
+                      minimum:
+                        type: number
+                        nullable: true
+                      median:
+                        type: number
+                        nullable: true
+                      populationStandardDeviation:
+                        type: number
+                        nullable: true
+                      positive:
+                        type: object
+                        fields:
+                          count: number
+                          denominator: number
+                          rate:
+                            type: number
+                            nullable: true
+                      negative:
+                        type: object
+                        fields:
+                          count: number
+                          denominator: number
+                          rate:
+                            type: number
+                            nullable: true
+                      even:
+                        type: object
+                        fields:
+                          count: number
+                          denominator: number
+                          rate:
+                            type: number
+                            nullable: true
+                  scoreByRank:
+                    type: array
+                    items:
+                      type: object
+                      fields:
+                        gameType:
+                          type: string
+                          enum: [sanma, yonma]
+                        rank: number
+                        matchCount: number
+                        averageRawScore:
+                          type: number
+                          nullable: true
+                        averageFinalPoint:
+                          type: number
+                          nullable: true
+                  records:
+                    type: object
+                    fields:
+                      highestRawScore:
+                        type: object
+                        nullable: true
+                        fields:
+                          value: number
+                          match:
+                            type: object
+                            fields:
+                              matchId: string
+                              leagueId: string
+                              leagueName: string
+                              seasonId: string
+                              seasonName: string
+                              sessionId: string
+                              sessionLabel:
+                                type: string
+                                nullable: true
+                              playedAt: string
+                              opponents:
+                                type: array
+                                maxItems: 3
+                                items:
+                                  type: object
+                                  fields:
+                                    userId: string
+                                    userName: string
+                                    rank: number
+                                    finalPoint: number
+                      lowestRawScore:
+                        type: object
+                        nullable: true
+                        fields:
+                          value: number
+                          match:
+                            type: object
+                            fields:
+                              matchId: string
+                              leagueId: string
+                              leagueName: string
+                              seasonId: string
+                              seasonName: string
+                              sessionId: string
+                              sessionLabel:
+                                type: string
+                                nullable: true
+                              playedAt: string
+                              opponents:
+                                type: array
+                                maxItems: 3
+                                items:
+                                  type: object
+                                  fields:
+                                    userId: string
+                                    userName: string
+                                    rank: number
+                                    finalPoint: number
+                      highestFinalPoint:
+                        type: object
+                        nullable: true
+                        fields:
+                          value: number
+                          match:
+                            type: object
+                            fields:
+                              matchId: string
+                              leagueId: string
+                              leagueName: string
+                              seasonId: string
+                              seasonName: string
+                              sessionId: string
+                              sessionLabel:
+                                type: string
+                                nullable: true
+                              playedAt: string
+                              opponents:
+                                type: array
+                                maxItems: 3
+                                items:
+                                  type: object
+                                  fields:
+                                    userId: string
+                                    userName: string
+                                    rank: number
+                                    finalPoint: number
+                      lowestFinalPoint:
+                        type: object
+                        nullable: true
+                        fields:
+                          value: number
+                          match:
+                            type: object
+                            fields:
+                              matchId: string
+                              leagueId: string
+                              leagueName: string
+                              seasonId: string
+                              seasonName: string
+                              sessionId: string
+                              sessionLabel:
+                                type: string
+                                nullable: true
+                              playedAt: string
+                              opponents:
+                                type: array
+                                maxItems: 3
+                                items:
+                                  type: object
+                                  fields:
+                                    userId: string
+                                    userName: string
+                                    rank: number
+                                    finalPoint: number
+                  streaks:
+                    type: array
+                    items:
+                      type: object
+                      fields:
+                        type:
+                          type: string
+                          enum: [top, last, topTwo, positive, negative]
+                        currentCount: number
+                        longestCount: number
+                  recentResults:
+                    type: array
+                    items:
+                      type: object
+                      fields:
+                        windowSize:
+                          type: number
+                          enum: [10, 20, 50]
+                        matchCount: number
+                        totalPoints: number
+                        byGameType:
+                          type: array
+                          items:
+                            type: object
+                            fields:
+                              gameType:
+                                type: string
+                                enum: [sanma, yonma]
+                              matchCount: number
+                              totalPoints: number
+                              averageFinalPoint:
+                                type: number
+                                nullable: true
+                              averageRank:
+                                type: number
+                                nullable: true
+                              ranks:
+                                type: array
+                                items:
+                                  type: object
+                                  fields:
+                                    rank: number
+                                    count: number
+                                    rate:
+                                      type: number
+                                      nullable: true
+                              topRate:
+                                type: number
+                                nullable: true
+                              topTwoRate:
+                                type: number
+                                nullable: true
+                              topThreeRate:
+                                type: number
+                                nullable: true
+                              lastRate:
+                                type: number
+                                nullable: true
+                              lastAvoidanceRate:
+                                type: number
+                                nullable: true
+                  currentStanding:
+                    type: object
+                    nullable: true
+                    fields:
+                      rank: number
+                      totalPoints: number
+                      pointsBehindAbove:
+                        type: number
+                        nullable: true
+                      pointsAheadBelow:
+                        type: number
+                        nullable: true
+                      source:
+                        type: string
+                        enum: [season, activeSeason]
 
     created_at: timestamp
     updated_at: timestamp

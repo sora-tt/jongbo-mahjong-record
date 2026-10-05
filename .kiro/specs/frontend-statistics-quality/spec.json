@@ -1,12 +1,12 @@
 {
   "name": "frontend-statistics-quality",
-  "displayName": "FE統計・品質整理",
-  "description": "統計、順位表、日次記録、ポイント推移をBE API正本と共通UIへ移行し、不要な旧型・mock・Redux・重複コード・未接続操作を整理する。",
+  "displayName": "個人成績・統計拡充",
+  "description": "対局結果から個人成績に必要な集計を提供し、成績の表示範囲と同じリーグ・シーズンの表示対象者を選べるようにする。",
   "version": "1.0.0",
   "language": "ja",
   "phase": "tasks-generated",
   "created_at": "2026-09-25T00:00:00Z",
-  "updated_at": "2026-09-25T07:30:00Z",
+  "updated_at": "2026-10-02T14:13:30Z",
   "approvals": {
     "requirements": {
       "generated": true,

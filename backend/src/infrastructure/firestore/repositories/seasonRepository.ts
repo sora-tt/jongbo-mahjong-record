@@ -68,6 +68,16 @@ export class FirestoreSeasonRepository implements SeasonRepository {
     );
   }
 
+  async exists(leagueId: string, seasonId: string): Promise<boolean> {
+    const snapshot = await this.db
+      .collection("leagues")
+      .doc(leagueId)
+      .collection("seasons")
+      .doc(seasonId)
+      .get();
+    return snapshot.exists;
+  }
+
   async create(
     leagueId: string,
     input: CreateSeasonInput,
@@ -231,6 +241,43 @@ export class FirestoreSeasonRepository implements SeasonRepository {
   ): Promise<SeasonMember[]> {
     const season = await this.get(leagueId, seasonId);
     return season.members;
+  }
+
+  async areMembers(
+    leagueId: string,
+    seasonId: string,
+    viewerUserId: string,
+    targetUserId: string,
+  ): Promise<boolean> {
+    if (!viewerUserId || !targetUserId) {
+      return false;
+    }
+
+    const seasonSnapshot = await this.db
+      .collection("leagues")
+      .doc(leagueId)
+      .collection("seasons")
+      .doc(seasonId)
+      .get();
+    if (!seasonSnapshot.exists) {
+      return false;
+    }
+
+    const requestedUserIds = new Set([viewerUserId, targetUserId]);
+    const members = requiredArray(
+      seasonSnapshot.data()?.members,
+      "seasons.members",
+    );
+    const memberUserIds = new Set(
+      members.map((member) =>
+        requiredString(
+          requiredObject(member, "seasons.members[]").user_id,
+          "seasons.members[].user_id",
+        ),
+      ),
+    );
+
+    return [...requestedUserIds].every((userId) => memberUserIds.has(userId));
   }
 
   async updateStatistics(params: {

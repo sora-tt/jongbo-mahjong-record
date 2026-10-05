@@ -6,12 +6,18 @@ import {
   getUserStatsQuerySchema,
   updateMeSchema,
 } from "@/presentation/schemas/user.js";
+import {
+  statisticsAnalysisQuerySchema,
+  statisticsMatchHistoryQuerySchema,
+  statisticsScopeQuerySchema,
+} from "@/presentation/schemas/statistics.js";
 import { AppError } from "@/domain/shared/errors.js";
+import { asOpaqueId } from "@/domain/shared/types.js";
 import type { Services } from "@/presentation/dependencies.js";
 import { validateJson, validateQuery } from "@/presentation/validation.js";
 
-export const buildUsersRouter = (services: Services) =>
-  new Hono<AppBindings>()
+export const buildUsersRouter = (services: Services) => {
+  const router = new Hono<AppBindings>()
     .get("/", async (c) => {
       const query = c.req.query("query") ?? "";
       return ok(c, await services.userService.searchUsers(query));
@@ -93,3 +99,62 @@ export const buildUsersRouter = (services: Services) =>
         );
       },
     );
+
+  const statisticsRouter = new Hono<AppBindings>()
+    .get(
+      "/:userId/statistics",
+      validateQuery(statisticsScopeQuerySchema),
+      async (c) => {
+        const authUser = c.get("authUser");
+        const targetUserId = asOpaqueId(c.req.param("userId"));
+        const query = c.req.valid("query");
+
+        return ok(
+          c,
+          await services.personalStatisticsSummaryReader.getSummary({
+            ...query,
+            viewerUserId: asOpaqueId(authUser.uid),
+            targetUserId,
+          }),
+        );
+      },
+    )
+    .get(
+      "/:userId/statistics/analysis",
+      validateQuery(statisticsAnalysisQuerySchema),
+      async (c) => {
+        const authUser = c.get("authUser");
+        const targetUserId = asOpaqueId(c.req.param("userId"));
+        const query = c.req.valid("query");
+
+        return ok(
+          c,
+          await services.personalStatisticsAnalysisReader.getAnalysis({
+            ...query,
+            viewerUserId: asOpaqueId(authUser.uid),
+            targetUserId,
+          }),
+        );
+      },
+    )
+    .get(
+      "/:userId/statistics/matches",
+      validateQuery(statisticsMatchHistoryQuerySchema),
+      async (c) => {
+        const authUser = c.get("authUser");
+        const targetUserId = asOpaqueId(c.req.param("userId"));
+        const query = c.req.valid("query");
+
+        return ok(
+          c,
+          await services.personalStatisticsMatchHistoryReader.getMatchHistory({
+            ...query,
+            viewerUserId: asOpaqueId(authUser.uid),
+            targetUserId,
+          }),
+        );
+      },
+    );
+
+  return router.route("/", statisticsRouter);
+};

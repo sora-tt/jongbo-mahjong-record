@@ -132,6 +132,11 @@ export class FirestoreLeagueRepository implements LeagueRepository {
     };
   }
 
+  async exists(leagueId: string): Promise<boolean> {
+    const snapshot = await this.db.collection("leagues").doc(leagueId).get();
+    return snapshot.exists;
+  }
+
   async getRule(leagueId: string): Promise<LeagueRule> {
     const snapshot = await this.db.collection("leagues").doc(leagueId).get();
     if (!snapshot.exists) {
@@ -262,6 +267,31 @@ export class FirestoreLeagueRepository implements LeagueRepository {
         "leagues.members.user_name",
       ),
     }));
+  }
+
+  async areMembers(
+    leagueId: string,
+    viewerUserId: string,
+    targetUserId: string,
+  ): Promise<boolean> {
+    if (!viewerUserId || !targetUserId) {
+      return false;
+    }
+
+    const requestedUserIds = new Set([viewerUserId, targetUserId]);
+    const snapshot = await this.db
+      .collection("leagues")
+      .doc(leagueId)
+      .collection("members")
+      .where("user_id", "in", [...requestedUserIds])
+      .get();
+    const matchedUserIds = new Set(
+      snapshot.docs.map((doc) =>
+        requiredString(doc.data().user_id, "leagues.members.user_id"),
+      ),
+    );
+
+    return [...requestedUserIds].every((userId) => matchedUserIds.has(userId));
   }
 
   async listAllMembers(): Promise<UserReference[]> {
