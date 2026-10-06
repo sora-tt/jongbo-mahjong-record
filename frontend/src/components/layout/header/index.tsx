@@ -42,8 +42,6 @@ export const Header: React.FC = () => {
   const { expandedLeagueIds, expandedSection, toggleLeague, toggleSection } =
     navigation;
   const menuToggleRef = React.useRef<HTMLButtonElement>(null);
-  const drawerCloseRef = React.useRef<HTMLButtonElement>(null);
-  const hasOpenedMenuRef = React.useRef(false);
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
   const [isLoggingOut, setIsLoggingOut] = React.useState(false);
 
@@ -67,6 +65,7 @@ export const Header: React.FC = () => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         closeMenu();
+        menuToggleRef.current?.focus();
       }
     };
 
@@ -77,19 +76,6 @@ export const Header: React.FC = () => {
   React.useEffect(() => {
     closeMenuRef.current = closeMenu;
   }, [closeMenu]);
-
-  React.useEffect(() => {
-    if (isMenuOpen) {
-      hasOpenedMenuRef.current = true;
-      drawerCloseRef.current?.focus();
-      return;
-    }
-
-    if (hasOpenedMenuRef.current) {
-      hasOpenedMenuRef.current = false;
-      menuToggleRef.current?.focus();
-    }
-  }, [isMenuOpen]);
 
   React.useEffect(() => {
     const pathnameChanged = previousPathnameRef.current !== pathname;
@@ -117,90 +103,66 @@ export const Header: React.FC = () => {
   const displayName = user?.displayName ?? user?.email ?? "ゲスト";
 
   return (
-    <>
-      <header className="sticky top-0 z-40 border-b border-border bg-white/95 backdrop-blur">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-6 px-4 sm:px-6 lg:px-8">
-          <Link
-            href="/"
-            className="flex shrink-0 items-center gap-2 rounded-control focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
-            aria-label="jongbo ホーム"
+    <header className="sticky top-0 z-40 border-b border-border bg-white/95 backdrop-blur">
+      <div className="mx-auto flex min-h-16 max-w-7xl items-center justify-between gap-3 px-4 lg:items-start lg:gap-6 sm:px-6 lg:px-8">
+        <Link
+          href="/"
+          className="flex shrink-0 items-center gap-2 rounded-control py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+          aria-label="jongbo ホーム"
+        >
+          <span
+            className="grid h-9 w-9 grid-cols-2 gap-0.5 rounded-control bg-brand-600 p-1.5 shadow-sm"
+            aria-hidden="true"
           >
-            <span
-              className="grid h-9 w-9 grid-cols-2 gap-0.5 rounded-control bg-brand-600 p-1.5 shadow-sm"
-              aria-hidden="true"
-            >
-              {Array.from({ length: 4 }).map((_, index) => (
-                <span key={index} className="rounded-[2px] bg-white/80" />
-              ))}
-            </span>
-            <span className="text-xl font-bold tracking-tight text-brand-strong">
-              jongbo
-            </span>
-          </Link>
+            {Array.from({ length: 4 }).map((_, index) => (
+              <span key={index} className="rounded-[2px] bg-white/80" />
+            ))}
+          </span>
+          <span className="text-xl font-bold tracking-tight text-brand-strong">
+            jongbo
+          </span>
+        </Link>
 
-          <NavigationSections
-            model={navigation}
-            pathname={pathname}
-            presentation="desktop"
-          />
-
-          <div className="hidden items-center gap-3 lg:flex">
-            <span className="flex items-center gap-2 text-sm text-text-muted">
-              <User size={17} aria-hidden="true" />
-              <span>{displayName}</span>
-            </span>
-            <button
-              type="button"
-              className="rounded-control px-3 py-2 text-sm text-text-muted transition-colors hover:bg-brand-50 hover:text-brand-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:opacity-60"
-              onClick={handleLogout}
-              disabled={isLoggingOut}
-            >
-              {isLoggingOut ? "ログアウト中…" : "ログアウト"}
-            </button>
-          </div>
-
-          <button
-            ref={menuToggleRef}
-            type="button"
-            className="rounded-control p-2 text-brand-strong hover:bg-brand-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus lg:hidden"
-            onClick={isMenuOpen ? closeMenu : openMenu}
-            aria-label={isMenuOpen ? "メニューを閉じる" : "メニューを開く"}
-            aria-expanded={isMenuOpen}
-            aria-controls="mobile-navigation"
-          >
-            {isMenuOpen ? <X size={22} /> : <Menu size={22} />}
-          </button>
-        </div>
-      </header>
-
-      {isMenuOpen ? (
-        <button
-          type="button"
-          className="fixed inset-0 z-40 bg-black/20 lg:hidden"
-          aria-label="メニューを閉じる"
-          onClick={closeMenu}
+        <NavigationSections
+          model={navigation}
+          pathname={pathname}
+          presentation="desktop"
         />
-      ) : null}
 
-      <aside
-        id="mobile-navigation"
-        className={`fixed inset-y-0 right-0 z-50 flex w-80 max-w-[88vw] flex-col border-l border-border bg-white shadow-xl transition-transform duration-200 lg:hidden ${isMenuOpen ? "translate-x-0" : "translate-x-full"}`}
-        aria-hidden={!isMenuOpen}
-        inert={!isMenuOpen}
-      >
-        <div className="flex items-center justify-between border-b border-border px-4 py-4">
-          <span className="font-semibold text-foreground">メニュー</span>
+        <div className="hidden items-center gap-3 py-3 lg:flex">
+          <span className="flex items-center gap-2 text-sm text-text-muted">
+            <User size={17} aria-hidden="true" />
+            <span className="max-w-40 truncate">{displayName}</span>
+          </span>
           <button
-            ref={drawerCloseRef}
             type="button"
-            className="rounded-control p-2 text-text-muted hover:bg-brand-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
-            onClick={closeMenu}
-            aria-label="メニューを閉じる"
+            className="rounded-control px-3 py-2 text-sm text-text-muted transition-colors hover:bg-brand-50 hover:text-brand-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:opacity-60"
+            onClick={handleLogout}
+            disabled={isLoggingOut}
           >
-            <X size={20} />
+            {isLoggingOut ? "ログアウト中…" : "ログアウト"}
           </button>
         </div>
-        <div className="flex-1 space-y-5 overflow-y-auto p-4">
+
+        <button
+          ref={menuToggleRef}
+          type="button"
+          className="rounded-control p-2 text-brand-strong hover:bg-brand-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus lg:hidden"
+          onClick={isMenuOpen ? closeMenu : openMenu}
+          aria-label={isMenuOpen ? "メニューを閉じる" : "メニューを開く"}
+          aria-expanded={isMenuOpen}
+          aria-controls="mobile-navigation"
+        >
+          {isMenuOpen ? <X size={22} /> : <Menu size={22} />}
+        </button>
+      </div>
+
+      <DisclosureRegion
+        id="mobile-navigation"
+        isExpanded={isMenuOpen}
+        className="lg:hidden"
+      >
+        <div className="space-y-4 border-t border-border px-4 py-4 sm:px-6">
           <div className="flex items-center gap-3 rounded-surface bg-surface-muted p-3">
             <span className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-50 text-brand-strong">
               <User size={18} aria-hidden="true" />
@@ -215,8 +177,6 @@ export const Header: React.FC = () => {
             presentation="mobile"
             onNavigate={closeMenu}
           />
-        </div>
-        <div className="border-t border-border p-4">
           <button
             type="button"
             className="w-full rounded-control px-3 py-2 text-left text-sm text-text-muted hover:bg-brand-50 hover:text-brand-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:opacity-60"
@@ -226,8 +186,8 @@ export const Header: React.FC = () => {
             {isLoggingOut ? "ログアウト中…" : "ログアウト"}
           </button>
         </div>
-      </aside>
-    </>
+      </DisclosureRegion>
+    </header>
   );
 };
 
@@ -238,6 +198,9 @@ type NavigationSectionsProps = {
   onNavigate?: () => void;
 };
 
+type SectionToggleRefKey =
+  `${NavigationSectionsProps["presentation"]}:${HeaderNavigationSection}`;
+
 const NavigationSections: React.FC<NavigationSectionsProps> = ({
   model,
   pathname,
@@ -245,7 +208,7 @@ const NavigationSections: React.FC<NavigationSectionsProps> = ({
   onNavigate,
 }) => {
   const sectionToggleRefs = React.useRef<
-    Partial<Record<HeaderNavigationSection, HTMLButtonElement>>
+    Partial<Record<SectionToggleRefKey, HTMLButtonElement>>
   >({});
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLElement>) => {
@@ -261,15 +224,15 @@ const NavigationSections: React.FC<NavigationSectionsProps> = ({
     model.expandedLeagueIds.forEach(model.toggleLeague);
     const expandedSection = model.expandedSection;
     model.toggleSection(expandedSection);
-    sectionToggleRefs.current[expandedSection]?.focus();
+    sectionToggleRefs.current[`${presentation}:${expandedSection}`]?.focus();
   };
 
   return (
     <nav
       className={
         presentation === "desktop"
-          ? "hidden items-center gap-1 lg:flex"
-          : "space-y-1"
+          ? "hidden items-start gap-2 pt-3 lg:flex"
+          : "space-y-2"
       }
       aria-label={
         presentation === "desktop"
@@ -284,17 +247,17 @@ const NavigationSections: React.FC<NavigationSectionsProps> = ({
           id === "leagues"
             ? pathname.startsWith("/league")
             : pathname.startsWith("/stats");
-        const panelId = `header-navigation-${presentation}-${id}`;
+        const sectionId = `header-navigation-${presentation}-${id}`;
 
         return (
           <div
             key={id}
-            className={presentation === "desktop" ? "relative" : ""}
+            className={`w-full shrink-0 overflow-hidden rounded-surface border border-border bg-white transition-colors lg:w-56 ${isExpanded ? "border-brand-200 bg-surface-muted" : ""}`}
           >
             <button
               ref={(element) => {
                 if (element) {
-                  sectionToggleRefs.current[id] = element;
+                  sectionToggleRefs.current[`${presentation}:${id}`] = element;
                 }
               }}
               type="button"
@@ -311,7 +274,7 @@ const NavigationSections: React.FC<NavigationSectionsProps> = ({
                 }
               }}
               aria-expanded={isExpanded}
-              aria-controls={panelId}
+              aria-controls={sectionId}
             >
               <span className="flex items-center gap-2">
                 <Icon size={17} aria-hidden="true" />
@@ -323,42 +286,67 @@ const NavigationSections: React.FC<NavigationSectionsProps> = ({
                 className={`transition-transform ${isExpanded ? "rotate-180" : ""}`}
               />
             </button>
-            <div
-              id={panelId}
-              hidden={!isExpanded}
-              className={`z-50 mt-1 max-h-96 overflow-y-auto rounded-surface border border-border bg-white p-2 shadow-lg ${presentation === "desktop" ? "absolute left-0 top-full min-w-64" : "ml-3"}`}
+            <DisclosureRegion
+              id={sectionId}
+              isExpanded={isExpanded}
+              className="border-t border-border"
             >
-              {id === "leagues" ? (
-                <LeagueLinks
-                  state={model.leagues}
-                  expandedLeagueIds={model.expandedLeagueIds}
-                  onToggleLeague={model.toggleLeague}
-                  onLoadSeasons={model.loadSeasons}
-                  onRetryLeagues={model.retryLeagues}
-                  onRetrySeasons={model.retrySeasons}
-                  pathname={pathname}
-                  onNavigate={onNavigate}
-                  presentation={presentation}
-                />
-              ) : (
-                <div className="space-y-1">
-                  {model.statistics.map((item) => (
-                    <NavigationAnchor
-                      key={item.id}
-                      item={item}
-                      pathname={pathname}
-                      onNavigate={onNavigate}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
+              <div className="max-h-80 overflow-y-auto p-2">
+                {id === "leagues" ? (
+                  <LeagueLinks
+                    state={model.leagues}
+                    expandedLeagueIds={model.expandedLeagueIds}
+                    onToggleLeague={model.toggleLeague}
+                    onLoadSeasons={model.loadSeasons}
+                    onRetryLeagues={model.retryLeagues}
+                    onRetrySeasons={model.retrySeasons}
+                    pathname={pathname}
+                    onNavigate={onNavigate}
+                    presentation={presentation}
+                  />
+                ) : (
+                  <div className="space-y-1">
+                    {model.statistics.map((item) => (
+                      <NavigationAnchor
+                        key={item.id}
+                        item={item}
+                        pathname={pathname}
+                        onNavigate={onNavigate}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </DisclosureRegion>
           </div>
         );
       })}
     </nav>
   );
 };
+
+type DisclosureRegionProps = {
+  id: string;
+  isExpanded: boolean;
+  className?: string;
+  children: React.ReactNode;
+};
+
+const DisclosureRegion: React.FC<DisclosureRegionProps> = ({
+  id,
+  isExpanded,
+  className = "",
+  children,
+}) => (
+  <div
+    id={id}
+    aria-hidden={!isExpanded}
+    inert={!isExpanded}
+    className={`grid overflow-hidden transition-[grid-template-rows,opacity] duration-200 ease-out motion-reduce:transition-none ${isExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"} ${className}`}
+  >
+    <div className="min-h-0 overflow-hidden">{children}</div>
+  </div>
+);
 
 type LeagueLinksProps = {
   state: NavigationLoadState<LeagueNavigationItem>;
@@ -422,25 +410,27 @@ const LeagueLinks: React.FC<LeagueLinksProps> = ({
               />
             </button>
           </div>
-          <div
+          <DisclosureRegion
             id={seasonListId}
-            hidden={!isExpanded}
-            className="ml-3 space-y-1"
+            isExpanded={isExpanded}
+            className="ml-3"
           >
-            <NavigationLoadFeedback
-              state={league.seasons}
-              subject={`${league.label}のシーズン一覧`}
-              onRetry={() => onRetrySeasons(league.id)}
-            />
-            {league.seasons.items.map((season) => (
-              <NavigationAnchor
-                key={season.id}
-                item={season}
-                pathname={pathname}
-                onNavigate={onNavigate}
+            <div className="space-y-1 py-1">
+              <NavigationLoadFeedback
+                state={league.seasons}
+                subject={`${league.label}のシーズン一覧`}
+                onRetry={() => onRetrySeasons(league.id)}
               />
-            ))}
-          </div>
+              {league.seasons.items.map((season) => (
+                <NavigationAnchor
+                  key={season.id}
+                  item={season}
+                  pathname={pathname}
+                  onNavigate={onNavigate}
+                />
+              ))}
+            </div>
+          </DisclosureRegion>
         </div>
       );
     })}

@@ -70,7 +70,7 @@
 ## 4. AppShellとnavigation
 
 - [x] 4.1 Header、navigation、AppShellを共通UIへ移行する
-  - `usePathname`でactive itemと`aria-current`を算出し、dashboard・league・stats、brand、user表示、logoutをdesktop inline navigationとmobile right drawerで提供する。
+  - `usePathname`でactive itemと`aria-current`を算出し、dashboard・league・stats、brand、user表示、logoutをdesktop inline navigationとmobile in-flow menuで提供する。
   - menuのopen/close、Escape、close action、focus、背景の操作可否を実装し、存在しないsettings routeや未接続actionを必須導線から除外する。
   - 完了時、SSR後のroute変更でactive表示が更新され、狭い画面でも本文を隠したまま操作不能にせず、既存画面がAppShellのmain slotへ接続できる。
   - _Depends: 2.1, 3.2, 3.3_
@@ -124,7 +124,7 @@
 
 - [x] 6.3 Accordion、loading/error/empty、keyboard操作を接続する
   - submenuを初期折りたたみとし、展開時にloading、正常な空、取得失敗とleague単位retryを表示する。
-  - aria-expanded、button semantics、focus、Escape、mobile drawerとの開閉を保ち、長い一覧を常時表示しない。
+  - aria-expanded、button semantics、focus、Escape、mobile in-flow menuとの開閉を保ち、長い一覧を常時表示しない。
   - 完了時、キーボードとmobile操作でsubmenuを開閉でき、状態別表示とretryがnavigation modelに一致する。
   - _Depends: 6.1, 6.2_
   - _Requirements: 8.3, 8.5, 8.7, 8.8_
@@ -137,6 +137,16 @@
   - _Depends: 6.1, 6.2, 6.3, frontend-league-season 7.6_
   - _Requirements: 8.1, 8.5, 8.6, 9.1, 9.3_
   - _Boundary: App Composition, Route Integration_
+
+## 7. Header navigationのin-flow accordion card化
+
+- [x] 7.1 League/Stats submenuとmobile menuを文書フロー内へ移す
+  - Desktop submenu、mobile menu、リーグごとのseason一覧を本文に重ねるpanelではなく、項目の下へ伸びる文書フロー内のdisclosureとして表示する。
+  - grid-row transition、`aria-expanded`/`aria-controls`、閉じた内容の`inert`、Escape、reduced-motion対応を保つ。
+  - 完了時、desktop/mobileのsubmenu展開で後続コンテンツが下へ移動し、overlay/fixed drawerが表示されないことを型チェック・lint・build・画面確認で検証する。
+  - _Depends: 6.2, 6.3_
+  - _Requirements: 8.3, 8.7, 9.3_
+  - _Boundary: Header and AppShell_
 
 ## Implementation Notes
 

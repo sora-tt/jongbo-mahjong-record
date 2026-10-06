@@ -14,7 +14,7 @@ Issue #123では、Headerの主項目をリーグ・成績の2つにし、各項
 - Cookie-only保護API、標準ErrorEnvelope、204、nullable/ISO日時を一つのFE境界で扱う。
 - API DTOから表示用modelへ変換するadapterの責務を表示整形に限定し、BE計算値を保持する。
 - 共通UIと白地・ブランドピンク基調のsemantic tokenを揃える。
-- Header、navigation、mobile drawer、AuthFormShellを再利用可能なshellにする。
+- Header、navigation、mobile in-flow menu、AuthFormShellを再利用可能なshellにする。
 
 ### Non-Goals
 
@@ -32,7 +32,7 @@ Issue #123では、Headerの主項目をリーグ・成績の2つにし、各項
 - Firebase ID Tokenのsession交換、Cookie-only保護API、401時の認証境界、requestのloading/error/empty状態。
 - `src/app`、`src/features`、`src/components`、`src/lib`の配置・import責務。
 - Tailwind token、Button/Input/Select/Card/Table/Loading/Error/Empty、AppShell/Header/navigation/AuthFormShell。
-- HeaderのLeague/Stats accordion表示、responsive drawer内の同一navigation model、navigationのloading/empty/error表示。
+- HeaderのLeague/Stats accordion card、responsiveな文書フロー内の同一navigation model、navigationのloading/empty/error表示。
 - 現行API module、auth provider、Header、auth画面への共通境界の適用と後続仕様へのhandoff。
 
 ### Out of Boundary
@@ -178,7 +178,7 @@ adapterはraw scoreからpointを計算せず、standingを並べ替えず、use
 | Auth Session Boundary | FirebaseとBE Cookieのsessionを連携する | 3.1-3.4, 8.1-8.4 | Firebase, API Transport | Service, State |
 | Request State Boundary | loading/error/empty/retryとstale requestを統一する | 4.1-4.4, 9.1 | React hooks | State |
 | Design System Primitives | tokenに基づく共通UIを提供する | 6.1-6.3, 7.1-7.4 | Tailwind CSS | UI |
-| App Shell | League/Stats submenu、navigation model、drawer、AuthFormShellを提供する | 8.1-8.8, 9.1 | Primitives, Auth, app composition | UI, State |
+| App Shell | League/Stats submenu、navigation model、in-flow menu、AuthFormShellを提供する | 8.1-8.8, 9.1 | Primitives, Auth, app composition | UI, State |
 | Foundation Handoff | 既存FE適用と検証・再検証条件を固定する | 9.1-9.4 | all components | Test, Contract |
 
 ### API Transport
@@ -261,7 +261,7 @@ interface RequestStateController<T> {
 
 ### App Shell and Navigation
 
-`AppShell`はHeaderとmain slotを持つ。Headerのmain項目はリーグ・成績の2つで、ホーム項目は独立表示しない。jongboロゴは`/`へのhome linkとして残す。Headerはデスクトップのinline navigationとモバイルのright drawerで同じnavigation modelを描画し、`usePathname`でactive stateと`aria-current`を計算する。League/Season情報とStats hrefはfoundation contextで受け取り、業務APIやroute builderをHeaderから呼ばない。
+`AppShell`はHeaderとmain slotを持つ。Headerのmain項目はリーグ・成績の2つで、ホーム項目は独立表示しない。jongboロゴは`/`へのhome linkとして残す。Headerはdesktop/mobileの両方で同じnavigation modelを文書フロー内のaccordion cardとして描画する。mobileではメニューボタンの直下にnavigationを開き、desktopでは選択したcardが下へ伸びる。開いたsubmenuは後続要素を押し下げ、floating panelやoverlayとして本文に重ねない。`usePathname`でactive stateと`aria-current`を計算する。League/Season情報とStats hrefはfoundation contextで受け取り、業務APIやroute builderをHeaderから呼ばない。
 
 `AuthFormShell`は認証画面だけが利用し、title、children、error、submit loading、footer linksをslotとして受ける。認証済みAppShellと重複するHeaderは表示しない。
 
@@ -291,9 +291,9 @@ type HeaderNavigationModel = {
 
 `HeaderNavigationModelContext`はHeaderにmodelを渡すfoundation-owned contextとし、app composition rootがproviderを構成する。app compositionは認証済みviewer ID、League featureのnavigation hook、statisticsの既存route builderを接続する。League featureはLeague/Season labelsとhrefを供給し、Stats route builderは三麻/四麻の既存hrefを作る。Headerが利用するpublic interfaceは汎用NavigationLink/stateだけに限定する。
 
-League groupを開いた時に`loadLeagues`でリーグ一覧を取得し、個別リーグを開いた時に`loadSeasons(leagueId)`でそのseason一覧を遅延取得する。各loadはidle時の初回だけ実行し、error stateでは対応するretry callbackで再取得する。これによりHeader初期表示時の全league×seasonの一括取得を避ける。リーグ名はリーグ詳細リンクと展開ボタンを分け、seasonはseason詳細へのリンクとする。Stats配下の三麻/四麻リンクは既存のstatistics route builderからapp compositionが受け取る。desktopとmobile drawerは同じmodelを描画する。
+League cardを開いた時に`loadLeagues`でリーグ一覧を取得し、個別リーグを開いた時に`loadSeasons(leagueId)`でそのseason一覧を遅延取得する。各loadはidle時の初回だけ実行し、error stateでは対応するretry callbackで再取得する。これによりHeader初期表示時の全league×seasonの一括取得を避ける。リーグ名はリーグ詳細リンクと展開ボタンを分け、seasonはseason詳細へのリンクとする。Stats配下の三麻/四麻リンクは既存のstatistics route builderからapp compositionが受け取る。desktopとmobileは同じmodelを描画し、cardの展開で後続要素を下へ押し出す。
 
-リーグ一覧・season一覧のloading、正常empty、失敗は展開部内で区別する。失敗にはretryを付ける。展開ボタンはaria-expanded/aria-controlsを持ち、linkとは別のbuttonにする。mobile drawerはEscape、close、遷移で閉じ、閉じる場合はtoggleへfocusを戻す。フォーカス可能な順序と可視focusを維持し、accordionはfocus trapを作らない。
+リーグ一覧・season一覧のloading、正常empty、失敗は展開部内で区別する。失敗にはretryを付ける。展開ボタンはaria-expanded/aria-controlsを持ち、linkとは別のbuttonにする。submenuとmobile menuはgrid-rowによる下方向のin-flow展開とし、`inert`/`aria-hidden`で閉じた内容を操作・読み上げ対象から外す。Escapeで閉じ、toggleへfocusを戻す。transitionはprefers-reduced-motionを尊重する。フォーカス可能な順序と可視focusを維持し、accordionはfocus trapを作らない。
 
 ## 6. Design Tokens
 
@@ -307,7 +307,7 @@ League groupを開いた時に`loadLeagues`でリーグ一覧を取得し、個�
 | `border-*` / `focus-*` | border、focus ring、divider |
 | `status-*` | error、warning、success、info |
 | `rank-*` / `chart-*` | 順位・チャートの意味別色。実際の系列選択は後続feature |
-| `font-*` / `radius-*` / `shadow-*` | 日本語本文、control、card、drawerの共通表現 |
+| `font-*` / `radius-*` / `shadow-*` | 日本語本文、control、cardの共通表現 |
 
 新規画面はhex値、`red-500`等の意味不明な直接色、ページ固有のfocus表現を追加しない。既存の`COLOR_MAP`は段階的にsemantic tokenへ寄せ、foundationではチャートや順位の業務意味を決めない。現行の白地・ピンク基調をlight themeの初期値とし、dark themeは別仕様で再検証する。
 
@@ -381,7 +381,7 @@ League groupを開いた時に`loadLeagues`でリーグ一覧を取得し、個�
 | Transport contract check | credentials、data/error envelope、status、204、decode/network distinction、no `meta` assumption | 2.1-2.4, 9.2 |
 | Auth flow check | header-only session exchange、Cookie-only protected API、401 handoff、logout ordering | 3.1-3.4 |
 | Adapter/state check | no recalculation、null preservation、loading/error/empty、stale request prevention | 1.2-1.4, 4.1-4.4 |
-| UI accessibility source review | label/error association、focus、disabled/loading、table semantics、aria status、drawer keyboard flowを実装上で確認 | 6.1-8.4 |
+| UI accessibility source review | label/error association、focus、disabled/loading、table semantics、aria status、mobile menu keyboard flowを実装上で確認 | 6.1-8.4 |
 | Header navigation source review | homeを独立項目として出さず、league/season/statsのroute、loading/empty/error/retry、desktop/mobile accordionの状態を実装上で確認 | 8.1-8.3, 8.5-8.8 |
 | Existing-app smoke | auth、home、league route、stats routeのcompile/buildとshared UI adoption | 9.1-9.4 |
 
@@ -406,6 +406,6 @@ FEに既存test runnerがないため、本仕様ではrunnerやbehavior test fi
 | 5.1, 5.2, 5.3, 5.4 | feature folder、import、state、legacy boundary | API Contract Boundary, Adapter Boundary | app/features/components/lib map |
 | 6.1, 6.2, 6.3 | semantic tokens、states、meaning colors | Design System Primitives | tokens → primitives → feature UI |
 | 7.1, 7.2, 7.3, 7.4 | accessible primitivesと業務props分離 | Design System Primitives | Button/Input/Select/Card/Table/status |
-| 8.1, 8.2, 8.3, 8.4 | AppShell、Header、navigation、drawer、AuthFormShell | App Shell, Auth Session Boundary | Authenticated shell / auth routes |
+| 8.1, 8.2, 8.3, 8.4 | AppShell、Header、in-flow navigation、AuthFormShell | App Shell, Auth Session Boundary | Authenticated shell / auth routes |
 | 8.1, 8.5, 8.6, 8.7, 8.8 | League/Statsの2項目、nested league/seasonリンク、sanma/yonmaリンク、accordion、取得状態とretry | App Shell, Navigation Model, App composition | feature navigation data → Header → route links |
 | 9.1, 9.2, 9.3, 9.4 | 既存適用、legacy API修正、validation、handoff | Foundation Handoff | current FE → downstream FE |
