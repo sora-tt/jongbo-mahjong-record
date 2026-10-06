@@ -114,7 +114,7 @@
   - _Requirements: 8.5, 8.6, 8.8, 9.4_
   - _Boundary: Header Navigation Model_
 
-- [ ] 6.2 HeaderをLeague/Statsの階層メニューへ更新する
+- [x] 6.2 HeaderをLeague/Statsの階層メニューへ更新する
   - 独立したHome項目を外し、LeagueとStatsの下に該当linkを配置し、League配下ではleagueごとにSeason一覧を開けるようにする。
   - Stats配下には既存route builderが返す三麻・四麻linkを表示し、pathnameとactive styleを同期する。
   - 完了時、desktop/mobileのHeaderからLeague detail、Season detail、三麻Stats、四麻Statsへ直接遷移できる。
