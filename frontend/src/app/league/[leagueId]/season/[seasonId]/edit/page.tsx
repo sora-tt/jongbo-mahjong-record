@@ -82,12 +82,31 @@ const SeasonEditPage: React.FC = () => {
         </Card>
 
         <section className="space-y-5 rounded-surface border border-border bg-white p-6 shadow-sm">
-          <Input
-            label="シーズン名"
-            value={seasonName}
-            onChange={(event) => setSeasonName(event.target.value)}
-            required
-          />
+          <div className="space-y-1.5">
+            <label
+              htmlFor="season-name"
+              className="block text-sm font-medium text-foreground"
+            >
+              シーズン名 <span className="text-danger">*</span>
+            </label>
+            <div className="flex items-center overflow-hidden rounded-lg border border-border bg-white transition-colors focus-within:border-brand-strong">
+              <Input
+                id="season-name"
+                containerClassName="min-w-0 flex-1 space-y-0"
+                className="rounded-none border-0 shadow-none hover:border-transparent focus:border-0"
+                value={seasonName}
+                onChange={(event) => setSeasonName(event.target.value)}
+                required
+                aria-describedby="season-name-suffix"
+              />
+              <span
+                id="season-name-suffix"
+                className="shrink-0 border-l border-border bg-surface-muted px-3 py-2 text-sm text-text-muted"
+              >
+                シーズン
+              </span>
+            </div>
+          </div>
           <Select
             label="状態"
             value={status}

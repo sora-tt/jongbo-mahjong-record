@@ -143,14 +143,14 @@
   - _Requirements: 3.9, 4.1, 4.2, 5.2, 5.3, 7.1, 7.2_
   - _Boundary: Name Suffix Model_
 
-- [ ] 7.3 League作成者の固定選択と継続メンバー検索を表示する
+- [x] 7.3 League作成者の固定選択と継続メンバー検索を表示する
   - 認証ユーザーを選択済みの作成者として明示し、ownerを重複memberとして追加しない既存API契約を保つ。
   - 検索結果の追加後も検索UIを開いたままにし、候補の連続追加と追加済みmemberの識別・削除を可能にする。
   - 完了時、作成者表示を確認しながら検索候補から複数人を連続で追加でき、追加操作のたびに検索UIが閉じない。
   - _Requirements: 3.7, 3.8_
   - _Boundary: League UI and Forms, Request Hooks_
 
-- [ ] 7.4 League create/editに固定「リーグ」suffixを接続する
+- [x] 7.4 League create/editに固定「リーグ」suffixを接続する
   - 作成・編集のname入力欄の後ろに固定表示の「リーグ」を置き、編集時は保存済みsuffixを入力stemへ含めない。
   - submit時にstemを正規化し、League APIへsuffixが一度だけ付いたcanonical nameを送る。
   - 完了時、create/editを続けて開いて保存してもnameが「OOリーグリーグ」にならず、suffixは利用者が編集できない。
@@ -158,7 +158,7 @@
   - _Requirements: 3.9, 4.1, 4.2_
   - _Boundary: League UI and Forms_
 
-- [ ] 7.5 (P) Season create/editに固定「シーズン」suffixを接続する
+- [x] 7.5 (P) Season create/editに固定「シーズン」suffixを接続する
   - Season作成・編集欄の後ろに固定表示の「シーズン」を置き、既存Season nameはsuffixを除いてstemへ初期化する。
   - submit時はnameへsuffixを一度だけ付け、status更新と既存member snapshotのAPI契約を維持する。
   - 完了時、作成・編集を繰り返してもSeason nameの末尾に「シーズン」が一度だけ保存される。

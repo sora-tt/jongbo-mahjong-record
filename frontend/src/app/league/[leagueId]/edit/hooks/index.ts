@@ -13,6 +13,7 @@ import {
 } from "@/features/league/model/rule-draft";
 import { ApiError, getApiErrorMessage } from "@/lib/api/core";
 import { searchUsers } from "@/lib/api/users";
+import { LEAGUE_NAME_SUFFIX_MODEL } from "@/lib/name-suffix";
 
 import type {
   FloatingCount,
@@ -81,7 +82,7 @@ export const useLeagueEdit = () => {
           return;
         }
 
-        setLeagueName(league.name);
+        setLeagueName(LEAGUE_NAME_SUFFIX_MODEL.toInputValue(league.name));
         setIsRuleLocked(league.totalMatchCount > 0);
         setAddedMembers(
           league.members.reduce(
@@ -196,7 +197,6 @@ export const useLeagueEdit = () => {
       };
     });
 
-    setMemberQuery("");
     setMemberCandidates([]);
     setError(null);
   }, []);
@@ -292,7 +292,7 @@ export const useLeagueEdit = () => {
 
     try {
       const updateInput = {
-        name: leagueName.trim(),
+        name: LEAGUE_NAME_SUFFIX_MODEL.toCanonicalName(leagueName),
         memberUserIds: Object.keys(addedMembers),
         ...(ruleResult?.ok ? { rule: ruleResult.rule } : {}),
       };

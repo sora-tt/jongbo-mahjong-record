@@ -69,14 +69,23 @@ const SeasonNewPage: React.FC = () => {
               <Type className="h-4 w-4 text-slate-700" aria-hidden="true" />
               シーズン名
             </label>
-            <Input
-              id="season-name"
-              containerClassName="space-y-0"
-              className="h-9 rounded-lg px-3 shadow-none"
-              placeholder="例: 2026シーズン"
-              value={seasonName}
-              onChange={handleSeasonNameChange}
-            />
+            <div className="flex items-center overflow-hidden rounded-lg border border-border bg-white transition-colors focus-within:border-brand-strong">
+              <Input
+                id="season-name"
+                containerClassName="min-w-0 flex-1 space-y-0"
+                className="h-9 rounded-none border-0 px-3 shadow-none hover:border-transparent focus:border-0"
+                placeholder="例: 2026"
+                value={seasonName}
+                onChange={handleSeasonNameChange}
+                aria-describedby="season-name-suffix"
+              />
+              <span
+                id="season-name-suffix"
+                className="shrink-0 border-l border-border bg-surface-muted px-3 py-2 text-sm text-text-muted"
+              >
+                シーズン
+              </span>
+            </div>
           </div>
 
           <section className="space-y-2">

@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { fetchSeasonDetail, updateSeason } from "@/features/season/api";
 import { toSeasonDetail } from "@/features/season/model/adapter";
 import { ApiError, getApiErrorMessage } from "@/lib/api/core";
+import { SEASON_NAME_SUFFIX_MODEL } from "@/lib/name-suffix";
 
 type SeasonStatus = "active" | "archived";
 type SeasonMember = ReturnType<typeof toSeasonDetail>["members"][number];
@@ -48,7 +49,7 @@ export const useSeasonEdit = () => {
           return;
         }
 
-        setSeasonName(season.name);
+        setSeasonName(SEASON_NAME_SUFFIX_MODEL.toInputValue(season.name));
         setStatus(season.status);
         setMembers(season.members);
         setIsLoaded(true);
@@ -83,8 +84,7 @@ export const useSeasonEdit = () => {
       return;
     }
 
-    const trimmedName = seasonName.trim();
-    if (!trimmedName) {
+    if (!seasonName.trim()) {
       setError("シーズン名を入力してください");
       return;
     }
@@ -94,7 +94,7 @@ export const useSeasonEdit = () => {
 
     try {
       await updateSeason(leagueId, seasonId, {
-        name: trimmedName,
+        name: SEASON_NAME_SUFFIX_MODEL.toCanonicalName(seasonName),
         status,
       });
       router.push(`/league/${leagueId}/season/${seasonId}`);
