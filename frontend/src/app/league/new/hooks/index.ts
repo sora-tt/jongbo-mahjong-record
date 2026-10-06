@@ -36,6 +36,8 @@ export const useLeagueNew = () => {
   const [addedMembers, setAddedMembers] = React.useState<
     Record<string, MemberCandidate>
   >({});
+  const addedMembersRef = React.useRef(addedMembers);
+  addedMembersRef.current = addedMembers;
   const [memberCandidates, setMemberCandidates] = React.useState<
     MemberCandidate[]
   >([]);
@@ -114,7 +116,7 @@ export const useLeagueNew = () => {
             .filter(
               (candidate) =>
                 candidate.userId !== user?.uid &&
-                !(candidate.userId in addedMembers)
+                !(candidate.userId in addedMembersRef.current)
             )
         );
       } catch (searchError) {
@@ -135,7 +137,7 @@ export const useLeagueNew = () => {
       isActive = false;
       window.clearTimeout(timeoutId);
     };
-  }, [memberQuery, addedMembers, user?.uid]);
+  }, [memberQuery, user?.uid]);
 
   const handleAddMember = React.useCallback((member: MemberCandidate) => {
     setAddedMembers((prev) => {
@@ -149,7 +151,9 @@ export const useLeagueNew = () => {
       };
     });
 
-    setMemberCandidates([]);
+    setMemberCandidates((prev) =>
+      prev.filter((candidate) => candidate.userId !== member.userId)
+    );
     setError(null);
   }, []);
 

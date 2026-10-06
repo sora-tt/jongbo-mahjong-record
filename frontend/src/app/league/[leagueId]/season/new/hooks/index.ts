@@ -161,6 +161,13 @@ export const useSeasonNew = () => {
         return;
       }
 
+      if (submitError instanceof ApiError && submitError.status === 409) {
+        setError(
+          "進行中のシーズンはリーグごとに1つまでです。既存の進行中シーズンを終了またはアーカイブしてから作成してください。"
+        );
+        return;
+      }
+
       setError(getApiErrorMessage(submitError, "シーズン作成に失敗しました"));
     } finally {
       setIsSubmitting(false);

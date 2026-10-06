@@ -176,7 +176,7 @@
 
 ## 8. Issue #123フォーム・navigationの回帰確認
 
-- [ ] 8.1 Rule、creator、member search、suffixの実装境界をsource reviewする
+- [x] 8.1 Rule、creator、member search、suffixの実装境界をsource reviewする
   - rotateSeatOrderのfalse初期値と保存payload、初回Match後のread-only分岐をform stateからAPI payloadまで確認する。
   - 作成者表示とmember searchの選択状態を追い、追加後も検索UIが開いたまま次の候補を選べることを確認する。
   - 完了時、LeagueとSeasonのsuffixは固定表示され、create/editいずれもcanonical nameへ一度だけ保存する処理を確認できる。
@@ -184,7 +184,7 @@
   - _Requirements: 3.1, 3.3, 3.7, 3.8, 3.9, 4.1, 4.2, 5.2, 5.3, 7.1, 7.2_
   - _Boundary: League/Season Forms_
 
-- [ ] 8.2 Header向けSeason lazy-loadとnavigation状態をsource reviewする
+- [x] 8.2 Header向けSeason lazy-loadとnavigation状態をsource reviewする
   - League一覧から各Leagueの展開callbackまでを追い、展開時だけSeason listを取得して既存のLeague/Season詳細routeを返すことを確認する。
   - loading、空、失敗、League単位retry stateがfoundationのHeader Navigation Modelへ渡ることを確認する。
   - 完了時、navigation hookに直接Header UI/API transportの再実装がなく、lazy-loadと個別retryの型付き接続を確認できる。
@@ -194,7 +194,7 @@
 
 ## 9. 契約・品質検証
 
-- [ ] 9.1 API型、adapter、既存form payloadのsource reviewを行う
+- [x] 9.1 API型、adapter、既存form payloadのsource reviewを行う
   - League/Seasonのendpoint request/response、status、`{ data }`、ErrorEnvelope、rule fourth nullability、Season updateのname/status限定、BE派生値の型とmappingを確認する。
   - uma合計0の事前検証、BE `validation_error`の表示・入力保持、empty/null、active conflict、401/403/404/409、stale request、二重submitのsource stateを追跡する。
   - 完了時、直接fetchや手書きAPI DTO、FE独自のrank/point/standing計算がなく、境界違反の発生画面を特定できる。
@@ -202,7 +202,7 @@
   - _Requirements: 2.2, 3.4, 3.6, 4.3, 5.4, 6.2, 6.4, 7.2, 7.4, 8.2, 8.3, 8.4, 9.2, 9.3_
   - _Boundary: Migration Validation, League Feature API, Season Feature API_
 
-- [ ] 9.2 typecheck、lint、buildと対象routeの静的スキャンを完了する
+- [x] 9.2 typecheck、lint、buildと対象routeの静的スキャンを完了する
   - `pnpm typecheck`、`pnpm lint`、`pnpm build`を実行し、AppType変更、React/Next構成、import境界、共通UI利用、route解決を確認する。
   - 対象routeに対するmock import、`console.log`、直接fetch、未接続button、旧season edit pathをスキャンし、Session/Match・統計の境界外変更がないことを確認する。
   - 完了時、ホームからLeague/Seasonのcreate/detail/edit、HeaderのLeague/Season/Stats linkとSession開始導線までの主要routeがcompile/build可能である。
