@@ -24,6 +24,7 @@ const SessionResultsPage: React.FC = () => {
     deletingMatchId,
     deleteTargetMatchId,
     error,
+    endError,
     retry,
     isEnded,
     handleAddRecord,
@@ -61,6 +62,9 @@ const SessionResultsPage: React.FC = () => {
             </HeaderCard>
 
             {error ? <ErrorState message={error} onRetry={retry} /> : null}
+            {endError ? (
+              <ErrorState message={endError} onRetry={handleEndRecord} />
+            ) : null}
 
             <SectionCard title="成績表" bodyClassName="overflow-hidden">
               <MatchList

@@ -161,7 +161,7 @@
 
 ## 8. 契約・品質検証
 
-- [ ] 8.1 API型・participant・form境界をsource reviewする
+- [x] 8.1 API型・participant・form境界をsource reviewする
   - Session/Match endpointのAppType由来request/response、fixed members、sanma/yonma wind、raw score input、BE rank/point、matchIndexの型境界を確認する。
   - 401/403/404/409、validation/transport error、empty/null、二重submit、stale response、edit participant lock、delete後refetchを担当hookとroute間で追跡する。
   - 完了時、feature UIに直接fetch、rank/point/aggregateの再計算、型外payloadがなく、境界違反を対象routeまで特定できる。
@@ -169,7 +169,7 @@
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 2.1, 2.2, 2.3, 2.5, 3.1, 3.2, 3.3, 3.4, 4.1, 4.2, 4.3, 4.4, 4.5, 5.2, 6.2, 6.3, 6.4, 7.1_
   - _Boundary: Validation Handoff_
 
-- [ ] 8.2 typecheck、lint、buildとIssue #123 source scanを完了する
+- [x] 8.2 typecheck、lint、buildとIssue #123 source scanを完了する
   - `pnpm typecheck`、`pnpm lint`、`pnpm build`を実行し、Session/Match AppType、React/Next route、shared UI、import境界の整合を確認する。
   - source scanでmax `matchIndex`をrotation基準にすること、修正後のassignmentを追加Match payloadへ渡すこと、Session更新成功時だけSeason detailへ遷移することを確認する。
   - 完了時、既存routeがcompile/build可能で、FE test runnerやbehavior test fileを追加せずにIssue #123の型・route契約を確認できる。

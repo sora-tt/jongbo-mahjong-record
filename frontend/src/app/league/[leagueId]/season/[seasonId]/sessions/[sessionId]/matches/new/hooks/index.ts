@@ -86,7 +86,8 @@ export const useRecordMatchPage = () => {
           if (latestMatch) {
             const nextSeatAssignment = getNextSeatAssignment(
               league.rule.gameType,
-              latestMatch
+              latestMatch,
+              session.members
             );
             if (!nextSeatAssignment.ok) {
               setError(

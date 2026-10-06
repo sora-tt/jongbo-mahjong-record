@@ -30,11 +30,27 @@ export const findLatestMatchByIndex = (matches: ReadonlyArray<RotationMatch>) =>
 
 export const getNextSeatAssignment = (
   gameType: GameType,
-  previousMatch: Pick<ApiMatch, "results">
+  previousMatch: Pick<ApiMatch, "results">,
+  sessionMembers: ReadonlyArray<{ userId: string }>
 ): SeatRotationResult => {
   const requiredWinds = WINDS_BY_GAME_TYPE[gameType];
-  if (previousMatch.results.length !== requiredWinds.length) {
+  if (
+    previousMatch.results.length !== requiredWinds.length ||
+    sessionMembers.length !== requiredWinds.length
+  ) {
     return { ok: false, reason: INVALID_SEAT_ASSIGNMENT_REASON };
+  }
+
+  const expectedUsers = new Set<string>();
+  for (const member of sessionMembers) {
+    if (
+      typeof member.userId !== "string" ||
+      !member.userId.trim() ||
+      expectedUsers.has(member.userId)
+    ) {
+      return { ok: false, reason: INVALID_SEAT_ASSIGNMENT_REASON };
+    }
+    expectedUsers.add(member.userId);
   }
 
   const userIdByWind = emptyParticipants();
@@ -51,7 +67,8 @@ export const getNextSeatAssignment = (
     if (
       currentWindIndex < 0 ||
       seenWinds.has(result.wind) ||
-      seenUsers.has(userId)
+      seenUsers.has(userId) ||
+      !expectedUsers.has(userId)
     ) {
       return { ok: false, reason: INVALID_SEAT_ASSIGNMENT_REASON };
     }
@@ -63,7 +80,10 @@ export const getNextSeatAssignment = (
     seenUsers.add(userId);
   }
 
-  if (requiredWinds.some((wind) => !userIdByWind[wind])) {
+  if (
+    requiredWinds.some((wind) => !userIdByWind[wind]) ||
+    seenUsers.size !== expectedUsers.size
+  ) {
     return { ok: false, reason: INVALID_SEAT_ASSIGNMENT_REASON };
   }
 
