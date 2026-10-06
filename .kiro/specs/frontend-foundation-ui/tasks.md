@@ -103,6 +103,41 @@
   - _Requirements: 1.1, 1.2, 1.3, 3.1, 3.2, 4.1, 4.2, 4.3, 5.2, 5.4, 6.3, 7.3, 8.1, 8.2, 8.3, 9.3, 9.4_
   - _Boundary: Foundation Handoff, Contract Test Suite_
 
+
+
+## 6. Header navigation modelとsubmenu
+
+- [x] 6.1 League/Stats用の型付きnavigation modelを定義する
+  - Headerが取得処理を持たずに表示できるLeague、Season、三麻/四麻Stats linkと、loading/empty/error/retryの状態を表現する。
+  - League/Seasonの展開・折りたたみと、対象Leagueだけを再取得するcallbackをnavigation contractに含める。
+  - 完了時、Header用modelから各項目のlabel、href、状態、retry操作を型安全に構成できる。
+  - _Requirements: 8.5, 8.6, 8.8, 9.4_
+  - _Boundary: Header Navigation Model_
+
+- [ ] 6.2 HeaderをLeague/Statsの階層メニューへ更新する
+  - 独立したHome項目を外し、LeagueとStatsの下に該当linkを配置し、League配下ではleagueごとにSeason一覧を開けるようにする。
+  - Stats配下には既存route builderが返す三麻・四麻linkを表示し、pathnameとactive styleを同期する。
+  - 完了時、desktop/mobileのHeaderからLeague detail、Season detail、三麻Stats、四麻Statsへ直接遷移できる。
+  - _Depends: 6.1_
+  - _Requirements: 8.1, 8.2, 8.5, 8.6, 8.7_
+  - _Boundary: Header and AppShell_
+
+- [ ] 6.3 Accordion、loading/error/empty、keyboard操作を接続する
+  - submenuを初期折りたたみとし、展開時にloading、正常な空、取得失敗とleague単位retryを表示する。
+  - aria-expanded、button semantics、focus、Escape、mobile drawerとの開閉を保ち、長い一覧を常時表示しない。
+  - 完了時、キーボードとmobile操作でsubmenuを開閉でき、状態別表示とretryがnavigation modelに一致する。
+  - _Depends: 6.1, 6.2_
+  - _Requirements: 8.3, 8.5, 8.7, 8.8_
+  - _Boundary: Header and AppShell_
+
+- [ ] 6.4 HeaderとLeague/Stats data sourceのapp compositionを接続する
+  - League Featureのnavigation dataと既存Statistics route builderのlinkをHeader navigation modelへ渡す。
+  - League/Season取得はHeader内で行わず、League Featureが担当するAPI stateを表示に利用する。
+  - 完了時、認証済みAppShellからAPI由来のLeague/Season linkと既存Stats routeへ移動でき、Headerに重複したHome linkがない。
+  - _Depends: 6.1, 6.2, 6.3, frontend-league-season 7.6_
+  - _Requirements: 8.1, 8.5, 8.6, 9.1, 9.3_
+  - _Boundary: App Composition, Route Integration_
+
 ## Implementation Notes
 
 - frontendにテストランナーは未導入のため、本段階はtypecheck、lint、build、実API疎通、UI確認を検証の正本とする。
