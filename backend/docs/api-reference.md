@@ -362,7 +362,8 @@ x-id-token: <ID_TOKEN>
       "returnPoints": 30000
     },
     "chomboPenaltyPoints": 0,
-    "allowOffTableKyotaku": false
+    "allowOffTableKyotaku": false,
+    "rotateSeatOrder": false
   },
   "memberUserIds": ["0002", "0003", "0004"]
 }
@@ -389,7 +390,8 @@ x-id-token: <ID_TOKEN>
         "returnPoints": 30000
       },
       "chomboPenaltyPoints": 0,
-      "allowOffTableKyotaku": false
+      "allowOffTableKyotaku": false,
+      "rotateSeatOrder": false
     },
     "memberCount": 4,
     "totalMatchCount": 0,
@@ -431,7 +433,7 @@ x-id-token: <ID_TOKEN>
 
 floatingCountのresponseも同じ5行とmodeを含みます。浮き人数はraw scoreが返し点以上の参加者数です。modeとgameTypeの不整合、欠落行、非整数、行合計不一致はHTTP 400で共通ErrorEnvelopeを返します。
 
-League ruleには`chomboPenaltyPoints`（チョンボ1回あたりに本人のpointから減算する非負整数）と`allowOffTableKyotaku`（卓外供託入力の可否）を含めます。旧形式のrule requestで省略した場合は`0`と`false`として正規化し、既存保存データに値がない場合も同じ既定値で読み取ります。
+League ruleには`chomboPenaltyPoints`（チョンボ1回あたりに本人のpointから減算する非負整数）、`allowOffTableKyotaku`（卓外供託入力の可否）、`rotateSeatOrder`（追加対局時に起家を一つ回すか）を含めます。requestで省略した場合は`0`と`false`として正規化し、既存保存データに値がない場合も同じ既定値で読み取ります。`rotateSeatOrder`を省略した場合はfalseです。
 
 ### GET /api/leagues/:leagueId
 
@@ -461,7 +463,8 @@ League ruleには`chomboPenaltyPoints`（チョンボ1回あたりに本人のpo
       },
       "oka": { "startingPoints": 25000, "returnPoints": 30000 },
       "chomboPenaltyPoints": 20,
-      "allowOffTableKyotaku": true
+      "allowOffTableKyotaku": true,
+      "rotateSeatOrder": false
     },
     "memberCount": 9,
     "totalMatchCount": 28,

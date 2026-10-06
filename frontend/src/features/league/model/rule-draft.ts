@@ -21,6 +21,7 @@ export type LeagueRuleDraft = {
   okaReturnPoints: string;
   chomboPenaltyPoints: string;
   allowOffTableKyotaku: boolean;
+  rotateSeatOrder: boolean;
   fixedUma: FixedUmaDraft;
   floatingCountUma: FloatingCountUmaDraft;
 };
@@ -41,6 +42,7 @@ export const createDefaultLeagueRuleDraft = (): LeagueRuleDraft => ({
   okaReturnPoints: "",
   chomboPenaltyPoints: "0",
   allowOffTableKyotaku: false,
+  rotateSeatOrder: false,
   fixedUma: { first: "", second: "", third: "", fourth: "" },
   floatingCountUma: createDefaultFloatingCountUmaDraft(),
 });
@@ -80,6 +82,7 @@ export const toLeagueRuleDraft = (rule: ApiLeague["rule"]): LeagueRuleDraft => {
     okaReturnPoints: rule.oka.returnPoints.toString(),
     chomboPenaltyPoints: String(rule.chomboPenaltyPoints ?? 0),
     allowOffTableKyotaku: rule.allowOffTableKyotaku ?? false,
+    rotateSeatOrder: rule.rotateSeatOrder ?? false,
     fixedUma,
     floatingCountUma,
   };
@@ -151,6 +154,7 @@ export const buildLeagueRulePayload = (
         oka,
         chomboPenaltyPoints,
         allowOffTableKyotaku: draft.allowOffTableKyotaku,
+        rotateSeatOrder: draft.rotateSeatOrder,
       },
     };
   }
@@ -186,6 +190,7 @@ export const buildLeagueRulePayload = (
         oka,
         chomboPenaltyPoints,
         allowOffTableKyotaku: draft.allowOffTableKyotaku,
+        rotateSeatOrder: draft.rotateSeatOrder,
       },
     };
   }
@@ -204,6 +209,7 @@ export const buildLeagueRulePayload = (
       oka,
       chomboPenaltyPoints,
       allowOffTableKyotaku: draft.allowOffTableKyotaku,
+      rotateSeatOrder: draft.rotateSeatOrder,
     },
   };
 };

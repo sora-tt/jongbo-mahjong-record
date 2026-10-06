@@ -2,7 +2,7 @@
 
 ## Summary
 
-現行BEはHono、Zod、Firebase Admin SDK、Firestoreを使ったCRUDと集計の途中実装を持つ。主な不整合は、旧文書が独立 `rules` コレクションを示す一方で、現行Domain・seed・repositoryがリーグ内の埋め込み `rule` を使うこと、認証文書がJSON bodyを示す一方で実装が `x-id-token` を読むこと、Firestore Rulesが全許可であること、`user_stats` のseedキーとrepositoryの自動IDが異なることである。
+現行BEはHono、Zod、Firebase Admin SDK、Firestoreを使ったCRUDと集計の途中実装を持つ。主な不整合は、旧文書が独立 `rules` コレクションを示す一方で、現行Domain・seed・repositoryがリーグ内の埋め込み `rule` を使うこと、認証文書がJSON bodyを示す一方で実装が `x-id-token` を読むこと、Firestore Rulesが全許可であること、`user_stats` のseedキーとrepositoryの自動IDが異なることである。Issue #123の座順ローテーション設定はLeague ruleのbooleanとして追加し、既存Leagueの欠損値はfalseへ正規化する。
 
 ## 調査対象
 
@@ -85,3 +85,22 @@
 ### 互換性リスク
 
 旧Leagueのfield defaultは既存結果を守るが、すでにMatchがあるLeagueはrule lockのため新設定を利用者が後から編集できない。既存Leagueへ有効化が必要なら、通常rule updateでlockを迂回せず、別途承認された移行手順を使う。
+
+## ISSUE-123 追加調査（2026-10-05）
+
+### 拡張点
+
+- LeagueRuleは`backend/src/domain/league/types.ts`、入力validationは`backend/src/presentation/schemas/league.ts`、Firestore変換は`backend/src/infrastructure/firestore/repositories/leagueRepository.ts`が既存の境界である。
+- League updateはrule全体を置換する契約で、rule schema/repository mapperを更新すればAppType、OpenAPI、Firestore documentationへ同じboolean fieldを公開できる。
+- 現行旧rule fieldの互換defaultは0/falseで統一されている。rotateSeatOrderも欠損値falseを読取時に適用し、一括backfillは行わない。
+
+### 設計判断
+
+- 採用: Domain/API keyは`rotateSeatOrder`、Firestore keyは`rotate_seat_order`とする。新しいLeague rule payloadで未指定ならfalseを正規値とし、responseは常にbooleanを返す。
+- 採用: 初回正本Match後の既存rule lockを維持し、rotateSeatOrderだけを例外的に変更可能にはしない。Match scoringやwind rotationはbackend-foundationの担当外とする。
+- build vs adopt: 新しい設定保存、collection、migration scriptを作らず、既存rule schemaとmapperを拡張する。
+
+### 契約上の影響
+
+- `backend-integrity-lifecycle`はrule lockに、`frontend-league-season`はrule draft/editorに、`frontend-session-match`はMatch入力の初期seat assignmentに変更が必要である。
+- Field名、legacy false、AppType/OpenAPI、Firestore文書のいずれかがずれる場合はBE contract testとFE typecheck handoffを再確認する。

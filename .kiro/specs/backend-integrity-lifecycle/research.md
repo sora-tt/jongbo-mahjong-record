@@ -2,7 +2,7 @@
 
 ## 調査概要
 
-`backend-foundation` が固定した Firestore の正本パス、camelCase Domain/API DTO、認証・ErrorEnvelope、Hono route 境界を前提に、既存の Session/Match サービス、scoring、aggregation、StatsRebuilder、Season/League/UserStats repository を拡張する方針を調査した。新規外部ライブラリは不要であり、既存の TypeScript、Firebase Admin SDK、Firestore transaction/batch、Emulator を利用する。
+`backend-foundation` が固定した Firestore の正本パス、camelCase Domain/API DTO、認証・ErrorEnvelope、Hono route 境界を前提に、既存の Session/Match サービス、scoring、aggregation、StatsRebuilder、Season/League/UserStats repository を拡張する方針を調査した。新規外部ライブラリは不要であり、既存の TypeScript、Firebase Admin SDK、Firestore transaction/batch、Emulator を利用する。Issue #123では既存のrule lockとmatchIndexを再利用し、座順rotationそのものをFE側へ境界化する。
 
 本リポジトリには `product.md`、`tech.md`、`structure.md` および `.kiro/settings/templates/specs/` のテンプレートが存在しないため、AGENTS.md、roadmap.md、backend-foundation の仕様、現行 backend 実装、指定された Kiro ルールを根拠にした。
 
@@ -94,3 +94,16 @@
 - active season を削除または archived にした場合、別の archived season を自動昇格せず activeSeason は null とする。
 - Match の同点順位は competition ranking、同順位帯の uma は平均配分、point は小数第1位へ丸める現行計算を正本とする。
 - Match index は Session 内で現在の最大 index + 1 を transaction で割り当て、削除時に既存 index を詰めない。削除した最大 index の再利用を防ぐ別の公開契約は追加しない。
+
+## ISSUE-123 追加調査（2026-10-05）
+
+### rule lifecycleとの関係
+
+- `rotateSeatOrder`はLeague ruleの設定値であり、windの初期割当はFEが行う。BEは従来どおりresultsの各windをvalidateし、Matchに保存する。
+- 既存の最初の正本Match後rule lockは新fieldにも適用する。初回Match前は値を更新でき、初回Match後に値だけを変更してもconflictとなる。
+- `matchIndex`は同Sessionで保存順を識別する既存の正本値である。削除による欠番は許容され、FEは最大indexを前対局として利用する。BEの採番、scoring、aggregateは変更しない。
+
+### 設計判断
+
+- 採用: 新たなBE rotation algorithm、Match field、migration、public routeを追加しない。rotation flagの保存契約はbackend-foundation、rule editorはfrontend-league-season、saved windからの初期値計算はfrontend-session-matchが所有する。
+- 再検証条件: rule lockを緩める、既存Matchのwindを自動で書換える、またはmatchIndexの意味を変更する要求が生じた場合は本仕様へ戻す。

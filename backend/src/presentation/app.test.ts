@@ -23,6 +23,7 @@ const floatingRule = {
       "4": { first: 0, second: 0, third: 0, fourth: 0 },
     },
   },
+  rotateSeatOrder: true,
 } as const;
 
 const createLeagueContractApp = () => {
@@ -103,6 +104,10 @@ test("normalizes legacy fixed rules and accepts only valid gameType/mode pairs",
     fourth: -20,
   });
   assert.equal(
+    createLeagueSchema.parse(legacyFixedInput).rule.rotateSeatOrder,
+    false,
+  );
+  assert.equal(
     createLeagueSchema.safeParse({
       ...legacyFixedInput,
       rule: {
@@ -126,6 +131,13 @@ test("normalizes legacy fixed rules and accepts only valid gameType/mode pairs",
     }).success,
     false,
   );
+  assert.equal(
+    createLeagueSchema.safeParse({
+      ...legacyFixedInput,
+      rule: { ...legacyFixedInput.rule, rotateSeatOrder: "yes" },
+    }).success,
+    false,
+  );
 });
 
 test("League create/update routes accept floatingCount rules and return the canonical five rows", async () => {
@@ -140,11 +152,17 @@ test("League create/update routes accept floatingCount rules and return the cano
     }),
   });
   const createBody = (await createResponse.json()) as {
-    data: { rule: { uma: { mode: string; pointsByFloatingCount: unknown } } };
+    data: {
+      rule: {
+        uma: { mode: string; pointsByFloatingCount: unknown };
+        rotateSeatOrder: boolean;
+      };
+    };
   };
 
   assert.equal(createResponse.status, 201);
   assert.equal(createBody.data.rule.uma.mode, "floatingCount");
+  assert.equal(createBody.data.rule.rotateSeatOrder, true);
   assert.deepEqual(
     createBody.data.rule.uma.pointsByFloatingCount,
     floatingRule.uma.pointsByFloatingCount,
@@ -156,11 +174,17 @@ test("League create/update routes accept floatingCount rules and return the cano
     body: JSON.stringify({ rule: floatingRule }),
   });
   const updateBody = (await updateResponse.json()) as {
-    data: { rule: { uma: { mode: string; pointsByFloatingCount: unknown } } };
+    data: {
+      rule: {
+        uma: { mode: string; pointsByFloatingCount: unknown };
+        rotateSeatOrder: boolean;
+      };
+    };
   };
 
   assert.equal(updateResponse.status, 200);
   assert.equal(updateBody.data.rule.uma.mode, "floatingCount");
+  assert.equal(updateBody.data.rule.rotateSeatOrder, true);
   assert.deepEqual(
     updateBody.data.rule.uma.pointsByFloatingCount,
     floatingRule.uma.pointsByFloatingCount,
@@ -185,11 +209,12 @@ test("League create/update routes preserve legacy fixed requests and return mode
     }),
   });
   const createBody = (await createResponse.json()) as {
-    data: { rule: { uma: { mode: string } } };
+    data: { rule: { uma: { mode: string }; rotateSeatOrder: boolean } };
   };
 
   assert.equal(createResponse.status, 201);
   assert.equal(createBody.data.rule.uma.mode, "fixed");
+  assert.equal(createBody.data.rule.rotateSeatOrder, false);
 
   const updateResponse = await app.request("/api/leagues/league-1", {
     method: "PATCH",
@@ -197,11 +222,12 @@ test("League create/update routes preserve legacy fixed requests and return mode
     body: JSON.stringify({ rule: legacyRule }),
   });
   const updateBody = (await updateResponse.json()) as {
-    data: { rule: { uma: { mode: string } } };
+    data: { rule: { uma: { mode: string }; rotateSeatOrder: boolean } };
   };
 
   assert.equal(updateResponse.status, 200);
   assert.equal(updateBody.data.rule.uma.mode, "fixed");
+  assert.equal(updateBody.data.rule.rotateSeatOrder, false);
 });
 
 test("League routes return ErrorEnvelope for invalid floatingCount rows", async () => {
@@ -1011,6 +1037,15 @@ test("OpenAPI publishes the canonical auth and match request contracts", async (
         LeagueSummary: { properties: Record<string, unknown> };
         LeagueRule: { oneOf?: Array<{ $ref?: string }> };
         LeagueRuleInput: { oneOf?: Array<{ $ref?: string }> };
+        FixedSanmaLeagueRuleInput: { properties: Record<string, unknown> };
+        FixedYonmaLeagueRuleInput: { properties: Record<string, unknown> };
+        FloatingCountYonmaLeagueRuleInput: {
+          properties: Record<string, unknown>;
+        };
+        FixedYonmaLeagueRule: {
+          properties: Record<string, unknown>;
+          required?: string[];
+        };
         UmaRule: {
           oneOf?: Array<{ $ref?: string }>;
           discriminator?: {
@@ -1079,6 +1114,26 @@ test("OpenAPI publishes the canonical auth and match request contracts", async (
       "#/components/schemas/LegacyFixedSanmaLeagueRule",
       "#/components/schemas/LegacyFixedYonmaLeagueRule",
     ],
+  );
+  for (const ruleInput of [
+    document.components.schemas.FixedSanmaLeagueRuleInput,
+    document.components.schemas.FixedYonmaLeagueRuleInput,
+    document.components.schemas.FloatingCountYonmaLeagueRuleInput,
+  ]) {
+    assert.deepEqual(ruleInput.properties.rotateSeatOrder, {
+      type: "boolean",
+      default: false,
+    });
+  }
+  assert.deepEqual(
+    document.components.schemas.FixedYonmaLeagueRule.properties.rotateSeatOrder,
+    { type: "boolean" },
+  );
+  assert.equal(
+    document.components.schemas.FixedYonmaLeagueRule.required?.includes(
+      "rotateSeatOrder",
+    ),
+    true,
   );
   assert.deepEqual(
     document.components.schemas.UmaRule.oneOf?.map(({ $ref }) => $ref),

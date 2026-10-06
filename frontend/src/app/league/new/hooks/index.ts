@@ -13,6 +13,8 @@ import {
 } from "@/features/league/model/rule-draft";
 import { ApiError, getApiErrorMessage } from "@/lib/api/core";
 import { searchUsers } from "@/lib/api/users";
+import { LEAGUE_NAME_SUFFIX_MODEL } from "@/lib/name-suffix";
+import { useAuth } from "@/providers/auth-provider";
 
 import type {
   FloatingCount,
@@ -27,12 +29,15 @@ type MemberCandidate = {
 
 export const useLeagueNew = () => {
   const router = useRouter();
+  const { user, isLoading: isAuthLoading } = useAuth();
 
   const [leagueName, setLeagueName] = React.useState("");
   const [memberQuery, setMemberQuery] = React.useState("");
   const [addedMembers, setAddedMembers] = React.useState<
     Record<string, MemberCandidate>
   >({});
+  const addedMembersRef = React.useRef(addedMembers);
+  addedMembersRef.current = addedMembers;
   const [memberCandidates, setMemberCandidates] = React.useState<
     MemberCandidate[]
   >([]);
@@ -42,6 +47,22 @@ export const useLeagueNew = () => {
   const [submitError, setSubmitError] = React.useState<string | null>(null);
   const [showUmaErrors, setShowUmaErrors] = React.useState(false);
   const [errorSummaryFocusToken, setErrorSummaryFocusToken] = React.useState(0);
+
+  React.useEffect(() => {
+    if (!user?.uid) {
+      return;
+    }
+
+    setAddedMembers((prev) => {
+      if (!(user.uid in prev)) {
+        return prev;
+      }
+
+      const next = { ...prev };
+      delete next[user.uid];
+      return next;
+    });
+  }, [user?.uid]);
 
   const [ruleSettings, setRuleSettings] = React.useState(
     createDefaultLeagueRuleDraft
@@ -92,7 +113,11 @@ export const useLeagueNew = () => {
               name: user.name,
               username: user.username,
             }))
-            .filter((user) => !(user.userId in addedMembers))
+            .filter(
+              (candidate) =>
+                candidate.userId !== user?.uid &&
+                !(candidate.userId in addedMembersRef.current)
+            )
         );
       } catch (searchError) {
         if (!isActive) {
@@ -112,7 +137,7 @@ export const useLeagueNew = () => {
       isActive = false;
       window.clearTimeout(timeoutId);
     };
-  }, [memberQuery, addedMembers]);
+  }, [memberQuery, user?.uid]);
 
   const handleAddMember = React.useCallback((member: MemberCandidate) => {
     setAddedMembers((prev) => {
@@ -126,8 +151,9 @@ export const useLeagueNew = () => {
       };
     });
 
-    setMemberQuery("");
-    setMemberCandidates([]);
+    setMemberCandidates((prev) =>
+      prev.filter((candidate) => candidate.userId !== member.userId)
+    );
     setError(null);
   }, []);
 
@@ -160,6 +186,10 @@ export const useLeagueNew = () => {
     },
     []
   );
+
+  const handleRotateSeatOrderChange = React.useCallback((value: boolean) => {
+    setRuleSettings((prev) => ({ ...prev, rotateSeatOrder: value }));
+  }, []);
 
   const handleModeChange = React.useCallback((mode: UmaMode) => {
     setRuleSettings((prev) => ({ ...prev, mode }));
@@ -211,8 +241,10 @@ export const useLeagueNew = () => {
 
     try {
       const createdLeague = await createLeague({
-        name: leagueName.trim(),
-        memberUserIds: Object.keys(addedMembers),
+        name: LEAGUE_NAME_SUFFIX_MODEL.toCanonicalName(leagueName),
+        memberUserIds: Object.keys(addedMembers).filter(
+          (userId) => userId !== user?.uid
+        ),
         rule: result.rule,
       });
 
@@ -227,15 +259,18 @@ export const useLeagueNew = () => {
     } finally {
       setIsSubmitting(false);
     }
-  }, [leagueName, addedMembers, ruleSettings, router, failSubmit]);
+  }, [leagueName, addedMembers, ruleSettings, router, failSubmit, user?.uid]);
 
   return {
     leagueName,
+    creatorName: user?.displayName ?? user?.email ?? "あなた",
+    memberCount: Object.keys(addedMembers).length + (user ? 1 : 0),
     memberQuery,
     addedMembers,
     memberCandidates,
     isSearchingMembers,
     isSubmitting,
+    isAuthLoading,
     error,
     submitError,
     showUmaErrors,
@@ -250,6 +285,7 @@ export const useLeagueNew = () => {
     handleOkaSettingChange,
     handleChomboPenaltyPointsChange,
     handleAllowOffTableKyotakuChange,
+    handleRotateSeatOrderChange,
     handleModeChange,
     handleFixedUmaChange,
     handleFloatingCountUmaChange,

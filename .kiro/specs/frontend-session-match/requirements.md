@@ -10,6 +10,7 @@ Session・Matchを記録する利用者とFE実装者は、参加者選択、Ses
 
 - Seasonの参加者候補からのPlayer select
 - Sessionの作成、一覧、詳細、終了状態の表示
+- Session終了保存後のシーズン詳細遷移と、League ruleに応じたSession内の座順ローテーション初期値
 - 初回Match、追加Match、Match編集で共有する入力フォーム
 - 三麻/四麻の人数、wind、Session member一致、raw score、チョンボ発生、卓外供託の入力制約表示
 - Matchの作成、編集、一覧、詳細、既存の削除操作
@@ -23,6 +24,7 @@ Session・Matchを記録する利用者とFE実装者は、参加者選択、Ses
 - 新しい麻雀ルール、可変丸め、点数計算ロジックの追加
 - 統計グラフ、個人成績、ランキング、旧domain型・mock・Reduxのリポジトリ横断削除
 - Session member snapshotを作成後に変更する機能
+- 保存済みMatchの席割当を自動で書き換える機能
 - 複数端末同時編集、リアルタイム同期、BEのFirestore/API/ErrorEnvelope/認証契約変更
 - 共通API client、共通UI primitive、Header/AppShell自体の再設計
 
@@ -30,7 +32,7 @@ Session・Matchを記録する利用者とFE実装者は、参加者選択、Ses
 
 - `frontend-foundation-ui` のHono `AppType`由来型、共通API client、`{ data }`、ErrorEnvelope、Cookie認証、AsyncState、UI primitivesを利用する。
 - `frontend-league-season` のSeason詳細からのSession開始導線を受け取り、Session一覧・詳細とMatch画面を所有する。Season/Leagueの集計表示は所有しない。
-- `backend-foundation` のcamelCase DTO、ISO 8601、Session/Match route、status、`rank`・`point`・`matchIndex`、チョンボ発生・卓外供託のresponse契約を正本として利用する。
+- `backend-foundation` のcamelCase DTO、ISO 8601、Session/Match route、status、`rank`・`point`・`matchIndex`、チョンボ発生・卓外供託・League ruleの座順ローテーション可否のresponse契約を正本として利用する。
 - `backend-integrity-lifecycle` のSession固定member、三麻の`east/south/west`、四麻の`east/south/west/north`、Match参加者完全一致、BE計算結果、欠番を許容するmatchIndex、League ruleに応じた外卓入力を画面へ反映する。
 
 ## 要件
@@ -57,7 +59,7 @@ Session・Matchを記録する利用者とFE実装者は、参加者選択、Ses
 
 2.3 When Session詳細を表示するとき, the Session-Match Feature shall `GET /api/leagues/:leagueId/seasons/:seasonId/sessions/:sessionId`のmembers、memberCount、totalMatchCount、開始・終了状態を表示し、membersをSeasonの現在値で置換しない。
 
-2.4 When 利用者がSessionを終了するとき, the Session-Match Feature shall 許可されたendedAtまたはtableLabelだけを更新し、成功後にSession詳細とMatch一覧を再取得して最新状態を表示する。
+2.4 When 利用者がSession一覧または詳細の終了操作を実行するとき, the Session-Match Feature shall 許可されたendedAtまたはtableLabelを保存し、保存成功後に所属シーズンの詳細画面へ遷移する。
 
 2.5 If Session一覧または詳細の取得・更新に失敗した場合, the Session-Match Feature shall empty、validation、authentication、forbidden、not_found、conflict、transport/decode errorを区別し、入力を失わず再試行可能な状態を表示する。
 
@@ -82,6 +84,12 @@ Session・Matchを記録する利用者とFE実装者は、参加者選択、Ses
 3.8 When 対象Leagueのruleで卓外供託が許可されているとき, the Session-Match Feature shall 卓外供託の有無を選択できるようにし、発生ありの場合に残数を入力する欄を表示する。ruleで許可されていないときは関連する選択欄と入力欄を表示しない。
 
 3.9 When 新しい外卓入力を既存Matchフォームへ追加するとき, the Session-Match Feature shall mainブランチのMatch UIの構成・見た目を維持し、必要な入力欄だけを既存UIに沿って追加する。
+
+3.10 Where League ruleで座順ローテーションが有効で、同じSessionに保存済みMatchがあるとき, the Session-Match Feature shall `matchIndex`が最大のMatchを直前の対局とみなし、その席割当から東家を次の南家、南家を次の西家、西家を次の北家、北家を次の東家へ移した初期席順を表示する。sanmaでは東家を次の南家、南家を次の西家、西家を次の東家へ移す。
+
+3.11 If 座順ローテーションが無効、またはSessionに保存済みMatchがない場合, the Session-Match Feature shall 現行のSession member順に基づく初期席順を表示する。
+
+3.12 When 利用者が新規Matchフォームの席割当を変更して保存するとき, the Session-Match Feature shall 選択した席割当を保存し、次の新規Matchの初期値は直近に保存された実際の席割当を基準にする。保存されていない変更は次のMatchへ反映しない。
 
 ### Requirement 4: Matchの作成・編集・一覧・詳細
 

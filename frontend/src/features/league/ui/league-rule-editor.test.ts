@@ -29,6 +29,7 @@ const renderEditor = (
     floatingCountUma: createDefaultFloatingCountUmaDraft(),
     chomboPenaltyPoints: "0",
     allowOffTableKyotaku: false,
+    rotateSeatOrder: false,
     showErrorSummary: true,
     errorSummaryFocusToken: 1,
     onModeChange: () => {},
@@ -36,6 +37,7 @@ const renderEditor = (
     onFloatingCountUmaChange: () => {},
     onChomboPenaltyPointsChange: () => {},
     onAllowOffTableKyotakuChange: () => {},
+    onRotateSeatOrderChange: () => {},
     ...overrides,
   };
 

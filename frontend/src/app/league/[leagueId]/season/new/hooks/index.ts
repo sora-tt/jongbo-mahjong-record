@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { fetchLeagueDetail, fetchLeagueMembers } from "@/features/league/api";
 import { createSeason } from "@/features/season/api";
 import { ApiError, getApiErrorMessage } from "@/lib/api/core";
+import { SEASON_NAME_SUFFIX_MODEL } from "@/lib/name-suffix";
 
 const DEFAULT_ERROR_MESSAGE =
   "シーズン作成画面の取得に失敗しました。時間をおいて再度お試しください。";
@@ -148,7 +149,7 @@ export const useSeasonNew = () => {
 
     try {
       const season = await createSeason(leagueId, {
-        name: seasonName.trim(),
+        name: SEASON_NAME_SUFFIX_MODEL.toCanonicalName(seasonName),
         memberUserIds: Object.keys(selectedMembers),
         status,
       });
@@ -157,6 +158,13 @@ export const useSeasonNew = () => {
     } catch (submitError) {
       if (submitError instanceof ApiError && submitError.status === 401) {
         router.replace("/login");
+        return;
+      }
+
+      if (submitError instanceof ApiError && submitError.status === 409) {
+        setError(
+          "進行中のシーズンはリーグごとに1つまでです。既存の進行中シーズンを終了またはアーカイブしてから作成してください。"
+        );
         return;
       }
 

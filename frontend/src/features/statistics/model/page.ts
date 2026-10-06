@@ -99,7 +99,7 @@ export const parseStatisticsRouteContext = (
 
 export const buildStatisticsHref = (input: {
   scope: StatisticsScopeFilters;
-  targetUserId: string;
+  targetUserId?: string;
   activeView?: StatisticsView;
   scopeLabel?: string;
   returnTo?: string | null;
@@ -107,9 +107,9 @@ export const buildStatisticsHref = (input: {
   const params = new URLSearchParams({
     scopeType: input.scope.scopeType,
     gameType: input.scope.gameType,
-    targetUserId: input.targetUserId,
     view: input.activeView ?? "overview",
   });
+  if (input.targetUserId) params.set("targetUserId", input.targetUserId);
   if (input.scope.leagueId) params.set("leagueId", input.scope.leagueId);
   if (input.scope.seasonId) params.set("seasonId", input.scope.seasonId);
   if (input.scopeLabel) params.set("scopeLabel", input.scopeLabel);

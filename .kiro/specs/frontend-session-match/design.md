@@ -6,6 +6,8 @@
 
 Seasonの参加者候補から固定Sessionを作成し、Session membersを正本として初回・追加・編集Matchを共通フォームで扱う。`frontend-foundation-ui`のtyped API client、AsyncState、Error boundary、UI primitivesを利用し、`backend-integrity-lifecycle`が返すcomputed `rank`・`point`・`matchIndex`を表示する。ISSUE-99ではMatchごとのチョンボ発生者と卓外供託を別入力で記録し、外卓入力を結果詳細で確認できるようにする。FEはscore/rank/point/aggregateを再計算せず、mutation成功後にGETで正本を再取得する。
 
+Issue #123ではSession終了保存の成功後にSeason detailへ遷移し、League ruleのrotateSeatOrderが有効な追加Matchでは、同SessionでmatchIndexが最大の保存済みMatchの実seat assignmentを一席分回した値を初期表示する。初期表示後の手修正は許可し、次回は直近に保存されたassignmentを基準に回す。
+
 ### Goals
 
 - `sanma`はeast/south/westの3人、`yonma`はeast/south/west/northの4人をPlayer selectとMatchフォームへ反映する。
@@ -13,6 +15,8 @@ Seasonの参加者候補から固定Sessionを作成し、Session membersを正�
 - Sessionの作成・一覧・詳細、Matchの作成・編集・一覧・詳細・削除と結果表示をAPIへ接続する。
 - 初回・追加・編集でMatchフォームの入力・validation・mutation状態を共通化する。
 - League ruleで卓外供託が許可される場合だけ供託入力を表示し、チョンボ発生行と供託本数を別々に送信する。
+- Session終了保存後は所属Season detailへ遷移する。
+- League ruleの座順ローテーション設定を追加Matchの初期seat assignmentに反映し、保存済みwindを次回の基準にする。
 - Main/PR #104のMatch UIを維持し、チョンボ・供託の入力欄と結果詳細だけを追加する。
 - API error/loading/empty、retry、二重submit、stale request、未接続操作を対象画面で統一する。
 
@@ -22,16 +26,18 @@ Seasonの参加者候補から固定Sessionを作成し、Session membersを正�
 - FEのrank、point、standing、累計値、統計の再計算やmatchIndex欠番の補正。
 - 統計画面、旧domain/mock/Reduxの全削除、リアルタイム同期、複数端末同時編集。
 - `frontend-foundation-ui`の共通API client、Auth boundary、UI primitive、AppShell本体の再設計。
+- League ruleの編集、rotation flagのBE保存、既存Matchのseat assignment変更。
 
 ## 2. Boundary Commitments
 
 ### This spec owns
 
 - Player selectのgameType別枠数、候補制御、Session作成フローへの接続。
-- Session feature API、Session一覧・詳細・終了表示、Session membersのview model。
+- Session feature API、Session一覧・詳細・終了表示と終了後Season遷移、Session membersのview model。
 - Match feature API、共通Matchフォーム、Match一覧・詳細・結果表示、create/update/delete後の再取得。
 - Session membersとMatch participantの一致をUIで表示・送信する境界、raw scoreの入力補助、BE結果の表示。
 - Matchごとのchombo event・off-table kyotaku inputと、BEが保存した両項目の結果詳細表示。
+- Session終了成功後のSeason detail navigation、および追加Match初期値の座順rotationと保存前seat correction。
 - 対象routeのloading/error/empty/retry、二重submit防止、stale request防止、未接続buttonの解消。
 
 ### Out of Boundary
@@ -47,7 +53,7 @@ Seasonの参加者候補から固定Sessionを作成し、Session membersを正�
 |---|---|---:|---|
 | Inbound | `frontend-foundation-ui` | P0 | AppType aliases、共通client、ApiError、AsyncState、Auth、UI primitives |
 | Inbound | `frontend-league-season` | P0 | Season detailからのSession開始導線、Season member候補 |
-| Inbound | `backend-foundation` | P0 | Session/Match route、camelCase DTO、ISO日時、status、Match external fields、ErrorEnvelope、AppType |
+| Inbound | `backend-foundation` | P0 | Session/Match route、camelCase DTO、ISO日時、status、Match external fields、LeagueRule.rotateSeatOrder、ErrorEnvelope、AppType |
 | Inbound | `backend-integrity-lifecycle` | P0 | fixed members、allowed wind、League rule external settings、computed rank/point、matchIndex、欠番、fourth null |
 | Outbound | `frontend-statistics-quality` | P1 | Session/Match画面がBE結果を再計算しない境界、旧資産の移行対象 |
 | External | Next.js `15.5.19` / React `19.1.0` | P0 | App Router、useParams/useRouter、`React.FC` |
@@ -56,9 +62,11 @@ Seasonの参加者候補から固定Sessionを作成し、Session membersを正�
 
 - Session/Matchのrequest/response DTO、route、HTTP status、ErrorCode、AppType公開位置の変更。
 - Session members、gameType、allowed wind、raw score totalとkyotaku count、chombo event/penalty契約、rank/point計算、matchIndex欠番、fourth null semanticsの変更。
+- rotateSeatOrderのlegacy default、最大matchIndexの判定、Wind assignment DTO semanticsの変更。
 - 共通client、Auth boundary、AsyncState、Loading/Error/Empty、Input/Select/Table primitiveの変更。
 - Season詳細からのSession開始導線、Session詳細route、Match一覧・詳細route、Session作成タイミングの変更。
 - Create/UpdateMatchでrankを入力するかどうかのBE契約変更。
+- rotateSeatOrderのBE契約、同Session matchIndex ordering、三麻/四麻のwind集合、保存済みseat correction方針の変更。
 
 ## 3. Architecture
 
@@ -162,6 +170,25 @@ type ParticipantConstraint = {
 
 `sanma`の`requiredWinds`は`east/south/west`、`yonma`は`east/south/west/north`。UIはSeason membersを候補として受け取り、Session作成後はSession membersだけを選択肢の正本とする。Match editではparticipant controlをread-onlyへ切り替え、異なる参加者は新Sessionでのみ登録可能と表示する。
 
+#### Issue #123 seat rotation contract
+
+League ruleのrotateSeatOrderはbackend-foundationのAppTypeから読み取るbooleanであり、frontend-league-seasonが編集・保存する。Session/Match画面はLeague detailからその値を読む。無効、または保存済みMatchがない場合は従来どおりmembersToParticipantsの初期割当を使う。有効かつMatchがある場合は、matches response内でmatchIndexが最大のMatchを直前とし、playedAtや配列位置では選ばない。削除によるindex gapはそのまま許容する。
+
+seat assignmentは直前Matchのresults[].windとuserIdを参加者集合に再構成する。yonmaでは直前の東家を次の南家、南家を次の西家、西家を次の北家、北家を次の東家に割り当てる。sanmaでは東家→南家、南家→西家、西家→東家とする。DTOの必須windが欠落/重複する場合、初期席順をmembers順へ黙ってfallbackせず契約エラーとして画面に表示する。
+
+```ts
+type SeatAssignmentResult =
+  | { ok: true; userIdByWind: ParticipantByWind }
+  | { ok: false; reason: "invalid_previous_assignment" };
+
+function rotateSeatAssignment(input: {
+  previous: ParticipantByWind;
+  constraint: ParticipantConstraint;
+}): SeatAssignmentResult;
+```
+
+MatchFormValuesは既存のuserIdByWindを編集可能なdraftとして保つ。POSTには選択後のwindを既存results payloadとして送信し、rotation用の別API fieldは追加しない。次回formはAPIから再取得した最新Matchから初期値を計算するため、保存前の未確定変更は次回へ漏れない。
+
 ### Match form model
 
 ```ts
@@ -228,11 +255,12 @@ Adapterは次を担当しない。
 | Session Feature API | Session list/create/detail/updateを型付きで提供する | 2.1-2.5, 6.1-6.2 | Foundation client、AppType | API, Type |
 | Match Feature API | Match list/create/detail/update/deleteを型付きで提供する | 4.1-4.5, 6.1-6.2 | Foundation client、AppType | API, Type |
 | Participant Model | gameType、wind、fixed memberを検証する | 1.1-1.6, 3.2 | Season/League DTO、Session DTO | Type, State |
-| Session Hooks and UI | Player select、Session list/detail、終了操作を表示する | 1.1-2.5, 5.1-5.3, 6.3-6.4 | AsyncState、UI primitives | UI, State |
-| Common Match Form | initial/additional/editを同一入力契約にし、チョンボ発生と許可された卓外供託を別入力にする | 3.1-3.9, 4.1, 4.4 | Participant Model、League rule、Match API | UI, State |
+| Session Hooks and UI | Player select、Session list/detail、終了保存とSeason detail遷移を扱う | 1.1-2.5, 5.1-5.3, 6.3-6.4 | AsyncState、UI primitives、Next Router | UI, State |
+| Common Match Form | initial/additional/editを同一入力契約にし、座順修正、チョンボ発生、許可された卓外供託を扱う | 3.1-3.12, 4.1, 4.4 | Participant Model、League rule、Match API | UI, State |
+| Seat Rotation Model | 直前保存Matchのwind assignmentをgameType別に一席回し、新規formの初期値を作る | 3.10-3.12 | Participant Model、Match DTO | Type, State |
 | Match Views | list/detail/result/delete confirmationと記録済み外卓入力を表示する | 4.2-4.5, 5.1-5.3 | Match adapter、Table | UI |
 | Route Integration | existing routeとSeason detail導線を接続する | 2.1, 5.1-5.4, 7.1-7.3 | Next Router、League-Season | UI, State |
-| Validation Handoff | typecheck/lint/buildと境界を検証する | 6.1-6.4, 7.1-7.3 | project scripts、BE contract | Test |
+| Validation Handoff | 既存scriptとsource reviewで型・境界を確認する | 6.1-6.4, 7.1-7.3 | project scripts、BE contract | Static Validation |
 
 ### Session Feature API
 
@@ -333,10 +361,13 @@ Matchのread-only詳細は専用routeを新設せず、既存results routeのMat
 
 - Player selectはLeague ruleとSeason membersを同時に読み、三麻はnorth controlを表示せず、四麻は4枠を必須にする。
 - Session detailのmembersは作成時snapshot。Season membersの現在値を上書きしない。
+- Session end操作はendedAt/tableLabelの許可済み更新を保存し、成功後に`/league/{leagueId}/season/{seasonId}`へ遷移する。更新失敗時はrouteを変えず、Session resultsにerrorを表示して再試行可能にする。
 - Match formのedit modeはparticipantをread-onlyにし、raw score/playedAtだけを編集する。別参加者の場合は新Session開始へ戻す説明を出す。
 - 初回/追加Match formでは既存のplayedAt/席別点数行の後に外卓欄を追加する。チョンボ発生toggleがONなら、Session memberを選ぶ発生者行（1行=1回）と「発生を追加/削除」を表示し、同一userの複数行を許す。各回の罰符はLeague ruleの値を説明表示するだけでFE計算しない。
 - 卓外供託の有無と本数欄は`allowOffTableKyotaku=true`の場合だけ描画する。ありを選んだ時だけ棒数欄を出し、0または不正値では送信を止める。falseの場合は選択・入力controlを描画しない。
 - Match edit modeでは既存のチョンボ発生者と卓外供託本数をread-onlyで表示し、追加・削除・変更controlを表示しない。PATCHは外卓fieldを省略して既存値を保持する。
+- 追加MatchでrotateSeatOrderがtrueの場合はLeague detail、Session detail、Match listを取得する。Match listが空なら現行member順、1件以上なら最大matchIndexのMatchから三麻/四麻の一席rotationを初期値にする。利用者は保存前に通常のseat selectorで修正できる。
+- seat assignmentを手修正してMatchを保存した時は、次の追加Matchでその保存結果を新しい基準としてさらに一席rotationする。既存Matchのseat selectorはread-onlyのままとし、保存済みMatchを自動補正しない。
 - Match listはBEの配列順と各`matchIndex`を表示し、欠番補正を行わない。sortを追加する場合もdisplay indexを変更しない。
 - Match listの各行は展開状態を持ち、展開時に同じMatch DTOのwind、raw score、rank、point、playedAt、記録済みチョンボ発生回数と各発生者、卓外供託本数をread-onlyで表示する。編集は既存のedit routeへ遷移する。
 - Session resultは各MatchのBE結果を表示し、pointの総和や順位の再計算で表示値を上書きしない。
@@ -348,33 +379,33 @@ Matchのread-only詳細は専用routeを新設せず、既存results routeのMat
 
 | Component | Path | Responsibility |
 |---|---|---|
-| Session Feature API | `frontend/src/features/session/api/index.ts` | Session list/create/detail/updateのtyped wrapper |
-| Match Feature API | `frontend/src/features/match/api/index.ts` | Match list/create/detail/update/deleteのtyped wrapper |
-| Participant Model | `frontend/src/features/session-match/model/participants.ts` | gameType、wind、fixed member、seat constraint |
 | Session Hooks | `frontend/src/features/session/hooks/index.ts` | Player select、Session list/detail、stale/error state |
 | Match Hooks | `frontend/src/features/match/hooks/index.ts` | Match list/detail/form mutation、refetch state |
-| Session UI | `frontend/src/features/session/ui/index.tsx` | Player select、Session list/detail、empty/error composition |
-| Match UI | `frontend/src/features/match/ui/index.tsx` | common form、list/detail/result、delete confirmation |
+| Session Hooks and UI | `frontend/src/features/session/ui/index.tsx` | Player select、Session list/detail、empty/error composition |
+| Common Match Form / Match Views | `frontend/src/features/match/ui/index.tsx` | common form、list/detail/result、delete confirmation |
 | Feature export | `frontend/src/features/session-match/index.ts` | downstream routeが使う公開feature入口 |
 
 ### Existing files to modify
 
 | Component | Path | Responsibility |
 |---|---|---|
-| ISSUE-99 Match Form Model | `frontend/src/features/session-match/model/match-form.ts` | external input draft、kyotaku調整後raw total validation、AppType payload変換、Match DTOからの初期化 |
-| ISSUE-99 Match Form UI | `frontend/src/features/match/ui/MatchForm.tsx` | 既存フォームにchombo toggle/event rowsとrule許可時のみのkyotaku controlを追加 |
-| ISSUE-99 Match Result UI | `frontend/src/features/match/ui/MatchList.tsx` | 展開詳細にMatch DTOのchombo/kyotakuを表示 |
-| ISSUE-99 Match route hooks | `frontend/src/app/league/[leagueId]/season/[seasonId]/sessions/start/match/hooks/index.ts`、`frontend/src/app/league/[leagueId]/season/[seasonId]/sessions/[sessionId]/matches/new/hooks/index.ts`、`frontend/src/app/league/[leagueId]/season/[seasonId]/sessions/[sessionId]/matches/[matchId]/edit/hooks/index.ts` | League external ruleをフォームへ渡し、外卓入力をMatch create/updateへ渡す |
-| Match Form Validation | `frontend/src/features/session-match/model/match-form.ts`、`frontend/src/features/match/ui/backend-result-display.test.tsx` | 外卓入力のpayload/validationとBE結果表示を既存test/model境界で検証 |
+| Session Feature API | `frontend/src/features/session/api/index.ts` | Session list/create/detail/updateのtyped wrapperを更新 |
+| Match Feature API | `frontend/src/features/match/api/index.ts` | Match list/create/detail/update/deleteのtyped wrapperを更新 |
+| Participant Model / Seat Rotation Model | `frontend/src/features/session-match/model/participants.ts` | gameType、wind、fixed memberを検証し、保存済みassignmentをsanma/yonma別に一席rotateする |
+| Common Match Form | `frontend/src/features/session-match/model/match-form.ts`, `frontend/src/features/match/ui/MatchForm.tsx` | seat assignmentとexternal input draft、kyotaku調整後raw total validation、chombo event rows、typed payload変換を共通formに追加 |
+| Match Views | `frontend/src/features/match/ui/MatchList.tsx` | 展開詳細にMatch DTOのchombo/kyotakuとBE算出結果を表示 |
+| Route Integration / Request Hooks | `frontend/src/app/league/[leagueId]/season/[seasonId]/sessions/start/match/hooks/index.ts`, `frontend/src/app/league/[leagueId]/season/[seasonId]/sessions/[sessionId]/matches/new/hooks/index.ts`, `frontend/src/app/league/[leagueId]/season/[seasonId]/sessions/[sessionId]/matches/[matchId]/edit/hooks/index.ts` | League external ruleをformへ渡し、追加Matchはmax matchIndexの保存windから初期assignmentを作り、保存後はMatch listを再取得する |
+| Route Integration | `frontend/src/app/league/[leagueId]/season/[seasonId]/sessions/[sessionId]/results/hooks/index.ts` | Session update成功後にrecording flowをclearしSeason detailへ遷移。失敗時は同routeに留める |
+
 | Validation Handoff | `frontend/package.json`, `frontend/tsconfig.json` | 既存typecheck/lint/build entryとHono API type境界を確認 |
 | Session API compatibility | `frontend/src/lib/api/sessions.ts` | feature APIへの薄い互換入口、list/detail契約の不足を補う |
 | Match API compatibility | `frontend/src/lib/api/matches.ts` | feature APIへの薄い互換入口、match detailとtyped inputを接続 |
-| Player select route | `frontend/src/app/league/[leagueId]/season/[seasonId]/sessions/start/players/*` | Participant ModelとSession creationを接続 |
-| First Match route | `frontend/src/app/league/[leagueId]/season/[seasonId]/sessions/start/match/*` | common formのinitial modeを接続 |
-| Session result route | `frontend/src/app/league/[leagueId]/season/[seasonId]/sessions/[sessionId]/results/*` | Session detail、Match list、BE result、end/delete/refetchを接続 |
-| Additional Match route | `frontend/src/app/league/[leagueId]/season/[seasonId]/sessions/[sessionId]/matches/new/*` | common formのadditional modeを接続 |
-| Match edit route | `frontend/src/app/league/[leagueId]/season/[seasonId]/sessions/[sessionId]/matches/[matchId]/edit/*` | common formのedit mode、participant read-onlyを接続 |
-| Season detail handoff | `frontend/src/app/league/[leagueId]/season/[seasonId]/*` | Session list/start導線を接続。Season集計は変更しない |
+| Route Integration | `frontend/src/app/league/[leagueId]/season/[seasonId]/sessions/start/players/*` | Participant ModelとSession creationを接続 |
+| Route Integration | `frontend/src/app/league/[leagueId]/season/[seasonId]/sessions/start/match/*` | common formのinitial modeを接続 |
+| Route Integration | `frontend/src/app/league/[leagueId]/season/[seasonId]/sessions/[sessionId]/results/*` | Session detail、Match list、BE result、end/delete/refetchを接続 |
+| Route Integration | `frontend/src/app/league/[leagueId]/season/[seasonId]/sessions/[sessionId]/matches/new/*` | common formのadditional modeを接続 |
+| Route Integration | `frontend/src/app/league/[leagueId]/season/[seasonId]/sessions/[sessionId]/matches/[matchId]/edit/*` | common formのedit mode、participant read-onlyを接続 |
+| Route Integration | `frontend/src/app/league/[leagueId]/season/[seasonId]/*` | Session list/start導線を接続。Season集計は変更しない |
 | Existing result table | `frontend/src/components/pages/daily-record/daily-record-table/*` | BE rank/point/indexを表示できる薄いview componentへ整理 |
 | Legacy flow boundary | `frontend/src/store/slices/recording-flow-slice/*` | 新しい正本状態にせず、不要なparticipant/session fallbackを移行対象として明示 |
 
@@ -409,15 +440,13 @@ Matchのread-only詳細は専用routeを新設せず、既存results routeのMat
 
 | Validation | Verifies | Requirements |
 |---|---|---|
-| Participant constraint check | sanma/yonma count、allowed wind、duplicate、fixed members、new Session handoff | 1.1-1.6, 2.1, 3.2, 4.1, 4.4 |
-| Session API contract check | list/create/detail/update、snapshot、DTO/null/ISO、status/ErrorEnvelope | 2.1-2.5, 6.1-6.2 |
-| Match form check | common modes、外卓供託棒を差し引いたraw score total、chombo event別offender、repeat offender、ruleによるkyotaku欄の非表示、participant read-only、no FE rank/point | 3.1-3.9, 4.1, 4.4 |
-| Match result check | list/detail/delete/refetch、computed rank/point、matchIndex gaps、記録済みchombo/kyotaku表示 | 4.2-4.5, 5.1-5.3 |
-| State and error check | loading/empty/retry、401 handoff、403/404/409/validation/transport、stale request | 1.6, 2.5, 3.5-3.6, 6.3-6.4 |
-| Route smoke | Season detail → Session → first/additional/edit/result/back flow and no-op buttons | 5.1-5.3, 7.3 |
+| Participant/form source review | participant constraints、wind、fixed members、external-input mapping、BE rank/point boundary | 1.1-1.6, 2.1, 3.1-3.9, 4.1, 4.4 |
+| Session and Match integration review | API types, DTO/null/ISO, Session snapshot, mutation/refetch flow, safe errors | 2.1-2.6, 4.2-4.5, 6.1-6.4 |
+| Issue #123 source review | typecheck/lint/build plus source review that selects the saved Match with maximum `matchIndex`, preserves editable draft assignment, uses saved assignment as the next baseline, and navigates only after Session update succeeds | 2.4, 3.10-3.12, 5.1, 5.3 |
+| State and route source review | loading/empty/retry, 401 handoff, 403/404/409/validation/transport, stale request, route links and no-op buttons | 1.6, 2.5, 3.5-3.6, 5.1-5.3, 6.3-6.4, 7.3 |
 | Project validation | `pnpm typecheck`、`pnpm lint`、`pnpm build`、mock/direct-fetch/FE-calculation scan | 5.4, 6.1, 7.1-7.3 |
 
-既存test runnerの導入は本仕様の前提にせず、foundationの型契約とプロジェクト標準コマンドを必須検証とする。後続でcomponent/E2E基盤が導入された場合は、上表のparticipant、form、mutation、stale、errorケースを追加する。
+本仕様ではフロントエンドのtest runnerやbehavior test fileを追加しない。必須検証はfoundationの型契約、`pnpm typecheck`、`pnpm lint`、`pnpm build`、対象routeとseat rotation modelのsource reviewとする。BEのAPI・Emulator contract testは`backend-foundation`と`backend-integrity-lifecycle`の責務として維持する。
 
 ## 10. Open Questions / Risks
 
@@ -426,13 +455,16 @@ Matchのread-only詳細は専用routeを新設せず、既存results routeのMat
 
 ## 11. Requirements Traceability
 
+
 | Requirement | Summary | Components | Interfaces / Flows |
 |---|---|---|---|
 | 1.1, 1.2, 1.3, 1.4, 1.5, 1.6 | gameType別Player select、重複、fixed member、候補状態 | Participant Model, Session Hooks and UI | Season/League → Player select |
-| 2.1, 2.2, 2.3, 2.4, 2.5 | Session create/list/detail/end/error | Session Feature API, Session Hooks and UI | Session endpoints → Session views |
+| 2.1, 2.2, 2.3, 2.5 | Session create/list/detail/error | Session Feature API, Session Hooks and UI | Session endpoints → Session views |
+| 2.4 | Session end成功後に所属Season detailへ遷移し、失敗時はSession resultsに留まる | Session Hooks and UI, Route Integration | update Session → `/league/{leagueId}/season/{seasonId}` |
 | 2.6 | Match create失敗時に今回作成したSessionだけをrollbackし、入力を保持 | Route Integration, Session Feature API, Match Feature API | create Session → create Match failure → delete newly-created Session |
 | 3.1, 3.2, 3.3, 3.4, 3.5, 3.6 | 共通Match form、raw score、participant一致、BE結果、二重submit | Common Match Form, Participant Model | form → Match API |
 | 3.7, 3.8, 3.9 | chombo eventごとのoffender、ruleに応じたkyotaku controlの表示/非表示、既存UIへの追加 | Common Match Form | League rule + Match form → separate external Match fields |
+| 3.10, 3.11, 3.12 | ruleに応じた初回/次回wind assignment、保存前修正、最新保存Matchを次回基準にする | Seat Rotation Model, Common Match Form, Additional Match route | max matchIndex Match → rotate seat assignment → editable draft → Match create |
 | 4.1, 4.2, 4.3, 4.4, 4.5 | Match create/update/delete、list/detail、外卓結果、欠番、編集固定、refetch | Match Feature API, Match Views | Match endpoints → result views |
 | 5.1, 5.2, 5.3, 5.4 | success navigation、BE result表示、未接続操作、scope | Route Integration, Match Views | mutation → route/refetch |
 | 6.1, 6.2, 6.3, 6.4 | foundation contracts、adapter、loading/error/stale | Session/Match API, Validation Handoff | feature → shared boundaries |

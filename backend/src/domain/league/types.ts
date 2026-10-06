@@ -47,6 +47,7 @@ export type LeagueRule =
       oka: { startingPoints: number; returnPoints: number };
       chomboPenaltyPoints: number;
       allowOffTableKyotaku: boolean;
+      rotateSeatOrder: boolean;
     }
   | {
       gameType: "yonma";
@@ -54,6 +55,7 @@ export type LeagueRule =
       oka: { startingPoints: number; returnPoints: number };
       chomboPenaltyPoints: number;
       allowOffTableKyotaku: boolean;
+      rotateSeatOrder: boolean;
     };
 
 export type LeagueMember = UserReference & { id: OpaqueId };

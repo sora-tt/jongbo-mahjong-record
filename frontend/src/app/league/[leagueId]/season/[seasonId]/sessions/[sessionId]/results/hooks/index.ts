@@ -54,6 +54,7 @@ export const useSessionResultsPage = () => {
     null
   );
   const [error, setError] = React.useState<string | null>(null);
+  const [endError, setEndError] = React.useState<string | null>(null);
   const [retryCount, setRetryCount] = React.useState(0);
 
   const load = React.useCallback(
@@ -99,6 +100,7 @@ export const useSessionResultsPage = () => {
 
     setIsEnding(true);
     setError(null);
+    setEndError(null);
     try {
       await updateSession({
         leagueId,
@@ -107,13 +109,13 @@ export const useSessionResultsPage = () => {
         endedAt: new Date().toISOString(),
       });
       dispatch(clearRecordingFlow());
-      await load({ showLoading: false });
+      router.push(`/league/${leagueId}/season/${seasonId}`);
     } catch (endError) {
       if (endError instanceof ApiError && endError.status === 401) {
         router.replace("/login");
         return;
       }
-      setError(getApiErrorMessage(endError, DEFAULT_END_ERROR_MESSAGE));
+      setEndError(getApiErrorMessage(endError, DEFAULT_END_ERROR_MESSAGE));
     } finally {
       setIsEnding(false);
     }
@@ -169,6 +171,7 @@ export const useSessionResultsPage = () => {
     deleteTargetMatchId,
     expandedMatchId,
     error,
+    endError,
     retry: () => setRetryCount((count) => count + 1),
     isEnded: Boolean(session?.endedAt),
     formatDate,

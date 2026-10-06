@@ -13,6 +13,7 @@ import {
 } from "@/features/league/model/rule-draft";
 import { ApiError, getApiErrorMessage } from "@/lib/api/core";
 import { searchUsers } from "@/lib/api/users";
+import { LEAGUE_NAME_SUFFIX_MODEL } from "@/lib/name-suffix";
 
 import type {
   FloatingCount,
@@ -38,6 +39,8 @@ export const useLeagueEdit = () => {
   const [addedMembers, setAddedMembers] = React.useState<
     Record<string, MemberCandidate>
   >({});
+  const addedMembersRef = React.useRef(addedMembers);
+  addedMembersRef.current = addedMembers;
   const [memberCandidates, setMemberCandidates] = React.useState<
     MemberCandidate[]
   >([]);
@@ -81,7 +84,7 @@ export const useLeagueEdit = () => {
           return;
         }
 
-        setLeagueName(league.name);
+        setLeagueName(LEAGUE_NAME_SUFFIX_MODEL.toInputValue(league.name));
         setIsRuleLocked(league.totalMatchCount > 0);
         setAddedMembers(
           league.members.reduce(
@@ -162,7 +165,7 @@ export const useLeagueEdit = () => {
               name: user.name,
               username: user.username,
             }))
-            .filter((user) => !(user.userId in addedMembers))
+            .filter((user) => !(user.userId in addedMembersRef.current))
         );
       } catch (searchError) {
         if (!isActive) {
@@ -182,7 +185,7 @@ export const useLeagueEdit = () => {
       isActive = false;
       window.clearTimeout(timeoutId);
     };
-  }, [memberQuery, addedMembers]);
+  }, [memberQuery]);
 
   const handleAddMember = React.useCallback((member: MemberCandidate) => {
     setAddedMembers((prev) => {
@@ -196,8 +199,9 @@ export const useLeagueEdit = () => {
       };
     });
 
-    setMemberQuery("");
-    setMemberCandidates([]);
+    setMemberCandidates((prev) =>
+      prev.filter((candidate) => candidate.userId !== member.userId)
+    );
     setError(null);
   }, []);
 
@@ -230,6 +234,10 @@ export const useLeagueEdit = () => {
     },
     []
   );
+
+  const handleRotateSeatOrderChange = React.useCallback((value: boolean) => {
+    setRuleSettings((prev) => ({ ...prev, rotateSeatOrder: value }));
+  }, []);
 
   const handleModeChange = React.useCallback((mode: UmaMode) => {
     setRuleSettings((prev) => ({ ...prev, mode }));
@@ -276,9 +284,11 @@ export const useLeagueEdit = () => {
       return;
     }
 
-    const result = buildLeagueRulePayload(ruleSettings);
-    if (!result.ok) {
-      failSubmit(result.error);
+    const ruleResult = isRuleLocked
+      ? null
+      : buildLeagueRulePayload(ruleSettings);
+    if (ruleResult && !ruleResult.ok) {
+      failSubmit(ruleResult.error);
       return;
     }
 
@@ -286,13 +296,9 @@ export const useLeagueEdit = () => {
 
     try {
       const updateInput = {
-        name: leagueName.trim(),
+        name: LEAGUE_NAME_SUFFIX_MODEL.toCanonicalName(leagueName),
         memberUserIds: Object.keys(addedMembers),
-        ...(isRuleLocked
-          ? {}
-          : {
-              rule: result.rule,
-            }),
+        ...(ruleResult?.ok ? { rule: ruleResult.rule } : {}),
       };
 
       const updatedLeague = await updateLeague(leagueId, updateInput);
@@ -347,6 +353,7 @@ export const useLeagueEdit = () => {
     handleOkaSettingChange,
     handleChomboPenaltyPointsChange,
     handleAllowOffTableKyotakuChange,
+    handleRotateSeatOrderChange,
     handleModeChange,
     handleFixedUmaChange,
     handleFloatingCountUmaChange,

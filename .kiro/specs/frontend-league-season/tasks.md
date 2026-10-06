@@ -124,20 +124,88 @@
   - _Requirements: 1.4, 6.3, 8.3, 9.1, 9.3, 9.4_
   - _Boundary: Route Integration, Migration Validation_
 
-## 7. 契約・品質検証
 
-- [ ] 7.1 API契約、adapter、form payloadの回帰検証を追加する
-  - League/Seasonのendpoint status、`{ data }`、ErrorEnvelope、rule fourth nullability、Season updateのname/status限定、BE派生値保持を検証する。
-  - uma合計0のFE事前検証と、BEが返す`validation_error`の表示・入力保持・BE優先を検証する。empty/null、active conflict、rule lock、401/403/404/409、stale request、二重submitの状態遷移も検証する。
-  - 完了時、frontendの検証結果から不一致した契約・画面状態・入力項目を特定でき、FE独自のrank/point/standing計算が検出される。
+
+## 7. Issue #123 League/Seasonフォームとnavigation data
+
+- [x] 7.1 League rule editorに座順ローテーション設定を追加する
+  - create/editフォームとLeagueのrule表示で`rotateSeatOrder`を扱い、新規作成時の初期値をfalseにする。
+  - Match作成後は既存rule lockに合わせてread-onlyとし、更新payloadに変更不可のruleを含めない。
+  - 完了時、設定値がBE型で作成・取得・編集へ反映され、既存MatchがあるLeagueでは変更できない。
+  - _Depends: backend-foundation 6.2, backend-foundation 6.3_
+  - _Requirements: 2.3, 3.1, 3.3, 4.2_
+  - _Boundary: League UI and Forms, League Feature API_
+
+- [x] 7.2 (P) League/Season名のsuffix正規化modelを用意する
+  - 入力stemと表示専用suffixを分離し、既存の末尾suffixを編集フォーム初期値から除いて重複付与を防ぐ。
+  - 前後空白を整理し、保存値には対象suffixを一度だけ付ける。
+  - 完了時、空白、suffixなし、suffix付き既存値を与えたとき正規化後のnameが常にsuffix一つで終わる。
+  - _Requirements: 3.9, 4.1, 4.2, 5.2, 5.3, 7.1, 7.2_
+  - _Boundary: Name Suffix Model_
+
+- [x] 7.3 League作成者の固定選択と継続メンバー検索を表示する
+  - 認証ユーザーを選択済みの作成者として明示し、ownerを重複memberとして追加しない既存API契約を保つ。
+  - 検索結果の追加後も検索UIを開いたままにし、候補の連続追加と追加済みmemberの識別・削除を可能にする。
+  - 完了時、作成者表示を確認しながら検索候補から複数人を連続で追加でき、追加操作のたびに検索UIが閉じない。
+  - _Requirements: 3.7, 3.8_
+  - _Boundary: League UI and Forms, Request Hooks_
+
+- [x] 7.4 League create/editに固定「リーグ」suffixを接続する
+  - 作成・編集のname入力欄の後ろに固定表示の「リーグ」を置き、編集時は保存済みsuffixを入力stemへ含めない。
+  - submit時にstemを正規化し、League APIへsuffixが一度だけ付いたcanonical nameを送る。
+  - 完了時、create/editを続けて開いて保存してもnameが「OOリーグリーグ」にならず、suffixは利用者が編集できない。
+  - _Depends: 7.2_
+  - _Requirements: 3.9, 4.1, 4.2_
+  - _Boundary: League UI and Forms_
+
+- [x] 7.5 (P) Season create/editに固定「シーズン」suffixを接続する
+  - Season作成・編集欄の後ろに固定表示の「シーズン」を置き、既存Season nameはsuffixを除いてstemへ初期化する。
+  - submit時はnameへsuffixを一度だけ付け、status更新と既存member snapshotのAPI契約を維持する。
+  - 完了時、作成・編集を繰り返してもSeason nameの末尾に「シーズン」が一度だけ保存される。
+  - _Depends: 7.2_
+  - _Requirements: 5.2, 5.3, 7.1, 7.2_
+  - _Boundary: Season UI and Forms_
+
+- [x] 7.6 Header向けLeague navigation dataを遅延取得する
+  - League一覧を取得し、Leagueが展開されたときだけそのLeagueのSeason一覧を取得してHeader Navigation Modelへ変換する。
+  - Season取得のloading/empty/errorをLeagueごとに保持し、retryは該当Leagueだけを再取得して詳細・Season詳細routeを提供する。
+  - 完了時、HeaderからLeagueを展開するまでSeason APIを呼ばず、展開後は該当LeagueのSeason linkと個別retryが表示される。
+  - _Depends: frontend-foundation-ui 6.1_
+  - _Requirements: 1.1, 2.3, 8.1, 8.3, 8.4, 9.1_
+  - _Boundary: League Navigation Data, League/Season Feature API_
+
+## 8. Issue #123フォーム・navigationの回帰確認
+
+- [x] 8.1 Rule、creator、member search、suffixの実装境界をsource reviewする
+  - rotateSeatOrderのfalse初期値と保存payload、初回Match後のread-only分岐をform stateからAPI payloadまで確認する。
+  - 作成者表示とmember searchの選択状態を追い、追加後も検索UIが開いたまま次の候補を選べることを確認する。
+  - 完了時、LeagueとSeasonのsuffixは固定表示され、create/editいずれもcanonical nameへ一度だけ保存する処理を確認できる。
+  - _Depends: 7.1, 7.2, 7.3, 7.4, 7.5, backend-foundation 6.2, backend-foundation 6.3_
+  - _Requirements: 3.1, 3.3, 3.7, 3.8, 3.9, 4.1, 4.2, 5.2, 5.3, 7.1, 7.2_
+  - _Boundary: League/Season Forms_
+
+- [x] 8.2 Header向けSeason lazy-loadとnavigation状態をsource reviewする
+  - League一覧から各Leagueの展開callbackまでを追い、展開時だけSeason listを取得して既存のLeague/Season詳細routeを返すことを確認する。
+  - loading、空、失敗、League単位retry stateがfoundationのHeader Navigation Modelへ渡ることを確認する。
+  - 完了時、navigation hookに直接Header UI/API transportの再実装がなく、lazy-loadと個別retryの型付き接続を確認できる。
+  - _Depends: 7.6, frontend-foundation-ui 6.1, frontend-foundation-ui 6.3, frontend-foundation-ui 6.4_
+  - _Requirements: 1.1, 2.3, 8.1, 8.3, 8.4, 9.1_
+  - _Boundary: League Navigation Data, Validation Handoff_
+
+## 9. 契約・品質検証
+
+- [x] 9.1 API型、adapter、既存form payloadのsource reviewを行う
+  - League/Seasonのendpoint request/response、status、`{ data }`、ErrorEnvelope、rule fourth nullability、Season updateのname/status限定、BE派生値の型とmappingを確認する。
+  - uma合計0の事前検証、BE `validation_error`の表示・入力保持、empty/null、active conflict、401/403/404/409、stale request、二重submitのsource stateを追跡する。
+  - 完了時、直接fetchや手書きAPI DTO、FE独自のrank/point/standing計算がなく、境界違反の発生画面を特定できる。
   - _Depends: 3.3, 4.3, 6.1_
   - _Requirements: 2.2, 3.4, 3.6, 4.3, 5.4, 6.2, 6.4, 7.2, 7.4, 8.2, 8.3, 8.4, 9.2, 9.3_
   - _Boundary: Migration Validation, League Feature API, Season Feature API_
 
-- [x] 7.2 typecheck、lint、buildと対象routeの静的スキャンを完了する
+- [x] 9.2 typecheck、lint、buildと対象routeの静的スキャンを完了する
   - `pnpm typecheck`、`pnpm lint`、`pnpm build`を実行し、AppType変更、React/Next構成、import境界、共通UI利用、route解決を確認する。
   - 対象routeに対するmock import、`console.log`、直接fetch、未接続button、旧season edit pathをスキャンし、Session/Match・統計の境界外変更がないことを確認する。
-  - 完了時、ホームからLeague/Seasonのcreate/detail/editとSession開始導線までの主要routeがcompile/build可能で、BEのuma合計0契約と`validation_error`表示が確認済みとして追跡される。
-  - _Depends: 6.2, 7.1_
-  - _Requirements: 1.1, 1.2, 1.3, 1.4, 2.1, 2.3, 2.4, 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 4.1, 4.2, 4.4, 5.1, 5.2, 5.3, 5.4, 6.1, 6.3, 7.1, 7.3, 8.1, 8.3, 8.4, 9.1, 9.3, 9.4_
+  - 完了時、ホームからLeague/Seasonのcreate/detail/edit、HeaderのLeague/Season/Stats linkとSession開始導線までの主要routeがcompile/build可能である。
+  - _Depends: 6.2, 8.1, 8.2, 9.1_
+  - _Requirements: 1.1, 1.2, 1.3, 1.4, 2.1, 2.3, 2.4, 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8, 3.9, 4.1, 4.2, 4.4, 5.1, 5.2, 5.3, 5.4, 6.1, 6.3, 7.1, 7.2, 7.3, 8.1, 8.3, 8.4, 9.1, 9.3, 9.4_
   - _Boundary: Migration Validation_

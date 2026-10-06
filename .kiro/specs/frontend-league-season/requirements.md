@@ -13,6 +13,7 @@
 - リーグ詳細内のシーズン一覧
 - シーズン作成、詳細、編集
 - BE API契約に基づく`rule`（チョンボ点数・卓外供託可否を含む）、member、active season、standings、league/season recordsの表示
+- League ruleの座順ローテーション設定、作成者メンバー表示、連続した複数メンバー追加、リーグ名・シーズン名の固定接尾語表示
 - API hooks、表示adapter、フォーム送信、loading/error/empty/retry状態
 - 未接続button、mock参照、旧シーズン編集route、編集後の派生値表示の整理
 
@@ -27,7 +28,7 @@
 ### 隣接仕様との契約
 
 - `frontend-foundation-ui` のHono `AppType`由来型、共通API client、`{ data }`/ErrorEnvelope、Cookie認証、AsyncState、UI primitives、AppShellを利用する。
-- `backend-foundation` のcamelCase DTO、ISO 8601日時、opaque ID、league embedded `rule`、`rule.uma`の合計0 invariant、チョンボ点数・卓外供託可否、リーグ/シーズンrouteとstatusを正本として利用する。
+- `backend-foundation` のcamelCase DTO、ISO 8601日時、opaque ID、league embedded `rule`、`rule.uma`の合計0 invariant、チョンボ点数・卓外供託可否・座順ローテーション可否、リーグ/シーズンrouteとstatusを正本として利用する。
 - `backend-integrity-lifecycle` のactive season一意性、rule lock、BEが計算したstandings/records、削除後の派生値をそのまま表示し、FE側で再計算しない。
 - 下流の`frontend-session-match`はシーズン詳細から既存のSession開始routeへ遷移できることだけを受け取り、Session/Match画面の実装は所有しない。
 
@@ -55,23 +56,29 @@
 
 ### Requirement 3: リーグ作成フォーム
 
-3.1 When 利用者がリーグ作成画面を表示するとき, the League-Season Feature shall リーグ名、メンバー候補、gameType、okaのstartingPoints/returnPoints、umaの順位別値、チョンボ点数、卓外供託の可否を入力できるフォームを表示する。
+3.1 When 利用者がリーグ作成画面を表示するとき, the League-Season Feature shall リーグ名、メンバー候補、gameType、okaのstartingPoints/returnPoints、umaの順位別値、チョンボ点数、卓外供託の可否、座順ローテーションの可否を入力できるフォームを表示し、座順ローテーションの初期状態をオフにする。
 
 3.2 When 利用者がメンバー検索を実行するとき, the League-Season Feature shall BEのユーザー検索結果だけを候補として表示し、追加済み候補の重複追加を防ぎ、検索中・該当なし・検索失敗を区別する。
 
-3.3 When gameTypeがsanmaまたはyonmaである状態, the League-Season Feature shall sanmaではuma.fourthをnull、yonmaではuma.fourthを入力値として送信し、チョンボ点数と卓外供託可否を含むBE契約上のruleフィールドだけを送信する。
+3.3 When gameTypeがsanmaまたはyonmaである状態, the League-Season Feature shall sanmaではuma.fourthをnull、yonmaではuma.fourthを入力値として送信し、チョンボ点数、卓外供託可否、座順ローテーション可否を含むBE契約上のruleフィールドだけを送信する。
 
 3.4 When 利用者がリーグ作成または編集フォームでrule.umaを入力するとき, the League-Season Feature shall `uma.first`、`uma.second`、`uma.third`と、yonmaの場合の`uma.fourth`の合計が0になることを事前検証し、合計が0でない場合はAPIを呼び出さず入力エラーを表示する。
 
-3.5 When 利用者が妥当なリーグ作成フォームを送信するとき, the League-Season Feature shall `POST /api/leagues`を一度だけ実行し、成功時は作成されたリーグ詳細へ遷移し、validation・認可・競合エラー時は入力を保持して再送可能な状態を表示する。
+3.5 When 利用者が妥当なリーグ作成フォームを送信するとき, the League-Season Feature shall 接尾語を含む正規化済みの名称で`POST /api/leagues`を一度だけ実行し、成功時は作成されたリーグ詳細へ遷移し、validation・認可・競合エラー時は入力を保持して再送可能な状態を表示する。
 
 3.6 If リーグ作成または編集APIが`rule.uma`の合計不整合を`validation_error`として返す場合, the League-Season Feature shall BEのエラーメッセージを安全に表示して入力を保持し、FEの事前検証結果でBEの判定を上書きまたは回避しない。
 
+3.7 When 利用者がリーグ作成フォームを表示するとき, the League-Season Feature shall 作成者自身が既定メンバーとして含まれていることを選択済みメンバー欄で明示する。
+
+3.8 When 利用者が検索結果からメンバーを追加するとき, the League-Season Feature shall 検索欄と候補表示を開いたままにし、続けて別のメンバーを追加できるようにする。
+
+3.9 When 利用者がリーグ作成フォームへ名称を入力するとき, the League-Season Feature shall 入力欄の後ろに固定の「リーグ」を表示し、保存する名称の末尾に「リーグ」を一度だけ含める。
+
 ### Requirement 4: リーグ編集フォーム
 
-4.1 When 利用者がリーグ編集画面を表示するとき, the League-Season Feature shall BEのLeagueDetailを読み込み、リーグ名、現在のメンバー、ruleをフォームへ初期表示する。
+4.1 When 利用者がリーグ編集画面を表示するとき, the League-Season Feature shall BEのLeagueDetailを読み込み、リーグ名の入力欄に編集可能な名称部分と固定の「リーグ」接尾語、現在のメンバー、ruleを表示する。
 
-4.2 When 利用者がリーグ設定を更新するとき, the League-Season Feature shall BEが許可するname、memberUserIds、ruleだけを`PATCH /api/leagues/:leagueId`へ送信し、正本Match後はチョンボ点数・卓外供託可否を含むruleを変更せずnameまたはmemberUserIdsの更新だけを許可する。
+4.2 When 利用者がリーグ設定を更新するとき, the League-Season Feature shall 更新するnameがある場合は接尾語を末尾に一度だけ含め、BEが許可するname、memberUserIds、ruleだけを`PATCH /api/leagues/:leagueId`へ送信し、正本Match後は座順ローテーション可否を含むruleを変更せずnameまたはmemberUserIdsの更新だけを許可する。
 
 4.3 If 正本Match後のrule更新、またはメンバー・rule更新がBEの競合/validation条件に該当する場合, the League-Season Feature shall BEのconflictまたはvalidation errorを安全な利用者向けメッセージとして表示し、mockによる代替更新を行わない。
 
@@ -81,9 +88,9 @@
 
 5.1 When 利用者がリーグ詳細のシーズン一覧を表示するとき, the League-Season Feature shall `GET /api/leagues/:leagueId/seasons`のSeasonSummaryを表示し、statusをactive/archivedの意味に対応させる。
 
-5.2 When 利用者がシーズン作成画面を表示するとき, the League-Season Feature shall リーグの現在メンバーから参加者を選択でき、nameとstatusを入力または選択できるフォームを表示する。
+5.2 When 利用者がシーズン作成画面を表示するとき, the League-Season Feature shall リーグの現在メンバーから参加者を選択でき、入力欄の後ろに固定の「シーズン」を表示したnameとstatusを入力または選択できるフォームを表示する。
 
-5.3 When シーズン作成フォームを送信するとき, the League-Season Feature shall 選択したmemberUserIdsを重複なく送信し、参加者が1人未満の場合はAPIを呼び出さず入力エラーを表示する。
+5.3 When シーズン作成フォームを送信するとき, the League-Season Feature shall 接尾語を末尾に一度だけ含むnameと選択したmemberUserIdsを重複なく送信し、参加者が1人未満の場合はAPIを呼び出さず入力エラーを表示する。
 
 5.4 When シーズン作成が成功、または既存active seasonとの競合になるとき, the League-Season Feature shall 成功時は作成されたシーズン詳細へ遷移し、conflict時は現在の入力を保持したままactive seasonが一意であることを説明する。
 
@@ -99,9 +106,9 @@
 
 ### Requirement 7: シーズン編集フォーム
 
-7.1 When 利用者がシーズン編集画面を表示するとき, the League-Season Feature shall `GET /api/leagues/:leagueId/seasons/:seasonId`からnameとstatusを初期化し、現在のmembersは読み取り専用のスナップショットとして表示する。
+7.1 When 利用者がシーズン編集画面を表示するとき, the League-Season Feature shall `GET /api/leagues/:leagueId/seasons/:seasonId`からnameとstatusを初期化し、name入力欄には編集可能な名称部分と固定の「シーズン」接尾語を表示し、現在のmembersは読み取り専用のスナップショットとして表示する。
 
-7.2 When 利用者がシーズン編集を送信するとき, the League-Season Feature shall BE契約で許可されたnameまたはstatusだけを`PATCH /api/leagues/:leagueId/seasons/:seasonId`へ送信し、memberUserIdsを更新入力へ含めない。
+7.2 When 利用者がシーズン編集を送信するとき, the League-Season Feature shall nameを更新する場合は接尾語を末尾に一度だけ含め、nameまたはBE契約で許可されたstatusだけを`PATCH /api/leagues/:leagueId/seasons/:seasonId`へ送信し、memberUserIdsを更新入力へ含めない。
 
 7.3 When シーズン編集が成功するとき, the League-Season Feature shall 更新後のSeasonDetailを再取得または更新レスポンスから反映し、シーズン詳細へ戻った時にstatus、name、active season表示が最新になる。
 

@@ -144,3 +144,13 @@
   - _Depends: 3.2, 3.3, 4.1_
   - _Requirements: 7.1, 7.2, 7.3, 7.4, 8.1, 8.2, 8.3_
   - _Boundary: Integrity Test Suite_
+
+## 7. 座順rule lockの回帰確認
+
+- [x] 7.1 座順ruleが初回Match後も既存lock規則に従うことを検証する
+  - 初回Match前は`rotateSeatOrder`を更新でき、最初のMatch登録後はこのfieldだけを変更するLeague updateもconflictになることを確認する。
+  - League ruleがtrueでもBEがwindを自動変更せず、Match入力で受けた実際のseat assignmentをcanonical Matchへ保存する。
+  - 完了時、rule lockと「座順の次回初期値はFEが直近保存Matchから作る」境界がregression testで確認できる。
+  - _Depends: 2.2, backend-foundation 6.2, backend-foundation 6.3_
+  - _Requirements: 3.1, 3.2, 8.3_
+  - _Boundary: Canonical Lifecycle, Integrity Test Suite_

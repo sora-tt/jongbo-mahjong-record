@@ -2,7 +2,7 @@
 
 ## Summary
 
-ISSUE-99のMatch入力は、チョンボeventと卓外供託を別々に編集し、AppTypeのMatch契約へ渡す。現行画面には共通の`match-form.ts`と`MatchForm.tsx`があるため、raw score行の後へ小さな入力群を加えられる。供託UIはLeague ruleで許可された場合だけ表示し、点数計算はBEに委ねる。
+ISSUE-99のMatch入力は、チョンボeventと卓外供託を別々に編集し、AppTypeのMatch契約へ渡す。現行画面には共通の`match-form.ts`と`MatchForm.tsx`があるため、raw score行の後へ小さな入力群を加えられる。供託UIはLeague ruleで許可された場合だけ表示し、点数計算はBEに委ねる。Issue #123ではSession終了成功後のSeason遷移と、最大matchIndexの保存済みseat assignmentを基準にする追加Matchの座順rotationを既存routeへ接続する。
 
 ## 調査対象
 
@@ -28,3 +28,25 @@ ISSUE-99のMatch入力は、チョンボeventと卓外供託を別々に編集�
 - League ruleのlegacy fallbackが`allowOffTableKyotaku=false`なら、既存Match画面の供託欄は表示されない。対象Leagueの有効化はrule lockに従い別途運用判断する。
 - PR #104前のdevelopへ差分を移す場合、共通form・raw score validation・ruleの型を再baseする必要がある。
 - `.kiro/settings/templates/specs/design.md`と`research.md`はリポジトリにない。既存specの構成を参考に記録した。
+
+## ISSUE-123 追加調査（2026-10-05）
+
+### 拡張点
+
+- Session終了actionは`frontend/src/app/league/[leagueId]/season/[seasonId]/sessions/[sessionId]/results/hooks/index.ts`にあり、成功後に同routeのloadを呼んでいる。route paramsからSeason detail pathを構成できるため、更新成功後に遷移先を差し替えられる。
+- 追加Match hookはLeague detailとSession detailを読み、members配列順を初期seat assignmentに使う。Match listは別APIから取得可能で、最大matchIndexの実windを次の初期値に使える。
+- Match DTOのresultsには保存済みの各userId/windがある。rotation用API fieldや座順の別正本は不要。既存の新規フォームseat selectorで利用者の保存前修正を保持できる。
+- Match editはseat assignment read-onlyのため、要件の手修正は追加Match formでのPOST前に限定する。次回はPOSTで保存されたwindから回転し、未保存draftは参照しない。
+
+### 麻雀用語調査
+
+- 検索した日本麻雀連盟用語説明では「連荘」は親が連続すること、一荘は東南西北の四風戦が一巡することと説明される。この設定は一荘戦の場風進行や連荘処理を変えない。[日本麻雀連盟・基礎用語](https://www.nihon-majan.org/majyankisoyougo.html)
+- 日本麻雀連盟の規定とFFXIVのドマ式麻雀説明は、席風を東・南・西・北の順で割り当てることを記述している。[日本麻雀連盟・規定](https://www.nihon-majan.org/arusiarumajyanruru.html)、[FFXIV ドマ式麻雀](https://jp.finalfantasyxiv.com/lodestone/playguide/contentsguide/goldsaucer/doman-mahjong/)
+- 対局間でプレイヤーの席風を1つずらす操作には統一された競技用語を確認できなかったため、UIは説明的な「座順ローテーション」とする。「連荘」は親継続の意味なのでラベルには使わない。
+
+### 設計判断
+
+- 採用: 同SessionのMatch配列からmatchIndex最大値を選ぶ。playedAtと配列順に依存しないため、削除後のindex gapや時刻同値でも直前対局を決定できる。
+- 採用: yonmaは東→南→西→北→東、sanmaは東→南→西→東にseat windを1段移す。前Matchの結果が保存正本で、userが新formで修正し保存した場合は、その修正後結果を次回rotationの基準とする。
+- 採用: DTOのwind集合が不正ならmembers順で黙って補わず、契約エラーを表示する。無効設定またはMatchなしの場合のみ既存members順の初期値を使う。
+- Session endの更新が成功した時だけSeason detailへ遷移する。失敗時は現在routeでerrorとretryを示す。

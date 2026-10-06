@@ -26,11 +26,14 @@ import { useLeagueNew } from "./hooks";
 const NewLeaguePage: React.FC = () => {
   const {
     leagueName,
+    creatorName,
+    memberCount,
     memberQuery,
     addedMembers,
     memberCandidates,
     isSearchingMembers,
     isSubmitting,
+    isAuthLoading,
     error,
     submitError,
     showUmaErrors,
@@ -44,6 +47,7 @@ const NewLeaguePage: React.FC = () => {
     handleOkaSettingChange,
     handleChomboPenaltyPointsChange,
     handleAllowOffTableKyotakuChange,
+    handleRotateSeatOrderChange,
     handleModeChange,
     handleFixedUmaChange,
     handleFloatingCountUmaChange,
@@ -72,14 +76,23 @@ const NewLeaguePage: React.FC = () => {
               <Type className="h-4 w-4 text-slate-700" aria-hidden="true" />
               リーグ名
             </label>
-            <Input
-              id="league-name"
-              containerClassName="space-y-0"
-              className="h-9 rounded-lg px-3 shadow-none"
-              placeholder="例: Mリーグ"
-              value={leagueName}
-              onChange={handleLeagueNameChange}
-            />
+            <div className="flex items-center gap-2">
+              <Input
+                id="league-name"
+                containerClassName="min-w-0 flex-1 space-y-0"
+                className="h-9 rounded-lg px-3 shadow-none"
+                placeholder="例: M"
+                value={leagueName}
+                onChange={handleLeagueNameChange}
+                aria-describedby="league-name-suffix"
+              />
+              <span
+                id="league-name-suffix"
+                className="shrink-0 text-sm font-bold text-foreground"
+              >
+                リーグ
+              </span>
+            </div>
           </div>
 
           <section className="space-y-2">
@@ -98,8 +111,30 @@ const NewLeaguePage: React.FC = () => {
                   className="h-4 w-4 text-brand-600"
                   aria-hidden="true"
                 />
-                {Object.keys(addedMembers).length} 人
+                {memberCount} 人
               </span>
+            </div>
+
+            <div className="flex flex-wrap gap-2" aria-label="追加済みメンバー">
+              <span className="inline-flex items-center gap-2 rounded-full bg-brand-50 px-3 py-1 text-xs text-brand-strong">
+                {creatorName}
+              </span>
+              {Object.entries(addedMembers).map(([id, member]) => (
+                <span
+                  key={id}
+                  className="inline-flex items-center gap-2 rounded-full bg-brand-50 px-3 py-1 text-xs text-brand-strong"
+                >
+                  {member.name}
+                  <button
+                    type="button"
+                    className="cursor-pointer font-bold"
+                    onClick={() => handleRemoveMember(id)}
+                    aria-label={`${member.name}を削除`}
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
             </div>
 
             <div className="relative">
@@ -150,32 +185,7 @@ const NewLeaguePage: React.FC = () => {
                   </p>
                 )}
               </div>
-            ) : Object.keys(addedMembers).length > 0 ? (
-              <div className="flex flex-wrap gap-2">
-                {Object.entries(addedMembers).map(([id, member]) => (
-                  <span
-                    key={id}
-                    className="inline-flex items-center gap-2 rounded-full bg-brand-50 px-3 py-1 text-xs text-brand-strong"
-                  >
-                    {member.name}
-                    <button
-                      type="button"
-                      className="cursor-pointer font-bold"
-                      onClick={() => handleRemoveMember(id)}
-                      aria-label={`${member.name}を削除`}
-                    >
-                      ×
-                    </button>
-                  </span>
-                ))}
-              </div>
-            ) : (
-              <div className="rounded-lg border border-dashed border-border bg-surface-muted px-3 py-3 text-center">
-                <p className="text-xs text-text-muted">
-                  まだメンバーが追加されていません
-                </p>
-              </div>
-            )}
+            ) : null}
           </section>
 
           <section className="space-y-3">
@@ -248,6 +258,7 @@ const NewLeaguePage: React.FC = () => {
                 floatingCountUma={ruleSettings.floatingCountUma}
                 chomboPenaltyPoints={ruleSettings.chomboPenaltyPoints}
                 allowOffTableKyotaku={ruleSettings.allowOffTableKyotaku}
+                rotateSeatOrder={ruleSettings.rotateSeatOrder}
                 showErrorSummary={showUmaErrors}
                 submitError={submitError}
                 errorSummaryFocusToken={errorSummaryFocusToken}
@@ -257,6 +268,7 @@ const NewLeaguePage: React.FC = () => {
                 onFloatingCountUmaChange={handleFloatingCountUmaChange}
                 onChomboPenaltyPointsChange={handleChomboPenaltyPointsChange}
                 onAllowOffTableKyotakuChange={handleAllowOffTableKyotakuChange}
+                onRotateSeatOrderChange={handleRotateSeatOrderChange}
               />
             </div>
           </section>
@@ -267,7 +279,7 @@ const NewLeaguePage: React.FC = () => {
             <Button
               onClick={handleSubmit}
               loading={isSubmitting}
-              disabled={isSubmitting}
+              disabled={isSubmitting || isAuthLoading}
               size="lg"
               className="min-w-[144px] rounded-xl"
             >

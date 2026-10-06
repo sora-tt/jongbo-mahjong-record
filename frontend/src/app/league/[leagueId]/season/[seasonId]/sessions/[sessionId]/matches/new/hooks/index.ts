@@ -2,6 +2,7 @@ import * as React from "react";
 
 import { useParams, useRouter } from "next/navigation";
 
+import { listMatches } from "@/features/match/api";
 import {
   createEmptyMatchFormValues,
   validateMatchForm,
@@ -11,6 +12,10 @@ import {
   getParticipantConstraint,
   membersToParticipants,
 } from "@/features/session-match/model/participants";
+import {
+  findLatestMatchByIndex,
+  getNextSeatAssignment,
+} from "@/features/session-match/model/seat-rotation";
 import { ApiError, getApiErrorMessage } from "@/lib/api/core";
 import { fetchLeagueDetail } from "@/lib/api/leagues";
 import { createMatch } from "@/lib/api/matches";
@@ -66,6 +71,34 @@ export const useRecordMatchPage = () => {
           fetchSessionDetail({ leagueId, seasonId, sessionId }),
         ]);
         if (!isActive) return;
+
+        let initialUserIdByWind: MatchFormValues["userIdByWind"] =
+          membersToParticipants(session.members);
+        if (league.rule.rotateSeatOrder) {
+          const matches = await listMatches({
+            leagueId,
+            seasonId,
+            sessionId,
+          });
+          if (!isActive) return;
+
+          const latestMatch = findLatestMatchByIndex(matches);
+          if (latestMatch) {
+            const nextSeatAssignment = getNextSeatAssignment(
+              league.rule.gameType,
+              latestMatch,
+              session.members
+            );
+            if (!nextSeatAssignment.ok) {
+              setError(
+                "前回の対局の席順を確認できません。対局結果を確認してください。"
+              );
+              return;
+            }
+            initialUserIdByWind = nextSeatAssignment.userIdByWind;
+          }
+        }
+
         setMembers(session.members);
         setConstraint(getParticipantConstraint(league.rule.gameType));
         setStartingPoints(league.rule.oka.startingPoints);
@@ -73,7 +106,7 @@ export const useRecordMatchPage = () => {
         setAllowOffTableKyotaku(league.rule.allowOffTableKyotaku ?? false);
         setValues({
           ...createEmptyMatchFormValues(),
-          userIdByWind: membersToParticipants(session.members),
+          userIdByWind: initialUserIdByWind,
         });
         setReady(true);
       } catch (loadError) {

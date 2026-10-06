@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { FieldValue } from "firebase-admin/firestore";
 import { getDb } from "@/infrastructure/firestore/client.js";
 import type { UserMatchStatisticsRepository } from "@/domain/statistics/repository.js";
 import { FirestoreLeagueRepository } from "@/infrastructure/firestore/repositories/leagueRepository.js";
@@ -29,6 +30,7 @@ const makeFixedRule = () => ({
   oka: { startingPoints: 25000, returnPoints: 30000 },
   chomboPenaltyPoints: 0,
   allowOffTableKyotaku: false,
+  rotateSeatOrder: false,
 });
 
 const floatingRule = {
@@ -46,6 +48,7 @@ const floatingRule = {
   oka: { startingPoints: 25000, returnPoints: 25000 },
   chomboPenaltyPoints: 0,
   allowOffTableKyotaku: false,
+  rotateSeatOrder: false,
 };
 
 const makeLeagueRuleDoc = (uma: Record<string, unknown>) => ({
@@ -74,6 +77,7 @@ test(
       oka: { startingPoints: 25000, returnPoints: 30000 },
       chomboPenaltyPoints: 0,
       allowOffTableKyotaku: false,
+      rotateSeatOrder: false,
     };
     const league = await leagueRepository.create({
       name: "lifecycle test",
@@ -175,6 +179,7 @@ test(
             oka: { startingPoints: 30000, returnPoints: 30000 },
             chomboPenaltyPoints: 0,
             allowOffTableKyotaku: false,
+            rotateSeatOrder: false,
           },
         }),
         /league rule is locked after the first match/,
@@ -252,7 +257,7 @@ test(
     );
     const league = await leagueRepository.create({
       name: "floating count rule lock test",
-      rule: floatingRule,
+      rule: { ...floatingRule, rotateSeatOrder: true },
       memberUserIds: [],
     });
     const members = [
@@ -284,6 +289,10 @@ test(
 
     try {
       assert.equal((await leagueRef.get()).data()?.rule_locked, false);
+      assert.equal(
+        (await leagueRef.get()).data()?.rule.rotate_seat_order,
+        true,
+      );
 
       const firstMatch = await matchService.createMatch(
         "0001",
@@ -302,6 +311,15 @@ test(
       );
 
       assert.equal((await leagueRef.get()).data()?.rule_locked, true);
+      assert.deepEqual(
+        firstMatch.results.map(({ userId, wind }) => ({ userId, wind })),
+        [
+          { userId: "0001", wind: "east" },
+          { userId: "0002", wind: "south" },
+          { userId: "0003", wind: "west" },
+          { userId: "0004", wind: "north" },
+        ],
+      );
       assert.deepEqual(
         firstMatch.results.map(({ rank, point }) => ({ rank, point })),
         [
@@ -334,7 +352,7 @@ test(
 
       await assert.rejects(
         leagueRepository.update(league.id, {
-          rule: makeFixedRule(),
+          rule: { ...floatingRule, rotateSeatOrder: false },
         }),
         /league rule is locked after the first match/,
       );
@@ -366,6 +384,15 @@ test(
         },
       );
       const secondMatchResults = secondMatch.results;
+      assert.deepEqual(
+        secondMatchResults.map(({ userId, wind }) => ({ userId, wind })),
+        [
+          { userId: "0001", wind: "east" },
+          { userId: "0002", wind: "south" },
+          { userId: "0003", wind: "west" },
+          { userId: "0004", wind: "north" },
+        ],
+      );
       const projectionsAfterCreate =
         await userMatchStatisticsRepository.listForScope({
           scopeType: "season",
@@ -694,12 +721,18 @@ test(
     const leagueRef = db.collection("leagues").doc(league.id);
 
     try {
+      assert.equal(
+        (await leagueRef.get()).data()?.rule.rotate_seat_order,
+        false,
+      );
+      const rotatingRule = { ...floatingRule, rotateSeatOrder: true };
       const updatedLeague = await leagueRepository.update(league.id, {
-        rule: floatingRule,
+        rule: rotatingRule,
       });
       const storedRule = (await leagueRef.get()).data()?.rule;
 
       assert.equal(storedRule?.uma.mode, "floating_count");
+      assert.equal(storedRule?.rotate_seat_order, true);
       assert.deepEqual(storedRule?.uma.points_by_floating_count, {
         "0": { first: 0, second: 0, third: 0, fourth: 0 },
         "1": { first: 12, second: -1, third: -3, fourth: -8 },
@@ -707,8 +740,14 @@ test(
         "3": { first: 8, second: 3, third: 1, fourth: -12 },
         "4": { first: 0, second: 0, third: 0, fourth: 0 },
       });
-      assert.deepEqual(updatedLeague.rule, floatingRule);
-      assert.deepEqual(await leagueRepository.getRule(league.id), floatingRule);
+      assert.deepEqual(updatedLeague.rule, rotatingRule);
+      assert.deepEqual(await leagueRepository.getRule(league.id), rotatingRule);
+
+      await leagueRef.update({ "rule.rotate_seat_order": FieldValue.delete() });
+      assert.equal(
+        (await leagueRepository.getRule(league.id)).rotateSeatOrder,
+        false,
+      );
     } finally {
       await db.recursiveDelete(leagueRef);
     }
@@ -833,6 +872,7 @@ test(
         oka: { startingPoints: 25000, returnPoints: 30000 },
         chomboPenaltyPoints: 0,
         allowOffTableKyotaku: false,
+        rotateSeatOrder: false,
       },
       memberUserIds: ["0001"],
     });

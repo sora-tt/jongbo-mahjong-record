@@ -2173,7 +2173,7 @@ export const openApiDocument = {
       },
       LeagueRuleInput: {
         description:
-          "Accepts fixed or floatingCount rules, with or without chomboPenaltyPoints and allowOffTableKyotaku. Omitted fields default to 0 and false; legacy fixed rules without uma.mode are normalized to mode=fixed.",
+          "Accepts fixed or floatingCount rules, with or without chomboPenaltyPoints, allowOffTableKyotaku, and rotateSeatOrder. Omitted fields default to 0 and false; legacy fixed rules without uma.mode are normalized to mode=fixed.",
         oneOf: [
           { $ref: "#/components/schemas/FixedSanmaLeagueRuleInput" },
           { $ref: "#/components/schemas/FixedYonmaLeagueRuleInput" },
@@ -2195,6 +2195,7 @@ export const openApiDocument = {
           },
           chomboPenaltyPoints: { type: "integer", minimum: 0, default: 0 },
           allowOffTableKyotaku: { type: "boolean", default: false },
+          rotateSeatOrder: { type: "boolean", default: false },
         },
         required: ["gameType", "oka", "uma"],
       },
@@ -2211,6 +2212,7 @@ export const openApiDocument = {
           },
           chomboPenaltyPoints: { type: "integer", minimum: 0, default: 0 },
           allowOffTableKyotaku: { type: "boolean", default: false },
+          rotateSeatOrder: { type: "boolean", default: false },
         },
         required: ["gameType", "oka", "uma"],
       },
@@ -2227,6 +2229,7 @@ export const openApiDocument = {
           },
           chomboPenaltyPoints: { type: "integer", minimum: 0, default: 0 },
           allowOffTableKyotaku: { type: "boolean", default: false },
+          rotateSeatOrder: { type: "boolean", default: false },
         },
         required: ["gameType", "oka", "uma"],
       },
@@ -2258,6 +2261,7 @@ export const openApiDocument = {
           },
           chomboPenaltyPoints: { type: "integer", minimum: 0 },
           allowOffTableKyotaku: { type: "boolean" },
+          rotateSeatOrder: { type: "boolean" },
         },
         required: [
           "gameType",
@@ -2265,6 +2269,7 @@ export const openApiDocument = {
           "uma",
           "chomboPenaltyPoints",
           "allowOffTableKyotaku",
+          "rotateSeatOrder",
         ],
       },
       FixedYonmaLeagueRule: {
@@ -2280,6 +2285,7 @@ export const openApiDocument = {
           },
           chomboPenaltyPoints: { type: "integer", minimum: 0 },
           allowOffTableKyotaku: { type: "boolean" },
+          rotateSeatOrder: { type: "boolean" },
         },
         required: [
           "gameType",
@@ -2287,6 +2293,7 @@ export const openApiDocument = {
           "uma",
           "chomboPenaltyPoints",
           "allowOffTableKyotaku",
+          "rotateSeatOrder",
         ],
       },
       FloatingCountYonmaLeagueRule: {
@@ -2304,6 +2311,7 @@ export const openApiDocument = {
           },
           chomboPenaltyPoints: { type: "integer", minimum: 0 },
           allowOffTableKyotaku: { type: "boolean" },
+          rotateSeatOrder: { type: "boolean" },
         },
         required: [
           "gameType",
@@ -2311,6 +2319,7 @@ export const openApiDocument = {
           "uma",
           "chomboPenaltyPoints",
           "allowOffTableKyotaku",
+          "rotateSeatOrder",
         ],
       },
       LeagueOka: {
@@ -2393,6 +2402,7 @@ export const openApiDocument = {
           gameType: { type: "string", enum: ["sanma"] },
           oka: { $ref: "#/components/schemas/LeagueOka" },
           uma: { $ref: "#/components/schemas/LegacyFixedSanmaUma" },
+          rotateSeatOrder: { type: "boolean", default: false },
         },
         required: ["gameType", "oka", "uma"],
       },
@@ -2402,6 +2412,7 @@ export const openApiDocument = {
           gameType: { type: "string", enum: ["yonma"] },
           oka: { $ref: "#/components/schemas/LeagueOka" },
           uma: { $ref: "#/components/schemas/LegacyFixedYonmaUma" },
+          rotateSeatOrder: { type: "boolean", default: false },
         },
         required: ["gameType", "oka", "uma"],
       },

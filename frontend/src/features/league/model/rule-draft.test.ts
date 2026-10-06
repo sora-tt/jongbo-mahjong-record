@@ -24,6 +24,9 @@ test("fixed yonma draft builds the explicit fixed API rule union", () => {
     gameType: "yonma",
     uma: { mode: "fixed", first: 10, second: 5, third: -5, fourth: -10 },
     oka: { startingPoints: 25000, returnPoints: 25000 },
+    chomboPenaltyPoints: 0,
+    allowOffTableKyotaku: false,
+    rotateSeatOrder: false,
   });
 });
 
@@ -48,6 +51,9 @@ test("floating-count draft builds all five integer rows in API shape", () => {
       },
     },
     oka: { startingPoints: 25000, returnPoints: 25000 },
+    chomboPenaltyPoints: 0,
+    allowOffTableKyotaku: false,
+    rotateSeatOrder: false,
   });
 });
 
@@ -73,6 +79,7 @@ test("sanma always builds a fixed rule while retaining yonma floating draft", ()
     oka: { startingPoints: 25000, returnPoints: 25000 },
     chomboPenaltyPoints: 0,
     allowOffTableKyotaku: false,
+    rotateSeatOrder: false,
   });
   strictEqual(draft.floatingCountUma[1].first, "21");
 });
@@ -93,6 +100,7 @@ test("edit draft loads the persisted floating mode and every saved row", () => {
     oka: { startingPoints: 25000, returnPoints: 30000 },
     chomboPenaltyPoints: 20,
     allowOffTableKyotaku: true,
+    rotateSeatOrder: true,
   });
 
   strictEqual(draft.mode, "floatingCount");

@@ -24,6 +24,7 @@ type Props = {
   floatingCountUma: FloatingCountUmaDraft;
   chomboPenaltyPoints: string;
   allowOffTableKyotaku: boolean;
+  rotateSeatOrder: boolean;
   showErrorSummary?: boolean;
   submitError?: string | null;
   errorSummaryFocusToken?: number;
@@ -37,6 +38,7 @@ type Props = {
   ) => void;
   onChomboPenaltyPointsChange: (value: string) => void;
   onAllowOffTableKyotakuChange: (value: boolean) => void;
+  onRotateSeatOrderChange: (value: boolean) => void;
 };
 
 const FLOATING_COUNTS = [0, 1, 2, 3, 4] as const;
@@ -61,6 +63,7 @@ const LeagueRuleEditor: React.FC<Props> = ({
   floatingCountUma,
   chomboPenaltyPoints,
   allowOffTableKyotaku,
+  rotateSeatOrder,
   showErrorSummary = false,
   submitError = null,
   errorSummaryFocusToken = 0,
@@ -70,6 +73,7 @@ const LeagueRuleEditor: React.FC<Props> = ({
   onFloatingCountUmaChange,
   onChomboPenaltyPointsChange,
   onAllowOffTableKyotakuChange,
+  onRotateSeatOrderChange,
 }) => {
   const isSanma = gameType === "sanma";
   const activeMode: UmaMode = isSanma ? "fixed" : mode;
@@ -388,6 +392,22 @@ const LeagueRuleEditor: React.FC<Props> = ({
           />
           卓外供託を記録できる
         </label>
+        <div className="space-y-1">
+          <label className="flex items-center gap-2 text-sm text-foreground">
+            <input
+              type="checkbox"
+              checked={rotateSeatOrder}
+              disabled={disabled}
+              onChange={(event) =>
+                onRotateSeatOrderChange(event.target.checked)
+              }
+            />
+            連戦時に起家を回す
+          </label>
+          <p className="pl-6 text-xs text-text-muted">
+            次の対局は席順を1つずらして始めます。
+          </p>
+        </div>
       </div>
     </div>
   );
