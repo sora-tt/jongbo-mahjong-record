@@ -115,38 +115,27 @@ const NewLeaguePage: React.FC = () => {
               </span>
             </div>
 
-            <div className="flex items-center justify-between gap-3 rounded-lg bg-brand-50 px-3 py-2 text-sm">
-              <span className="font-medium text-brand-strong">
+            <div className="flex flex-wrap gap-2" aria-label="追加済みメンバー">
+              <span className="inline-flex items-center gap-2 rounded-full bg-brand-50 px-3 py-1 text-xs text-brand-strong">
                 {creatorName}
               </span>
-              <span className="shrink-0 text-xs text-text-muted">
-                あなた（作成者）
-              </span>
-            </div>
-
-            {Object.keys(addedMembers).length > 0 ? (
-              <div
-                className="flex flex-wrap gap-2"
-                aria-label="追加済みメンバー"
-              >
-                {Object.entries(addedMembers).map(([id, member]) => (
-                  <span
-                    key={id}
-                    className="inline-flex items-center gap-2 rounded-full bg-brand-50 px-3 py-1 text-xs text-brand-strong"
+              {Object.entries(addedMembers).map(([id, member]) => (
+                <span
+                  key={id}
+                  className="inline-flex items-center gap-2 rounded-full bg-brand-50 px-3 py-1 text-xs text-brand-strong"
+                >
+                  {member.name}
+                  <button
+                    type="button"
+                    className="cursor-pointer font-bold"
+                    onClick={() => handleRemoveMember(id)}
+                    aria-label={`${member.name}を削除`}
                   >
-                    {member.name}
-                    <button
-                      type="button"
-                      className="cursor-pointer font-bold"
-                      onClick={() => handleRemoveMember(id)}
-                      aria-label={`${member.name}を削除`}
-                    >
-                      ×
-                    </button>
-                  </span>
-                ))}
-              </div>
-            ) : null}
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
 
             <div className="relative">
               <Search
@@ -195,12 +184,6 @@ const NewLeaguePage: React.FC = () => {
                     条件に一致するユーザーが見つかりません。
                   </p>
                 )}
-              </div>
-            ) : Object.keys(addedMembers).length === 0 ? (
-              <div className="rounded-lg border border-dashed border-border bg-surface-muted px-3 py-3 text-center">
-                <p className="text-xs text-text-muted">
-                  まだメンバーが追加されていません
-                </p>
               </div>
             ) : null}
           </section>
