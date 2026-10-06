@@ -26,7 +26,7 @@ BEを利用するFE実装者、運用者、対局記録を扱う利用者は、S
 
 ### 上流・下流との契約
 
-- `backend-foundation` の embedded `rule`（`gameType`、`uma`、`oka`、チョンボ点数、卓外供託可否）、camelCase DTO、既存 route/status、`{ data }` と ErrorEnvelope、session cookie、AppType、user_stats logical keyを入力契約として利用する。
+- `backend-foundation` の embedded `rule`（`gameType`、`uma`、`oka`、チョンボ点数、卓外供託可否、座順ローテーション可否）、camelCase DTO、既存 route/status、`{ data }` と ErrorEnvelope、session cookie、AppType、user_stats logical keyを入力契約として利用する。
 - `frontend-session-match` は Session の固定メンバー、三麻/四麻の許容 wind、BEが返す `matchIndex`・`rank`・`point`および外卓入力に対応した結果を利用する。FEは同じ計算を複製しない。
 - `frontend-statistics-quality` は Season/League/UserStats の再構築結果、削除後の stale stats cleanup、sanma の fourth 系 `null` を利用する。
 
@@ -62,7 +62,7 @@ BEを利用するFE実装者、運用者、対局記録を扱う利用者は、S
 
 3.1 While Leagueに正本Matchが一件も存在しない状態, the Backend Integrity Lifecycle shall League ruleの更新を許可し、最初のMatch登録時点のruleをそのMatchの計算に使用する。
 
-3.2 If Leagueに一度でも正本Matchが登録された後にruleを更新しようとする場合, the Backend Integrity Lifecycle shall conflictとして拒否し、既存Matchの結果を再計算または書き換えない。チョンボ点数と卓外供託可否もこのrule lockに従う。
+3.2 If Leagueに一度でも正本Matchが登録された後にruleを更新しようとする場合, the Backend Integrity Lifecycle shall conflictとして拒否し、既存Matchの結果を再計算または書き換えない。チョンボ点数、卓外供託可否、座順ローテーション可否もこのrule lockに従う。
 
 3.3 When同じSessionへMatchを同時登録するとき, the Backend Integrity Lifecycle shall Session内で重複しない正のmatchIndexを割り当て、既存の最大値より大きい値を返す。
 

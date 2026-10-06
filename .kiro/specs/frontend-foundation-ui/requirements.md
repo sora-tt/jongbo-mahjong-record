@@ -15,6 +15,7 @@ FEの画面実装者と利用者は、BE由来のAPI型、旧domain型、mock型
 - loading、error、empty、retryの共通状態表現
 - Tailwind CSS 4のデザイントークン、Button、Input、Select、Card、Tableなどの共通UI
 - Header、navigation、認証フォームの共通shellと既存共通部品の置換方針
+- リーグ・シーズン一覧と三麻・四麻の成績リンクをアコーディオン配下にまとめたHeader navigation
 - 現行のAPI module・Header・認証画面への基盤適用とtypecheck/lint/buildによる検証
 
 ### 対象外
@@ -103,13 +104,21 @@ FEの画面実装者と利用者は、BE由来のAPI型、旧domain型、mock型
 
 ### 8. Header、navigation、認証shell
 
-8.1 When 認証済みの画面を表示するとき, the Frontend Foundation shall 再利用可能なAppShell/Headerを通じて`jongbo`ブランド、dashboard・league・statsのnavigation、ログインユーザー表示、logout操作を一貫して提供する。
+8.1 When 認証済みの画面を表示するとき, the Frontend Foundation shall 再利用可能なAppShell/Headerを通じて`jongbo`ブランド、リーグ・成績のnavigation、ログインユーザー表示、logout操作を一貫して提供し、リーグと同じ遷移先を持つ独立したホーム項目を表示しない。
 
 8.2 When pathnameがnavigation itemに一致するとき, the Frontend Foundation shall `aria-current`とactive styleを適用し、SSR後のpathname変更にも追従してactive状態を更新する。
 
 8.3 When 画面幅が狭い、menuを開閉する、Escapeまたはcloseを操作する場合, the Frontend Foundation shall キーボード操作可能なmobile drawer、背景・focus・閉じる操作を提供し、本文を操作不能なまま隠さない。
 
 8.4 When loginまたはsignup画面を表示するとき, the Frontend Foundation shall 共通AuthFormShellでtitle、form content、error、submit loading、footer linkを同じレイアウトとアクセシビリティ規則で提供する。
+
+8.5 When 利用者がHeaderのリーグメニューを展開するとき, the Frontend Foundation shall 利用可能なリーグ一覧を表示し、各リーグを展開するとそのシーズン一覧からリーグ詳細またはシーズン詳細へ直接移動できるリンクを提供する。
+
+8.6 When 利用者がHeaderの成績メニューを展開するとき, the Frontend Foundation shall 既存の成績画面にある三麻・四麻の成績へ直接移動できるリンクを提供する。
+
+8.7 When 利用者がdesktopまたはmobileのHeaderでnavigationを操作するとき, the Frontend Foundation shall リーグ・成績の下位項目をアコーディオンで展開・折りたたみできるようにし、長い項目一覧が常時表示されない状態を保つ。
+
+8.8 While Headerのリーグまたはシーズン一覧を取得している状態、または取得できない状態, the Frontend Foundation shall loading、空の一覧、取得失敗を区別して表示し、再試行が必要な場合に操作を提供する。
 
 ### 9. 既存FEへの適用と検証
 
@@ -125,5 +134,5 @@ FEの画面実装者と利用者は、BE由来のAPI型、旧domain型、mock型
 
 - 既存コードで確認できる白地・ブランドピンク基調、`jongbo`表記、レスポンシブな右drawerを初期の視覚方針とする。ダークモードや別ブランドカラーは本仕様では追加しない。
 - 新しいUIライブラリ、データ取得ライブラリ、状態管理ライブラリは追加せず、Next.js、React、Tailwind CSS 4、`clsx`、`lucide-react`、Hono clientを利用する。
-- リーグ一覧専用routeが後続仕様で確定するまで、league navigationの遷移先は既存routeと衝突しない設定可能な値として扱い、foundationで新しい業務routeを作らない。
+- Headerのリーグ一覧は既存の`/`を正規入口とし、項目から既存のリーグ詳細・シーズン詳細routeへ遷移する。専用のリーグ一覧routeは新設しない。
 - FEに既存のテストランナーがないため、本段階の必須検証はtypecheck、lint、build、BE契約型とのコンパイル整合とし、画面固有のcomponent/E2Eテストは後続画面仕様の検証基盤に委ねる。

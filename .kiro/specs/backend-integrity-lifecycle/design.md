@@ -4,7 +4,7 @@
 
 ### Summary
 
-現行の `MatchService`、scoring/aggregation domain、`StatsRebuilder`を拡張し、チョンボと卓外供託をMatchの外卓入力として扱う。PR #104のfixed/floatingCount順位点、raw score順位、League rule lockは維持し、raw score合計とpoint合計を記録済み外卓要因に照合する。Match上のチョンボ発生者からscope別`chomboCount`を再構築する。公開API/保存shapeは`backend-foundation`の契約を利用する。
+現行の `MatchService`、scoring/aggregation domain、`StatsRebuilder`を拡張し、チョンボと卓外供託をMatchの外卓入力として扱う。PR #104のfixed/floatingCount順位点、raw score順位、League rule lockは維持し、raw score合計とpoint合計を記録済み外卓要因に照合する。Match上のチョンボ発生者からscope別`chomboCount`を再構築する。公開API/保存shapeは`backend-foundation`の契約を利用する。Issue #123の`rotateSeatOrder`も既存のrule lock対象とし、BEはwind割当を変更せずFE送信値を検証・保存する。
 
 ### Goals
 
@@ -183,6 +183,8 @@ type MatchCalculationContext = LeagueRule; // PR #104 fixed/floatingCount union
 - canonical Match writeとSession `total_match_count`更新は同じ正本write操作として扱う。Match updateはindexを変更しない。
 - deleteは残存Matchのindexを詰めない。新規割当はその時点の最大index+1とし、既存Matchのindexを再番号付けしない。
 - 最初のMatch createはLeague documentの非公開 lifecycle metadataをlockし、以後のrule updateをconflictで拒否する。このmetadataはAPI/Domain DTOへ露出しない。
+
+Issue #123のrotateSeatOrderもLeague ruleの一部として既存の全体rule lockを受ける。最初の正本Match前は更新可能、登録後は他のrule fieldと同じくconflictで拒否する。BEはフラグに基づく席順変更を行わず、Matchに送信されたwindを従来どおり検証・保存する。席の初期値を作る責務はfrontend-session-matchにある。
 
 ### Aggregate ordering
 
@@ -374,7 +376,7 @@ interface AggregateCalculator {
 | Session Integrity | `backend/src/presentation/schemas/session.ts` | 上流API入力型を保ちながら境界検証へ接続 |
 | Match Scoring | `backend/src/presentation/schemas/match.ts` | 上流schema入力からMatchServiceの外卓検証へ接続 |
 | Integrity Test Suite | `backend/src/application/services/sessionService.test.ts` | Session member固定、人数、重複、membershipの検証 |
-| Integrity Test Suite | `backend/src/application/services/matchService.test.ts` | Match external input、rule lock、canonical write/rebuild handoff |
+| Integrity Test Suite | `backend/src/application/services/matchService.test.ts`, `backend/src/application/services/statsRebuilder.test.ts` | Match external input、rule lock、canonical write/rebuild handoff、およびrebuild idempotency/stale cleanup/failure retry |
 | Integrity Test Suite | `backend/src/domain/shared/scoring.test.ts` | 外卓raw total、chombo penalty、kyotaku、rank/point expected sum |
 | Integrity Test Suite | `backend/src/domain/shared/aggregation.test.ts` | chomboCountのscope別再構築 |
 | Integrity Test Suite | `backend/src/infrastructure/firestore/repositories/lifecycle.emulator.test.ts`、`backend/src/infrastructure/firestore/repositories/matchRepository.emulator.test.ts` | transaction、lifecycle、Match外卓fieldの永続化 |
@@ -386,7 +388,6 @@ interface AggregateCalculator {
 | Canonical Lifecycle | `backend/src/application/services/lifecycleRebuildCoordinator.ts` | scopeと親scopeのrebuild順序、失敗報告、repair呼び出し |
 | Session Integrity | `backend/src/domain/shared/integrity.ts` | Session/Matchの人数、重複、membership、wind setの純粋検証 |
 | Repair Entry Point | `backend/src/scripts/repairStats.ts` | 公開APIを増やさないscope指定repair/rebuild起動 |
-| Integrity Test Suite | `backend/src/application/services/statsRebuilder.test.ts` | rebuild idempotency、stale cleanup、failure retry |
 
 `backend-foundation` が所有する composition root、公開 route、auth middleware、OpenAPI契約は本仕様のファイル構造に追加しない。既存 service/repositoryの変更は上表の責務内に限定する。
 
@@ -416,6 +417,7 @@ interface AggregateCalculator {
 | Scoring unit | raw score total、rank再計算、同点competition ranking、uma/oka、rounding、zero-sum | 2.1-2.5 |
 | External scoring unit | kyotaku 0/1/複数棒、chombo 0/複数回、同一offender再発、ルール不許可、期待raw/point合計 | 2.1-2.7 |
 | Transaction integration | 同時Match createのunique index、delete後の欠番、rule lock、index不変 | 3.1-3.4 |
+| Rule lock regression | 初回Match前はrotateSeatOrderを含むrule更新が可能で、初回Match後はフラグだけの変更もconflictとなり、既存Match結果が変化しない | 3.1-3.2 |
 | Lifecycle integration | Match/Session/Season/League create/update/delete後の親scope rebuildとactive cache | 4.1-4.4, 6.1-6.2 |
 | Aggregate contract | deterministic match order、standing/progression/record、League/overall projection | 5.1-5.5 |
 | UserStats contract | logical ID、sanma fourth null、rates/streak、chomboCount、stale cleanup、重複なし | 7.1-7.5 |
@@ -439,13 +441,15 @@ interface AggregateCalculator {
 
 ## 12. Requirements Traceability
 
+
 | Requirement | Summary | Components | Interfaces / Flows |
 |---|---|---|---|
 | 1.1, 1.2, 1.3, 1.4 | Session固定、gameType、membership、Match参加者完全一致 | Session Integrity, Match Scoring | Session create → Match validation |
 | 2.1, 2.2, 2.3, 2.4, 2.5 | raw score・pointの外卓差分検証、rank/point決定、同点、丸め | Match Scoring | Match input → external score calculation |
-| 2.6-2.7 | offenderごとのチョンボ発生、kyotaku設定適合 | Match Scoring, Canonical Contracts | Match create/update validation |
+| 2.6, 2.7 | offenderごとのチョンボ発生、kyotaku設定適合 | Match Scoring, Canonical Contracts | Match create/update validation |
 | 2.6, 2.7 | offenderごとのチョンボ発生、kyotaku設定適合 | Match Scoring, Canonical Contracts | Match create/update validation |
 | 3.1, 3.2, 3.3, 3.4 | rule lock、transactional index、欠番、index不変 | Canonical Lifecycle | Match create/update/delete flow |
+| 3.1, 3.2 | rotateSeatOrderを含む全rule fieldの初回Match前後のlock | Canonical Lifecycle | League rule update ↔ first Match lifecycle |
 | 4.1, 4.2, 4.3, 4.4 | Match/Session/Season/League deleteと親scope rebuild | Canonical Lifecycle, Rebuild Coordinator | lifecycle flow |
 | 5.1, 5.2, 5.3, 5.4, 5.5 | Season/League/overall projectionと決定的順序 | Aggregate Calculators, Rebuild Coordinator | canonical Match → projections |
 | 6.1, 6.2, 6.3 | active season一意性、cache、member履歴 | Canonical Lifecycle, Session Integrity | season/member transition |

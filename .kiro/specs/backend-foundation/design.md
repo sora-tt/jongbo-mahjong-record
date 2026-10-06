@@ -6,6 +6,8 @@
 
 現行BEのHono route、Zod入力検証、Firebase Admin SDK、Firestore repositoryを活かし、League rule、Matchの外卓記録、UserStatsのチョンボ回数を既存のsnake_case保存・camelCase Domain/API DTOへ追加する。業務計算は `backend-integrity-lifecycle` に委ね、API・保存契約と後続仕様の境界を固定する。ISSUE-99の基準はPR #104のLeague rule（fixed/floatingCount uma）とMatch後のrule lockを含む状態とする。
 
+Issue #123では、League ruleに座順ローテーション設定を追加する。API/DomainではrotateSeatOrder、Firestoreではrotate_seat_orderとして保存し、未設定の既存ruleはfalseで読む。席の計算やMatch入力への適用は本仕様に含めない。
+
 ### Goals
 
 - リーグ内埋め込み `rule` をDB・Domain・APIの正本にする。
@@ -30,6 +32,7 @@
 
 - Firestoreのcollection/path、保存フィールド、埋め込みrule、IDとuser_stats論理キー。
 - `rule.chomboPenaltyPoints`、`rule.allowOffTableKyotaku`、Matchの`chomboEvents`/`offTableKyotakuCount`、UserStatsの`chomboCount`の永続/API shapeと互換mapper。
+- `rule.rotateSeatOrder` / `rule.rotate_seat_order`のDomain/API/storage shapeと、欠損時falseのmapper規則。
 - `rule.uma` の三麻・四麻別合計0不変条件と、League作成・更新時の検証エラー契約。
 - Repository mapperとcamelCase Domain/API型の対応。
 - Auth session endpoint、Cookie属性、保護API middleware、CORS、認証エラー。
@@ -65,6 +68,7 @@
 - `user_stats` 論理キー、Firestore index、Rules、seed fieldの変更。
 - OpenAPI schemaまたは `AppType` の変更。
 - chombo/kyotakuのMatch DTO、UserStatsの`chomboCount`、未設定旧データの互換規則の変更。
+- rotateSeatOrderの型、Firestore field名、legacy default、公開API/OpenAPI契約の変更。
 
 ## 3. Architecture
 
@@ -147,9 +151,10 @@ rule.oka.starting_points: integer
 rule.oka.return_points: integer
 rule.chombo_penalty_points: non-negative integer
 rule.allow_off_table_kyotaku: boolean
+rule.rotate_seat_order: boolean
 ```
 
-`uma`はPR #104の既存discriminated union（fixed / floatingCount）を維持する。`sanma`ではfixed umaの`fourth = null`、`yonma`ではfixed umaまたはfloatingCount umaの全順位点行を必須とする。全ての有効な順位点行はゼロサムとする。新しい罰符はpoint単位の非負整数であり、実際の減点適用は`backend-integrity-lifecycle`が所有する。`scoreCalculation`は現在の公開契約に含めない。
+`uma`はPR #104の既存discriminated union（fixed / floatingCount）を維持する。`sanma`ではfixed umaの`fourth = null`、`yonma`ではfixed umaまたはfloatingCount umaの全順位点行を必須とする。全ての有効な順位点行はゼロサムとする。新しい罰符はpoint単位の非負整数であり、実際の減点適用は`backend-integrity-lifecycle`が所有する。rotateSeatOrderはbooleanで常にAPI responseへ含め、legacy Leagueの欠損値はfalseへ正規化する。既存データの一括backfillは行わない。`scoreCalculation`は現在の公開契約に含めない。
 
 ### ISSUE-99 Match and UserStats Data Contract
 
@@ -240,10 +245,13 @@ type UserStatsExternalFields = {
 | Contract Publication | OpenAPI、Swagger、静的文書、FE向けrule/external input契約を同期する | 1.5, 2.5, 6.1-6.2, 7.3, 8.3 | HTTP Contract | API |
 | Seed and Infrastructure | seed、index、Rulesの再現性を担保する | 1.4, 5.1-5.3, 6.2-6.3 | Firestore Emulator | Data, State |
 | Contract Test Suite | 境界と後続仕様の回帰を検出する | 4.1-4.5, 7.1-7.3, 8.1-8.4 | 全コンポーネント | Test |
+| Seat Rotation Rule Contract | rotateSeatOrderをruleのAPI/Domain/Firestore境界に追加し、legacy falseを保証する | 1.2, 1.6, 1.7, 6.2, 7.1-7.3 | Canonical Contracts, Repository Mappers, HTTP Contract Boundary | Type, API, Data |
 
 ### Canonical Contracts
 
 公開Domain型は既存の `User`、`LeagueSummary`、`LeagueDetail`、`SeasonSummary`、`SeasonDetail`、`Session`、`Match`、`UserStats` を正本とし、route responseはこれらを `{ data: T }` に包む。入力型はrouteごとのZod schemaから推論し、保存型はRepository境界に閉じ込める。
+
+LeagueRuleにはrotateSeatOrder: booleanを追加する。League create/update schemaはboolean以外を拒否し、League repository mapperは保存時にsnake_caseへ変換する。値がない既存documentはfalseとしてDomain/APIへ返すため、FEはAppTypeから同じ契約を導出できる。ruleの効果やwind割当計算はbackend-integrity-lifecycleおよびfrontend-session-matchの境界に委譲する。
 
 ```ts
 type ErrorCode =
@@ -349,32 +357,31 @@ League create/updateでは、`rule` が入力された場合に `LeagueRuleValid
 
 | Component | Path | Responsibility |
 |---|---|---|
-| Seed and Infrastructure | `backend/docs/firestore.yaml` | Firestore canonical schema |
-| Contract Publication | `backend/docs/api-design.md` | API responsibility and data contract |
-| Contract Publication | `backend/docs/api-reference.md` | Endpoint examples and status/error contract |
+| Seed and Infrastructure / Contract Publication | `backend/docs/firestore.yaml` | Firestore canonical schemaとrotate_seat_order field contract。seedの初期League ruleはrotateSeatOrder=falseとする |
+| Contract Publication | `backend/docs/api-design.md`, `backend/docs/api-reference.md` | API responsibility、rule field、request/response examples、status/error contract |
 | Session Auth Boundary | `backend/docs/auth-design.md` | Auth and Cookie lifecycle |
 | Seed and Infrastructure | `backend/firestore.indexes.json` | Required Firestore indexes |
 | Seed and Infrastructure | `backend/firestore.rules` | Default-deny production Rules |
 | Canonical Contracts | `backend/src/domain/*/types.ts` | camelCase Domain types and nullable semantics |
+| Canonical Contracts / Seat Rotation Rule Contract | `backend/src/domain/league/types.ts` | LeagueRuleにrotateSeatOrder booleanを追加 |
 | Canonical Contracts | `backend/src/domain/match/types.ts` | Match responseにchomboEventsとoffTableKyotakuCountを公開 |
 | Canonical Contracts | `backend/src/domain/match/repository.ts` | Match create/update inputに外卓入力を公開 |
 | Canonical Contracts | `backend/src/domain/user/types.ts` | overall/league/season UserStatsのchomboCountを公開 |
 | Rule Invariant Validator | `backend/src/domain/league/rule.ts` | `rule.uma` sum validation and typed validation details |
-| Canonical Contracts | `backend/src/presentation/schemas/league.ts` | 追加rule fieldsの入力型と既存client向け省略default |
+| Canonical Contracts / Seat Rotation Rule Contract | `backend/src/presentation/schemas/league.ts` | rule fieldsの入力型、rotateSeatOrderのboolean validation、未指定時false default |
 | Canonical Contracts | `backend/src/presentation/schemas/match.ts` | chomboEventsとoffTableKyotakuCountのrequest validation |
 | HTTP Contract Boundary | `backend/src/domain/shared/errors.ts` | typed error codes and safe details |
 | Repository Mappers | `backend/src/infrastructure/firestore/utils.ts` | timestamp and persistence conversion helpers |
 | Repository Mappers | `backend/src/infrastructure/firestore/repositories/*.ts` | entity-specific mapping and canonical writes |
-| Repository Mappers | `backend/src/infrastructure/firestore/repositories/leagueRepository.ts` | new rule fieldsとlegacy rule fallbackの保存/読取 |
+| Repository Mappers / Seat Rotation Rule Contract | `backend/src/infrastructure/firestore/repositories/leagueRepository.ts` | new rule fieldsの保存/読取と、rotate_seat_order欠損時falseのlegacy read |
 | Repository Mappers | `backend/src/infrastructure/firestore/repositories/matchRepository.ts` | chombo/kyotaku Match fieldsの保存/読取 |
 | Repository Mappers | `backend/src/infrastructure/firestore/repositories/userStatsRepository.ts` | chomboCountの保存とlegacy read default |
 | HTTP Contract Boundary | `backend/src/presentation/app.ts` | CORS, public/protected route registration, error normalization |
 | Session Auth Boundary | `backend/src/presentation/middleware/auth.ts` | Cookie-only protected API auth |
 | Session Auth Boundary | `backend/src/presentation/session.ts` | Cookie name and attributes |
 | HTTP Contract Boundary | `backend/src/presentation/response.ts` | data/error response helpers |
-| Contract Publication | `backend/src/presentation/openapi.ts` | runtime OpenAPI document |
-| Contract Publication | `backend/docs/firestore.yaml`, `backend/docs/api-design.md`, `backend/docs/api-reference.md` | rule、Match、UserStatsの新field contract |
-| Contract Test Suite | `backend/src/domain/league/rule.test.ts` | rule zero-sum、新rule field validation、legacy default contract |
+| Contract Publication / Seat Rotation Rule Contract | `backend/src/presentation/openapi.ts` | runtime OpenAPI documentとLeagueRule.rotateSeatOrder schema |
+| Contract Test Suite | `backend/src/domain/league/rule.test.ts`, `backend/src/application/services/leagueService.test.ts` | rule zero-sum、rotateSeatOrder boolean境界とLeague API round tripを検証 |
 | Contract Test Suite | `backend/src/application/services/matchService.test.ts` | Match APIのcreate/update omissionと外卓field受け渡し |
 | Contract Test Suite | `backend/src/infrastructure/firestore/repositories/matchRepository.emulator.test.ts` | Match外卓fieldのFirestore round tripとlegacy read default |
 | Contract Test Suite | `backend/src/infrastructure/firestore/utils.test.ts` | snake_case/camelCase mapperと既存entity contract |
@@ -390,6 +397,7 @@ League create/updateでは、`rule` が入力された場合に `LeagueRuleValid
 | Component | Path | Responsibility |
 |---|---|---|
 | Contract Test Suite | `backend/src/infrastructure/firestore/repositories/userStatsRepository.test.ts` | new chomboCount fieldのread/writeとlogical key契約 |
+| Seat Rotation Rule Contract | `backend/src/infrastructure/firestore/repositories/leagueRepository.test.ts` | rotate_seat_orderのround tripと欠損時falseのlegacy readを検証 |
 
 Each file has one boundary owner. `backend/src/presentation/dependencies.ts` is the only composition point allowed to connect application services to Firestore implementations.
 
@@ -412,6 +420,7 @@ Each file has one boundary owner. `backend/src/presentation/dependencies.ts` is 
 - If any existing record cannot be mapped without guessing, stop deployment and create a migration decision rather than defaulting a field.
 - Legacy League rules without the new fields map to `chomboPenaltyPoints: 0` and `allowOffTableKyotaku: false`; legacy Matches map to empty chombo events and zero kyotaku; legacy UserStats map to `chomboCount: 0`. No historical result is rewritten.
 - Legacy Leagueで初回Match登録後にrule lock済みの場合、新設定はrule updateから有効化できない。必要な既存Leagueは本番運用の承認済みmigration手順で扱い、rule lockを迂回しない。
+- 既存Leagueでrotate_seat_orderが欠損する場合は読取時にfalseを返す。新規作成・rule更新は値を保存し、API responseでは常にbooleanを返す。過去のMatchやrule documentは一括更新しない。
 
 ## 8. Testing Strategy
 
@@ -419,6 +428,7 @@ Each file has one boundary owner. `backend/src/presentation/dependencies.ts` is 
 |---|---|---|
 | Mapper contract | all entity fields, embedded rule, snake/camel, Timestamp/ISO, null values | 1.1-1.4 |
 | External field contract | legacy rule defaults, repeated chombo offender IDs, kyotaku count, Match/UserStats mapping round trip | 1.2, 1.5, 2.5 |
+| Seat rotation contract | create/updateがboolean以外を拒否し、値をLeague APIとFirestoreで往復し、欠損legacy ruleはfalseを返す | 1.2, 1.6, 1.7, 6.2, 7.1, 7.2 |
 | Rule invariant contract | League create/update rejects non-zero uma total, returns field/expected/actual details, and does not partially persist | 8.1-8.2 |
 | Stats uniqueness | logical key lookup and repeated upsert do not create duplicates | 2.1-2.4 |
 | Auth integration | valid header exchange, invalid/missing token, Cookie attributes, Cookie-only protected routes, logout 204 | 3.1-3.5 |
@@ -438,9 +448,11 @@ Tests must not log tokens or service account data. Production data is never used
 
 ## 10. Requirements Traceability
 
+
 | Requirement | Summary | Components | Interfaces / Flows |
 |---|---|---|---|
 | 1.1, 1.2, 1.3, 1.4 | canonical data, embedded rule, mapping, seed | Canonical Contracts, Repository Mappers, Seed and Infrastructure | persistence flow |
+| 1.2, 1.6, 1.7 | rotateSeatOrderのLeague rule保存/返却、boolean validation、欠損時false | Canonical Contracts, Seat Rotation Rule Contract, Repository Mappers | League request → schema → mapper → DTO |
 | 1.5 | Match API keeps chombo occurrences separate from kyotaku count | Canonical Contracts, HTTP Contract Boundary, Repository Mappers | Match create/read/update |
 | 2.1, 2.2, 2.3, 2.4 | stats key and migration safety | Canonical Contracts, Repository Mappers | User Stats Logical Key |
 | 2.5 | UserStats API returns chomboCount per existing scope | Canonical Contracts, Repository Mappers | UserStats read/write |
