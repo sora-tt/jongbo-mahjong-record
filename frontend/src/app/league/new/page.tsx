@@ -76,11 +76,11 @@ const NewLeaguePage: React.FC = () => {
               <Type className="h-4 w-4 text-slate-700" aria-hidden="true" />
               リーグ名
             </label>
-            <div className="flex items-center overflow-hidden rounded-lg border border-border bg-white transition-colors focus-within:border-brand-strong">
+            <div className="flex items-center gap-2">
               <Input
                 id="league-name"
                 containerClassName="min-w-0 flex-1 space-y-0"
-                className="h-9 rounded-none border-0 px-3 shadow-none hover:border-transparent focus:border-0"
+                className="h-9 rounded-lg px-3 shadow-none"
                 placeholder="例: M"
                 value={leagueName}
                 onChange={handleLeagueNameChange}
@@ -88,7 +88,7 @@ const NewLeaguePage: React.FC = () => {
               />
               <span
                 id="league-name-suffix"
-                className="shrink-0 border-l border-border bg-surface-muted px-3 py-2 text-sm text-text-muted"
+                className="shrink-0 text-sm font-bold text-foreground"
               >
                 リーグ
               </span>
