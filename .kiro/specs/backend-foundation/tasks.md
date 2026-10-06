@@ -201,7 +201,7 @@
   - _Requirements: 1.3, 1.6, 1.7, 6.2_
   - _Boundary: Repository Mappers_
 
-- [ ] 6.4 Seedに座順ruleの明示的な初期値を含める
+- [x] 6.4 Seedに座順ruleの明示的な初期値を含める
   - 新規seed Leagueには`rotateSeatOrder: false`を含め、canonical League DTOとして取得できるようにする。
   - 既存seed識別子を保ち、未承認の既存データ移行を行わない。
   - 完了時、seed再実行後もLeagueの座順設定がfalseで取得でき、既存識別子が変わらない。
@@ -209,7 +209,7 @@
   - _Requirements: 1.4, 1.7, 6.2, 6.3_
   - _Boundary: Seed and Infrastructure_
 
-- [ ] 6.5 座順ruleを公開契約へ同期する
+- [x] 6.5 座順ruleを公開契約へ同期する
   - API schemaからruntime OpenAPI/Swaggerへfieldを公開し、静的API referenceとFirestore schemaにもboolean型、snake_case保存名、legacy false semanticsを反映する。
   - APIと保存層のfield/default表現を契約公開物間でそろえるintegration作業として扱う。
   - 完了時、runtime OpenAPI、Swagger、API reference、Firestore schemaに同一fieldとdefault semanticsが記載される。
@@ -217,21 +217,21 @@
   - _Requirements: 6.1, 6.2, 7.2, 7.3_
   - _Boundary: Contract Publication Integration_
 
-- [ ] 6.6 League API座順契約の検証を追加する
+- [x] 6.6 League API座順契約の検証を追加する
   - create/updateのboolean validation、League DTOへの反映、runtime OpenAPI schemaのfield parityを検証する。
   - 完了時、契約検証で不正型が業務service前に拒否され、FE公開型とAPI schemaの値が一致する。
   - _Depends: 6.2, 6.5_
   - _Requirements: 4.4, 4.5, 6.1, 7.1, 7.2_
   - _Boundary: HTTP Contract Test Suite_
 
-- [ ] 6.7 Repository mapperの座順互換性を検証する
+- [x] 6.7 Repository mapperの座順互換性を検証する
   - repository round-tripで`rotateSeatOrder`が保存・読戻しされ、fieldがない旧Leagueをfalseで返すことを確認する。
   - 完了時、legacy false semanticsとsnake_case/camelCase変換がcontract fixtureで再現できる。
   - _Depends: 6.3, 6.5_
   - _Requirements: 1.3, 1.7, 6.2, 7.1_
   - _Boundary: Repository Contract Tests_
 
-- [ ] 6.8 Seedの座順初期値をEmulatorで検証する
+- [x] 6.8 Seedの座順初期値をEmulatorで検証する
   - seed後のLeague DTOに`rotateSeatOrder: false`が含まれ、再実行時も既存League識別子が変わらないことを確認する。
   - 完了時、seed integration checkで座順初期値と正本識別子の再現性が確認できる。
   - _Depends: 6.4_

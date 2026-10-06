@@ -224,6 +224,16 @@ leagues:
           fields:
             starting_points: number
             return_points: number
+        chombo_penalty_points:
+          type: number
+          default: 0
+        allow_off_table_kyotaku:
+          type: boolean
+          default: false
+        # 保存がない旧Leagueもfalseとして扱う
+        rotate_seat_order:
+          type: boolean
+          default: false
 
     # 最初の正本Match登録後にルール変更を防ぐ内部ライフサイクルフラグ
     rule_locked: boolean

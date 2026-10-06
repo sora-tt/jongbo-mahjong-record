@@ -773,7 +773,7 @@ components:
     Rule:
       type: object
       description: ルール設定
-      required: [gameType, uma, oka, scoreCalculation, chomboPenaltyPoints, allowOffTableKyotaku]
+      required: [gameType, uma, oka, scoreCalculation, chomboPenaltyPoints, allowOffTableKyotaku, rotateSeatOrder]
       properties:
         id:
           type: string
@@ -807,10 +807,13 @@ components:
         allowOffTableKyotaku:
           type: boolean
           description: 卓外供託の入力を許可するか
+        rotateSeatOrder:
+          type: boolean
+          description: 追加対局時に起家を一つ回すか
 
     RuleInput:
       type: object
-      description: ルール設定。外卓項目を省略した場合は0/falseで扱う
+      description: ルール設定。外卓項目とrotateSeatOrderを省略した場合は0/falseで扱う
       required: [gameType, uma, oka]
       properties:
         gameType:
@@ -828,6 +831,9 @@ components:
           minimum: 0
           default: 0
         allowOffTableKyotaku:
+          type: boolean
+          default: false
+        rotateSeatOrder:
           type: boolean
           default: false
 

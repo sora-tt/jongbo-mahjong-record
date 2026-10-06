@@ -1037,6 +1037,15 @@ test("OpenAPI publishes the canonical auth and match request contracts", async (
         LeagueSummary: { properties: Record<string, unknown> };
         LeagueRule: { oneOf?: Array<{ $ref?: string }> };
         LeagueRuleInput: { oneOf?: Array<{ $ref?: string }> };
+        FixedSanmaLeagueRuleInput: { properties: Record<string, unknown> };
+        FixedYonmaLeagueRuleInput: { properties: Record<string, unknown> };
+        FloatingCountYonmaLeagueRuleInput: {
+          properties: Record<string, unknown>;
+        };
+        FixedYonmaLeagueRule: {
+          properties: Record<string, unknown>;
+          required?: string[];
+        };
         UmaRule: {
           oneOf?: Array<{ $ref?: string }>;
           discriminator?: {
@@ -1105,6 +1114,26 @@ test("OpenAPI publishes the canonical auth and match request contracts", async (
       "#/components/schemas/LegacyFixedSanmaLeagueRule",
       "#/components/schemas/LegacyFixedYonmaLeagueRule",
     ],
+  );
+  for (const ruleInput of [
+    document.components.schemas.FixedSanmaLeagueRuleInput,
+    document.components.schemas.FixedYonmaLeagueRuleInput,
+    document.components.schemas.FloatingCountYonmaLeagueRuleInput,
+  ]) {
+    assert.deepEqual(ruleInput.properties.rotateSeatOrder, {
+      type: "boolean",
+      default: false,
+    });
+  }
+  assert.deepEqual(
+    document.components.schemas.FixedYonmaLeagueRule.properties.rotateSeatOrder,
+    { type: "boolean" },
+  );
+  assert.equal(
+    document.components.schemas.FixedYonmaLeagueRule.required?.includes(
+      "rotateSeatOrder",
+    ),
+    true,
   );
   assert.deepEqual(
     document.components.schemas.UmaRule.oneOf?.map(({ $ref }) => $ref),
