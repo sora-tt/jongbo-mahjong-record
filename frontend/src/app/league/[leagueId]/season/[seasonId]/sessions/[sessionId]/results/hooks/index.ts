@@ -107,7 +107,7 @@ export const useSessionResultsPage = () => {
         endedAt: new Date().toISOString(),
       });
       dispatch(clearRecordingFlow());
-      await load({ showLoading: false });
+      router.push(`/league/${leagueId}/season/${seasonId}`);
     } catch (endError) {
       if (endError instanceof ApiError && endError.status === 401) {
         router.replace("/login");

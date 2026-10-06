@@ -141,7 +141,7 @@
   - _Requirements: 3.10, 3.11_
   - _Boundary: Seat Rotation Model_
 
-- [ ] 7.2 Session終了保存後にSeason detailへ遷移する
+- [x] 7.2 Session終了保存後にSeason detailへ遷移する
   - Session list/detailの終了操作はendedAtまたはtableLabelをSession APIへ保存し、成功応答を受けてから所属Season detailへ遷移する。
   - mutation失敗時は現在のSession結果画面に留まり、入力値・error・再試行可能状態を保つ。
   - 完了時、成功時だけSeason detailへ到達し、失敗時に保存未完了のまま画面が移動しない。
