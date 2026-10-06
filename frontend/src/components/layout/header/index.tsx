@@ -42,6 +42,8 @@ export const Header: React.FC = () => {
   const { expandedLeagueIds, expandedSection, toggleLeague, toggleSection } =
     navigation;
   const menuToggleRef = React.useRef<HTMLButtonElement>(null);
+  const drawerCloseRef = React.useRef<HTMLButtonElement>(null);
+  const hasOpenedMenuRef = React.useRef(false);
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
   const [isLoggingOut, setIsLoggingOut] = React.useState(false);
 
@@ -74,6 +76,19 @@ export const Header: React.FC = () => {
   }, [closeMenu, isMenuOpen]);
 
   React.useEffect(() => {
+    if (isMenuOpen) {
+      hasOpenedMenuRef.current = true;
+      drawerCloseRef.current?.focus();
+      return;
+    }
+
+    if (hasOpenedMenuRef.current) {
+      hasOpenedMenuRef.current = false;
+      menuToggleRef.current?.focus();
+    }
+  }, [isMenuOpen]);
+
+  React.useEffect(() => {
     closeMenuRef.current = closeMenu;
   }, [closeMenu]);
 
@@ -103,66 +118,90 @@ export const Header: React.FC = () => {
   const displayName = user?.displayName ?? user?.email ?? "ゲスト";
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-white/95 backdrop-blur">
-      <div className="mx-auto flex min-h-16 max-w-7xl items-center justify-between gap-3 px-4 lg:items-start lg:gap-6 sm:px-6 lg:px-8">
-        <Link
-          href="/"
-          className="flex shrink-0 items-center gap-2 rounded-control py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
-          aria-label="jongbo ホーム"
-        >
-          <span
-            className="grid h-9 w-9 grid-cols-2 gap-0.5 rounded-control bg-brand-600 p-1.5 shadow-sm"
-            aria-hidden="true"
+    <>
+      <header className="sticky top-0 z-40 border-b border-border bg-white/95 backdrop-blur">
+        <div className="mx-auto flex min-h-16 max-w-7xl items-center justify-between gap-3 px-4 lg:items-start lg:gap-6 sm:px-6 lg:px-8">
+          <Link
+            href="/"
+            className="flex shrink-0 items-center gap-2 rounded-control py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+            aria-label="jongbo ホーム"
           >
-            {Array.from({ length: 4 }).map((_, index) => (
-              <span key={index} className="rounded-[2px] bg-white/80" />
-            ))}
-          </span>
-          <span className="text-xl font-bold tracking-tight text-brand-strong">
-            jongbo
-          </span>
-        </Link>
+            <span
+              className="grid h-9 w-9 grid-cols-2 gap-0.5 rounded-control bg-brand-600 p-1.5 shadow-sm"
+              aria-hidden="true"
+            >
+              {Array.from({ length: 4 }).map((_, index) => (
+                <span key={index} className="rounded-[2px] bg-white/80" />
+              ))}
+            </span>
+            <span className="text-xl font-bold tracking-tight text-brand-strong">
+              jongbo
+            </span>
+          </Link>
 
-        <NavigationSections
-          model={navigation}
-          pathname={pathname}
-          presentation="desktop"
-        />
+          <NavigationSections
+            model={navigation}
+            pathname={pathname}
+            presentation="desktop"
+          />
 
-        <div className="hidden items-center gap-3 py-3 lg:flex">
-          <span className="flex items-center gap-2 text-sm text-text-muted">
-            <User size={17} aria-hidden="true" />
-            <span className="max-w-40 truncate">{displayName}</span>
-          </span>
+          <div className="hidden items-center gap-3 py-3 lg:flex">
+            <span className="flex items-center gap-2 text-sm text-text-muted">
+              <User size={17} aria-hidden="true" />
+              <span className="max-w-40 truncate">{displayName}</span>
+            </span>
+            <button
+              type="button"
+              className="rounded-control px-3 py-2 text-sm text-text-muted transition-colors hover:bg-brand-50 hover:text-brand-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:opacity-60"
+              onClick={handleLogout}
+              disabled={isLoggingOut}
+            >
+              {isLoggingOut ? "ログアウト中…" : "ログアウト"}
+            </button>
+          </div>
+
           <button
+            ref={menuToggleRef}
             type="button"
-            className="rounded-control px-3 py-2 text-sm text-text-muted transition-colors hover:bg-brand-50 hover:text-brand-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:opacity-60"
-            onClick={handleLogout}
-            disabled={isLoggingOut}
+            className="rounded-control p-2 text-brand-strong hover:bg-brand-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus lg:hidden"
+            onClick={isMenuOpen ? closeMenu : openMenu}
+            aria-label={isMenuOpen ? "メニューを閉じる" : "メニューを開く"}
+            aria-expanded={isMenuOpen}
+            aria-controls="mobile-navigation"
           >
-            {isLoggingOut ? "ログアウト中…" : "ログアウト"}
+            {isMenuOpen ? <X size={22} /> : <Menu size={22} />}
           </button>
         </div>
+      </header>
 
+      {isMenuOpen ? (
         <button
-          ref={menuToggleRef}
           type="button"
-          className="rounded-control p-2 text-brand-strong hover:bg-brand-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus lg:hidden"
-          onClick={isMenuOpen ? closeMenu : openMenu}
-          aria-label={isMenuOpen ? "メニューを閉じる" : "メニューを開く"}
-          aria-expanded={isMenuOpen}
-          aria-controls="mobile-navigation"
-        >
-          {isMenuOpen ? <X size={22} /> : <Menu size={22} />}
-        </button>
-      </div>
+          className="fixed inset-0 z-40 bg-black/20 transition-opacity motion-reduce:transition-none lg:hidden"
+          aria-label="メニューを閉じる"
+          onClick={closeMenu}
+        />
+      ) : null}
 
-      <DisclosureRegion
+      <aside
         id="mobile-navigation"
-        isExpanded={isMenuOpen}
-        className="lg:hidden"
+        className={`fixed inset-y-0 right-0 z-50 flex w-80 max-w-[88vw] flex-col border-l border-border bg-white shadow-xl transition-transform duration-200 motion-reduce:transition-none lg:hidden ${isMenuOpen ? "translate-x-0" : "translate-x-full"}`}
+        aria-hidden={!isMenuOpen}
+        inert={!isMenuOpen}
       >
-        <div className="space-y-4 border-t border-border px-4 py-4 sm:px-6">
+        <div className="flex items-center justify-between border-b border-border px-4 py-4">
+          <span className="font-semibold text-foreground">メニュー</span>
+          <button
+            ref={drawerCloseRef}
+            type="button"
+            className="rounded-control p-2 text-text-muted hover:bg-brand-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+            onClick={closeMenu}
+            aria-label="メニューを閉じる"
+          >
+            <X size={20} />
+          </button>
+        </div>
+        <div className="flex-1 space-y-5 overflow-y-auto p-4">
           <div className="flex items-center gap-3 rounded-surface bg-surface-muted p-3">
             <span className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-50 text-brand-strong">
               <User size={18} aria-hidden="true" />
@@ -177,6 +216,8 @@ export const Header: React.FC = () => {
             presentation="mobile"
             onNavigate={closeMenu}
           />
+        </div>
+        <div className="border-t border-border p-4">
           <button
             type="button"
             className="w-full rounded-control px-3 py-2 text-left text-sm text-text-muted hover:bg-brand-50 hover:text-brand-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:opacity-60"
@@ -186,8 +227,8 @@ export const Header: React.FC = () => {
             {isLoggingOut ? "ログアウト中…" : "ログアウト"}
           </button>
         </div>
-      </DisclosureRegion>
-    </header>
+      </aside>
+    </>
   );
 };
 

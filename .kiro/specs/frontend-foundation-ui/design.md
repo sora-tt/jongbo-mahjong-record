@@ -14,7 +14,7 @@ Issue #123では、Headerの主項目をリーグ・成績の2つにし、各項
 - Cookie-only保護API、標準ErrorEnvelope、204、nullable/ISO日時を一つのFE境界で扱う。
 - API DTOから表示用modelへ変換するadapterの責務を表示整形に限定し、BE計算値を保持する。
 - 共通UIと白地・ブランドピンク基調のsemantic tokenを揃える。
-- Header、navigation、mobile in-flow menu、AuthFormShellを再利用可能なshellにする。
+- Header、navigation、mobile right drawer、AuthFormShellを再利用可能なshellにする。
 
 ### Non-Goals
 
@@ -32,7 +32,7 @@ Issue #123では、Headerの主項目をリーグ・成績の2つにし、各項
 - Firebase ID Tokenのsession交換、Cookie-only保護API、401時の認証境界、requestのloading/error/empty状態。
 - `src/app`、`src/features`、`src/components`、`src/lib`の配置・import責務。
 - Tailwind token、Button/Input/Select/Card/Table/Loading/Error/Empty、AppShell/Header/navigation/AuthFormShell。
-- HeaderのLeague/Stats accordion card、responsiveな文書フロー内の同一navigation model、navigationのloading/empty/error表示。
+- HeaderのLeague/Stats accordion card、desktop inline navigationとmobile right drawerで共有するnavigation model、navigationのloading/empty/error表示。
 - 現行API module、auth provider、Header、auth画面への共通境界の適用と後続仕様へのhandoff。
 
 ### Out of Boundary
@@ -178,7 +178,7 @@ adapterはraw scoreからpointを計算せず、standingを並べ替えず、use
 | Auth Session Boundary | FirebaseとBE Cookieのsessionを連携する | 3.1-3.4, 8.1-8.4 | Firebase, API Transport | Service, State |
 | Request State Boundary | loading/error/empty/retryとstale requestを統一する | 4.1-4.4, 9.1 | React hooks | State |
 | Design System Primitives | tokenに基づく共通UIを提供する | 6.1-6.3, 7.1-7.4 | Tailwind CSS | UI |
-| App Shell | League/Stats submenu、navigation model、in-flow menu、AuthFormShellを提供する | 8.1-8.8, 9.1 | Primitives, Auth, app composition | UI, State |
+| App Shell | League/Stats submenu、navigation model、desktop inline menuとmobile right drawer、AuthFormShellを提供する | 8.1-8.8, 9.1 | Primitives, Auth, app composition | UI, State |
 | Foundation Handoff | 既存FE適用と検証・再検証条件を固定する | 9.1-9.4 | all components | Test, Contract |
 
 ### API Transport
@@ -261,7 +261,7 @@ interface RequestStateController<T> {
 
 ### App Shell and Navigation
 
-`AppShell`はHeaderとmain slotを持つ。Headerのmain項目はリーグ・成績の2つで、ホーム項目は独立表示しない。jongboロゴは`/`へのhome linkとして残す。Headerはdesktop/mobileの両方で同じnavigation modelを文書フロー内のaccordion cardとして描画する。mobileではメニューボタンの直下にnavigationを開き、desktopでは選択したcardが下へ伸びる。開いたsubmenuは後続要素を押し下げ、floating panelやoverlayとして本文に重ねない。`usePathname`でactive stateと`aria-current`を計算する。League/Season情報とStats hrefはfoundation contextで受け取り、業務APIやroute builderをHeaderから呼ばない。
+`AppShell`はHeaderとmain slotを持つ。Headerのmain項目はリーグ・成績の2つで、ホーム項目は独立表示しない。jongboロゴは`/`へのhome linkとして残す。Headerはdesktopでは同じnavigation modelを文書フロー内のaccordion cardとして描画し、選択したcardが下へ伸びてページ本文を押し下げる。mobileではメニューボタンから右側drawerを開き、その内側に同じLeague/Stats cardを表示する。cardのsubmenuはdrawer内で下へ伸び、後続のdrawer内容を押し下げる。`usePathname`でactive stateと`aria-current`を計算する。League/Season情報とStats hrefはfoundation contextで受け取り、業務APIやroute builderをHeaderから呼ばない。
 
 `AuthFormShell`は認証画面だけが利用し、title、children、error、submit loading、footer linksをslotとして受ける。認証済みAppShellと重複するHeaderは表示しない。
 
@@ -291,9 +291,9 @@ type HeaderNavigationModel = {
 
 `HeaderNavigationModelContext`はHeaderにmodelを渡すfoundation-owned contextとし、app composition rootがproviderを構成する。app compositionは認証済みviewer ID、League featureのnavigation hook、statisticsの既存route builderを接続する。League featureはLeague/Season labelsとhrefを供給し、Stats route builderは三麻/四麻の既存hrefを作る。Headerが利用するpublic interfaceは汎用NavigationLink/stateだけに限定する。
 
-League cardを開いた時に`loadLeagues`でリーグ一覧を取得し、個別リーグを開いた時に`loadSeasons(leagueId)`でそのseason一覧を遅延取得する。各loadはidle時の初回だけ実行し、error stateでは対応するretry callbackで再取得する。これによりHeader初期表示時の全league×seasonの一括取得を避ける。リーグ名はリーグ詳細リンクと展開ボタンを分け、seasonはseason詳細へのリンクとする。Stats配下の三麻/四麻リンクは既存のstatistics route builderからapp compositionが受け取る。desktopとmobileは同じmodelを描画し、cardの展開で後続要素を下へ押し出す。
+League cardを開いた時に`loadLeagues`でリーグ一覧を取得し、個別リーグを開いた時に`loadSeasons(leagueId)`でそのseason一覧を遅延取得する。各loadはidle時の初回だけ実行し、error stateでは対応するretry callbackで再取得する。これによりHeader初期表示時の全league×seasonの一括取得を避ける。リーグ名はリーグ詳細リンクと展開ボタンを分け、seasonはseason詳細へのリンクとする。Stats配下の三麻/四麻リンクは既存のstatistics route builderからapp compositionが受け取る。desktopとmobile drawerは同じmodelを描画する。desktop cardの展開はページ本文を、mobile drawer内cardの展開はdrawer内の後続項目を下へ押し出す。
 
-リーグ一覧・season一覧のloading、正常empty、失敗は展開部内で区別する。失敗にはretryを付ける。展開ボタンはaria-expanded/aria-controlsを持ち、linkとは別のbuttonにする。submenuとmobile menuはgrid-rowによる下方向のin-flow展開とし、`inert`/`aria-hidden`で閉じた内容を操作・読み上げ対象から外す。Escapeで閉じ、toggleへfocusを戻す。transitionはprefers-reduced-motionを尊重する。フォーカス可能な順序と可視focusを維持し、accordionはfocus trapを作らない。
+リーグ一覧・season一覧のloading、正常empty、失敗は展開部内で区別する。失敗にはretryを付ける。展開ボタンはaria-expanded/aria-controlsを持ち、linkとは別のbuttonにする。League/Stats submenuとseason一覧はgrid-rowで下へ展開する。mobile drawerは右からスライドし、backdrop、close button、Escapeで閉じられる。閉じたdrawerとdisclosureは`inert`/`aria-hidden`で操作・読み上げ対象から外し、drawerを閉じた後はmenu toggleへfocusを戻す。transitionはprefers-reduced-motionを尊重する。フォーカス可能な順序と可視focusを維持し、drawer内にfocus trapは作らない。
 
 ## 6. Design Tokens
 
