@@ -129,20 +129,50 @@
   - _Requirements: 5.4, 6.1, 6.2, 7.1, 7.3_
   - _Boundary: Route Integration, Validation Handoff_
 
-## 7. 契約・品質検証
 
-- [ ] 7.1 API contract、participant、form stateの検証を追加する
-  - Session/Matchのendpoint、status、`{ data }`、ErrorEnvelope、fixed members、sanma/yonma wind、raw score validation、BE rank/point、matchIndex gapを検証する。
-  - 401/403/404/409/validation/transport error、empty/null、二重submit、stale response、edit participant lock、delete後refetchを確認する。
-  - 完了時、契約不一致時に対象route、入力状態、表示値を特定でき、FEでrank/point/aggregateを再計算する変更を検出できる。
-  - _Depends: 2.1, 4.2, 5.3, 6.1_
-  - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 2.1, 2.2, 2.3, 2.4, 3.1, 3.2, 3.3, 3.4, 4.1, 4.2, 4.3, 4.4, 4.5, 5.2, 6.2, 6.3, 6.4, 7.1_
+
+## 7. Issue #123 Session終了後遷移と座順ローテーション
+
+- [x] 7.1 三麻・四麻の次回席割当modelを定義する
+  - 最大`matchIndex`の保存済みMatchから各playerのwindを読み、四麻をeast→south→west→north→east、三麻をeast→south→west→eastへ一つ移した割当を作る。
+  - 不正または不完全なwind集合は誤った席順へ補正せず、既存エラー境界へ渡す。
+  - 完了時、同じ直前MatchとgameTypeから常に同じ次回wind割当が得られ、sanmaにnorthを生成しない。
+  - _Depends: 1.2, 2.1, backend-foundation 6.2, backend-foundation 6.3_
+  - _Requirements: 3.10, 3.11_
+  - _Boundary: Seat Rotation Model_
+
+- [ ] 7.2 Session終了保存後にSeason detailへ遷移する
+  - Session list/detailの終了操作はendedAtまたはtableLabelをSession APIへ保存し、成功応答を受けてから所属Season detailへ遷移する。
+  - mutation失敗時は現在のSession結果画面に留まり、入力値・error・再試行可能状態を保つ。
+  - 完了時、成功時だけSeason detailへ到達し、失敗時に保存未完了のまま画面が移動しない。
+  - _Depends: 3.1, 3.2_
+  - _Requirements: 2.4, 5.1, 5.3_
+  - _Boundary: Session Hooks and UI, Route Integration_
+
+- [ ] 7.3 追加Matchの初期席順と修正値の保存を接続する
+  - rotationが有効で保存済みMatchがある場合は最大`matchIndex`のMatchを基準に次のseat assignmentを初期表示し、disabledまたは初回Matchでは既存のSession member順を使う。
+  - 利用者がフォーム内で席割当を変更できるようにし、追加Match APIには現在の選択値を保存する。
+  - 次のMatchは一つ前に実際に保存されたseat assignmentから初期化し、未保存の修正を持ち越さない。
+  - 完了時、保存済みの手修正が次の対局の基準となり、過去のMatchや未保存draftでseat順が変わらない。
+  - _Depends: 1.2, 2.1, 4.1, 7.1, frontend-league-season 1.1, backend-foundation 6.2, backend-foundation 6.3_
+  - _Requirements: 3.10, 3.11, 3.12, 4.1, 4.5_
+  - _Boundary: Seat Rotation Model, Additional Match route_
+
+
+## 8. 契約・品質検証
+
+- [ ] 8.1 API型・participant・form境界をsource reviewする
+  - Session/Match endpointのAppType由来request/response、fixed members、sanma/yonma wind、raw score input、BE rank/point、matchIndexの型境界を確認する。
+  - 401/403/404/409、validation/transport error、empty/null、二重submit、stale response、edit participant lock、delete後refetchを担当hookとroute間で追跡する。
+  - 完了時、feature UIに直接fetch、rank/point/aggregateの再計算、型外payloadがなく、境界違反を対象routeまで特定できる。
+  - _Depends: 2.1, 4.2, 5.3, 6.1, 7.1, 7.2, 7.3_
+  - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 2.1, 2.2, 2.3, 2.5, 3.1, 3.2, 3.3, 3.4, 4.1, 4.2, 4.3, 4.4, 4.5, 5.2, 6.2, 6.3, 6.4, 7.1_
   - _Boundary: Validation Handoff_
 
-- [ ] 7.2 typecheck、lint、buildと対象route静的スキャンを完了する
-  - `pnpm typecheck`、`pnpm lint`、`pnpm build`を実行し、AppType変更、React/Next route、shared UI、import境界の違反を確認する。
-  - 対象routeのdirect fetch、mock fallback、console-only button、FE rank/point/aggregate計算、matchIndex補正、stats実装の混入をスキャンする。
-  - 完了時、Season detailからSession list/start、初回/追加/edit/result/detail/backまでがcompile/build可能で、後続仕様の再検証項目が記録される。
-  - _Depends: 6.2, 7.1_
-  - _Requirements: 5.1, 5.3, 5.4, 6.1, 7.1, 7.2, 7.3_
+- [ ] 8.2 typecheck、lint、buildとIssue #123 source scanを完了する
+  - `pnpm typecheck`、`pnpm lint`、`pnpm build`を実行し、Session/Match AppType、React/Next route、shared UI、import境界の整合を確認する。
+  - source scanでmax `matchIndex`をrotation基準にすること、修正後のassignmentを追加Match payloadへ渡すこと、Session更新成功時だけSeason detailへ遷移することを確認する。
+  - 完了時、既存routeがcompile/build可能で、FE test runnerやbehavior test fileを追加せずにIssue #123の型・route契約を確認できる。
+  - _Depends: 6.2, 8.1_
+  - _Requirements: 2.4, 3.10, 3.11, 3.12, 5.1, 5.3, 5.4, 6.1, 7.1, 7.2, 7.3_
   - _Boundary: Validation Handoff_
