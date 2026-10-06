@@ -166,7 +166,7 @@
   - _Requirements: 5.2, 5.3, 7.1, 7.2_
   - _Boundary: Season UI and Forms_
 
-- [ ] 7.6 Header向けLeague navigation dataを遅延取得する
+- [x] 7.6 Header向けLeague navigation dataを遅延取得する
   - League一覧を取得し、Leagueが展開されたときだけそのLeagueのSeason一覧を取得してHeader Navigation Modelへ変換する。
   - Season取得のloading/empty/errorをLeagueごとに保持し、retryは該当Leagueだけを再取得して詳細・Season詳細routeを提供する。
   - 完了時、HeaderからLeagueを展開するまでSeason APIを呼ばず、展開後は該当LeagueのSeason linkと個別retryが表示される。
