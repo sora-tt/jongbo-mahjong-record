@@ -122,7 +122,7 @@
   - _Requirements: 8.1, 8.2, 8.5, 8.6, 8.7_
   - _Boundary: Header and AppShell_
 
-- [ ] 6.3 Accordion、loading/error/empty、keyboard操作を接続する
+- [x] 6.3 Accordion、loading/error/empty、keyboard操作を接続する
   - submenuを初期折りたたみとし、展開時にloading、正常な空、取得失敗とleague単位retryを表示する。
   - aria-expanded、button semantics、focus、Escape、mobile drawerとの開閉を保ち、長い一覧を常時表示しない。
   - 完了時、キーボードとmobile操作でsubmenuを開閉でき、状態別表示とretryがnavigation modelに一致する。

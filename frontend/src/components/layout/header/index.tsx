@@ -20,6 +20,7 @@ import { useAuth } from "@/providers/auth-provider";
 import { HeaderNavigationModelContext } from "@/components/layout/navigation/context";
 import type {
   HeaderNavigationSection,
+  LeagueNavigationItem,
   NavigationLink,
   NavigationLoadState,
 } from "@/components/layout/navigation/types";
@@ -38,10 +39,25 @@ export const Header: React.FC = () => {
   const router = useRouter();
   const { user, logout } = useAuth();
   const navigation = React.useContext(HeaderNavigationModelContext);
+  const { expandedLeagueIds, expandedSection, toggleLeague, toggleSection } =
+    navigation;
+  const menuToggleRef = React.useRef<HTMLButtonElement>(null);
+  const drawerCloseRef = React.useRef<HTMLButtonElement>(null);
+  const hasOpenedMenuRef = React.useRef(false);
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
   const [isLoggingOut, setIsLoggingOut] = React.useState(false);
 
-  const closeMenu = React.useCallback(() => setIsMenuOpen(false), []);
+  const closeMenu = React.useCallback(() => {
+    setIsMenuOpen(false);
+    expandedLeagueIds.forEach(toggleLeague);
+    if (expandedSection) {
+      toggleSection(expandedSection);
+    }
+  }, [expandedLeagueIds, expandedSection, toggleLeague, toggleSection]);
+  const closeMenuRef = React.useRef(closeMenu);
+  const previousPathnameRef = React.useRef(pathname);
+
+  const openMenu = React.useCallback(() => setIsMenuOpen(true), []);
 
   React.useEffect(() => {
     if (!isMenuOpen) {
@@ -59,8 +75,29 @@ export const Header: React.FC = () => {
   }, [closeMenu, isMenuOpen]);
 
   React.useEffect(() => {
-    closeMenu();
-  }, [closeMenu, pathname]);
+    closeMenuRef.current = closeMenu;
+  }, [closeMenu]);
+
+  React.useEffect(() => {
+    if (isMenuOpen) {
+      hasOpenedMenuRef.current = true;
+      drawerCloseRef.current?.focus();
+      return;
+    }
+
+    if (hasOpenedMenuRef.current) {
+      hasOpenedMenuRef.current = false;
+      menuToggleRef.current?.focus();
+    }
+  }, [isMenuOpen]);
+
+  React.useEffect(() => {
+    const pathnameChanged = previousPathnameRef.current !== pathname;
+    previousPathnameRef.current = pathname;
+    if (pathnameChanged && isMenuOpen) {
+      closeMenuRef.current();
+    }
+  }, [isMenuOpen, pathname]);
 
   const handleLogout = async () => {
     if (isLoggingOut) {
@@ -123,9 +160,10 @@ export const Header: React.FC = () => {
           </div>
 
           <button
+            ref={menuToggleRef}
             type="button"
             className="rounded-control p-2 text-brand-strong hover:bg-brand-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus lg:hidden"
-            onClick={() => setIsMenuOpen((current) => !current)}
+            onClick={isMenuOpen ? closeMenu : openMenu}
             aria-label={isMenuOpen ? "メニューを閉じる" : "メニューを開く"}
             aria-expanded={isMenuOpen}
             aria-controls="mobile-navigation"
@@ -153,6 +191,7 @@ export const Header: React.FC = () => {
         <div className="flex items-center justify-between border-b border-border px-4 py-4">
           <span className="font-semibold text-foreground">メニュー</span>
           <button
+            ref={drawerCloseRef}
             type="button"
             className="rounded-control p-2 text-text-muted hover:bg-brand-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
             onClick={closeMenu}
@@ -204,100 +243,130 @@ const NavigationSections: React.FC<NavigationSectionsProps> = ({
   pathname,
   presentation,
   onNavigate,
-}) => (
-  <nav
-    className={
-      presentation === "desktop"
-        ? "hidden items-center gap-1 lg:flex"
-        : "space-y-1"
-    }
-    aria-label={
-      presentation === "desktop"
-        ? "メインナビゲーション"
-        : "モバイルメインナビゲーション"
-    }
-  >
-    {NAVIGATION_SECTIONS.map(({ id, label, icon: Icon }) => {
-      const isExpanded = model.expandedSection === id;
-      const isActive =
-        id === "leagues"
-          ? pathname.startsWith("/league")
-          : pathname.startsWith("/stats");
-      const panelId = `header-navigation-${presentation}-${id}`;
+}) => {
+  const sectionToggleRefs = React.useRef<
+    Partial<Record<HeaderNavigationSection, HTMLButtonElement>>
+  >({});
 
-      return (
-        <div key={id} className={presentation === "desktop" ? "relative" : ""}>
-          <button
-            type="button"
-            className={`flex items-center gap-2 rounded-control px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus ${presentation === "mobile" ? "w-full justify-between" : ""} ${isActive ? "bg-brand-50 text-brand-strong" : "text-text-muted hover:bg-surface-muted hover:text-foreground"}`}
-            onClick={() => {
-              const willOpen = model.expandedSection !== id;
-              model.toggleSection(id);
-              if (
-                willOpen &&
-                id === "leagues" &&
-                model.leagues.status === "idle"
-              ) {
-                model.loadLeagues();
-              }
-            }}
-            aria-expanded={isExpanded}
-            aria-controls={panelId}
-          >
-            <span className="flex items-center gap-2">
-              <Icon size={17} aria-hidden="true" />
-              {label}
-            </span>
-            <ChevronDown
-              size={16}
-              aria-hidden="true"
-              className={`transition-transform ${isExpanded ? "rotate-180" : ""}`}
-            />
-          </button>
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLElement>) => {
+    if (
+      presentation !== "desktop" ||
+      event.key !== "Escape" ||
+      !model.expandedSection
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+    model.expandedLeagueIds.forEach(model.toggleLeague);
+    const expandedSection = model.expandedSection;
+    model.toggleSection(expandedSection);
+    sectionToggleRefs.current[expandedSection]?.focus();
+  };
+
+  return (
+    <nav
+      className={
+        presentation === "desktop"
+          ? "hidden items-center gap-1 lg:flex"
+          : "space-y-1"
+      }
+      aria-label={
+        presentation === "desktop"
+          ? "メインナビゲーション"
+          : "モバイルメインナビゲーション"
+      }
+      onKeyDown={handleKeyDown}
+    >
+      {NAVIGATION_SECTIONS.map(({ id, label, icon: Icon }) => {
+        const isExpanded = model.expandedSection === id;
+        const isActive =
+          id === "leagues"
+            ? pathname.startsWith("/league")
+            : pathname.startsWith("/stats");
+        const panelId = `header-navigation-${presentation}-${id}`;
+
+        return (
           <div
-            id={panelId}
-            hidden={!isExpanded}
-            className={`z-50 mt-1 max-h-96 overflow-y-auto rounded-surface border border-border bg-white p-2 shadow-lg ${presentation === "desktop" ? "absolute left-0 top-full min-w-64" : "ml-3"}`}
+            key={id}
+            className={presentation === "desktop" ? "relative" : ""}
           >
-            {id === "leagues" ? (
-              <LeagueLinks
-                state={model.leagues}
-                expandedLeagueIds={model.expandedLeagueIds}
-                onToggleLeague={model.toggleLeague}
-                onLoadSeasons={model.loadSeasons}
-                pathname={pathname}
-                onNavigate={onNavigate}
-                presentation={presentation}
+            <button
+              ref={(element) => {
+                if (element) {
+                  sectionToggleRefs.current[id] = element;
+                }
+              }}
+              type="button"
+              className={`flex items-center gap-2 rounded-control px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus ${presentation === "mobile" ? "w-full justify-between" : ""} ${isActive ? "bg-brand-50 text-brand-strong" : "text-text-muted hover:bg-surface-muted hover:text-foreground"}`}
+              onClick={() => {
+                const willOpen = model.expandedSection !== id;
+                model.toggleSection(id);
+                if (
+                  willOpen &&
+                  id === "leagues" &&
+                  model.leagues.status === "idle"
+                ) {
+                  model.loadLeagues();
+                }
+              }}
+              aria-expanded={isExpanded}
+              aria-controls={panelId}
+            >
+              <span className="flex items-center gap-2">
+                <Icon size={17} aria-hidden="true" />
+                {label}
+              </span>
+              <ChevronDown
+                size={16}
+                aria-hidden="true"
+                className={`transition-transform ${isExpanded ? "rotate-180" : ""}`}
               />
-            ) : (
-              <div className="space-y-1">
-                {model.statistics.map((item) => (
-                  <NavigationAnchor
-                    key={item.id}
-                    item={item}
-                    pathname={pathname}
-                    onNavigate={onNavigate}
-                  />
-                ))}
-              </div>
-            )}
+            </button>
+            <div
+              id={panelId}
+              hidden={!isExpanded}
+              className={`z-50 mt-1 max-h-96 overflow-y-auto rounded-surface border border-border bg-white p-2 shadow-lg ${presentation === "desktop" ? "absolute left-0 top-full min-w-64" : "ml-3"}`}
+            >
+              {id === "leagues" ? (
+                <LeagueLinks
+                  state={model.leagues}
+                  expandedLeagueIds={model.expandedLeagueIds}
+                  onToggleLeague={model.toggleLeague}
+                  onLoadSeasons={model.loadSeasons}
+                  onRetryLeagues={model.retryLeagues}
+                  onRetrySeasons={model.retrySeasons}
+                  pathname={pathname}
+                  onNavigate={onNavigate}
+                  presentation={presentation}
+                />
+              ) : (
+                <div className="space-y-1">
+                  {model.statistics.map((item) => (
+                    <NavigationAnchor
+                      key={item.id}
+                      item={item}
+                      pathname={pathname}
+                      onNavigate={onNavigate}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      );
-    })}
-  </nav>
-);
+        );
+      })}
+    </nav>
+  );
+};
 
 type LeagueLinksProps = {
-  state: NavigationLoadState<{
-    id: string;
-    label: string;
-    href: string;
-    seasons: NavigationLoadState<NavigationLink>;
-  }>;
+  state: NavigationLoadState<LeagueNavigationItem>;
   expandedLeagueIds: readonly string[];
   onToggleLeague: (leagueId: string) => void;
   onLoadSeasons: (leagueId: string) => void;
+  onRetryLeagues: () => void;
+  onRetrySeasons: (leagueId: string) => void;
   pathname: string;
   onNavigate?: () => void;
   presentation: "desktop" | "mobile";
@@ -308,11 +377,18 @@ const LeagueLinks: React.FC<LeagueLinksProps> = ({
   expandedLeagueIds,
   onToggleLeague,
   onLoadSeasons,
+  onRetryLeagues,
+  onRetrySeasons,
   pathname,
   onNavigate,
   presentation,
 }) => (
   <div className="space-y-1">
+    <NavigationLoadFeedback
+      state={state}
+      subject="リーグ一覧"
+      onRetry={onRetryLeagues}
+    />
     {state.items.map((league) => {
       const isExpanded = expandedLeagueIds.includes(league.id);
       const seasonListId = `header-navigation-${presentation}-seasons-${encodeURIComponent(league.id)}`;
@@ -351,6 +427,11 @@ const LeagueLinks: React.FC<LeagueLinksProps> = ({
             hidden={!isExpanded}
             className="ml-3 space-y-1"
           >
+            <NavigationLoadFeedback
+              state={league.seasons}
+              subject={`${league.label}のシーズン一覧`}
+              onRetry={() => onRetrySeasons(league.id)}
+            />
             {league.seasons.items.map((season) => (
               <NavigationAnchor
                 key={season.id}
@@ -365,6 +446,55 @@ const LeagueLinks: React.FC<LeagueLinksProps> = ({
     })}
   </div>
 );
+
+type NavigationLoadFeedbackProps = {
+  state: NavigationLoadState<unknown>;
+  subject: string;
+  onRetry: () => void;
+};
+
+const NavigationLoadFeedback: React.FC<NavigationLoadFeedbackProps> = ({
+  state,
+  subject,
+  onRetry,
+}) => {
+  if (state.status === "ready" || state.status === "idle") {
+    return null;
+  }
+
+  if (state.status === "error") {
+    return (
+      <div className="space-y-2 rounded-control border border-error-border bg-error-bg p-3 text-sm text-error-text">
+        <p role="alert">
+          {state.message || `${subject}を取得できませんでした。`}
+        </p>
+        <button
+          type="button"
+          className="rounded-control px-2 py-1 font-medium underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+          onClick={onRetry}
+          aria-label={`${subject}を再試行`}
+        >
+          再試行
+        </button>
+      </div>
+    );
+  }
+
+  const message =
+    state.status === "empty"
+      ? `${subject}はありません。`
+      : `${subject}を読み込んでいます…`;
+
+  return (
+    <p
+      role="status"
+      aria-live="polite"
+      className="px-3 py-2 text-sm text-text-muted"
+    >
+      {message}
+    </p>
+  );
+};
 
 type NavigationAnchorProps = {
   item: NavigationLink;
