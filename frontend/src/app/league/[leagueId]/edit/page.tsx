@@ -48,6 +48,7 @@ const EditLeaguePage: React.FC = () => {
     handleOkaSettingChange,
     handleChomboPenaltyPointsChange,
     handleAllowOffTableKyotakuChange,
+    handleRotateSeatOrderChange,
     handleModeChange,
     handleFixedUmaChange,
     handleFloatingCountUmaChange,
@@ -281,6 +282,7 @@ const EditLeaguePage: React.FC = () => {
                 floatingCountUma={ruleSettings.floatingCountUma}
                 chomboPenaltyPoints={ruleSettings.chomboPenaltyPoints}
                 allowOffTableKyotaku={ruleSettings.allowOffTableKyotaku}
+                rotateSeatOrder={ruleSettings.rotateSeatOrder}
                 showErrorSummary={showUmaErrors}
                 submitError={submitError}
                 errorSummaryFocusToken={errorSummaryFocusToken}
@@ -290,6 +292,7 @@ const EditLeaguePage: React.FC = () => {
                 onFloatingCountUmaChange={handleFloatingCountUmaChange}
                 onChomboPenaltyPointsChange={handleChomboPenaltyPointsChange}
                 onAllowOffTableKyotakuChange={handleAllowOffTableKyotakuChange}
+                onRotateSeatOrderChange={handleRotateSeatOrderChange}
               />
             </div>
           </section>
@@ -300,7 +303,7 @@ const EditLeaguePage: React.FC = () => {
             <Button
               onClick={handleSubmit}
               loading={isSubmitting}
-              disabled={isSubmitting || isRuleLocked}
+              disabled={isSubmitting}
               size="lg"
               className="min-w-[144px] rounded-xl"
             >

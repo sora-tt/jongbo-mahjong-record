@@ -231,6 +231,10 @@ export const useLeagueEdit = () => {
     []
   );
 
+  const handleRotateSeatOrderChange = React.useCallback((value: boolean) => {
+    setRuleSettings((prev) => ({ ...prev, rotateSeatOrder: value }));
+  }, []);
+
   const handleModeChange = React.useCallback((mode: UmaMode) => {
     setRuleSettings((prev) => ({ ...prev, mode }));
   }, []);
@@ -276,9 +280,11 @@ export const useLeagueEdit = () => {
       return;
     }
 
-    const result = buildLeagueRulePayload(ruleSettings);
-    if (!result.ok) {
-      failSubmit(result.error);
+    const ruleResult = isRuleLocked
+      ? null
+      : buildLeagueRulePayload(ruleSettings);
+    if (ruleResult && !ruleResult.ok) {
+      failSubmit(ruleResult.error);
       return;
     }
 
@@ -288,11 +294,7 @@ export const useLeagueEdit = () => {
       const updateInput = {
         name: leagueName.trim(),
         memberUserIds: Object.keys(addedMembers),
-        ...(isRuleLocked
-          ? {}
-          : {
-              rule: result.rule,
-            }),
+        ...(ruleResult?.ok ? { rule: ruleResult.rule } : {}),
       };
 
       const updatedLeague = await updateLeague(leagueId, updateInput);
@@ -347,6 +349,7 @@ export const useLeagueEdit = () => {
     handleOkaSettingChange,
     handleChomboPenaltyPointsChange,
     handleAllowOffTableKyotakuChange,
+    handleRotateSeatOrderChange,
     handleModeChange,
     handleFixedUmaChange,
     handleFloatingCountUmaChange,

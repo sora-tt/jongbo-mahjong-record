@@ -128,7 +128,7 @@
 
 ## 7. Issue #123 League/Seasonフォームとnavigation data
 
-- [ ] 7.1 League rule editorに座順ローテーション設定を追加する
+- [x] 7.1 League rule editorに座順ローテーション設定を追加する
   - create/editフォームとLeagueのrule表示で`rotateSeatOrder`を扱い、新規作成時の初期値をfalseにする。
   - Match作成後は既存rule lockに合わせてread-onlyとし、更新payloadに変更不可のruleを含めない。
   - 完了時、設定値がBE型で作成・取得・編集へ反映され、既存MatchがあるLeagueでは変更できない。

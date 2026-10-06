@@ -26,6 +26,10 @@ export const LeagueRuleSummary: React.FC<Props> = ({ rule }) => {
       <dd className="text-right font-medium text-foreground">
         {rule.allowOffTableKyotaku ? "あり" : "なし"}
       </dd>
+      <dt className="text-text-muted">連戦時の起家ローテーション</dt>
+      <dd className="text-right font-medium text-foreground">
+        {rule.rotateSeatOrder ? "あり" : "なし"}
+      </dd>
     </dl>
   );
 

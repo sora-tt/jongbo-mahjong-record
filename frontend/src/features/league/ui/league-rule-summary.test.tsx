@@ -21,6 +21,7 @@ const fixedRule: ApiLeague["rule"] = {
   oka: { startingPoints: 25000, returnPoints: 25000 },
   chomboPenaltyPoints: 0,
   allowOffTableKyotaku: false,
+  rotateSeatOrder: false,
 };
 
 const fixedSanmaRule: ApiLeague["rule"] = {
@@ -29,6 +30,7 @@ const fixedSanmaRule: ApiLeague["rule"] = {
   oka: { startingPoints: 35000, returnPoints: 35000 },
   chomboPenaltyPoints: 20,
   allowOffTableKyotaku: true,
+  rotateSeatOrder: false,
 };
 
 const floatingCountRule: ApiLeague["rule"] = {
@@ -46,6 +48,7 @@ const floatingCountRule: ApiLeague["rule"] = {
   oka: { startingPoints: 25000, returnPoints: 25000 },
   chomboPenaltyPoints: 20,
   allowOffTableKyotaku: true,
+  rotateSeatOrder: true,
 };
 
 const renderSummary = (rule: ApiLeague["rule"]) =>

@@ -161,6 +161,10 @@ export const useLeagueNew = () => {
     []
   );
 
+  const handleRotateSeatOrderChange = React.useCallback((value: boolean) => {
+    setRuleSettings((prev) => ({ ...prev, rotateSeatOrder: value }));
+  }, []);
+
   const handleModeChange = React.useCallback((mode: UmaMode) => {
     setRuleSettings((prev) => ({ ...prev, mode }));
   }, []);
@@ -250,6 +254,7 @@ export const useLeagueNew = () => {
     handleOkaSettingChange,
     handleChomboPenaltyPointsChange,
     handleAllowOffTableKyotakuChange,
+    handleRotateSeatOrderChange,
     handleModeChange,
     handleFixedUmaChange,
     handleFloatingCountUmaChange,
