@@ -257,7 +257,7 @@ test(
     );
     const league = await leagueRepository.create({
       name: "floating count rule lock test",
-      rule: floatingRule,
+      rule: { ...floatingRule, rotateSeatOrder: true },
       memberUserIds: [],
     });
     const members = [
@@ -289,6 +289,10 @@ test(
 
     try {
       assert.equal((await leagueRef.get()).data()?.rule_locked, false);
+      assert.equal(
+        (await leagueRef.get()).data()?.rule.rotate_seat_order,
+        true,
+      );
 
       const firstMatch = await matchService.createMatch(
         "0001",
@@ -307,6 +311,15 @@ test(
       );
 
       assert.equal((await leagueRef.get()).data()?.rule_locked, true);
+      assert.deepEqual(
+        firstMatch.results.map(({ userId, wind }) => ({ userId, wind })),
+        [
+          { userId: "0001", wind: "east" },
+          { userId: "0002", wind: "south" },
+          { userId: "0003", wind: "west" },
+          { userId: "0004", wind: "north" },
+        ],
+      );
       assert.deepEqual(
         firstMatch.results.map(({ rank, point }) => ({ rank, point })),
         [
@@ -339,7 +352,7 @@ test(
 
       await assert.rejects(
         leagueRepository.update(league.id, {
-          rule: makeFixedRule(),
+          rule: { ...floatingRule, rotateSeatOrder: false },
         }),
         /league rule is locked after the first match/,
       );
@@ -371,6 +384,15 @@ test(
         },
       );
       const secondMatchResults = secondMatch.results;
+      assert.deepEqual(
+        secondMatchResults.map(({ userId, wind }) => ({ userId, wind })),
+        [
+          { userId: "0001", wind: "east" },
+          { userId: "0002", wind: "south" },
+          { userId: "0003", wind: "west" },
+          { userId: "0004", wind: "north" },
+        ],
+      );
       const projectionsAfterCreate =
         await userMatchStatisticsRepository.listForScope({
           scopeType: "season",

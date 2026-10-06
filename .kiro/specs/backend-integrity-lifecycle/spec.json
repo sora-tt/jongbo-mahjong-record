@@ -1,12 +1,12 @@
 {
   "name": "backend-integrity-lifecycle",
   "displayName": "BEゲーム整合性・集計ライフサイクル",
-  "description": "Session・Matchの入力整合性、チョンボ/卓外供託による点数差分、UserStatsチョンボ回数、match index、集計、削除、active season、user_statsの再構築可能なライフサイクルを整備する。",
+  "description": "Session・Matchの入力整合性、チョンボ/卓外供託による点数差分、UserStatsチョンボ回数、match index、rule lock、集計、削除、active season、user_statsの再構築可能なライフサイクルを整備する。",
   "version": "1.0.0",
   "language": "ja",
   "phase": "tasks-generated",
   "created_at": "2026-09-25T00:00:00Z",
-  "updated_at": "2026-10-01T05:55:34Z",
+  "updated_at": "2026-10-06T03:12:43Z",
   "approvals": {
     "requirements": {
       "generated": true,
