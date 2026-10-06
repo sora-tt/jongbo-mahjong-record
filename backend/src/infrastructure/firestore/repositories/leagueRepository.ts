@@ -514,6 +514,16 @@ export class FirestoreLeagueRepository implements LeagueRepository {
       );
     }
     const allowOffTableKyotaku = storedAllowOffTableKyotaku ?? false;
+    const storedRotateSeatOrder = rule.rotate_seat_order;
+    if (
+      storedRotateSeatOrder !== undefined &&
+      typeof storedRotateSeatOrder !== "boolean"
+    ) {
+      throw new TypeError(
+        "invalid Firestore field: leagues.rule.rotate_seat_order",
+      );
+    }
+    const rotateSeatOrder = storedRotateSeatOrder ?? false;
     const umaMode =
       "mode" in uma
         ? requiredString(uma.mode, "leagues.rule.uma.mode")
@@ -584,6 +594,7 @@ export class FirestoreLeagueRepository implements LeagueRepository {
         oka: mappedOka,
         chomboPenaltyPoints,
         allowOffTableKyotaku,
+        rotateSeatOrder,
       } satisfies LeagueRule;
     }
 
@@ -613,6 +624,7 @@ export class FirestoreLeagueRepository implements LeagueRepository {
         oka: mappedOka,
         chomboPenaltyPoints,
         allowOffTableKyotaku,
+        rotateSeatOrder,
       } satisfies LeagueRule;
     }
 
@@ -627,6 +639,7 @@ export class FirestoreLeagueRepository implements LeagueRepository {
       oka: mappedOka,
       chomboPenaltyPoints,
       allowOffTableKyotaku,
+      rotateSeatOrder,
     } satisfies LeagueRule;
   }
 
@@ -650,6 +663,7 @@ export class FirestoreLeagueRepository implements LeagueRepository {
         },
         chombo_penalty_points: rule.chomboPenaltyPoints,
         allow_off_table_kyotaku: rule.allowOffTableKyotaku,
+        rotate_seat_order: rule.rotateSeatOrder,
       };
     }
 
@@ -668,6 +682,7 @@ export class FirestoreLeagueRepository implements LeagueRepository {
       },
       chombo_penalty_points: rule.chomboPenaltyPoints,
       allow_off_table_kyotaku: rule.allowOffTableKyotaku,
+      rotate_seat_order: rule.rotateSeatOrder,
     };
   }
 }

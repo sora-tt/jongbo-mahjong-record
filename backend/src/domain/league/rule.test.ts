@@ -23,6 +23,7 @@ const makeFloatingRule = (
       oka: { startingPoints: 25000, returnPoints: 25000 },
       chomboPenaltyPoints: 0,
       allowOffTableKyotaku: false,
+      rotateSeatOrder: false,
     }),
   ) as LeagueRule;
 
@@ -34,6 +35,7 @@ test("validateLeagueRule accepts zero-sum sanma uma", () => {
       oka: { startingPoints: 35000, returnPoints: 35000 },
       chomboPenaltyPoints: 0,
       allowOffTableKyotaku: false,
+      rotateSeatOrder: false,
     }),
   );
 });
@@ -53,6 +55,7 @@ test("validateLeagueRule rejects non-zero-sum uma", () => {
         oka: { startingPoints: 25000, returnPoints: 30000 },
         chomboPenaltyPoints: 0,
         allowOffTableKyotaku: false,
+        rotateSeatOrder: false,
       }),
     /rule\.uma must total zero/,
   );
@@ -69,6 +72,7 @@ test("validateLeagueRule enforces the fourth uma semantics", () => {
             oka: { startingPoints: 35000, returnPoints: 35000 },
             chomboPenaltyPoints: 0,
             allowOffTableKyotaku: false,
+            rotateSeatOrder: false,
           }),
         ),
       ),
@@ -89,6 +93,7 @@ test("validateLeagueRule enforces the fourth uma semantics", () => {
           oka: { startingPoints: 25000, returnPoints: 30000 },
           chomboPenaltyPoints: 0,
           allowOffTableKyotaku: false,
+          rotateSeatOrder: false,
         }),
       ),
     ),

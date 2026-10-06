@@ -52,6 +52,7 @@ const leagueRuleSchema = z.discriminatedUnion("gameType", [
     uma: fixedSanmaUmaSchema,
     chomboPenaltyPoints: z.number().int().nonnegative().default(0),
     allowOffTableKyotaku: z.boolean().default(false),
+    rotateSeatOrder: z.boolean().default(false),
   }),
   z.object({
     gameType: z.literal("yonma"),
@@ -62,6 +63,7 @@ const leagueRuleSchema = z.discriminatedUnion("gameType", [
     uma: z.union([fixedYonmaUmaSchema, floatingCountUmaSchema]),
     chomboPenaltyPoints: z.number().int().nonnegative().default(0),
     allowOffTableKyotaku: z.boolean().default(false),
+    rotateSeatOrder: z.boolean().default(false),
   }),
 ]) satisfies z.ZodType<CreateLeagueInput["rule"]>;
 

@@ -146,6 +146,7 @@ test(
           oka: { startingPoints: 25000, returnPoints: 30000 },
           chomboPenaltyPoints: 0,
           allowOffTableKyotaku: false,
+          rotateSeatOrder: false,
         },
         memberUserIds: memberIds,
       });

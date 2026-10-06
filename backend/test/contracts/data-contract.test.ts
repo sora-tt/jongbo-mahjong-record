@@ -36,13 +36,23 @@ test("league rule is embedded and has only the canonical fields", () => {
     gameType: "yonma",
     uma: { first: 20, second: 10, third: -10, fourth: -20 },
     oka: { startingPoints: 25_000, returnPoints: 30_000 },
+    chomboPenaltyPoints: 0,
+    allowOffTableKyotaku: false,
+    rotateSeatOrder: true,
   } satisfies LeagueRule;
 
   assert.equal(
     rule.uma.first + rule.uma.second + rule.uma.third + rule.uma.fourth,
     0,
   );
-  assert.deepEqual(Object.keys(rule).sort(), ["gameType", "oka", "uma"]);
+  assert.deepEqual(Object.keys(rule).sort(), [
+    "allowOffTableKyotaku",
+    "chomboPenaltyPoints",
+    "gameType",
+    "oka",
+    "rotateSeatOrder",
+    "uma",
+  ]);
 });
 
 test("Firestore schema documents bounded personal statistics and match projections", () => {
