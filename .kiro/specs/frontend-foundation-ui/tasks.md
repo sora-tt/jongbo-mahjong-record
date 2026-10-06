@@ -130,7 +130,7 @@
   - _Requirements: 8.3, 8.5, 8.7, 8.8_
   - _Boundary: Header and AppShell_
 
-- [ ] 6.4 HeaderとLeague/Stats data sourceのapp compositionを接続する
+- [x] 6.4 HeaderとLeague/Stats data sourceのapp compositionを接続する
   - League Featureのnavigation dataと既存Statistics route builderのlinkをHeader navigation modelへ渡す。
   - League/Season取得はHeader内で行わず、League Featureが担当するAPI stateを表示に利用する。
   - 完了時、認証済みAppShellからAPI由来のLeague/Season linkと既存Stats routeへ移動でき、Headerに重複したHome linkがない。

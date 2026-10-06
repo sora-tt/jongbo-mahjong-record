@@ -4,6 +4,8 @@ import "./styles/globals.css";
 
 import { Metadata } from "next";
 
+import { NavigationModelProvider } from "@/app/navigation-model-provider";
+
 import { AppProviders } from "@/components/app/providers";
 
 export const metadata: Metadata = {
@@ -15,7 +17,9 @@ const RootLayout: React.FC<RootLayoutProps> = ({ children }) => {
   return (
     <html lang="ja">
       <body>
-        <AppProviders>{children}</AppProviders>
+        <AppProviders>
+          <NavigationModelProvider>{children}</NavigationModelProvider>
+        </AppProviders>
       </body>
     </html>
   );
