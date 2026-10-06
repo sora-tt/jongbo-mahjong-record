@@ -149,7 +149,7 @@
   - _Requirements: 2.4, 5.1, 5.3_
   - _Boundary: Session Hooks and UI, Route Integration_
 
-- [ ] 7.3 追加Matchの初期席順と修正値の保存を接続する
+- [x] 7.3 追加Matchの初期席順と修正値の保存を接続する
   - rotationが有効で保存済みMatchがある場合は最大`matchIndex`のMatchを基準に次のseat assignmentを初期表示し、disabledまたは初回Matchでは既存のSession member順を使う。
   - 利用者がフォーム内で席割当を変更できるようにし、追加Match APIには現在の選択値を保存する。
   - 次のMatchは一つ前に実際に保存されたseat assignmentから初期化し、未保存の修正を持ち越さない。
