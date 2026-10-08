@@ -279,6 +279,19 @@ export const getApiErrorMessage = (error: unknown, fallback: string) => {
     return fallback;
   }
 
+  if (error.status === 429) {
+    const retryAfterSeconds =
+      typeof error.details.retryAfterSeconds === "number"
+        ? error.details.retryAfterSeconds
+        : null;
+
+    if (retryAfterSeconds !== null && retryAfterSeconds > 0) {
+      return `${Math.ceil(retryAfterSeconds)}秒後に再送信できます。`;
+    }
+
+    return "時間をおいて再度お試しください。";
+  }
+
   if (error.status === 401 || error.code === "authentication_error") {
     return "ログイン状態を確認できません。再度ログインしてください。";
   }

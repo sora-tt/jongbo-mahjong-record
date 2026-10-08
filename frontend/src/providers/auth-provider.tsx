@@ -51,6 +51,12 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({
         return;
       }
 
+      console.info("[auth-debug]", "authProvider:state-changed", {
+        pathname,
+        hasUser: Boolean(nextUser),
+        emailVerified: nextUser?.emailVerified ?? null,
+      });
+
       setUser(nextUser);
       setIsLoading(false);
     }).then((nextUnsubscribe) => {
@@ -69,7 +75,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({
   }, []);
 
   React.useEffect(() => {
-    if (!user || user.emailVerified || pathname === "/verify-email") {
+    if (!user || pathname === "/verify-email") {
       return;
     }
 
@@ -77,7 +83,67 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({
       return;
     }
 
-    router.replace("/verify-email");
+    if (user.emailVerified) {
+      console.info("[auth-debug]", "authProvider:skip-redirect", {
+        pathname,
+        reason: "emailVerified=true",
+      });
+      return;
+    }
+
+    let isActive = true;
+
+    void (async () => {
+      try {
+        console.info("[auth-debug]", "authProvider:verify-before-redirect", {
+          pathname,
+          uid: user.uid,
+          emailVerified: user.emailVerified,
+        });
+        await user.reload();
+        const idTokenResult = await user.getIdTokenResult(true);
+        const isEmailVerified =
+          user.emailVerified || idTokenResult.claims.email_verified === true;
+
+        console.info("[auth-debug]", "authProvider:verify-result", {
+          pathname,
+          emailVerifiedProperty: user.emailVerified,
+          emailVerifiedClaim: idTokenResult.claims.email_verified === true,
+          isEmailVerified,
+        });
+
+        if (!isActive || isEmailVerified) {
+          return;
+        }
+
+        console.warn("[auth-debug]", "authProvider:redirect-verify-email", {
+          pathname,
+          reason: "still unverified",
+        });
+        router.replace("/verify-email");
+      } catch (error) {
+        if (!isActive) {
+          return;
+        }
+
+        console.error("[auth-debug]", "authProvider:verify-error", {
+          pathname,
+          error:
+            error instanceof Error
+              ? {
+                  name: error.name,
+                  message: error.message,
+                }
+              : error,
+        });
+
+        router.replace("/verify-email");
+      }
+    })();
+
+    return () => {
+      isActive = false;
+    };
   }, [pathname, router, user]);
 
   const value = {

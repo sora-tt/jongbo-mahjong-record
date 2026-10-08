@@ -21,5 +21,16 @@ export const getVerificationAction = (search: string): VerificationAction => {
   };
 };
 
+export const shouldAutoSendVerificationEmail = (search: string) => {
+  const source = search.startsWith("?")
+    ? search.slice(1)
+    : search.includes("://")
+      ? new URL(search).search.slice(1)
+      : search;
+
+  const params = new URLSearchParams(source);
+  return params.get("sent") !== "1";
+};
+
 export const getRetryMessage = (seconds: number) =>
   `${Math.max(0, seconds)}秒後に再送信できます`;
