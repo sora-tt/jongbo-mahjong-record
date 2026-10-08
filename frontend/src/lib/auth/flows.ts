@@ -37,7 +37,11 @@ export const loginToApp = async (input: {
   password: string;
 }) => {
   const credential = await loginWithEmail(input.email, input.password);
-  const idToken = await credential.user.getIdToken();
+
+  // Refresh user state so emailVerified reflects the latest verification status.
+  await credential.user.reload();
+
+  const idToken = await credential.user.getIdToken(true);
   await createSession(idToken);
 
   if (!credential.user.emailVerified) {
