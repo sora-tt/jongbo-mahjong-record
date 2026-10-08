@@ -69,7 +69,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({
   }, []);
 
   React.useEffect(() => {
-    if (!user || user.emailVerified || pathname === "/verify-email") {
+    if (!user || pathname === "/verify-email") {
       return;
     }
 
@@ -77,7 +77,36 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({
       return;
     }
 
-    router.replace("/verify-email");
+    if (user.emailVerified) {
+      return;
+    }
+
+    let isActive = true;
+
+    void (async () => {
+      try {
+        await user.reload();
+        const idTokenResult = await user.getIdTokenResult(true);
+        const isEmailVerified =
+          user.emailVerified || idTokenResult.claims.email_verified === true;
+
+        if (!isActive || isEmailVerified) {
+          return;
+        }
+
+        router.replace("/verify-email");
+      } catch {
+        if (!isActive) {
+          return;
+        }
+
+        router.replace("/verify-email");
+      }
+    })();
+
+    return () => {
+      isActive = false;
+    };
   }, [pathname, router, user]);
 
   const value = {
