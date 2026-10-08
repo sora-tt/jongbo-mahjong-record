@@ -27,6 +27,7 @@ const VerifyEmailPageContent: React.FC = () => {
   const [error, setError] = React.useState<string | null>(null);
   const [retryAfterSeconds, setRetryAfterSeconds] = React.useState(0);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const hasInitializedSentCooldown = React.useRef(false);
 
   const refreshCooldown = React.useCallback((seconds: number) => {
     setRetryAfterSeconds(Math.max(0, seconds));
@@ -49,6 +50,21 @@ const VerifyEmailPageContent: React.FC = () => {
       setError(null);
       setStatus("pending");
     } catch (submitError) {
+      const firebaseErrorCode =
+        submitError &&
+        typeof submitError === "object" &&
+        "code" in submitError &&
+        typeof submitError.code === "string"
+          ? submitError.code
+          : null;
+
+      if (firebaseErrorCode === "auth/too-many-requests") {
+        setStatus("pending");
+        setError(null);
+        refreshCooldown(60);
+        return;
+      }
+
       const retryAfterSecondsFromError =
         submitError instanceof ApiError
           ? (submitError.details.retryAfterSeconds ?? 0)
@@ -105,8 +121,14 @@ const VerifyEmailPageContent: React.FC = () => {
 
     if (shouldAutoSendVerificationEmail(searchParams.toString())) {
       void handleSendVerificationEmail();
+      return;
     }
-  }, [handleSendVerificationEmail, searchParams]);
+
+    if (!hasInitializedSentCooldown.current) {
+      refreshCooldown(60);
+      hasInitializedSentCooldown.current = true;
+    }
+  }, [handleSendVerificationEmail, refreshCooldown, searchParams]);
 
   React.useEffect(() => {
     if (retryAfterSeconds <= 0) {

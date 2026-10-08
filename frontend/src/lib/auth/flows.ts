@@ -85,17 +85,6 @@ export const signupToApp = async (input: {
   await createSession(idToken);
   await sendFirebaseVerificationEmail(credential.user);
 
-  // Do not block redirect on profile sync. Home page will retry if needed.
-  void (async () => {
-    try {
-      await createMe({ name: input.name, username: input.username });
-    } catch (error) {
-      if (!isTransientApiFailure(error)) {
-        throw error;
-      }
-    }
-  })();
-
   return "/verify-email?sent=1" as const;
 };
 
