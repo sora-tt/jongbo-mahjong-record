@@ -8,6 +8,15 @@ import {
   signupWithEmail,
 } from "@/lib/firebase/auth";
 
+const logAuthDebug = (event: string, detail?: Record<string, unknown>) => {
+  if (detail) {
+    console.info("[auth-debug]", event, detail);
+    return;
+  }
+
+  console.info("[auth-debug]", event);
+};
+
 const getFallbackUsername = (email: string) =>
   email
     .split("@")[0]
@@ -36,19 +45,33 @@ export const loginToApp = async (input: {
   email: string;
   password: string;
 }) => {
+  logAuthDebug("loginToApp:start");
   const credential = await loginWithEmail(input.email, input.password);
+  logAuthDebug("loginToApp:firebase-signin-success", {
+    uid: credential.user.uid,
+  });
 
   // Refresh user state so emailVerified reflects the latest verification status.
   await credential.user.reload();
+  logAuthDebug("loginToApp:user-reloaded", {
+    emailVerified: credential.user.emailVerified,
+  });
 
   const idTokenResult = await credential.user.getIdTokenResult(true);
   const isEmailVerified =
     credential.user.emailVerified ||
     idTokenResult.claims.email_verified === true;
+  logAuthDebug("loginToApp:verification-evaluated", {
+    emailVerifiedProperty: credential.user.emailVerified,
+    emailVerifiedClaim: idTokenResult.claims.email_verified === true,
+    isEmailVerified,
+  });
 
   await createSession(idTokenResult.token);
+  logAuthDebug("loginToApp:session-created");
 
   if (!isEmailVerified) {
+    logAuthDebug("loginToApp:redirect", { nextPath: "/verify-email" });
     return "/verify-email" as const;
   }
 
@@ -74,6 +97,7 @@ export const loginToApp = async (input: {
     }
   })();
 
+  logAuthDebug("loginToApp:redirect", { nextPath: "/" });
   return "/" as const;
 };
 

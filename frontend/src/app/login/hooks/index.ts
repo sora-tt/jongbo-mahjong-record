@@ -14,13 +14,24 @@ export const useLoginPage = () => {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   const handleSubmit = async () => {
+    console.info("[auth-debug]", "loginPage:submit");
     setError(null);
     setIsSubmitting(true);
 
     try {
       const nextPath = await loginToApp({ email, password });
+      console.info("[auth-debug]", "loginPage:nextPath", { nextPath });
       router.replace(nextPath);
     } catch (submitError) {
+      console.error("[auth-debug]", "loginPage:error", {
+        error:
+          submitError instanceof Error
+            ? {
+                name: submitError.name,
+                message: submitError.message,
+              }
+            : submitError,
+      });
       setError(
         submitError instanceof Error
           ? submitError.message

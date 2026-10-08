@@ -33,12 +33,18 @@ export const useHome = () => {
     let isActive = true;
 
     const load = async () => {
+      console.info("[auth-debug]", "home:load-start", { retryCount });
       setIsLoading(true);
       setError(null);
 
       try {
         const me = await fetchMe();
         const joinedLeagues = await fetchLeagues();
+
+        console.info("[auth-debug]", "home:load-success", {
+          userId: me.id,
+          leagues: joinedLeagues.length,
+        });
 
         if (!isActive) {
           return;
@@ -48,11 +54,26 @@ export const useHome = () => {
         setUserName(me.name);
         setLeagues(joinedLeagues.map(toLeagueSummary));
       } catch (loadError) {
+        console.error("[auth-debug]", "home:load-error", {
+          error:
+            loadError instanceof Error
+              ? {
+                  name: loadError.name,
+                  message: loadError.message,
+                }
+              : loadError,
+          status: loadError instanceof ApiError ? loadError.status : null,
+          code: loadError instanceof ApiError ? loadError.code : null,
+        });
+
         if (!isActive) {
           return;
         }
 
         if (loadError instanceof ApiError && loadError.status === 401) {
+          console.warn("[auth-debug]", "home:redirect-login", {
+            reason: "status 401",
+          });
           router.replace("/login");
           return;
         }
@@ -62,6 +83,9 @@ export const useHome = () => {
             const fbUser = await getCurrentUser();
 
             if (!fbUser) {
+              console.warn("[auth-debug]", "home:redirect-login", {
+                reason: "status 404 and no firebase user",
+              });
               router.replace("/login");
               return;
             }
@@ -73,6 +97,11 @@ export const useHome = () => {
               ),
             });
             const joinedLeagues = await fetchLeagues();
+
+            console.info("[auth-debug]", "home:repair-success", {
+              userId: profile.id,
+              leagues: joinedLeagues.length,
+            });
 
             if (!isActive) {
               return;
