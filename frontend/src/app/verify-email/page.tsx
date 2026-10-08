@@ -5,10 +5,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 
-import {
-  confirmVerificationEmail,
-  sendVerificationEmail,
-} from "@/lib/api/auth";
+import { confirmVerificationEmail } from "@/lib/api/auth";
 import { ApiError, getApiErrorMessage } from "@/lib/api/core";
 import {
   getAuthRedirectTarget,
@@ -16,7 +13,10 @@ import {
   getVerificationAction,
   shouldAutoSendVerificationEmail,
 } from "@/lib/auth/verification";
-import { getCurrentUser } from "@/lib/firebase/auth";
+import {
+  getCurrentUser,
+  sendVerificationEmail as sendFirebaseVerificationEmail,
+} from "@/lib/firebase/auth";
 
 const VerifyEmailPageContent: React.FC = () => {
   const router = useRouter();
@@ -37,13 +37,15 @@ const VerifyEmailPageContent: React.FC = () => {
     setError(null);
 
     try {
-      const response = await sendVerificationEmail();
-      const retryAfterSeconds =
-        typeof response.retryAfterSeconds === "number"
-          ? response.retryAfterSeconds
-          : 60;
+      const currentUser = await getCurrentUser();
+      if (!currentUser) {
+        setStatus("error");
+        setError("ログイン状態が無効です。ログインし直してください。");
+        return;
+      }
 
-      refreshCooldown(retryAfterSeconds);
+      await sendFirebaseVerificationEmail(currentUser);
+      refreshCooldown(60);
       setError(null);
       setStatus("pending");
     } catch (submitError) {
@@ -51,13 +53,6 @@ const VerifyEmailPageContent: React.FC = () => {
         submitError instanceof ApiError
           ? (submitError.details.retryAfterSeconds ?? 0)
           : 0;
-
-      if (submitError instanceof ApiError && submitError.status === 429) {
-        setStatus("pending");
-        setError(null);
-        refreshCooldown(Number(retryAfterSecondsFromError || 60));
-        return;
-      }
 
       setError(
         getApiErrorMessage(submitError, "認証メールの送信に失敗しました")
