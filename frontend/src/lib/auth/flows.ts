@@ -41,10 +41,14 @@ export const loginToApp = async (input: {
   // Refresh user state so emailVerified reflects the latest verification status.
   await credential.user.reload();
 
-  const idToken = await credential.user.getIdToken(true);
-  await createSession(idToken);
+  const idTokenResult = await credential.user.getIdTokenResult(true);
+  const isEmailVerified =
+    credential.user.emailVerified ||
+    idTokenResult.claims.email_verified === true;
 
-  if (!credential.user.emailVerified) {
+  await createSession(idTokenResult.token);
+
+  if (!isEmailVerified) {
     return "/verify-email" as const;
   }
 
