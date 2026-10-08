@@ -37,18 +37,32 @@ const VerifyEmailPageContent: React.FC = () => {
     setError(null);
 
     try {
-      await sendVerificationEmail();
-      refreshCooldown(60);
+      const response = await sendVerificationEmail();
+      const retryAfterSeconds =
+        typeof response.retryAfterSeconds === "number"
+          ? response.retryAfterSeconds
+          : 60;
+
+      refreshCooldown(retryAfterSeconds);
+      setError(null);
       setStatus("pending");
     } catch (submitError) {
-      setError(
-        getApiErrorMessage(submitError, "認証メールの送信に失敗しました")
-      );
-      setStatus("error");
       const retryAfterSecondsFromError =
         submitError instanceof ApiError
           ? (submitError.details.retryAfterSeconds ?? 0)
           : 0;
+
+      if (submitError instanceof ApiError && submitError.status === 429) {
+        setStatus("pending");
+        setError(null);
+        refreshCooldown(Number(retryAfterSecondsFromError || 60));
+        return;
+      }
+
+      setError(
+        getApiErrorMessage(submitError, "認証メールの送信に失敗しました")
+      );
+      setStatus("error");
       refreshCooldown(Number(retryAfterSecondsFromError));
     } finally {
       setIsSubmitting(false);
