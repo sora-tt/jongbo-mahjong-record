@@ -5,17 +5,18 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 
-import { confirmVerificationEmail } from "@/lib/api/auth";
+import {
+  confirmVerificationEmail,
+  sendVerificationEmail,
+} from "@/lib/api/auth";
 import { ApiError, getApiErrorMessage } from "@/lib/api/core";
 import {
   getAuthRedirectTarget,
   getRetryMessage,
   getVerificationAction,
+  shouldAutoSendVerificationEmail,
 } from "@/lib/auth/verification";
-import {
-  getCurrentUser,
-  sendVerificationEmail as sendFirebaseVerificationEmail,
-} from "@/lib/firebase/auth";
+import { getCurrentUser } from "@/lib/firebase/auth";
 
 const VerifyEmailPageContent: React.FC = () => {
   const router = useRouter();
@@ -36,31 +37,18 @@ const VerifyEmailPageContent: React.FC = () => {
     setError(null);
 
     try {
-      await sendFirebaseVerificationEmail();
+      await sendVerificationEmail();
       refreshCooldown(60);
       setStatus("pending");
     } catch (submitError) {
-      const retryableError =
-        submitError instanceof ApiError
-          ? submitError
-          : new ApiError(
-              submitError instanceof Error
-                ? submitError.message
-                : "認証メールの送信に失敗しました",
-              null,
-              null,
-              {},
-              "api"
-            );
-
-      const message = getApiErrorMessage(
-        retryableError,
-        "認証メールの送信に失敗しました"
+      setError(
+        getApiErrorMessage(submitError, "認証メールの送信に失敗しました")
       );
-      setError(message);
       setStatus("error");
       const retryAfterSecondsFromError =
-        retryableError.details.retryAfterSeconds ?? 0;
+        submitError instanceof ApiError
+          ? (submitError.details.retryAfterSeconds ?? 0)
+          : 0;
       refreshCooldown(Number(retryAfterSecondsFromError));
     } finally {
       setIsSubmitting(false);
@@ -106,7 +94,9 @@ const VerifyEmailPageContent: React.FC = () => {
       return;
     }
 
-    void handleSendVerificationEmail();
+    if (shouldAutoSendVerificationEmail(searchParams.toString())) {
+      void handleSendVerificationEmail();
+    }
   }, [handleSendVerificationEmail, searchParams]);
 
   React.useEffect(() => {

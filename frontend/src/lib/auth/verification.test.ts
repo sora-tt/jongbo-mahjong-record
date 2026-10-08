@@ -6,6 +6,7 @@ import {
   getAuthRedirectTarget,
   getVerificationAction,
   getRetryMessage,
+  shouldAutoSendVerificationEmail,
 } from "@/lib/auth/verification";
 
 test("redirects unverified users to the verification waiting page", () => {
@@ -25,6 +26,20 @@ test("parses verification action and retry text from query params", () => {
   });
 
   assert.equal(getRetryMessage(90), "90秒後に再送信できます");
+});
+
+test("skips auto-send when signup flow already sent verification email", () => {
+  assert.equal(shouldAutoSendVerificationEmail("?sent=1"), false);
+  assert.equal(
+    shouldAutoSendVerificationEmail("?mode=verify&oobCode=abc123"),
+    true
+  );
+  assert.equal(
+    shouldAutoSendVerificationEmail(
+      "https://example.com/verify-email?sent=1&mode=verify"
+    ),
+    false
+  );
 });
 
 test("prefers the configured API base URL in production", () => {
