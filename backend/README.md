@@ -144,8 +144,10 @@ curl -X DELETE http://127.0.0.1:8080/api/auth/session \
 - Framework Preset: `Other`（`vercel.json` の `framework: null` で指定）
 - Build Command: `pnpm compile`（`vercel.json` で指定）
 - Install Command: 省略可
-- Output Directory: 未指定
+- Output Directory: `public`（`vercel.json` で指定）
 - Functions entrypoint: `api/index.js`
+
+`Framework Preset: Other` でビルドコマンドを実行するため、静的出力先の `public/` も用意しています。静的ファイルはこのディレクトリのみを公開し、`dist/` は Functions の読み込みに使用します。
 
 `vercel.json` の `routes` で `/api` とその配下の全パスを単一の Functions entrypoint へ転送します。キャプチャを持たない正規表現を使い、ルートパラメータをクエリへ追加しません。元のリクエストパスとクエリに対するルーティング・検証は Hono が担当するため、`/api/leagues/{leagueId}/members` やシーズン・セッション配下の深いパスも処理できます。
 

@@ -16,8 +16,9 @@
 ### バックエンドのルーティング設定
 
 - Git 連携でリポジトリを取り込む場合、Root Directory は `backend` にします。GitHub Actions は既に `backend/` を作業ディレクトリにしています。
-- Framework Preset は `Other`、Output Directory は未指定にします。
-- `backend/vercel.json` が Framework Preset と Build Command (`pnpm compile`) を指定します。追加の環境変数や Dashboard 上のルーティングルール設定は不要です。
+- Framework Preset は `Other`、Output Directory は `public` にします。
+- `backend/vercel.json` が Framework Preset、Build Command (`pnpm compile`)、Output Directory (`public`) を指定します。追加の環境変数や Dashboard 上のルーティングルール設定は不要です。
+- `Other` でビルドコマンドを指定すると静的出力先も必要です。`backend/public/robots.txt` を配置して出力先を確保しています。`dist/` は Functions 用のコンパイル結果で、静的出力先には指定しません。
 - `routes` の `/api(?:/.*)?` で `/api` とその配下を `api/index.js` へ転送し、元のパスとクエリを Hono が処理します。キャプチャを使わないので、転送用のパラメータがクエリに追加されません。通常の Functions の `[...route].js` に複数階層の catch-all 動作を依存させません。
 - 設定変更を反映するには、修正を含むバックエンドを再デプロイします。以前のデプロイをそのまま再実行するだけでは反映されません。
 
