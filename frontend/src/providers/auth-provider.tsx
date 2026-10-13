@@ -5,6 +5,7 @@ import * as React from "react";
 import { usePathname, useRouter } from "next/navigation";
 
 import { logoutFromApp } from "@/lib/auth/flows";
+import { logAuthDebug } from "@/lib/debug/auth-debug";
 import { subscribeAuthState, type FirebaseUser } from "@/lib/firebase/auth";
 import { hasFirebaseConfig } from "@/lib/firebase/client";
 
@@ -51,7 +52,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({
         return;
       }
 
-      console.info("[auth-debug]", "authProvider:state-changed", {
+      logAuthDebug("authProvider:state-changed", {
         pathname,
         hasUser: Boolean(nextUser),
         emailVerified: nextUser?.emailVerified ?? null,
@@ -84,7 +85,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({
     }
 
     if (user.emailVerified) {
-      console.info("[auth-debug]", "authProvider:skip-redirect", {
+      logAuthDebug("authProvider:skip-redirect", {
         pathname,
         reason: "emailVerified=true",
       });
@@ -95,7 +96,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({
 
     void (async () => {
       try {
-        console.info("[auth-debug]", "authProvider:verify-before-redirect", {
+        logAuthDebug("authProvider:verify-before-redirect", {
           pathname,
           uid: user.uid,
           emailVerified: user.emailVerified,
@@ -105,7 +106,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({
         const isEmailVerified =
           user.emailVerified || idTokenResult.claims.email_verified === true;
 
-        console.info("[auth-debug]", "authProvider:verify-result", {
+        logAuthDebug("authProvider:verify-result", {
           pathname,
           emailVerifiedProperty: user.emailVerified,
           emailVerifiedClaim: idTokenResult.claims.email_verified === true,
@@ -116,26 +117,34 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({
           return;
         }
 
-        console.warn("[auth-debug]", "authProvider:redirect-verify-email", {
-          pathname,
-          reason: "still unverified",
-        });
+        logAuthDebug(
+          "authProvider:redirect-verify-email",
+          {
+            pathname,
+            reason: "still unverified",
+          },
+          "warn"
+        );
         router.replace("/verify-email");
       } catch (error) {
         if (!isActive) {
           return;
         }
 
-        console.error("[auth-debug]", "authProvider:verify-error", {
-          pathname,
-          error:
-            error instanceof Error
-              ? {
-                  name: error.name,
-                  message: error.message,
-                }
-              : error,
-        });
+        logAuthDebug(
+          "authProvider:verify-error",
+          {
+            pathname,
+            error:
+              error instanceof Error
+                ? {
+                    name: error.name,
+                    message: error.message,
+                  }
+                : error,
+          },
+          "error"
+        );
 
         router.replace("/verify-email");
       }

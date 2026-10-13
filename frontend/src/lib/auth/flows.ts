@@ -1,21 +1,13 @@
 import { createSession, deleteSession } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/core";
 import { createMe, fetchMe } from "@/lib/api/users";
+import { logAuthDebug } from "@/lib/debug/auth-debug";
 import {
   loginWithEmail,
   logout,
   sendVerificationEmail as sendFirebaseVerificationEmail,
   signupWithEmail,
 } from "@/lib/firebase/auth";
-
-const logAuthDebug = (event: string, detail?: Record<string, unknown>) => {
-  if (detail) {
-    console.info("[auth-debug]", event, detail);
-    return;
-  }
-
-  console.info("[auth-debug]", event);
-};
 
 const getFallbackUsername = (email: string) =>
   email
