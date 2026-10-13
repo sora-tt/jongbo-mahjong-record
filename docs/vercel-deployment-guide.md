@@ -13,6 +13,16 @@
 - backend project: `jongbo-mahjong-record-backend`
 - それぞれの workflow は `main` への push と手動実行 (`workflow_dispatch`) で動作します。
 
+### バックエンドのルーティング設定
+
+- Git 連携でリポジトリを取り込む場合、Root Directory は `backend` にします。GitHub Actions は既に `backend/` を作業ディレクトリにしています。
+- Framework Preset は `Other`、Output Directory は未指定にします。
+- `backend/vercel.json` が Framework Preset と Build Command (`pnpm compile`) を指定します。追加の環境変数や Dashboard 上のルーティングルール設定は不要です。
+- `routes` の `/api(?:/.*)?` で `/api` とその配下を `api/index.js` へ転送し、元のパスとクエリを Hono が処理します。キャプチャを使わないので、転送用のパラメータがクエリに追加されません。通常の Functions の `[...route].js` に複数階層の catch-all 動作を依存させません。
+- 設定変更を反映するには、修正を含むバックエンドを再デプロイします。以前のデプロイをそのまま再実行するだけでは反映されません。
+
+デプロイ後は、認証情報なしで `GET /api/leagues/{leagueId}/members` や `GET /api/leagues/{leagueId}/seasons` を呼び、Hono の JSON 形式の401 (`authentication_error`) が返ることを確認します。Vercel の `x-vercel-error: NOT_FOUND` が返る場合は、Functions に到達していません。ログイン済みの画面では、これらの取得が成功して参加者・シーズン一覧が表示されることを確認します。
+
 ## 再実行と切り戻し
 
 ### 再実行

@@ -1,0 +1,11 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "buildCommand": "pnpm compile",
+  "routes": [
+    {
+      "src": "/api(?:/.*)?",
+      "dest": "/api/index.js"
+    }
+  ]
+}
