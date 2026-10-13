@@ -38,6 +38,7 @@ const SeasonPage: React.FC = () => {
     seasonId,
     leagueName,
     season,
+    seasonNotFound,
     sessions,
     titles,
     pointProgressionChart,
@@ -76,7 +77,25 @@ const SeasonPage: React.FC = () => {
   }
 
   if (!season) {
-    return null;
+    return (
+      <AppShell mainClassName="min-h-screen bg-background font-jp">
+        <div className="mx-auto max-w-2xl px-4 py-8 sm:px-6 lg:px-8">
+          <EmptyState
+            title={
+              seasonNotFound
+                ? "シーズンが見つかりません"
+                : "シーズン情報がありません"
+            }
+            description="リーグ詳細からシーズンを選び直してください。"
+            action={
+              <Link href={`/league/${leagueId}`}>
+                <Button variant="secondary">リーグ詳細へ戻る</Button>
+              </Link>
+            }
+          />
+        </div>
+      </AppShell>
+    );
   }
 
   return (

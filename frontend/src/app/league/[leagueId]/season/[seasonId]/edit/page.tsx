@@ -7,6 +7,7 @@ import Link from "next/link";
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { Input } from "@/components/ui/input";
 import { LoadingState } from "@/components/ui/loading-state";
@@ -23,6 +24,7 @@ const SeasonEditPage: React.FC = () => {
     members,
     isLoading,
     isLoaded,
+    notFound,
     isSubmitting,
     error,
     setSeasonName,
@@ -38,6 +40,24 @@ const SeasonEditPage: React.FC = () => {
           label="シーズン情報を読み込んでいます…"
           className="min-h-[calc(100vh-4rem)]"
         />
+      </AppShell>
+    );
+  }
+
+  if (notFound) {
+    return (
+      <AppShell mainClassName="min-h-screen bg-background font-jp">
+        <div className="mx-auto max-w-2xl px-4 py-8 sm:px-6 lg:px-8">
+          <EmptyState
+            title="シーズンが見つかりません"
+            description="リーグ詳細からシーズンを選び直してください。"
+            action={
+              <Link href={`/league/${leagueId}`}>
+                <Button variant="secondary">リーグ詳細へ戻る</Button>
+              </Link>
+            }
+          />
+        </div>
       </AppShell>
     );
   }

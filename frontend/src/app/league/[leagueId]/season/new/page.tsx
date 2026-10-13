@@ -24,6 +24,7 @@ const SeasonNewPage: React.FC = () => {
     selectedMembers,
     seasonName,
     loading,
+    notFound,
     isSubmitting,
     error,
     handleMemberToggle,
@@ -38,6 +39,24 @@ const SeasonNewPage: React.FC = () => {
           label="シーズン作成画面を読み込んでいます…"
           className="min-h-[calc(100vh-4rem)]"
         />
+      </AppShell>
+    );
+  }
+
+  if (notFound) {
+    return (
+      <AppShell mainClassName="min-h-screen bg-background font-jp">
+        <div className="mx-auto max-w-2xl px-4 py-8 sm:px-6 lg:px-8">
+          <EmptyState
+            title="リーグが見つかりません"
+            description="リーグ一覧に戻って選び直してください。"
+            action={
+              <Link href="/">
+                <Button variant="secondary">リーグ一覧へ戻る</Button>
+              </Link>
+            }
+          />
+        </div>
       </AppShell>
     );
   }

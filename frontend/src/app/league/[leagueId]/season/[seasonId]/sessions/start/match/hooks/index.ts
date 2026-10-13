@@ -55,6 +55,7 @@ export const useRecordMatchPage = () => {
     };
   });
   const [isLoading, setIsLoading] = React.useState(true);
+  const [notFound, setNotFound] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -75,6 +76,7 @@ export const useRecordMatchPage = () => {
 
     const load = async () => {
       setIsLoading(true);
+      setNotFound(false);
       setError(null);
       try {
         const [league, season] = await Promise.all([
@@ -104,6 +106,10 @@ export const useRecordMatchPage = () => {
         if (!isActive) return;
         if (loadError instanceof ApiError && loadError.status === 401) {
           router.replace("/login");
+          return;
+        }
+        if (loadError instanceof ApiError && loadError.status === 404) {
+          setNotFound(true);
           return;
         }
         setError(getApiErrorMessage(loadError, DEFAULT_ERROR_MESSAGE));
@@ -221,6 +227,7 @@ export const useRecordMatchPage = () => {
     chomboPenaltyPoints,
     allowOffTableKyotaku,
     isLoading,
+    notFound,
     isSubmitting,
     error,
     handleSubmit,

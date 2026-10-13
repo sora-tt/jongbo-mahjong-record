@@ -8,6 +8,7 @@ import { MatchList } from "@/features/match/ui/MatchList";
 
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { HeaderCard } from "@/components/ui/header-card";
 import { LoadingState } from "@/components/ui/loading-state";
@@ -23,6 +24,7 @@ const SessionResultsPage: React.FC = () => {
     isEnding,
     deletingMatchId,
     deleteTargetMatchId,
+    notFound,
     error,
     endError,
     retry,
@@ -33,6 +35,7 @@ const SessionResultsPage: React.FC = () => {
     handleRequestDeleteMatch,
     handleCancelDeleteMatch,
     handleConfirmDeleteMatch,
+    goToSeason,
   } = useSessionResultsPage();
 
   const formatSessionDate = (value: string) =>
@@ -49,6 +52,16 @@ const SessionResultsPage: React.FC = () => {
           <LoadingState
             label="Sessionの結果を読み込んでいます…"
             className="min-h-[calc(100vh-4rem)]"
+          />
+        ) : notFound ? (
+          <EmptyState
+            title="Sessionが見つかりません"
+            description="シーズン詳細に戻ってSessionを選び直してください。"
+            action={
+              <Button variant="secondary" onClick={goToSeason}>
+                シーズン詳細へ戻る
+              </Button>
+            }
           />
         ) : error && !session ? (
           <ErrorState message={error} onRetry={retry} />

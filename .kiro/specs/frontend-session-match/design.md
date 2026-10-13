@@ -335,7 +335,7 @@ interface MatchFeatureApi {
 |---|---|
 | 401 / authentication_error | Auth boundaryへ委譲しloginへ誘導。入力を無関係なemptyへ変換しない |
 | 403 / forbidden | 権限不足のErrorState、戻るまたは再試行 |
-| 404 / not_found | 対象Session/MatchなしのErrorState、戻る導線 |
+| 404 / not_found | 対象Session/Matchなしの空状態、親画面へ戻る導線 |
 | 409 / conflict | Session固定、participant不一致、編集競合を説明し入力保持 |
 | validation_error | field/form messageへ安全に表示し入力保持 |
 | internal_error | 内部detailsを露出せず汎用的に再試行 |

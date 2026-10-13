@@ -23,6 +23,7 @@ const PlayerSelectPage: React.FC = () => {
     requiredWinds,
     players,
     isLoading,
+    notFound,
     isSubmitting,
     error,
     canSubmit,
@@ -39,6 +40,17 @@ const PlayerSelectPage: React.FC = () => {
       <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-xl flex-col justify-center px-4 py-8">
         {isLoading ? (
           <LoadingState label="プレイヤー候補を読み込んでいます…" />
+        ) : null}
+        {!isLoading && notFound ? (
+          <EmptyState
+            title="シーズンが見つかりません"
+            description="リーグ詳細からシーズンを選び直してください。"
+            action={
+              <Button variant="secondary" onClick={handleBack}>
+                戻る
+              </Button>
+            }
+          />
         ) : null}
         {!isLoading && error ? (
           <ErrorState message={error} onRetry={retry} />

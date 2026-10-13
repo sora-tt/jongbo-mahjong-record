@@ -18,6 +18,7 @@ import { LeagueRuleEditor } from "@/features/league/ui/league-rule-editor";
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { Input } from "@/components/ui/input";
 import { LoadingState } from "@/components/ui/loading-state";
@@ -33,6 +34,7 @@ const EditLeaguePage: React.FC = () => {
     isSearchingMembers,
     loading,
     isLoaded,
+    notFound,
     isSubmitting,
     error,
     isRuleLocked,
@@ -63,6 +65,24 @@ const EditLeaguePage: React.FC = () => {
           label="リーグ情報を読み込んでいます…"
           className="min-h-[calc(100vh-4rem)]"
         />
+      </AppShell>
+    );
+  }
+
+  if (notFound) {
+    return (
+      <AppShell mainClassName="min-h-screen bg-background font-jp">
+        <div className="mx-auto flex w-full max-w-[390px] px-4 pb-8 pt-4">
+          <EmptyState
+            title="リーグが見つかりません"
+            description="リーグ一覧に戻って選び直してください。"
+            action={
+              <Link href="/">
+                <Button variant="secondary">リーグ一覧へ戻る</Button>
+              </Link>
+            }
+          />
+        </div>
       </AppShell>
     );
   }

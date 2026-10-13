@@ -190,6 +190,11 @@ export const useLeagueNavigation = () => {
 
         if (loadError instanceof ApiError && loadError.status === 401) {
           router.replace("/login");
+          return;
+        }
+        if (loadError instanceof ApiError && loadError.status === 404) {
+          setSeasonState(leagueId, { status: "empty", items: [] });
+          return;
         }
         setSeasonState(leagueId, {
           status: "error",

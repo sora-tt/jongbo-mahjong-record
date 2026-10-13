@@ -212,7 +212,7 @@ sequenceDiagram
 
 固定scope summaryのresponseは、選択条件、`generatedAt`、`timeZone`、`totalMatchCount`、`sessionCount`、`totalPoints`、`averageFinalPoint`、`byGameType[].ranks`、`rawScore`/`finalPoint`の平均・最大・最小・中央値・母標準偏差、符号別件数/率、順位別平均、`records`、`streaks`、`recentResults`とする。全対局の`progression[]`は含めず、未算出値は`null`、0件は`status: "empty"`で識別する。
 
-`generatedAt`は対象scopeの`user_stats.updatedAt`を返す。scope文書がない、または`personal_statistics_version < 1`なら`status: "uncomputed"`の200 responseを返す。versionが1でmatch countが0なら`empty`、1件以上なら`ready`とする。scope自体が存在しない場合は404とし、未計算とは区別する。`from`/`to`がないsummaryは既存UserStats文書から返す。任意期間を指定したsummaryだけはprojectionを期間で絞って都度集計する。
+`generatedAt`は対象scopeの`user_stats.updatedAt`を返す。scope文書がない、または`personal_statistics_version < 1`なら`status: "uncomputed"`の200 responseを返す。versionが1でmatch countが0なら`empty`、1件以上なら`ready`とする。scope自体が存在しない場合は404とし、未計算とは区別する。FEではscope不在の404を対象範囲の空状態として表示する。`from`/`to`がないsummaryは既存UserStats文書から返す。任意期間を指定したsummaryだけはprojectionを期間で絞って都度集計する。
 
 analysisは`dimension`に対応する判別可能なbreakdown unionと、最大50件の推移点を一つのresponseで返す。`windowSize`は10/20/50とし、推移は同じ分析queryの対象範囲の新しい側を使う。割合には分母の件数を返す。analysisのbreakdownは選択scopeのprojectionからサーバー側で集計する。matches itemは日時、リーグ/シーズン名、セッション、ゲーム形式、本人の席・順位・素点・最終ポイント、同卓者を含む。履歴ページサイズの既定値は50、最大値は100とし、cursorはopaqueにする。
 

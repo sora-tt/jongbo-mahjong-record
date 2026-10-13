@@ -27,10 +27,14 @@ const LeaguePage: React.FC = () => {
     currentHighestScore,
     currentLowestScore,
     leagueSeasons,
+    seasonsLoading,
+    seasonsError,
+    retrySeasons,
     members,
     membersLoading,
     membersError,
     loading,
+    notFound,
     error,
     retry,
   } = useLeaguePage();
@@ -42,6 +46,24 @@ const LeaguePage: React.FC = () => {
           label="リーグ情報を読み込んでいます…"
           className="min-h-[calc(100vh-4rem)]"
         />
+      </AppShell>
+    );
+  }
+
+  if (notFound) {
+    return (
+      <AppShell mainClassName="min-h-screen bg-background font-jp">
+        <div className="mx-auto max-w-2xl px-4 py-8 sm:px-6 lg:px-8">
+          <EmptyState
+            title="リーグが見つかりません"
+            description="リーグ一覧に戻って選び直してください。"
+            action={
+              <Link href="/">
+                <Button variant="secondary">リーグ一覧へ戻る</Button>
+              </Link>
+            }
+          />
+        </div>
       </AppShell>
     );
   }
@@ -217,7 +239,11 @@ const LeaguePage: React.FC = () => {
             </Link>
           </div>
 
-          {leagueSeasons.length === 0 ? (
+          {seasonsLoading ? (
+            <LoadingState label="シーズン一覧を読み込んでいます…" />
+          ) : seasonsError ? (
+            <ErrorState message={seasonsError} onRetry={retrySeasons} />
+          ) : leagueSeasons.length === 0 ? (
             <EmptyState
               className="!bg-transparent"
               title="まだシーズンが作成されていません"
