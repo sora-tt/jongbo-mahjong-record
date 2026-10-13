@@ -141,9 +141,15 @@ curl -X DELETE http://127.0.0.1:8080/api/auth/session \
 ### backend project の設定
 
 - Root Directory: `backend`
-- Build Command: 省略可
+- Framework Preset: `Other`（`vercel.json` の `framework: null` で指定）
+- Build Command: `pnpm compile`（`vercel.json` で指定）
 - Install Command: 省略可
-- Functions entrypoint: `api/[[...route]].ts`
+- Output Directory: 未指定
+- Functions entrypoint: `api/index.js`
+
+`vercel.json` の `routes` で `/api` とその配下の全パスを単一の Functions entrypoint へ転送します。キャプチャを持たない正規表現を使い、ルートパラメータをクエリへ追加しません。元のリクエストパスとクエリに対するルーティング・検証は Hono が担当するため、`/api/leagues/{leagueId}/members` やシーズン・セッション配下の深いパスも処理できます。
+
+通常の Vercel Functions の `[...route].js` は Next.js の catch-all route としては扱われないため、パス階層ごとの Functions entrypoint は作成しません。ルーティング設定はリポジトリに含まれるので、Vercel Dashboard でルーティングルールを追加する必要はありません。変更の反映にはバックエンドの再デプロイが必要です。
 
 この最小構成では Vercel 上で公開するのは `/api/*` エンドポイントのみです。
 
