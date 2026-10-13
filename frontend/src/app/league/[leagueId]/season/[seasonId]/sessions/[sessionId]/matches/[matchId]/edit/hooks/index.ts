@@ -39,6 +39,7 @@ export const useEditMatchPage = () => {
   const [allowOffTableKyotaku, setAllowOffTableKyotaku] = React.useState(false);
   const [values, setValues] = React.useState<MatchFormValues | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
+  const [notFound, setNotFound] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [retryCount, setRetryCount] = React.useState(0);
@@ -53,6 +54,7 @@ export const useEditMatchPage = () => {
     }
     const load = async () => {
       setIsLoading(true);
+      setNotFound(false);
       setError(null);
       setValues(null);
       try {
@@ -72,6 +74,10 @@ export const useEditMatchPage = () => {
         if (!isActive) return;
         if (loadError instanceof ApiError && loadError.status === 401) {
           router.replace("/login");
+          return;
+        }
+        if (loadError instanceof ApiError && loadError.status === 404) {
+          setNotFound(true);
           return;
         }
         setError(getApiErrorMessage(loadError, DEFAULT_ERROR_MESSAGE));
@@ -170,6 +176,7 @@ export const useEditMatchPage = () => {
     chomboPenaltyPoints,
     allowOffTableKyotaku,
     isLoading,
+    notFound,
     isSubmitting,
     error,
     retry: () => setRetryCount((count) => count + 1),

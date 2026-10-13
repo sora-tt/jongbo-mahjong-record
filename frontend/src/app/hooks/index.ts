@@ -19,6 +19,17 @@ const getFallbackUsername = (email: string) =>
 const DEFAULT_ERROR_MESSAGE =
   "ホーム画面の取得に失敗しました。時間をおいて再度お試しください。";
 
+const fetchHomeLeagues = async () => {
+  try {
+    return await fetchLeagues();
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) {
+      return [];
+    }
+    throw error;
+  }
+};
+
 type LeagueSummary = ReturnType<typeof toLeagueSummary>;
 
 export const useHome = () => {
@@ -40,7 +51,7 @@ export const useHome = () => {
 
       try {
         const me = await fetchMe();
-        const joinedLeagues = await fetchLeagues();
+        const joinedLeagues = await fetchHomeLeagues();
 
         logAuthDebug("home:load-success", {
           userId: me.id,
@@ -109,7 +120,7 @@ export const useHome = () => {
                 fbUser.email ?? fbUser.displayName ?? "user"
               ),
             });
-            const joinedLeagues = await fetchLeagues();
+            const joinedLeagues = await fetchHomeLeagues();
 
             logAuthDebug("home:repair-success", {
               userId: profile.id,

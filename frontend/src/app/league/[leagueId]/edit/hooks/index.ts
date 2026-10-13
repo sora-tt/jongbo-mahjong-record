@@ -47,6 +47,7 @@ export const useLeagueEdit = () => {
   const [isSearchingMembers, setIsSearchingMembers] = React.useState(false);
   const [loading, setLoading] = React.useState(true);
   const [isLoaded, setIsLoaded] = React.useState(false);
+  const [notFound, setNotFound] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [submitError, setSubmitError] = React.useState<string | null>(null);
@@ -75,6 +76,7 @@ export const useLeagueEdit = () => {
     const load = async () => {
       setLoading(true);
       setIsLoaded(false);
+      setNotFound(false);
       setError(null);
 
       try {
@@ -108,6 +110,11 @@ export const useLeagueEdit = () => {
 
         if (loadError instanceof ApiError && loadError.status === 401) {
           router.replace("/login");
+          return;
+        }
+
+        if (loadError instanceof ApiError && loadError.status === 404) {
+          setNotFound(true);
           return;
         }
 
@@ -173,6 +180,10 @@ export const useLeagueEdit = () => {
         }
 
         setMemberCandidates([]);
+        if (searchError instanceof ApiError && searchError.status === 404) {
+          setError(null);
+          return;
+        }
         setError(getApiErrorMessage(searchError, "メンバー検索に失敗しました"));
       } finally {
         if (isActive) {
@@ -338,6 +349,7 @@ export const useLeagueEdit = () => {
     isSearchingMembers,
     loading,
     isLoaded,
+    notFound,
     isSubmitting,
     error,
     submitError,

@@ -231,7 +231,8 @@ interface SeasonFeatureApi {
 | `rotateSeatOrder`未選択 | falseを初期値として保持し、rule payloadへbooleanを送る | APIはbooleanを受け付け、legacy欠損ruleはfalseとして返す |
 | validation error | API detailsを安全なfield/form messageへ表示 | `validation_error` |
 | 未認証 | Auth boundaryへ委譲してloginへ遷移 | `authentication_error`/401 |
-| 権限なし・対象なし | 画面内error stateと戻る/retry | `forbidden`/`not_found` |
+| 権限なし | 権限不足の画面内error stateと戻る/retry | `forbidden` |
+| 対象なし | 空状態と親画面へ戻る導線を表示 | `not_found` |
 | rule lock・active重複 | 入力を保持し、競合理由と再確認操作を表示 | `conflict` |
 | network・timeout・decode | retry可能な共通error state | transport/decode error |
 

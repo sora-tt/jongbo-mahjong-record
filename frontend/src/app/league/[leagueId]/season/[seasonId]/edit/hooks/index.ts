@@ -22,6 +22,7 @@ export const useSeasonEdit = () => {
   const [members, setMembers] = React.useState<SeasonMember[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [isLoaded, setIsLoaded] = React.useState(false);
+  const [notFound, setNotFound] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [retryCount, setRetryCount] = React.useState(0);
@@ -38,6 +39,7 @@ export const useSeasonEdit = () => {
     const load = async () => {
       setIsLoading(true);
       setIsLoaded(false);
+      setNotFound(false);
       setError(null);
 
       try {
@@ -60,6 +62,11 @@ export const useSeasonEdit = () => {
 
         if (loadError instanceof ApiError && loadError.status === 401) {
           router.replace("/login");
+          return;
+        }
+
+        if (loadError instanceof ApiError && loadError.status === 404) {
+          setNotFound(true);
           return;
         }
 
@@ -122,6 +129,7 @@ export const useSeasonEdit = () => {
     members,
     isLoading,
     isLoaded,
+    notFound,
     isSubmitting,
     error,
     setSeasonName,

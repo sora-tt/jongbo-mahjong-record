@@ -53,6 +53,7 @@ export const useSessionResultsPage = () => {
   const [expandedMatchId, setExpandedMatchId] = React.useState<string | null>(
     null
   );
+  const [notFound, setNotFound] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [endError, setEndError] = React.useState<string | null>(null);
   const [retryCount, setRetryCount] = React.useState(0);
@@ -68,16 +69,37 @@ export const useSessionResultsPage = () => {
 
       if (options?.showLoading ?? true) setIsLoading(true);
       setError(null);
+      setNotFound(false);
       try {
-        const [sessionDto, matchesDto] = await Promise.all([
+        const [sessionResult, matchesResult] = await Promise.allSettled([
           fetchSessionDetail({ leagueId, seasonId, sessionId }),
           fetchMatches({ leagueId, seasonId, sessionId }),
         ]);
-        setSession(toSession(sessionDto));
-        setMatches(toMatchList(matchesDto));
+
+        if (sessionResult.status === "rejected") {
+          throw sessionResult.reason;
+        }
+
+        setSession(toSession(sessionResult.value));
+        if (matchesResult.status === "fulfilled") {
+          setMatches(toMatchList(matchesResult.value));
+        } else if (
+          matchesResult.reason instanceof ApiError &&
+          matchesResult.reason.status === 404
+        ) {
+          setMatches([]);
+        } else {
+          throw matchesResult.reason;
+        }
       } catch (loadError) {
         if (loadError instanceof ApiError && loadError.status === 401) {
           router.replace("/login");
+          return;
+        }
+        if (loadError instanceof ApiError && loadError.status === 404) {
+          setSession(null);
+          setMatches([]);
+          setNotFound(true);
           return;
         }
         setError(getApiErrorMessage(loadError, DEFAULT_ERROR_MESSAGE));
@@ -170,6 +192,7 @@ export const useSessionResultsPage = () => {
     deletingMatchId,
     deleteTargetMatchId,
     expandedMatchId,
+    notFound,
     error,
     endError,
     retry: () => setRetryCount((count) => count + 1),

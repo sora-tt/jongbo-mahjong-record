@@ -41,6 +41,7 @@ export const useSeasonPage = () => {
   const [loading, setLoading] = React.useState(true);
   const [sessionsLoading, setSessionsLoading] = React.useState(true);
   const [sessionsError, setSessionsError] = React.useState<string | null>(null);
+  const [seasonNotFound, setSeasonNotFound] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [retryCount, setRetryCount] = React.useState(0);
 
@@ -60,6 +61,7 @@ export const useSeasonPage = () => {
       setLoading(true);
       setError(null);
       setLeagueName("");
+      setSeasonNotFound(false);
 
       setSessionsLoading(true);
       setSessionsError(null);
@@ -75,12 +77,20 @@ export const useSeasonPage = () => {
 
       if (seasonResult.status === "fulfilled") {
         setSeason(toSeasonDetail(seasonResult.value));
+        setSeasonNotFound(false);
         setError(null);
       } else if (
         seasonResult.reason instanceof ApiError &&
         seasonResult.reason.status === 401
       ) {
         router.replace("/login");
+      } else if (
+        seasonResult.reason instanceof ApiError &&
+        seasonResult.reason.status === 404
+      ) {
+        setSeason(null);
+        setSeasonNotFound(true);
+        setError(null);
       } else {
         setError(
           getApiErrorMessage(seasonResult.reason, DEFAULT_ERROR_MESSAGE)
@@ -95,6 +105,12 @@ export const useSeasonPage = () => {
         sessionsResult.reason.status === 401
       ) {
         router.replace("/login");
+      } else if (
+        sessionsResult.reason instanceof ApiError &&
+        sessionsResult.reason.status === 404
+      ) {
+        setSessions([]);
+        setSessionsError(null);
       } else {
         setSessionsError(
           getApiErrorMessage(
@@ -226,6 +242,7 @@ export const useSeasonPage = () => {
     leagueName,
     season,
     sessions,
+    seasonNotFound,
     titles,
     pointProgressionChart,
     chartSeries,

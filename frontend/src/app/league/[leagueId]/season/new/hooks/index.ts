@@ -32,6 +32,7 @@ export const useSeasonNew = () => {
   const [seasonName, setSeasonName] = React.useState("");
   const [status, setStatus] = React.useState<SeasonStatus>("active");
   const [loading, setLoading] = React.useState(true);
+  const [notFound, setNotFound] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -46,12 +47,21 @@ export const useSeasonNew = () => {
 
     const load = async () => {
       setLoading(true);
+      setNotFound(false);
       setError(null);
 
       try {
         const [league, members] = await Promise.all([
           fetchLeagueDetail(leagueId),
-          fetchLeagueMembers(leagueId),
+          fetchLeagueMembers(leagueId).catch((membersError: unknown) => {
+            if (
+              membersError instanceof ApiError &&
+              membersError.status === 404
+            ) {
+              return [];
+            }
+            throw membersError;
+          }),
         ]);
 
         if (!isActive) {
@@ -81,6 +91,11 @@ export const useSeasonNew = () => {
 
         if (loadError instanceof ApiError && loadError.status === 401) {
           router.replace("/login");
+          return;
+        }
+
+        if (loadError instanceof ApiError && loadError.status === 404) {
+          setNotFound(true);
           return;
         }
 
@@ -182,6 +197,7 @@ export const useSeasonNew = () => {
     seasonName,
     status,
     loading,
+    notFound,
     isSubmitting,
     error,
     handleMemberToggle,

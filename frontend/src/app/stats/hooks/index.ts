@@ -55,6 +55,9 @@ const DEFAULT_QUERY_ERROR_MESSAGE =
 const DEFAULT_MEMBERS_ERROR_MESSAGE =
   "表示対象者の一覧を取得できませんでした。再試行してください。";
 
+const isNotFoundError = (error: unknown) =>
+  error instanceof ApiError && error.status === 404;
+
 type StatisticsHookApi = {
   getCurrentUser: typeof getCurrentUser;
   getPersonalStatisticsAnalysis: typeof getPersonalStatisticsAnalysis;
@@ -425,6 +428,12 @@ export const createUseStatistics = (
               api.listLeagues?.() ?? Promise.resolve([]),
             ]);
             if (!isActive) return;
+            const seasonsNotFound =
+              seasonsResult.status === "rejected" &&
+              isNotFoundError(seasonsResult.reason);
+            const leaguesNotFound =
+              leaguesResult.status === "rejected" &&
+              isNotFoundError(leaguesResult.reason);
             if (seasonsResult.status === "fulfilled") {
               setJoiningLeagueSeasons(
                 seasonsResult.value.map((season) => {
@@ -435,13 +444,17 @@ export const createUseStatistics = (
                   };
                 })
               );
+            } else if (seasonsNotFound) {
+              setJoiningLeagueSeasons([]);
             }
             if (leaguesResult.status === "fulfilled") {
               setJoiningLeagues(leaguesResult.value.map(toLeagueSummary));
+            } else if (leaguesNotFound) {
+              setJoiningLeagues([]);
             }
             setHubDataStatus(
-              seasonsResult.status === "fulfilled" &&
-                leaguesResult.status === "fulfilled"
+              (seasonsResult.status === "fulfilled" || seasonsNotFound) &&
+                (leaguesResult.status === "fulfilled" || leaguesNotFound)
                 ? "ready"
                 : "error"
             );
@@ -554,14 +567,14 @@ export const createUseStatistics = (
           }
           const currentSelection = selectionRef.current;
           const failure = resolveStatisticsMembersFailure(currentSelection);
+          const membersNotFound = isNotFoundError(membersError);
           setMembersState({
             key: scopeKey,
-            status: failure.rosterStatus,
+            status: membersNotFound ? "ready" : failure.rosterStatus,
             data: [],
-            error: getApiErrorMessage(
-              membersError,
-              DEFAULT_MEMBERS_ERROR_MESSAGE
-            ),
+            error: membersNotFound
+              ? null
+              : getApiErrorMessage(membersError, DEFAULT_MEMBERS_ERROR_MESSAGE),
           });
           if (
             failure.selection.targetUserId !== currentSelection.targetUserId
@@ -655,6 +668,15 @@ export const createUseStatistics = (
             return;
           if (loadError instanceof ApiError && loadError.status === 401) {
             router.replace("/login");
+          }
+          if (isNotFoundError(loadError)) {
+            setSummaryState({
+              key: summaryQueryKey,
+              status: "empty",
+              data: null,
+              error: null,
+            });
+            return;
           }
           setSummaryState({
             key: summaryQueryKey,
@@ -767,6 +789,15 @@ export const createUseStatistics = (
             return;
           if (loadError instanceof ApiError && loadError.status === 401) {
             router.replace("/login");
+          }
+          if (isNotFoundError(loadError)) {
+            setAnalysisState({
+              key: analysisQueryKey,
+              status: "empty",
+              data: null,
+              error: null,
+            });
+            return;
           }
           setAnalysisState({
             key: analysisQueryKey,
@@ -894,6 +925,15 @@ export const createUseStatistics = (
           if (loadError instanceof ApiError && loadError.status === 401) {
             router.replace("/login");
           }
+          if (isNotFoundError(loadError)) {
+            setSupplementalAnalysisState({
+              key: supplementalAnalysisKey,
+              status: "ready",
+              data: cachedData,
+              error: null,
+            });
+            return;
+          }
           setSupplementalAnalysisState({
             key: supplementalAnalysisKey,
             status: "error",
@@ -1009,6 +1049,20 @@ export const createUseStatistics = (
           }
           if (loadError instanceof ApiError && loadError.status === 401) {
             router.replace("/login");
+          }
+          if (isNotFoundError(loadError)) {
+            setHistoryState({
+              key: historyBaseQueryKey,
+              status: "empty",
+              data: null,
+              error: null,
+            });
+            setSelection((current) =>
+              historyBaseKeyRef.current === historyBaseQueryKey
+                ? { ...current, historyCursor: null }
+                : current
+            );
+            return;
           }
           setHistoryState({
             key: historyBaseQueryKey,
@@ -1207,6 +1261,28 @@ export const createUseStatistics = (
         ) {
           if (loadError instanceof ApiError && loadError.status === 401) {
             router.replace("/login");
+          }
+          if (isNotFoundError(loadError)) {
+            setHistoryError(null);
+            if (historyState.data?.status === "ready") {
+              const lastPage = {
+                ...historyState.data,
+                nextCursor: null,
+              };
+              queryCache.current.set(historyBaseQueryKey, lastPage);
+              setHistoryState({
+                key: historyBaseQueryKey,
+                status: "ready",
+                data: lastPage,
+                error: null,
+              });
+            }
+            setSelection((current) =>
+              historyBaseKeyRef.current === historyBaseQueryKey
+                ? { ...current, historyCursor: null }
+                : current
+            );
+            return;
           }
           setHistoryError(
             getApiErrorMessage(loadError, DEFAULT_QUERY_ERROR_MESSAGE)
@@ -1580,6 +1656,24 @@ export const createUseStatistics = (
           ) {
             if (loadError instanceof ApiError && loadError.status === 401) {
               router.replace("/login");
+            }
+            if (isNotFoundError(loadError)) {
+              const lastPage = {
+                ...currentAnalysis,
+                breakdown: {
+                  ...currentAnalysis.breakdown,
+                  nextCursor: null,
+                },
+              };
+              queryCache.current.set(analysisQueryKey, lastPage);
+              setAnalysisState({
+                key: analysisQueryKey,
+                status: "ready",
+                data: lastPage,
+                error: null,
+              });
+              setAnalysisMoreError(null);
+              return;
             }
             setAnalysisMoreError(
               getApiErrorMessage(loadError, DEFAULT_QUERY_ERROR_MESSAGE)

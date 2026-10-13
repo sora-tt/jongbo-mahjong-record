@@ -125,6 +125,10 @@ export const useLeagueNew = () => {
         }
 
         setMemberCandidates([]);
+        if (searchError instanceof ApiError && searchError.status === 404) {
+          setError(null);
+          return;
+        }
         setError(getApiErrorMessage(searchError, "メンバー検索に失敗しました"));
       } finally {
         if (isActive) {
