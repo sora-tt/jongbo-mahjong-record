@@ -6,6 +6,7 @@ import { fetchLeagues } from "@/features/league/api";
 import { toLeagueSummary } from "@/features/league/model/adapter";
 import { ApiError, getApiErrorMessage } from "@/lib/api/core";
 import { createMe, fetchMe } from "@/lib/api/users";
+import { logAuthDebug } from "@/lib/debug/auth-debug";
 import { getCurrentUser } from "@/lib/firebase/auth";
 
 const getFallbackUsername = (email: string) =>
@@ -33,12 +34,18 @@ export const useHome = () => {
     let isActive = true;
 
     const load = async () => {
+      logAuthDebug("home:load-start", { retryCount });
       setIsLoading(true);
       setError(null);
 
       try {
         const me = await fetchMe();
         const joinedLeagues = await fetchLeagues();
+
+        logAuthDebug("home:load-success", {
+          userId: me.id,
+          leagues: joinedLeagues.length,
+        });
 
         if (!isActive) {
           return;
@@ -48,11 +55,34 @@ export const useHome = () => {
         setUserName(me.name);
         setLeagues(joinedLeagues.map(toLeagueSummary));
       } catch (loadError) {
+        logAuthDebug(
+          "home:load-error",
+          {
+            error:
+              loadError instanceof Error
+                ? {
+                    name: loadError.name,
+                    message: loadError.message,
+                  }
+                : loadError,
+            status: loadError instanceof ApiError ? loadError.status : null,
+            code: loadError instanceof ApiError ? loadError.code : null,
+          },
+          "error"
+        );
+
         if (!isActive) {
           return;
         }
 
         if (loadError instanceof ApiError && loadError.status === 401) {
+          logAuthDebug(
+            "home:redirect-login",
+            {
+              reason: "status 401",
+            },
+            "warn"
+          );
           router.replace("/login");
           return;
         }
@@ -62,6 +92,13 @@ export const useHome = () => {
             const fbUser = await getCurrentUser();
 
             if (!fbUser) {
+              logAuthDebug(
+                "home:redirect-login",
+                {
+                  reason: "status 404 and no firebase user",
+                },
+                "warn"
+              );
               router.replace("/login");
               return;
             }
@@ -73,6 +110,11 @@ export const useHome = () => {
               ),
             });
             const joinedLeagues = await fetchLeagues();
+
+            logAuthDebug("home:repair-success", {
+              userId: profile.id,
+              leagues: joinedLeagues.length,
+            });
 
             if (!isActive) {
               return;

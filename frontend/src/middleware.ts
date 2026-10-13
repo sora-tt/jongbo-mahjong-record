@@ -1,27 +1,10 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
-import { SESSION_COOKIE_NAME } from "@/lib/auth/session";
-
-const isProtectedPath = (pathname: string) => pathname === "/";
-
-const isGuestOnlyPath = (pathname: string) =>
-  pathname === "/login" || pathname === "/signup";
-
-export const middleware = (request: NextRequest) => {
-  const sessionCookie = request.cookies.get(SESSION_COOKIE_NAME)?.value;
-  const { pathname } = request.nextUrl;
-
-  if (!sessionCookie && isProtectedPath(pathname)) {
-    return NextResponse.redirect(new URL("/login", request.url));
-  }
-
-  if (sessionCookie && isGuestOnlyPath(pathname)) {
-    return NextResponse.redirect(new URL("/", request.url));
-  }
-
-  return NextResponse.next();
-};
+// Session cookies are issued from the API origin, so they are not reliably
+// readable from the frontend origin middleware in production. Client-side auth
+// guards handle redirects after the app loads.
+export const middleware = (_request: NextRequest) => NextResponse.next();
 
 export const config = {
   matcher: ["/", "/login", "/signup"],

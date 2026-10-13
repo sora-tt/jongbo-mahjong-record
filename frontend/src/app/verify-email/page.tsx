@@ -11,6 +11,7 @@ import {
   getAuthRedirectTarget,
   getRetryMessage,
   getVerificationAction,
+  shouldAutoSendVerificationEmail,
 } from "@/lib/auth/verification";
 import {
   getCurrentUser,
@@ -26,6 +27,7 @@ const VerifyEmailPageContent: React.FC = () => {
   const [error, setError] = React.useState<string | null>(null);
   const [retryAfterSeconds, setRetryAfterSeconds] = React.useState(0);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const hasInitializedSentCooldown = React.useRef(false);
 
   const refreshCooldown = React.useCallback((seconds: number) => {
     setRetryAfterSeconds(Math.max(0, seconds));
@@ -36,31 +38,42 @@ const VerifyEmailPageContent: React.FC = () => {
     setError(null);
 
     try {
-      await sendFirebaseVerificationEmail();
+      const currentUser = await getCurrentUser();
+      if (!currentUser) {
+        setStatus("error");
+        setError("ログイン状態が無効です。ログインし直してください。");
+        return;
+      }
+
+      await sendFirebaseVerificationEmail(currentUser);
       refreshCooldown(60);
+      setError(null);
       setStatus("pending");
     } catch (submitError) {
-      const retryableError =
-        submitError instanceof ApiError
-          ? submitError
-          : new ApiError(
-              submitError instanceof Error
-                ? submitError.message
-                : "認証メールの送信に失敗しました",
-              null,
-              null,
-              {},
-              "api"
-            );
+      const firebaseErrorCode =
+        submitError &&
+        typeof submitError === "object" &&
+        "code" in submitError &&
+        typeof submitError.code === "string"
+          ? submitError.code
+          : null;
 
-      const message = getApiErrorMessage(
-        retryableError,
-        "認証メールの送信に失敗しました"
-      );
-      setError(message);
-      setStatus("error");
+      if (firebaseErrorCode === "auth/too-many-requests") {
+        setStatus("pending");
+        setError(null);
+        refreshCooldown(60);
+        return;
+      }
+
       const retryAfterSecondsFromError =
-        retryableError.details.retryAfterSeconds ?? 0;
+        submitError instanceof ApiError
+          ? (submitError.details.retryAfterSeconds ?? 0)
+          : 0;
+
+      setError(
+        getApiErrorMessage(submitError, "認証メールの送信に失敗しました")
+      );
+      setStatus("error");
       refreshCooldown(Number(retryAfterSecondsFromError));
     } finally {
       setIsSubmitting(false);
@@ -106,8 +119,16 @@ const VerifyEmailPageContent: React.FC = () => {
       return;
     }
 
-    void handleSendVerificationEmail();
-  }, [handleSendVerificationEmail, searchParams]);
+    if (shouldAutoSendVerificationEmail(searchParams.toString())) {
+      void handleSendVerificationEmail();
+      return;
+    }
+
+    if (!hasInitializedSentCooldown.current) {
+      refreshCooldown(60);
+      hasInitializedSentCooldown.current = true;
+    }
+  }, [handleSendVerificationEmail, refreshCooldown, searchParams]);
 
   React.useEffect(() => {
     if (retryAfterSeconds <= 0) {

@@ -5,6 +5,7 @@ import * as React from "react";
 import { usePathname, useRouter } from "next/navigation";
 
 import { logoutFromApp } from "@/lib/auth/flows";
+import { logAuthDebug } from "@/lib/debug/auth-debug";
 import { subscribeAuthState, type FirebaseUser } from "@/lib/firebase/auth";
 import { hasFirebaseConfig } from "@/lib/firebase/client";
 
@@ -51,6 +52,12 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({
         return;
       }
 
+      logAuthDebug("authProvider:state-changed", {
+        pathname,
+        hasUser: Boolean(nextUser),
+        emailVerified: nextUser?.emailVerified ?? null,
+      });
+
       setUser(nextUser);
       setIsLoading(false);
     }).then((nextUnsubscribe) => {
@@ -69,7 +76,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({
   }, []);
 
   React.useEffect(() => {
-    if (!user || user.emailVerified || pathname === "/verify-email") {
+    if (!user || pathname === "/verify-email") {
       return;
     }
 
@@ -77,7 +84,75 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({
       return;
     }
 
-    router.replace("/verify-email");
+    if (user.emailVerified) {
+      logAuthDebug("authProvider:skip-redirect", {
+        pathname,
+        reason: "emailVerified=true",
+      });
+      return;
+    }
+
+    let isActive = true;
+
+    void (async () => {
+      try {
+        logAuthDebug("authProvider:verify-before-redirect", {
+          pathname,
+          uid: user.uid,
+          emailVerified: user.emailVerified,
+        });
+        await user.reload();
+        const idTokenResult = await user.getIdTokenResult(true);
+        const isEmailVerified =
+          user.emailVerified || idTokenResult.claims.email_verified === true;
+
+        logAuthDebug("authProvider:verify-result", {
+          pathname,
+          emailVerifiedProperty: user.emailVerified,
+          emailVerifiedClaim: idTokenResult.claims.email_verified === true,
+          isEmailVerified,
+        });
+
+        if (!isActive || isEmailVerified) {
+          return;
+        }
+
+        logAuthDebug(
+          "authProvider:redirect-verify-email",
+          {
+            pathname,
+            reason: "still unverified",
+          },
+          "warn"
+        );
+        router.replace("/verify-email");
+      } catch (error) {
+        if (!isActive) {
+          return;
+        }
+
+        logAuthDebug(
+          "authProvider:verify-error",
+          {
+            pathname,
+            error:
+              error instanceof Error
+                ? {
+                    name: error.name,
+                    message: error.message,
+                  }
+                : error,
+          },
+          "error"
+        );
+
+        router.replace("/verify-email");
+      }
+    })();
+
+    return () => {
+      isActive = false;
+    };
   }, [pathname, router, user]);
 
   const value = {

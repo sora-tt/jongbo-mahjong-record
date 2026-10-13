@@ -5,6 +5,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 
 import { loginToApp } from "@/lib/auth/flows";
+import { clearAuthDebugLogs, logAuthDebug } from "@/lib/debug/auth-debug";
 
 export const useLoginPage = () => {
   const router = useRouter();
@@ -14,13 +15,29 @@ export const useLoginPage = () => {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   const handleSubmit = async () => {
+    clearAuthDebugLogs();
+    logAuthDebug("loginPage:submit");
     setError(null);
     setIsSubmitting(true);
 
     try {
       const nextPath = await loginToApp({ email, password });
+      logAuthDebug("loginPage:nextPath", { nextPath });
       router.replace(nextPath);
     } catch (submitError) {
+      logAuthDebug(
+        "loginPage:error",
+        {
+          error:
+            submitError instanceof Error
+              ? {
+                  name: submitError.name,
+                  message: submitError.message,
+                }
+              : submitError,
+        },
+        "error"
+      );
       setError(
         submitError instanceof Error
           ? submitError.message

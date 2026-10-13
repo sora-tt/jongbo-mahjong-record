@@ -1,6 +1,7 @@
 import { createSession, deleteSession } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/core";
 import { createMe, fetchMe } from "@/lib/api/users";
+import { logAuthDebug } from "@/lib/debug/auth-debug";
 import {
   loginWithEmail,
   logout,
@@ -36,11 +37,33 @@ export const loginToApp = async (input: {
   email: string;
   password: string;
 }) => {
+  logAuthDebug("loginToApp:start");
   const credential = await loginWithEmail(input.email, input.password);
-  const idToken = await credential.user.getIdToken();
-  await createSession(idToken);
+  logAuthDebug("loginToApp:firebase-signin-success", {
+    uid: credential.user.uid,
+  });
 
-  if (!credential.user.emailVerified) {
+  // Refresh user state so emailVerified reflects the latest verification status.
+  await credential.user.reload();
+  logAuthDebug("loginToApp:user-reloaded", {
+    emailVerified: credential.user.emailVerified,
+  });
+
+  const idTokenResult = await credential.user.getIdTokenResult(true);
+  const isEmailVerified =
+    credential.user.emailVerified ||
+    idTokenResult.claims.email_verified === true;
+  logAuthDebug("loginToApp:verification-evaluated", {
+    emailVerifiedProperty: credential.user.emailVerified,
+    emailVerifiedClaim: idTokenResult.claims.email_verified === true,
+    isEmailVerified,
+  });
+
+  await createSession(idTokenResult.token);
+  logAuthDebug("loginToApp:session-created");
+
+  if (!isEmailVerified) {
+    logAuthDebug("loginToApp:redirect", { nextPath: "/verify-email" });
     return "/verify-email" as const;
   }
 
@@ -66,6 +89,7 @@ export const loginToApp = async (input: {
     }
   })();
 
+  logAuthDebug("loginToApp:redirect", { nextPath: "/" });
   return "/" as const;
 };
 
@@ -85,18 +109,7 @@ export const signupToApp = async (input: {
   await createSession(idToken);
   await sendFirebaseVerificationEmail(credential.user);
 
-  // Do not block redirect on profile sync. Home page will retry if needed.
-  void (async () => {
-    try {
-      await createMe({ name: input.name, username: input.username });
-    } catch (error) {
-      if (!isTransientApiFailure(error)) {
-        throw error;
-      }
-    }
-  })();
-
-  return "/verify-email" as const;
+  return "/verify-email?sent=1" as const;
 };
 
 export const logoutFromApp = async () => {
