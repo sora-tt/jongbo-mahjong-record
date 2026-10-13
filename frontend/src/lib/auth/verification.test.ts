@@ -32,8 +32,9 @@ test("skips auto-send when signup flow already sent verification email", () => {
   assert.equal(shouldAutoSendVerificationEmail("?sent=1"), false);
   assert.equal(
     shouldAutoSendVerificationEmail("?mode=verify&oobCode=abc123"),
-    true
+    false
   );
+  assert.equal(shouldAutoSendVerificationEmail("?verified=1"), false);
   assert.equal(
     shouldAutoSendVerificationEmail(
       "https://example.com/verify-email?sent=1&mode=verify"
@@ -118,4 +119,10 @@ test("issue 84 acceptance: verified and unverified state transitions are consist
 
   assert.equal(getRetryMessage(0), "0秒後に再送信できます");
   assert.equal(getRetryMessage(45), "45秒後に再送信できます");
+  assert.equal(
+    shouldAutoSendVerificationEmail(
+      "https://example.com/verify-email?verified=1"
+    ),
+    false
+  );
 });

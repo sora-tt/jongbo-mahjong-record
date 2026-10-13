@@ -17,10 +17,12 @@ import {
   getCurrentUser,
   sendVerificationEmail as sendFirebaseVerificationEmail,
 } from "@/lib/firebase/auth";
+import { useAuth } from "@/providers/auth-provider";
 
 const VerifyEmailPageContent: React.FC = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { refreshVerifiedUser } = useAuth();
   const [status, setStatus] = React.useState<
     "checking" | "pending" | "success" | "error"
   >("pending");
@@ -32,6 +34,9 @@ const VerifyEmailPageContent: React.FC = () => {
   const refreshCooldown = React.useCallback((seconds: number) => {
     setRetryAfterSeconds(Math.max(0, seconds));
   }, []);
+
+  const searchParamsString = searchParams.toString();
+  const verifiedQuery = searchParams.get("verified") === "1";
 
   const handleSendVerificationEmail = React.useCallback(async () => {
     setIsSubmitting(true);
@@ -81,7 +86,7 @@ const VerifyEmailPageContent: React.FC = () => {
   }, [refreshCooldown]);
 
   React.useEffect(() => {
-    const action = getVerificationAction(searchParams.toString());
+    const action = getVerificationAction(searchParamsString);
 
     if (action.mode === "verify") {
       setStatus("checking");
@@ -98,14 +103,11 @@ const VerifyEmailPageContent: React.FC = () => {
 
         try {
           await confirmVerificationEmail(action.oobCode);
-
-          const currentUser = await getCurrentUser();
-          if (currentUser) {
-            await currentUser.reload();
-          }
+          await refreshVerifiedUser();
 
           setStatus("success");
           setError(null);
+          router.replace("/verify-email?verified=1");
         } catch (confirmError) {
           setStatus("error");
           setError(
@@ -119,7 +121,13 @@ const VerifyEmailPageContent: React.FC = () => {
       return;
     }
 
-    if (shouldAutoSendVerificationEmail(searchParams.toString())) {
+    if (verifiedQuery) {
+      setStatus("success");
+      setError(null);
+      return;
+    }
+
+    if (shouldAutoSendVerificationEmail(searchParamsString)) {
       void handleSendVerificationEmail();
       return;
     }
@@ -128,7 +136,14 @@ const VerifyEmailPageContent: React.FC = () => {
       refreshCooldown(60);
       hasInitializedSentCooldown.current = true;
     }
-  }, [handleSendVerificationEmail, refreshCooldown, searchParams]);
+  }, [
+    handleSendVerificationEmail,
+    refreshCooldown,
+    refreshVerifiedUser,
+    router,
+    searchParamsString,
+    verifiedQuery,
+  ]);
 
   React.useEffect(() => {
     if (retryAfterSeconds <= 0) {

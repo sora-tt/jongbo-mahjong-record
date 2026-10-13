@@ -17,6 +17,7 @@ type AuthContextValue = {
   status: AuthStatus;
   logout: () => Promise<void>;
   markUnauthenticated: () => void;
+  refreshVerifiedUser: () => Promise<void>;
 };
 
 const AuthContext = React.createContext<AuthContextValue | null>(null);
@@ -28,6 +29,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({
   const pathname = usePathname();
   const [user, setUser] = React.useState<FirebaseUser | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
+  const [authRevision, setAuthRevision] = React.useState(0);
 
   const handleLogout = React.useCallback(async () => {
     await logoutFromApp();
@@ -37,6 +39,15 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({
   const markUnauthenticated = React.useCallback(() => {
     setUser(null);
   }, []);
+
+  const refreshVerifiedUser = React.useCallback(async () => {
+    if (!user) {
+      return;
+    }
+
+    await user.reload();
+    setAuthRevision((currentRevision) => currentRevision + 1);
+  }, [user]);
 
   React.useEffect(() => {
     if (!hasFirebaseConfig()) {
@@ -153,7 +164,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({
     return () => {
       isActive = false;
     };
-  }, [pathname, router, user]);
+  }, [authRevision, pathname, router, user]);
 
   const value = {
     user,
@@ -165,6 +176,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({
         : ("unauthenticated" as const),
     logout: handleLogout,
     markUnauthenticated,
+    refreshVerifiedUser,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -29,7 +29,11 @@ export const shouldAutoSendVerificationEmail = (search: string) => {
       : search;
 
   const params = new URLSearchParams(source);
-  return params.get("sent") !== "1";
+  return (
+    params.get("sent") !== "1" &&
+    params.get("verified") !== "1" &&
+    params.get("mode") !== "verify"
+  );
 };
 
 export const getRetryMessage = (seconds: number) =>
