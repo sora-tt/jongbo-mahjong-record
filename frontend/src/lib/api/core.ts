@@ -54,6 +54,11 @@ const API_TIMEOUT_MS = 8_000;
 const trimTrailingSlash = (value: string) => value.replace(/\/$/, "");
 
 export const getApiBaseUrl = () => {
+  if (typeof window !== "undefined" && process.env.NODE_ENV === "production") {
+    // Keep API calls same-origin in production so session cookies stay first-party.
+    return window.location.origin;
+  }
+
   const configuredBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
 
   if (configuredBaseUrl) {
@@ -69,10 +74,6 @@ export const getApiBaseUrl = () => {
     }
 
     return trimTrailingSlash(apiUrl.toString());
-  }
-
-  if (typeof window !== "undefined" && process.env.NODE_ENV === "production") {
-    return window.location.origin;
   }
 
   return DEFAULT_LOCAL_API_BASE_URL;
