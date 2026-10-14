@@ -22,7 +22,7 @@ import { useAuth } from "@/providers/auth-provider";
 const VerifyEmailPageContent: React.FC = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { refreshVerifiedUser } = useAuth();
+  const { refreshVerifiedUser, user } = useAuth();
   const [status, setStatus] = React.useState<
     "checking" | "pending" | "success" | "error"
   >("pending");
@@ -121,7 +121,7 @@ const VerifyEmailPageContent: React.FC = () => {
       return;
     }
 
-    if (verifiedQuery) {
+    if (verifiedQuery || user?.emailVerified) {
       setStatus("success");
       setError(null);
       return;
@@ -142,6 +142,7 @@ const VerifyEmailPageContent: React.FC = () => {
     refreshVerifiedUser,
     router,
     searchParamsString,
+    user,
     verifiedQuery,
   ]);
 

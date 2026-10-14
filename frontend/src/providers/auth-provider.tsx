@@ -6,7 +6,11 @@ import { usePathname, useRouter } from "next/navigation";
 
 import { logoutFromApp } from "@/lib/auth/flows";
 import { logAuthDebug } from "@/lib/debug/auth-debug";
-import { subscribeAuthState, type FirebaseUser } from "@/lib/firebase/auth";
+import {
+  getCurrentUser,
+  subscribeAuthState,
+  type FirebaseUser,
+} from "@/lib/firebase/auth";
 import { hasFirebaseConfig } from "@/lib/firebase/client";
 
 export type AuthStatus = "loading" | "authenticated" | "unauthenticated";
@@ -41,11 +45,13 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({
   }, []);
 
   const refreshVerifiedUser = React.useCallback(async () => {
-    if (!user) {
+    const currentUser = user ?? (await getCurrentUser());
+    if (!currentUser) {
       return;
     }
 
-    await user.reload();
+    await currentUser.reload();
+    setUser(currentUser);
     setAuthRevision((currentRevision) => currentRevision + 1);
   }, [user]);
 
