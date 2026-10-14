@@ -42,7 +42,7 @@ test("skips auto-send when signup flow already sent verification email", () => {
   );
 });
 
-test("prefers the configured API base URL in production", () => {
+test("uses same-origin API base URL in production browser", () => {
   const previousWindow = (
     globalThis as typeof globalThis & {
       window?: { location: { origin: string; hostname: string } };
@@ -72,7 +72,7 @@ test("prefers the configured API base URL in production", () => {
   });
 
   try {
-    assert.equal(getApiBaseUrl(), "https://api.example.com");
+    assert.equal(getApiBaseUrl(), "https://app.example.com");
   } finally {
     if (previousEnvDescriptor) {
       Object.defineProperty(process, "env", previousEnvDescriptor);
