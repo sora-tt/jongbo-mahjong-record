@@ -102,7 +102,7 @@
   - _Requirements: 9.2, 10.2, 10.4, 10.5_
   - _Boundary: SeasonRepository_
 
-- [ ] 4.6 SeasonServiceで認可・リーグ所属検証・集計再実行を統合する
+- [x] 4.6 SeasonServiceで認可・リーグ所属検証・集計再実行を統合する
   - 現行Season memberに基づく認可を維持し、`addMemberUserIds`の全利用者が対象League memberであることを永続化前に検証して、1人でも不一致ならbatch全体を拒否する。
   - League memberからSeasonMember snapshotを作り、参加者追加入力がある要求では新規追加がなくても`StatsRebuilder.rebuildSeason(leagueId, seasonId)`を実行し、再集計後のSeasonDetailを返す。
   - 完了時、対局履歴を保持したまま対局数0・ポイント0の追加参加者を表示でき、再集計失敗後の同一request retryで二重登録されない。
