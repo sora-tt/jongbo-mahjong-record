@@ -3,6 +3,11 @@
   "framework": null,
   "buildCommand": "pnpm compile",
   "outputDirectory": "public",
+  "functions": {
+    "api/index.js": {
+      "maxDuration": 60
+    }
+  },
   "routes": [
     {
       "src": "/api(?:/.*)?",
