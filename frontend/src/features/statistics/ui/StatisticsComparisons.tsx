@@ -154,7 +154,6 @@ const SeatPerformance: React.FC<{
                       </span>
                     );
                   }}
-                  labelFormatter={(label) => `${label}家`}
                   contentStyle={{
                     borderColor: "var(--color-brand-300)",
                     borderRadius: "var(--radius-control)",
@@ -206,7 +205,7 @@ const SeatPerformance: React.FC<{
                     {showGameType ? (
                       <TableCell>{formatGameType(row.gameType)}</TableCell>
                     ) : null}
-                    <TableCell>{row.label}家</TableCell>
+                    <TableCell>{row.label}</TableCell>
                     <TableCell>{row.matchCount}</TableCell>
                     <TableCell>
                       {row.averageRank === null
