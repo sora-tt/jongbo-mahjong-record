@@ -9,7 +9,7 @@ import type {
 import type {
   CreateSeasonInput,
   SeasonRepository,
-  UpdateSeasonInput,
+  SeasonUpdateCommand,
 } from "@/domain/season/repository.js";
 import {
   nullableNumber,
@@ -144,7 +144,7 @@ export class FirestoreSeasonRepository implements SeasonRepository {
   async update(
     leagueId: string,
     seasonId: string,
-    input: UpdateSeasonInput,
+    command: SeasonUpdateCommand,
   ): Promise<SeasonDetail> {
     const leagueRef = this.db.collection("leagues").doc(leagueId);
     const seasonRef = leagueRef.collection("seasons").doc(seasonId);
@@ -153,7 +153,7 @@ export class FirestoreSeasonRepository implements SeasonRepository {
       const leagueSnapshot = await transaction.get(leagueRef);
       const seasonSnapshot = await transaction.get(seasonRef);
       const activeSeasonSnapshot =
-        input.status === "active"
+        command.status === "active"
           ? await transaction.get(
               leagueRef
                 .collection("seasons")
@@ -169,7 +169,7 @@ export class FirestoreSeasonRepository implements SeasonRepository {
       }
 
       const currentData = seasonSnapshot.data() ?? {};
-      const nextStatus = input.status ?? currentData.status;
+      const nextStatus = command.status ?? currentData.status;
       const activeSeasonId = leagueSnapshot.data()?.active_season_id;
       if (
         nextStatus === "active" &&
@@ -186,21 +186,57 @@ export class FirestoreSeasonRepository implements SeasonRepository {
       const patch: Record<string, unknown> = {
         updated_at: Timestamp.now(),
       };
-      if (input.name !== undefined) {
-        patch.name = input.name;
+      if (command.name !== undefined) {
+        patch.name = command.name;
       }
-      if (input.status !== undefined) {
-        patch.status = input.status;
+      if (command.status !== undefined) {
+        patch.status = command.status;
+      }
+      const membersToAdd = command.addMembers ?? [];
+      if (membersToAdd.length > 0) {
+        const existingMembers = requiredArray(
+          currentData.members,
+          "seasons.members",
+        );
+        const existingUserIds = new Set(
+          existingMembers.map((member) =>
+            requiredString(
+              requiredObject(member, "seasons.members[]").user_id,
+              "seasons.members[].user_id",
+            ),
+          ),
+        );
+        const additions = membersToAdd.filter((member) => {
+          if (existingUserIds.has(member.userId)) {
+            return false;
+          }
+          existingUserIds.add(member.userId);
+          return true;
+        });
+
+        if (additions.length > 0) {
+          patch.members = [
+            ...existingMembers,
+            ...additions.map((member) => ({
+              user_id: member.userId,
+              user_name: member.userName,
+            })),
+          ];
+          patch.member_count = existingMembers.length + additions.length;
+        }
       }
 
       transaction.update(seasonRef, patch);
-      if (nextStatus === "active") {
+      if (
+        nextStatus === "active" &&
+        (command.name !== undefined || command.status !== undefined)
+      ) {
         transaction.update(leagueRef, {
           active_season_id: seasonId,
-          active_season_name: input.name ?? currentData.name,
+          active_season_name: command.name ?? currentData.name,
           updated_at: patch.updated_at,
         });
-      } else if (input.status === "archived" && activeSeasonId === seasonId) {
+      } else if (command.status === "archived" && activeSeasonId === seasonId) {
         transaction.update(leagueRef, {
           active_season_id: null,
           active_season_name: null,

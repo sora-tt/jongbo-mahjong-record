@@ -95,7 +95,7 @@
   - _Requirements: 7.2, 9.3, 10.2, 10.4, 10.6_
   - _Boundary: Season Membership Update_
 
-- [ ] 4.5 SeasonRepositoryで参加者snapshotを一意に追加する
+- [x] 4.5 SeasonRepositoryで参加者snapshotを一意に追加する
   - Firestore transaction内で既存SeasonMember snapshotを保持し、既存IDと追加配列内の重複を除いたメンバーだけを追加する。
   - Seasonのactive metadataと既存memberの情報を変更せず、競合時にも同じ追加要求を再送できる更新にする。
   - 完了時、単一更新と並行更新のどちらでもSeason memberに同一userIdが二重登録されず、既存snapshotが維持される。
