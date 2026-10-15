@@ -22,15 +22,21 @@ const SeasonEditPage: React.FC = () => {
     seasonName,
     status,
     members,
+    candidateMembers,
+    selectedMembers,
     isLoading,
+    areLeagueMembersLoading,
+    leagueMembersError,
     isLoaded,
     notFound,
     isSubmitting,
     error,
     setSeasonName,
     setStatus,
+    handleMemberToggle,
     handleSubmit,
     retry,
+    retryLeagueMembers,
   } = useSeasonEdit();
 
   if (isLoading) {
@@ -78,13 +84,13 @@ const SeasonEditPage: React.FC = () => {
         <div>
           <h1 className="text-2xl font-bold text-foreground">シーズン設定</h1>
           <p className="mt-2 text-sm text-text-muted">
-            シーズン名と状態のみ変更できます。参加者は変更できません。
+            既存の参加者を維持したまま、リーグ参加者を追加できます。対局記録後も追加できます。
           </p>
         </div>
 
         <Card
-          title="参加者"
-          meta="作成時のスナップショット"
+          title="参加中のメンバー"
+          meta="既存メンバーは維持されます"
           bodyClassName="flex flex-wrap gap-2"
         >
           {members.length > 0 ? (
@@ -99,6 +105,70 @@ const SeasonEditPage: React.FC = () => {
           ) : (
             <p className="text-sm text-text-muted">参加者情報がありません。</p>
           )}
+        </Card>
+
+        <Card
+          title="参加者を追加"
+          meta={`${Object.keys(selectedMembers).length}人選択`}
+        >
+          <fieldset className="space-y-4" disabled={isSubmitting}>
+            <legend className="sr-only">
+              リーグ参加者から追加するメンバー
+            </legend>
+            <p id="season-members-help" className="text-sm text-text-muted">
+              追加する参加者を選択してください。現在の参加者は候補に表示されません。
+            </p>
+
+            {areLeagueMembersLoading ? (
+              <LoadingState
+                label="リーグ参加者を読み込んでいます…"
+                className="p-4"
+              />
+            ) : leagueMembersError ? (
+              <ErrorState
+                message={leagueMembersError}
+                onRetry={retryLeagueMembers}
+              />
+            ) : candidateMembers.length === 0 ? (
+              <EmptyState
+                title="追加できる参加者がいません"
+                description="リーグ参加者がいないか、全員がこのシーズンに参加しています。"
+              />
+            ) : (
+              <div
+                role="group"
+                aria-describedby="season-members-help"
+                className="grid grid-cols-1 gap-2 sm:grid-cols-2"
+              >
+                {candidateMembers.map((member) => {
+                  const isSelected = member.userId in selectedMembers;
+                  return (
+                    <label
+                      key={member.userId}
+                      className={`flex min-h-11 cursor-pointer items-center gap-3 rounded-lg border px-3 py-2 text-sm transition-colors ${isSelected ? "border-brand-500 bg-brand-50 text-foreground" : "border-border bg-white text-foreground hover:border-brand-400"}`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => handleMemberToggle(member.userId)}
+                        className="h-4 w-4 shrink-0 accent-brand-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
+                      />
+                      <span>{member.userName}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            )}
+
+            <p
+              className="text-xs text-text-muted"
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+            >
+              {Object.keys(selectedMembers).length}人を追加する予定です。
+            </p>
+          </fieldset>
         </Card>
 
         <section className="space-y-5 rounded-surface border border-border bg-white p-6 shadow-sm">

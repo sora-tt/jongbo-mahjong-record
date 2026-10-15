@@ -110,7 +110,7 @@
   - _Requirements: 9.2, 10.2, 10.3, 10.4, 10.5, 10.6_
   - _Boundary: Season Membership Update (application service integration)_
 
-- [ ] 4.7 シーズン参加者追加のUIとリクエストを統合する
+- [x] 4.7 シーズン参加者追加のUIとリクエストを統合する
   - Season editでLeague membersを取得し、既存Season memberを除いた候補を表示する。複数選択、個別解除、読み上げ可能なcheckbox、loading・該当なし・error・retry・keyboard操作を備える。
   - 既存参加者snapshotは保持して表示し、対局後も候補選択をロックしない。name/statusと選択中IDだけを送信し、空選択時は`addMemberUserIds`を省略する。
   - 失敗時に選択を保持し、成功時に更新後のSeasonDetailを表示する。
@@ -248,3 +248,8 @@
   - _Depends: 6.2, 8.1, 8.2, 9.1_
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 2.1, 2.3, 2.4, 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8, 3.9, 4.1, 4.2, 4.4, 5.1, 5.2, 5.3, 5.4, 6.1, 6.3, 7.3, 8.1, 8.3, 8.4, 9.1, 9.3, 9.4_
   - _Boundary: Migration Validation_
+
+## 実装メモ
+
+- Season editは現在のleagueId・seasonIdに紐づく候補と選択だけを扱い、ルート切替時は前画面の状態を利用しない。
+- 参加者追加要求ではeditフォームがname/statusも送るため、Repositoryは値が実際に変わる場合だけLeagueのactive metadataを同期する。
