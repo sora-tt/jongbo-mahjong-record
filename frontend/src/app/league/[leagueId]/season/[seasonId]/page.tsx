@@ -3,7 +3,7 @@
 import * as React from "react";
 
 import clsx from "clsx";
-import { Calendar, Crown } from "lucide-react";
+import { Calendar, Crown, Pencil } from "lucide-react";
 
 import Link from "next/link";
 
@@ -113,10 +113,16 @@ const SeasonPage: React.FC = () => {
           </HeaderCard>
         </section>
 
-        <section className="mb-8">
+        <section className="mb-8 flex flex-wrap gap-3">
           <Button variant="brand-primary" onClick={handleStartRecording}>
             記録する
           </Button>
+          <Link href={`/league/${leagueId}/season/${seasonId}/edit`}>
+            <Button variant="secondary" size="lg">
+              <Pencil className="h-4 w-4" aria-hidden="true" />
+              シーズンを編集
+            </Button>
+          </Link>
         </section>
 
         <section className="mb-8">

@@ -74,7 +74,9 @@ export const getNextSeatAssignment = (
     }
 
     const nextWind =
-      requiredWinds[(currentWindIndex + 1) % requiredWinds.length];
+      requiredWinds[
+        (currentWindIndex - 1 + requiredWinds.length) % requiredWinds.length
+      ];
     userIdByWind[nextWind] = userId;
     seenWinds.add(result.wind);
     seenUsers.add(userId);
