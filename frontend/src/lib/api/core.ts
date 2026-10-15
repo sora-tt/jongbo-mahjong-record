@@ -49,7 +49,7 @@ type ApiPayload<T> = ApiDataPayload<T> | ApiErrorPayload;
 
 const LOCAL_HOSTS = new Set(["127.0.0.1", "localhost"]);
 const DEFAULT_LOCAL_API_BASE_URL = "http://127.0.0.1:8080";
-const API_TIMEOUT_MS = 8_000;
+const API_TIMEOUT_MS = 30_000;
 
 const trimTrailingSlash = (value: string) => value.replace(/\/$/, "");
 
