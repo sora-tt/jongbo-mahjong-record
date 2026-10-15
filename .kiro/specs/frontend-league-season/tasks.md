@@ -119,7 +119,7 @@
   - _Requirements: 7.1, 7.2, 7.3, 7.4, 9.4, 10.1, 10.2, 10.6_
   - _Boundary: Season UI and Forms, Request Hooks (integration)_
 
-- [ ] 4.8 Season参加者追加契約と既存導線を再検証する
+- [x] 4.8 Season参加者追加契約と既存導線を再検証する
   - AppType、OpenAPI、入力schema、Season update hook、Serviceの認可とLeague所属検証、重複・retry、対局後の履歴維持と再集計、edit画面の候補/選択/エラー状態をsource reviewする。
   - `pnpm typecheck`、`pnpm lint`、`pnpm build`を実行し、変更したAPI型、route、画面を検証する。
   - 完了時、削除・置換入力、直接fetch、mock更新がなく、Season editから更新後SeasonDetailまでadd-only契約が通ることを確認する。
