@@ -171,6 +171,10 @@ export class FirestoreSeasonRepository implements SeasonRepository {
       const currentData = seasonSnapshot.data() ?? {};
       const nextStatus = command.status ?? currentData.status;
       const activeSeasonId = leagueSnapshot.data()?.active_season_id;
+      const nameChanged =
+        command.name !== undefined && command.name !== currentData.name;
+      const statusChanged =
+        command.status !== undefined && command.status !== currentData.status;
       if (
         nextStatus === "active" &&
         ((activeSeasonId !== null &&
@@ -227,16 +231,17 @@ export class FirestoreSeasonRepository implements SeasonRepository {
       }
 
       transaction.update(seasonRef, patch);
-      if (
-        nextStatus === "active" &&
-        (command.name !== undefined || command.status !== undefined)
-      ) {
+      if (nextStatus === "active" && (nameChanged || statusChanged)) {
         transaction.update(leagueRef, {
           active_season_id: seasonId,
           active_season_name: command.name ?? currentData.name,
           updated_at: patch.updated_at,
         });
-      } else if (command.status === "archived" && activeSeasonId === seasonId) {
+      } else if (
+        statusChanged &&
+        command.status === "archived" &&
+        activeSeasonId === seasonId
+      ) {
         transaction.update(leagueRef, {
           active_season_id: null,
           active_season_name: null,
