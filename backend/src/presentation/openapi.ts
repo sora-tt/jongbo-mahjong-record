@@ -1506,6 +1506,11 @@ export const openApiDocument = {
             properties: {
               name: { type: "string" },
               status: { type: "string", enum: ["active", "archived"] },
+              addMemberUserIds: {
+                type: "array",
+                items: { type: "string", minLength: 1 },
+                minItems: 1,
+              },
             },
           }),
         },

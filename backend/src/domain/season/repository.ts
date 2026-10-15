@@ -16,6 +16,7 @@ export type CreateSeasonInput = {
 export type UpdateSeasonInput = {
   name?: string;
   status?: SeasonStatus;
+  addMemberUserIds?: string[];
 };
 
 export interface SeasonRepository {

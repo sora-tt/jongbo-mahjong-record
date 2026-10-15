@@ -1,12 +1,12 @@
 {
   "name": "frontend-league-season",
   "displayName": "FEリーグ・シーズン画面",
-  "description": "ホーム、リーグ、シーズン画面をBE API契約へ接続し、座順ローテーションrule、作成者表示、継続メンバー追加、League/Season名suffix、Header用navigation dataを既存UIへ追加する。",
+  "description": "ホーム、リーグ、シーズン画面をBE API契約へ接続し、座順ローテーションrule、作成者表示、継続メンバー追加、シーズン参加者の追加、League/Season名suffix、Header用navigation dataを既存UIへ追加する。",
   "version": "1.0.0",
   "language": "ja",
   "phase": "tasks-generated",
   "created_at": "2026-09-25T00:00:00Z",
-  "updated_at": "2026-10-06T03:25:48Z",
+  "updated_at": "2026-10-15T18:26:42Z",
   "approvals": {
     "requirements": {
       "generated": true,
