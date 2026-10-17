@@ -2,6 +2,7 @@ import type { LeagueRepository } from "@/domain/league/repository.js";
 import type { MatchRepository } from "@/domain/match/repository.js";
 import type {
   CreateSeasonInput,
+  SeasonUpdateCommand,
   SeasonRepository,
   UpdateSeasonInput,
 } from "@/domain/season/repository.js";
@@ -105,6 +106,29 @@ export class SeasonService {
     input: UpdateSeasonInput,
   ) {
     await this.assertSeasonMembership(userId, leagueId, seasonId);
+
+    let addMembers: SeasonUpdateCommand["addMembers"];
+    if (input.addMemberUserIds !== undefined) {
+      const leagueMembers = await this.leagueRepository.listMembers(leagueId);
+      const leagueMemberMap = new Map(
+        leagueMembers.map((member) => [member.userId, member]),
+      );
+      const requestedIds = [...new Set(input.addMemberUserIds)];
+
+      addMembers = requestedIds.map((userIdValue) => {
+        const member = leagueMemberMap.get(asOpaqueId(userIdValue));
+        if (!member) {
+          throw new ValidationError("addMemberUserIds must be league members", {
+            userId: userIdValue,
+          });
+        }
+        return {
+          userId: member.userId,
+          userName: member.userName,
+        };
+      });
+    }
+
     if (input.status === "active") {
       const activeSeason =
         await this.seasonRepository.findActiveSeason(leagueId);
@@ -115,7 +139,28 @@ export class SeasonService {
       }
     }
 
-    return this.seasonRepository.update(leagueId, seasonId, input);
+    const command: SeasonUpdateCommand = {};
+    if (input.name !== undefined) {
+      command.name = input.name;
+    }
+    if (input.status !== undefined) {
+      command.status = input.status;
+    }
+    if (addMembers !== undefined) {
+      command.addMembers = addMembers;
+    }
+
+    const season = await this.seasonRepository.update(
+      leagueId,
+      seasonId,
+      command,
+    );
+    if (input.addMemberUserIds === undefined) {
+      return season;
+    }
+
+    await this.statsRebuilder.rebuildSeason(leagueId, seasonId);
+    return this.getSeason(userId, leagueId, seasonId);
   }
 
   async deleteSeason(userId: string, leagueId: string, seasonId: string) {

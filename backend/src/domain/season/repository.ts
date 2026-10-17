@@ -16,6 +16,13 @@ export type CreateSeasonInput = {
 export type UpdateSeasonInput = {
   name?: string;
   status?: SeasonStatus;
+  addMemberUserIds?: string[];
+};
+
+export type SeasonUpdateCommand = {
+  name?: string;
+  status?: SeasonStatus;
+  addMembers?: SeasonMember[];
 };
 
 export interface SeasonRepository {
@@ -31,7 +38,7 @@ export interface SeasonRepository {
   update(
     leagueId: string,
     seasonId: string,
-    input: UpdateSeasonInput,
+    command: SeasonUpdateCommand,
   ): Promise<SeasonDetail>;
   delete(leagueId: string, seasonId: string): Promise<void>;
   listMembers(leagueId: string, seasonId: string): Promise<SeasonMember[]>;

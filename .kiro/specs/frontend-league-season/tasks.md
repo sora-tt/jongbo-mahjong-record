@@ -12,8 +12,8 @@
 - [x] 1.2 (P) Season featureの型付きAPI入口とadapterを整備する
   - `GET/POST /api/leagues/:leagueId/seasons`、`GET/PATCH /api/leagues/:leagueId/seasons/:seasonId`、league members取得のrequest/response型を`AppType`から導出する。
   - SeasonSummary/Detail、members、standings、pointProgressions、seasonRecords、latestPlayedAt、statusのnull/ISO semanticsを保持する。
-  - 完了時、Season edit payloadにmemberUserIdsが存在せず、BE算出値の再計算・0埋め・mock補完がない。
-  - _Requirements: 5.1, 5.2, 5.3, 5.4, 6.1, 6.2, 6.4, 7.1, 7.2, 7.3, 7.4, 8.1, 8.2, 9.2, 9.3_
+  - 完了時、Season edit payloadに参加者全件の置換用`memberUserIds`がなく、BE算出値の再計算・0埋め・mock補完がない。
+  - _Requirements: 5.1, 5.2, 5.3, 5.4, 6.1, 6.2, 6.4, 7.3, 7.4, 8.1, 8.2, 9.3_
   - _Boundary: Season Feature API, Season Adapter_
 
 ## 2. HomeとLeague読み取り画面
@@ -41,7 +41,7 @@
   - sanmaではfourthをnull、yonmaではnumberとしてpayloadへ変換し、API契約にないruleフィールドやFE独自の点数計算を追加しない。
   - umaのfirst/second/thirdとyonmaのfourthの合計が0であることをcreate/edit共通でFE事前検証し、sanmaのnull fourthは合計対象から除外する。これはUX向上のためであり、BE検証を置き換えない。
   - 完了時、create/editの初期値と送信payloadが同じcanonical rule/member shapeになり、API未対応のmock操作が存在しない。
-  - _Requirements: 3.1, 3.2, 3.3, 3.4, 4.1, 4.2, 8.2, 9.2_
+  - _Requirements: 3.1, 3.2, 3.3, 3.4, 4.1, 4.2, 8.2_
   - _Boundary: League UI and Forms, League Adapter_
 
 - [x] 3.2 League作成submitと成功後遷移を接続する
@@ -58,17 +58,17 @@
   - Match存在後のrule lockやmember/validation errorをsafe messageへ変換し、uma合計の`validation_error`を含むBE結果を最終的な正として表示する。必要に応じてruleをread-only表示し、mock更新を行わない。
   - 成功後はLeagueDetailを再取得してrecords、activeSeason、memberCount、totalMatchCountを最新化し、詳細へ戻る。
   - _Depends: 1.1, 2.2, 3.1_
-  - _Requirements: 3.6, 4.1, 4.2, 4.3, 4.4, 8.3, 8.4, 9.2, 9.4_
+  - _Requirements: 3.6, 4.1, 4.2, 4.3, 4.4, 8.3, 8.4, 9.4_
   - _Boundary: League UI and Forms, Request Hooks_
 
-## 4. Seasonフォームと表示画面
+## 4. Season API、フォームと表示画面
 
 - [x] 4.1 Season作成フォームとactive conflict処理を接続する
   - League membersをAPIから読み込み、name、member selection、statusをフォームへ表示し、status省略時のactive既定値をBE契約と一致させる。
   - 参加者0人の送信をclientで拒否し、重複のないmemberUserIdsで`POST /api/leagues/:leagueId/seasons`を一度だけ実行する。
   - 完了時、作成成功後にSeasonDetailへ遷移し、既存active seasonとの409では入力と選択状態を保持して再試行またはstatus変更を促す。
   - _Depends: 1.2, 2.2_
-  - _Requirements: 5.2, 5.3, 5.4, 8.2, 8.3, 8.4, 9.2, 9.4_
+  - _Requirements: 5.2, 5.3, 5.4, 8.2, 8.3, 8.4, 9.4_
   - _Boundary: Season UI and Forms, Request Hooks_
 
 - [x] 4.2 Season detailとBE算出結果の表示を接続する
@@ -80,13 +80,52 @@
   - _Requirements: 6.1, 6.2, 6.3, 6.4, 8.2, 8.3, 8.4, 9.4_
   - _Boundary: Season UI and Forms, Season Adapter, Route Integration_
 
-- [x] 4.3 Season編集をname/status限定のAPI mutationへ移行する
-  - 正規`/league/[leagueId]/season/[seasonId]/edit`でSeasonDetailを初期表示し、membersは読み取り専用、編集可能項目はname/statusだけにする。
-  - `PATCH /api/leagues/:leagueId/seasons/:seasonId`へmemberUserIdsを送らず、401/403/404/409/validation/transport errorを区別して入力保持付きで表示する。
+- [x] 4.3 Season編集のname/status更新と既存参加者snapshotの表示をAPIへ移行する
+  - 正規`/league/[leagueId]/season/[seasonId]/edit`でSeasonDetailを初期表示し、既存members snapshotを表示して維持する。
+  - 参加者全件の置換用`memberUserIds`を送らず、401/403/404/409/validation/transport errorを区別して入力保持付きで表示する。
   - 成功後にSeasonDetailを再取得し、name、status、activeSeason表示を最新化する。旧mock hook、`console.log`、leagueIdのない旧routeを本番導線から除去する。
   - _Depends: 1.2, 4.2_
-  - _Requirements: 7.1, 7.2, 7.3, 7.4, 8.2, 8.3, 8.4, 9.2, 9.4_
+  - _Requirements: 7.3, 7.4, 8.2, 8.3, 8.4, 9.4_
   - _Boundary: Season UI and Forms, Request Hooks, Route Integration_
+
+- [x] 4.4 Season更新APIに参加者の追加専用入力を定義する
+  - `PATCH /api/leagues/:leagueId/seasons/:seasonId`へ、省略可能な非空配列`addMemberUserIds`を追加し、既存name/status入力と併用できるschema・domain input・OpenAPI/AppType契約を整える。
+  - 参加者全件の置換用フィールドは追加せず、配列内の重複IDは冪等に処理できるAPI入力として受け入れる。
+  - 完了時、型生成後のSeason update APIがadd-only契約を表し、既存のname/status更新との後方互換性を保つ。
+  - _Requirements: 7.2, 9.3, 10.2, 10.4, 10.6_
+  - _Boundary: Season Membership Update_
+
+- [x] 4.5 SeasonRepositoryで参加者snapshotを一意に追加する
+  - Firestore transaction内で既存SeasonMember snapshotを保持し、既存IDと追加配列内の重複を除いたメンバーだけを追加する。
+  - Seasonのactive metadataと既存memberの情報を変更せず、競合時にも同じ追加要求を再送できる更新にする。
+  - 完了時、単一更新と並行更新のどちらでもSeason memberに同一userIdが二重登録されず、既存snapshotが維持される。
+  - _Requirements: 9.2, 10.2, 10.4, 10.5_
+  - _Boundary: SeasonRepository_
+
+- [x] 4.6 SeasonServiceで認可・リーグ所属検証・集計再実行を統合する
+  - 現行Season memberに基づく認可を維持し、`addMemberUserIds`の全利用者が対象League memberであることを永続化前に検証して、1人でも不一致ならbatch全体を拒否する。
+  - League memberからSeasonMember snapshotを作り、参加者追加入力がある要求では新規追加がなくても`StatsRebuilder.rebuildSeason(leagueId, seasonId)`を実行し、再集計後のSeasonDetailを返す。
+  - 完了時、対局履歴を保持したまま対局数0・ポイント0の追加参加者を表示でき、再集計失敗後の同一request retryで二重登録されない。
+  - _Depends: 4.4, 4.5_
+  - _Requirements: 9.2, 10.2, 10.3, 10.4, 10.5, 10.6_
+  - _Boundary: Season Membership Update (application service integration)_
+
+- [x] 4.7 シーズン参加者追加のUIとリクエストを統合する
+  - Season editでLeague membersを取得し、既存Season memberを除いた候補を表示する。複数選択、個別解除、読み上げ可能なcheckbox、loading・該当なし・error・retry・keyboard操作を備える。
+  - 既存参加者snapshotは保持して表示し、対局後も候補選択をロックしない。name/statusと選択中IDだけを送信し、空選択時は`addMemberUserIds`を省略する。
+  - 失敗時に選択を保持し、成功時に更新後のSeasonDetailを表示する。
+  - 完了時、既存のsuffix、入力保持、二重submit防止と両立し、複数のリーグ参加者をまとめて追加できる。
+  - _Depends: 4.6_
+  - _Requirements: 7.1, 7.2, 7.3, 7.4, 9.4, 10.1, 10.2, 10.6_
+  - _Boundary: Season UI and Forms, Request Hooks (integration)_
+
+- [x] 4.8 Season参加者追加契約と既存導線を再検証する
+  - AppType、OpenAPI、入力schema、Season update hook、Serviceの認可とLeague所属検証、重複・retry、対局後の履歴維持と再集計、edit画面の候補/選択/エラー状態をsource reviewする。
+  - `pnpm typecheck`、`pnpm lint`、`pnpm build`を実行し、変更したAPI型、route、画面を検証する。
+  - 完了時、削除・置換入力、直接fetch、mock更新がなく、Season editから更新後SeasonDetailまでadd-only契約が通ることを確認する。
+  - _Depends: 4.4, 4.5, 4.6, 4.7_
+  - _Requirements: 8.1, 8.2, 8.3, 8.4, 9.2, 9.3, 10.1, 10.2, 10.3, 10.4, 10.5, 10.6_
+  - _Boundary: Migration Validation_
 
 ## 5. ISSUE-99リーグrule項目
 
@@ -102,7 +141,7 @@
   - LeagueのMatch件数が0より大きい場合、チョンボ罰符・卓外供託可否をread-onlyにし、League PATCHには許可されたname/memberUserIdsだけを含める。
   - BEのconflict/validation errorを安全に表示して入力を保持し、rule fieldをmockやlocal stateで更新しない。
   - 完了時、rule lock後のLeague更新が外卓項目を送信せず、BEのrule値をそのまま表示する。
-  - _Requirements: 3.5, 3.6, 4.2, 4.3, 4.4, 8.3, 9.2, 9.4_
+  - _Requirements: 3.5, 3.6, 4.2, 4.3, 4.4, 8.3, 9.4_
   - _Depends: 5.1_
   - _Boundary: League UI and Forms, Request Hooks_
 
@@ -113,7 +152,7 @@
   - season editをleagueIdを含む正規routeへ統一し、旧URLは安全なredirectまたは到達不能な移行対象として二重実装を残さない。
   - 完了時、主要操作はAPI完了または明確なroute遷移を持ち、Session/Match・統計画面の実装や旧資産の全削除を取り込んでいない。
   - _Depends: 2.1, 2.2, 3.2, 3.3, 4.1, 4.2, 4.3_
-  - _Requirements: 6.3, 7.2, 8.1, 9.1, 9.2, 9.4_
+  - _Requirements: 6.3, 8.1, 9.1, 9.4_
   - _Boundary: Route Integration, Migration Validation_
 
 - [x] 6.2 AppShell、共通UI、下流Session導線を再検証する
@@ -181,7 +220,7 @@
   - 作成者表示とmember searchの選択状態を追い、追加後も検索UIが開いたまま次の候補を選べることを確認する。
   - 完了時、LeagueとSeasonのsuffixは固定表示され、create/editいずれもcanonical nameへ一度だけ保存する処理を確認できる。
   - _Depends: 7.1, 7.2, 7.3, 7.4, 7.5, backend-foundation 6.2, backend-foundation 6.3_
-  - _Requirements: 3.1, 3.3, 3.7, 3.8, 3.9, 4.1, 4.2, 5.2, 5.3, 7.1, 7.2_
+  - _Requirements: 3.1, 3.3, 3.7, 3.8, 3.9, 4.1, 4.2, 5.2, 5.3_
   - _Boundary: League/Season Forms_
 
 - [x] 8.2 Header向けSeason lazy-loadとnavigation状態をsource reviewする
@@ -195,11 +234,11 @@
 ## 9. 契約・品質検証
 
 - [x] 9.1 API型、adapter、既存form payloadのsource reviewを行う
-  - League/Seasonのendpoint request/response、status、`{ data }`、ErrorEnvelope、rule fourth nullability、Season updateのname/status限定、BE派生値の型とmappingを確認する。
+  - League/Seasonのendpoint request/response、status、`{ data }`、ErrorEnvelope、rule fourth nullability、Season updateのname/status入力、BE派生値の型とmappingを確認する。
   - uma合計0の事前検証、BE `validation_error`の表示・入力保持、empty/null、active conflict、401/403/404/409、stale request、二重submitのsource stateを追跡する。
   - 完了時、直接fetchや手書きAPI DTO、FE独自のrank/point/standing計算がなく、境界違反の発生画面を特定できる。
   - _Depends: 3.3, 4.3, 6.1_
-  - _Requirements: 2.2, 3.4, 3.6, 4.3, 5.4, 6.2, 6.4, 7.2, 7.4, 8.2, 8.3, 8.4, 9.2, 9.3_
+  - _Requirements: 2.2, 3.4, 3.6, 4.3, 5.4, 6.2, 6.4, 7.4, 8.2, 8.3, 8.4, 9.3_
   - _Boundary: Migration Validation, League Feature API, Season Feature API_
 
 - [x] 9.2 typecheck、lint、buildと対象routeの静的スキャンを完了する
@@ -207,5 +246,10 @@
   - 対象routeに対するmock import、`console.log`、直接fetch、未接続button、旧season edit pathをスキャンし、Session/Match・統計の境界外変更がないことを確認する。
   - 完了時、ホームからLeague/Seasonのcreate/detail/edit、HeaderのLeague/Season/Stats linkとSession開始導線までの主要routeがcompile/build可能である。
   - _Depends: 6.2, 8.1, 8.2, 9.1_
-  - _Requirements: 1.1, 1.2, 1.3, 1.4, 2.1, 2.3, 2.4, 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8, 3.9, 4.1, 4.2, 4.4, 5.1, 5.2, 5.3, 5.4, 6.1, 6.3, 7.1, 7.2, 7.3, 8.1, 8.3, 8.4, 9.1, 9.3, 9.4_
+  - _Requirements: 1.1, 1.2, 1.3, 1.4, 2.1, 2.3, 2.4, 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8, 3.9, 4.1, 4.2, 4.4, 5.1, 5.2, 5.3, 5.4, 6.1, 6.3, 7.3, 8.1, 8.3, 8.4, 9.1, 9.3, 9.4_
   - _Boundary: Migration Validation_
+
+## 実装メモ
+
+- Season editは現在のleagueId・seasonIdに紐づく候補と選択だけを扱い、ルート切替時は前画面の状態を利用しない。
+- 参加者追加要求ではeditフォームがname/statusも送るため、Repositoryは値が実際に変わる場合だけLeagueのactive metadataを同期する。

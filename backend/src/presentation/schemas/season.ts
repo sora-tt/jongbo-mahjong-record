@@ -13,4 +13,5 @@ export const createSeasonSchema: z.ZodType<CreateSeasonInput> = z.object({
 export const updateSeasonSchema: z.ZodType<UpdateSeasonInput> = z.object({
   name: z.string().min(1).optional(),
   status: z.enum(["active", "archived"]).optional(),
+  addMemberUserIds: z.array(z.string().min(1)).min(1).optional(),
 });
