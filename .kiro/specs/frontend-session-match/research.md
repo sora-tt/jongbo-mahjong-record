@@ -2,7 +2,7 @@
 
 ## Summary
 
-ISSUE-99のMatch入力は、チョンボeventと卓外供託を別々に編集し、AppTypeのMatch契約へ渡す。現行画面には共通の`match-form.ts`と`MatchForm.tsx`があるため、raw score行の後へ小さな入力群を加えられる。供託UIはLeague ruleで許可された場合だけ表示し、点数計算はBEに委ねる。Issue #123ではSession終了成功後のSeason遷移と、最大matchIndexの保存済みseat assignmentを基準にする追加Matchの座順rotationを既存routeへ接続する。
+ISSUE-99のMatch入力は、チョンボeventと卓外供託を別々に編集し、AppTypeのMatch契約へ渡す。現行画面には共通の`match-form.ts`と`MatchForm.tsx`があるため、raw score行の後へ小さな入力群を加えられる。供託UIはLeague ruleで許可された場合だけ表示し、点数計算はBEに委ねる。Issue #123ではSession終了成功後のSeason遷移と、最大matchIndexの保存済みseat assignmentを基準にする追加Matchの座順rotationを既存routeへ接続する。Issue #150ではSeason詳細のSession一覧に削除確認を追加し、既存のcascade削除APIの後に一覧とSeason集計を再取得する。
 
 ## 調査対象
 
@@ -50,3 +50,33 @@ ISSUE-99のMatch入力は、チョンボeventと卓外供託を別々に編集�
 - 採用: yonmaは東→南→西→北→東、sanmaは東→南→西→東にseat windを1段移す。前Matchの結果が保存正本で、userが新formで修正し保存した場合は、その修正後結果を次回rotationの基準とする。
 - 採用: DTOのwind集合が不正ならmembers順で黙って補わず、契約エラーを表示する。無効設定またはMatchなしの場合のみ既存members順の初期値を使う。
 - Session endの更新が成功した時だけSeason detailへ遷移する。失敗時は現在routeでerrorとretryを示す。
+
+## ISSUE-150 Session削除調査（2026-10-18）
+
+### 調査対象
+
+| 対象 | 確認した資料・実装 | 設計への影響 |
+|---|---|---|
+| Season detail UI | `frontend/src/app/league/[leagueId]/season/[seasonId]/page.tsx`、`hooks/index.ts` | Session行は結果画面へのLinkで、hookがSeason・Session一覧・League名を取得する。hook/pageに削除対象と再取得状態を追加する |
+| Session Feature API | `frontend/src/features/session/api/index.ts` | 型付きの`deleteSession({ leagueId, seasonId, sessionId })`が既にあり、`204`を扱う。互換性のある削除wrapperを再利用する |
+| Backend lifecycle | `backend/src/presentation/routes/sessions.ts`、`.kiro/specs/backend-integrity-lifecycle/design.md` | DELETE routeはSessionと配下Matchの削除後にSeason/League/overall集計を再構築する。BE変更は不要 |
+| 確認ダイアログ | `frontend/src/app/league/[leagueId]/season/[seasonId]/sessions/[sessionId]/results/page.tsx` | Match削除にinline `role="dialog"`、キャンセル、送信中disableの既存パターンがある。共通Dialog導入は不要 |
+
+### 設計判断
+
+- 採用: 削除対象Sessionの開始日時、参加者名、対局数と配下Matchの削除を確認画面に表示する。確認前にmutationを行わず、キャンセルは対象を一覧に残す。
+- 採用: Season detailの結果画面Linkと削除buttonは兄弟要素にして、Link内へbuttonをネストしない。
+- 採用: 既存の`deleteSession` typed wrapperを利用し、Session削除専用のAPI層や新しいUI primitiveを作らない。Hookが対象・mutation・safe error状態を持つ。
+- 採用: DELETE成功時にSession listとSeason detailを再取得する。失敗時もsafe errorを保ったまま両方を再取得し、対象が残る場合は再確認から再試行を許す。再取得後に対象が消えていれば確認対象を解除し、DELETEの結果を成功扱いに変換しない。
+- 境界: 初回Match作成失敗時のrollbackは、その同じ送信内で作成されたSessionのみが対象。Season detailの削除操作は必ず利用者確認を通り、既存のBE cascade契約に委譲する。
+
+### Synthesis
+
+- Generalization: 削除後の再取得はSession一覧とSeason detailに限定した既存のload責務であり、Session全般の削除フレームワークへ一般化しない。Requirement 2.10/2.11の必要範囲だけをhookへ追加する。
+- Build vs. adopt: API、Auth、共通error処理、inline confirmation patternを再利用する。新規依存、BE route、共有Dialog primitiveを導入する理由はない。
+- Simplification: route hook/pageへ削除対象・確認・再取得を加えるだけにし、新しいfeature hookや共通mutation層を作らない。削除操作とrollbackは同一API wrapperを共有するが、呼出元の状態・確認方針を分ける。
+
+### リスク
+
+- cascade削除や集計再構築が失敗した場合、BEは標準エラーを返す。FEは成功扱いにせず、エラーを残して一覧・Seasonの現状を読み直す。削除後の再構築失敗に対するrepair処理はBEの既存責務である。
+- `.kiro/settings/templates/specs/design.md`と`research.md`がリポジトリになく、既存specの構成を維持して追記した。

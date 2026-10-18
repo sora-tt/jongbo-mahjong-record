@@ -12,7 +12,7 @@ Issue #123ではSession終了保存の成功後にSeason detailへ遷移し、Le
 
 - `sanma`はeast/south/westの3人、`yonma`はeast/south/west/northの4人をPlayer selectとMatchフォームへ反映する。
 - Session member snapshotをSession作成時に固定し、Matchのparticipant集合を常に完全一致させる。
-- Sessionの作成・一覧・詳細、Matchの作成・編集・一覧・詳細・削除と結果表示をAPIへ接続する。
+- Sessionの作成・一覧・詳細・削除、Matchの作成・編集・一覧・詳細・削除と結果表示をAPIへ接続する。
 - 初回・追加・編集でMatchフォームの入力・validation・mutation状態を共通化する。
 - League ruleで卓外供託が許可される場合だけ供託入力を表示し、チョンボ発生行と供託本数を別々に送信する。
 - Session終了保存後は所属Season detailへ遷移する。
@@ -33,7 +33,7 @@ Issue #123ではSession終了保存の成功後にSeason detailへ遷移し、Le
 ### This spec owns
 
 - Player selectのgameType別枠数、候補制御、Session作成フローへの接続。
-- Session feature API、Session一覧・詳細・終了表示と終了後Season遷移、Session membersのview model。
+- Session feature API、Session一覧・詳細・終了表示と終了後Season遷移、Season詳細のSession削除操作と確認、Session membersのview model。
 - Match feature API、共通Matchフォーム、Match一覧・詳細・結果表示、create/update/delete後の再取得。
 - Session membersとMatch participantの一致をUIで表示・送信する境界、raw scoreの入力補助、BE結果の表示。
 - Matchごとのchombo event・off-table kyotaku inputと、BEが保存した両項目の結果詳細表示。
@@ -67,6 +67,7 @@ Issue #123ではSession終了保存の成功後にSeason detailへ遷移し、Le
 - Season詳細からのSession開始導線、Session詳細route、Match一覧・詳細route、Session作成タイミングの変更。
 - Create/UpdateMatchでrankを入力するかどうかのBE契約変更。
 - rotateSeatOrderのBE契約、同Session matchIndex ordering、三麻/四麻のwind集合、保存済みseat correction方針の変更。
+- Session削除のroute/status/cascade対象、削除後のSeason集計再構築契約の変更。
 
 ## 3. Architecture
 
@@ -140,7 +141,7 @@ Player selectでは参加者を一時保持し、初回Match送信直前にSessi
 | Session create | `POST /api/leagues/:leagueId/seasons/:seasonId/sessions` | create input → 201 `Session` | fixed member snapshotの開始 |
 | Session detail | `GET /api/leagues/:leagueId/seasons/:seasonId/sessions/:sessionId` | `data: Session` | members、status、count |
 | Session update | `PATCH /api/leagues/:leagueId/seasons/:seasonId/sessions/:sessionId` | endedAt/tableLabel → 200 `Session` | 終了操作、再取得 |
-| Session delete | existing API only for rollback/explicit supported action | 204 | UIの必須機能には含めない |
+| Session delete | `DELETE /api/leagues/:leagueId/seasons/:seasonId/sessions/:sessionId` | 204 | Season詳細で確認後に削除。BEが配下Matchと集計を処理する |
 | Match list | `GET /api/leagues/:leagueId/seasons/:seasonId/sessions/:sessionId/matches` | `data: Match[]` | matchIndex、raw score、rank、point |
 | Match create | `POST /api/leagues/:leagueId/seasons/:seasonId/sessions/:sessionId/matches` | create input（rank/pointなし、外卓欄別）→ 201 `Match` | 初回・追加登録 |
 | Match detail | `GET /api/leagues/:leagueId/seasons/:seasonId/sessions/:sessionId/matches/:matchId` | `data: Match` | 編集初期値、結果詳細 |
@@ -242,9 +243,10 @@ Adapterは次を担当しない。
 
 1. form validationで不正入力を止める。
 2. feature APIが共通client経由でPOST/PATCH/DELETEを実行する。
-3. 成功してもlocal listへoptimistic updateせず、対象Session、Match list、必要なMatch detailをGETする。
+3. 成功してもlocal list/totalsへoptimistic updateせず、対象Session、Match list、必要なMatch detailをGETする。Session削除後はSession listとSeason detailを再取得する。
 4. GET responseをadapterへ通し、BEのcomputed値・欠番・nullをそのまま描画する。
-5. 失敗時は入力を保持し、401だけAuth boundaryへ委譲する。
+5. Session削除失敗時はsafe errorを表示したままSession listとSeason detailを再取得する。対象が残っている場合は確認画面から再試行できる。
+6. その他の失敗時は入力を保持し、401だけAuth boundaryへ委譲する。
 
 ## 5. Components and Interfaces
 
@@ -252,10 +254,10 @@ Adapterは次を担当しない。
 
 | Component | Intent | Requirements | Key dependencies | Contracts |
 |---|---|---|---|---|
-| Session Feature API | Session list/create/detail/updateを型付きで提供する | 2.1-2.5, 6.1-6.2 | Foundation client、AppType | API, Type |
+| Session Feature API | Session list/create/detail/update/deleteを型付きで提供する | 2.1-2.11, 6.1-6.2 | Foundation client、AppType | API, Type |
 | Match Feature API | Match list/create/detail/update/deleteを型付きで提供する | 4.1-4.5, 6.1-6.2 | Foundation client、AppType | API, Type |
 | Participant Model | gameType、wind、fixed memberを検証する | 1.1-1.6, 3.2 | Season/League DTO、Session DTO | Type, State |
-| Session Hooks and UI | Player select、Session list/detail、終了保存とSeason detail遷移を扱う | 1.1-2.5, 5.1-5.3, 6.3-6.4 | AsyncState、UI primitives、Next Router | UI, State |
+| Session Hooks and UI | Player select、Session list/detail、終了保存とSeason detail遷移、Season詳細でのSession削除確認と再取得を扱う | 1.1-2.11, 5.1-5.3, 6.3-6.4 | AsyncState、UI primitives、Next Router | UI, State |
 | Common Match Form | initial/additional/editを同一入力契約にし、座順修正、チョンボ発生、許可された卓外供託を扱う | 3.1-3.12, 4.1, 4.4 | Participant Model、League rule、Match API | UI, State |
 | Seat Rotation Model | 直前保存Matchのwind assignmentをgameType別に一席回し、新規formの初期値を作る | 3.10-3.12 | Participant Model、Match DTO | Type, State |
 | Match Views | list/detail/result/delete confirmationと記録済み外卓入力を表示する | 4.2-4.5, 5.1-5.3 | Match adapter、Table | UI |
@@ -283,10 +285,32 @@ interface SessionFeatureApi {
     sessionId: string,
     input: UpdateSessionInput,
   ): Promise<SessionDto>;
+  deleteSession(input: {
+    leagueId: string;
+    seasonId: string;
+    sessionId: string;
+  }): Promise<void>;
 }
 ```
 
 `SessionDto`、`CreateSessionInput`、`UpdateSessionInput`はAppTypeから導出する。`members`の配列順をseat順として暗黙利用せず、participant modelがgameTypeとwindを明示的に管理する。createはone-shot guardを持ち、成功後に返却Sessionのmembersを保存する。
+
+```ts
+type SessionDeletionState = {
+  target: SessionSummary | null;
+  deletingSessionId: string | null;
+  errorMessage: string | null;
+};
+
+interface SessionDeletionController {
+  state: SessionDeletionState;
+  requestDelete(session: SessionSummary): void;
+  cancelDelete(): void;
+  confirmDelete(): Promise<void>;
+}
+```
+
+Season detail hookは削除対象、削除中のSession ID、safe errorを保持する。削除確定は既存feature APIの`deleteSession`を一度呼び、二重実行を防ぐ。成功時は確認状態を閉じてSession listとSeason detailを再取得する。失敗時はエラーを保持したまま同じ二領域を再取得し、対象Sessionが残っていれば確認画面から再試行できる状態にする。再取得で対象Sessionが見つからない場合は削除対象を解除し、失敗を成功表示へ読み替えない。
 
 ### Match Feature API
 
@@ -361,6 +385,8 @@ Matchのread-only詳細は専用routeを新設せず、既存results routeのMat
 
 - Player selectはLeague ruleとSeason membersを同時に読み、三麻はnorth controlを表示せず、四麻は4枠を必須にする。
 - Session detailのmembersは作成時snapshot。Season membersの現在値を上書きしない。
+- Season detailの各Session行はresults routeへのリンクと削除ボタンを別要素として配置し、リンク内buttonの入れ子を作らない。削除ボタンでは開始日時、参加者、対局数と「配下の対局結果も削除される」旨を、既存Match削除確認と同じdialogパターンで表示する。キャンセルはmutationを起こさず、削除中は確定・キャンセルを無効化する。
+- Session削除確定後はBEのSession cascade削除とSeason集計再構築を待ち、Session一覧とSeason detailを再取得して表示を更新する。失敗時はsafe errorを表示し、両データを再取得した後、対象が残っている場合のみ再試行を許す。
 - Session end操作はendedAt/tableLabelの許可済み更新を保存し、成功後に`/league/{leagueId}/season/{seasonId}`へ遷移する。更新失敗時はrouteを変えず、Session resultsにerrorを表示して再試行可能にする。
 - Match formのedit modeはparticipantをread-onlyにし、raw score/playedAtだけを編集する。別参加者の場合は新Session開始へ戻す説明を出す。
 - 初回/追加Match formでは既存のplayedAt/席別点数行の後に外卓欄を追加する。チョンボ発生toggleがONなら、Session memberを選ぶ発生者行（1行=1回）と「発生を追加/削除」を表示し、同一userの複数行を許す。各回の罰符はLeague ruleの値を説明表示するだけでFE計算しない。
@@ -389,13 +415,15 @@ Matchのread-only詳細は専用routeを新設せず、既存results routeのMat
 
 | Component | Path | Responsibility |
 |---|---|---|
-| Session Feature API | `frontend/src/features/session/api/index.ts` | Session list/create/detail/updateのtyped wrapperを更新 |
+| Session Feature API | `frontend/src/features/session/api/index.ts` | Session list/create/detail/update/deleteのtyped wrapperを提供。既存delete wrapperを再利用 |
 | Match Feature API | `frontend/src/features/match/api/index.ts` | Match list/create/detail/update/deleteのtyped wrapperを更新 |
 | Participant Model / Seat Rotation Model | `frontend/src/features/session-match/model/participants.ts` | gameType、wind、fixed memberを検証し、保存済みassignmentをsanma/yonma別に一席rotateする |
 | Common Match Form | `frontend/src/features/session-match/model/match-form.ts`, `frontend/src/features/match/ui/MatchForm.tsx` | seat assignmentとexternal input draft、kyotaku調整後raw total validation、chombo event rows、typed payload変換を共通formに追加 |
 | Match Views | `frontend/src/features/match/ui/MatchList.tsx` | 展開詳細にMatch DTOのchombo/kyotakuとBE算出結果を表示 |
 | Route Integration / Request Hooks | `frontend/src/app/league/[leagueId]/season/[seasonId]/sessions/start/match/hooks/index.ts`, `frontend/src/app/league/[leagueId]/season/[seasonId]/sessions/[sessionId]/matches/new/hooks/index.ts`, `frontend/src/app/league/[leagueId]/season/[seasonId]/sessions/[sessionId]/matches/[matchId]/edit/hooks/index.ts` | League external ruleをformへ渡し、追加Matchはmax matchIndexの保存windから初期assignmentを作り、保存後はMatch listを再取得する |
 | Route Integration | `frontend/src/app/league/[leagueId]/season/[seasonId]/sessions/[sessionId]/results/hooks/index.ts` | Session update成功後にrecording flowをclearしSeason detailへ遷移。失敗時は同routeに留める |
+| Session Hooks and UI | `frontend/src/app/league/[leagueId]/season/[seasonId]/hooks/index.ts` | 削除対象・mutation/error状態、DELETE後のSession listとSeason detailの再取得を管理 |
+| Session Hooks and UI | `frontend/src/app/league/[leagueId]/season/[seasonId]/page.tsx` | 各Session行に独立した削除buttonを配置し、cascade警告付きdialogで確定・キャンセルを扱う |
 
 | Validation Handoff | `frontend/package.json`, `frontend/tsconfig.json` | 既存typecheck/lint/build entryとHono API type境界を確認 |
 | Session API compatibility | `frontend/src/lib/api/sessions.ts` | feature APIへの薄い互換入口、list/detail契約の不足を補う |
@@ -405,7 +433,7 @@ Matchのread-only詳細は専用routeを新設せず、既存results routeのMat
 | Route Integration | `frontend/src/app/league/[leagueId]/season/[seasonId]/sessions/[sessionId]/results/*` | Session detail、Match list、BE result、end/delete/refetchを接続 |
 | Route Integration | `frontend/src/app/league/[leagueId]/season/[seasonId]/sessions/[sessionId]/matches/new/*` | common formのadditional modeを接続 |
 | Route Integration | `frontend/src/app/league/[leagueId]/season/[seasonId]/sessions/[sessionId]/matches/[matchId]/edit/*` | common formのedit mode、participant read-onlyを接続 |
-| Route Integration | `frontend/src/app/league/[leagueId]/season/[seasonId]/*` | Session list/start導線を接続。Season集計は変更しない |
+| Route Integration | `frontend/src/app/league/[leagueId]/season/[seasonId]/*` | Session list/start導線とSession削除後の再取得を接続。集計計算は変更しない |
 | Existing result table | `frontend/src/components/pages/daily-record/daily-record-table/*` | BE rank/point/indexを表示できる薄いview componentへ整理 |
 | Legacy flow boundary | `frontend/src/store/slices/recording-flow-slice/*` | 新しい正本状態にせず、不要なparticipant/session fallbackを移行対象として明示 |
 
@@ -424,7 +452,7 @@ Matchのread-only詳細は専用routeを新設せず、既存results routeのMat
 3. Player selectとSession作成/list/detailを移行し、members snapshotを正本化する。
 4. 初回・追加・編集を共通Matchフォームへ寄せ、FE rank/point計算を外す。
 5. Match list/detail/result、delete、成功後refetch、error/loading/emptyを接続する。
-6. Season detail導線、未接続button、mock fallback、旧recording flow依存を対象範囲で整理する。
+6. Season detail導線、Session削除確認・再取得、未接続button、mock fallback、旧recording flow依存を対象範囲で整理する。
 7. AppType契約、typecheck、lint、build、主要routeの静的スキャンを検証する。
 
 ### Migration safety
@@ -432,9 +460,9 @@ Matchのread-only詳細は専用routeを新設せず、既存results routeのMat
 - Session作成後のmembersを再取得したSeason membersで上書きしない。
 - BEのrank/point/matchIndexをFEで作らず、欠番を連番化せず、raw scoreから表示用rankを推定しない。
 - Match editでparticipant selectを編集可能なまま残さず、異なる参加者は新Sessionへ誘導する。
-- API成功前にlocal list/totalsを確定させず、成功後にSession detail・Match list・Match detailを再取得する。
+- API成功前にlocal list/totalsを確定させず、Session削除成功後はSession listとSeason detailを再取得する。失敗時も両方を再取得して現状を反映する。
 - APIにない参加者変更・統計計算・旧コード全削除をmockで補わない。
-- 既存Session createのrollback用途だけで使われるdelete APIは、UIの通常操作と混同しない。
+- 初回Match失敗時のrollbackは同じ送信内で作成したSessionだけを削除する。Season detailの通常削除は、対象Sessionと配下Matchの削除を説明する確認を経て実行する。
 
 ## 9. Testing and Validation Strategy
 
@@ -442,6 +470,7 @@ Matchのread-only詳細は専用routeを新設せず、既存results routeのMat
 |---|---|---|
 | Participant/form source review | participant constraints、wind、fixed members、external-input mapping、BE rank/point boundary | 1.1-1.6, 2.1, 3.1-3.9, 4.1, 4.4 |
 | Session and Match integration review | API types, DTO/null/ISO, Session snapshot, mutation/refetch flow, safe errors | 2.1-2.6, 4.2-4.5, 6.1-6.4 |
+| Season detail Session deletion review | list rowの削除操作、cascadeと対象情報の確認、キャンセル時mutationなし、確定後のDELETEとSession list/Season detail再取得、失敗時のsafe errorと再取得後の再試行 | 2.7-2.11, 6.3-6.4 |
 | Issue #123 source review | typecheck/lint/build plus source review that selects the saved Match with maximum `matchIndex`, preserves editable draft assignment, uses saved assignment as the next baseline, and navigates only after Session update succeeds | 2.4, 3.10-3.12, 5.1, 5.3 |
 | State and route source review | loading/empty/retry, 401 handoff, 403/404/409/validation/transport, stale request, route links and no-op buttons | 1.6, 2.5, 3.5-3.6, 5.1-5.3, 6.3-6.4, 7.3 |
 | Project validation | `pnpm typecheck`、`pnpm lint`、`pnpm build`、mock/direct-fetch/FE-calculation scan | 5.4, 6.1, 7.1-7.3 |
@@ -462,6 +491,8 @@ Matchのread-only詳細は専用routeを新設せず、既存results routeのMat
 | 2.1, 2.2, 2.3, 2.5 | Session create/list/detail/error | Session Feature API, Session Hooks and UI | Session endpoints → Session views |
 | 2.4 | Session end成功後に所属Season detailへ遷移し、失敗時はSession resultsに留まる | Session Hooks and UI, Route Integration | update Session → `/league/{leagueId}/season/{seasonId}` |
 | 2.6 | Match create失敗時に今回作成したSessionだけをrollbackし、入力を保持 | Route Integration, Session Feature API, Match Feature API | create Session → create Match failure → delete newly-created Session |
+| 2.7, 2.8, 2.9 | 各Sessionの削除操作、cascade警告と対象情報を示す確認、キャンセル時はデータ維持 | Session Feature API, Session Hooks and UI | Season Session list → confirmation → cancel or DELETE |
+| 2.10, 2.11 | DELETE成功・失敗後にSession listとSeason detailを再取得し、BE集計・safe error・再試行状態を反映 | Session Feature API, Session Hooks and UI | DELETE Session → GET Session list + Season detail → refreshed UI or retry |
 | 3.1, 3.2, 3.3, 3.4, 3.5, 3.6 | 共通Match form、raw score、participant一致、BE結果、二重submit | Common Match Form, Participant Model | form → Match API |
 | 3.7, 3.8, 3.9 | chombo eventごとのoffender、ruleに応じたkyotaku controlの表示/非表示、既存UIへの追加 | Common Match Form | League rule + Match form → separate external Match fields |
 | 3.10, 3.11, 3.12 | ruleに応じた初回/次回wind assignment、保存前修正、最新保存Matchを次回基準にする | Seat Rotation Model, Common Match Form, Additional Match route | max matchIndex Match → rotate seat assignment → editable draft → Match create |
