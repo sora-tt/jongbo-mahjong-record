@@ -35,7 +35,7 @@
 
 ## 3. Session一覧・詳細と画面状態
 
-- [ ] 3.1 Session一覧をSeason detailへ接続する
+- [x] 3.1 Session一覧をSeason detailへ接続する
   - Session list APIを呼び出し、startedAt、endedAt、memberCount、totalMatchCount、tableLabel、fixed membersを表示する。
   - 正常な空配列はempty stateと新規Session導線へ、取得失敗はErrorStateとretryへ渡し、Seasonの現在membersでsnapshotを上書きしない。
   - 完了時、Season detailから既存Sessionの結果画面と新規Session開始へ遷移でき、Session一覧のloading/error/emptyが区別される。
@@ -175,4 +175,23 @@
   - 完了時、既存routeがcompile/build可能で、FE test runnerやbehavior test fileを追加せずにIssue #123の型・route契約を確認できる。
   - _Depends: 6.2, 8.1_
   - _Requirements: 2.4, 3.10, 3.11, 3.12, 5.1, 5.3, 5.4, 6.1, 7.1, 7.2, 7.3_
+  - _Boundary: Validation Handoff_
+
+## 9. Season詳細のSession削除
+
+- [x] 9.1 Season詳細からSession削除を確定・再試行できるようにする
+  - 3.1が担当する既存の結果画面リンクを保ち、リンクとは兄弟の独立した削除操作をSession一覧の各行へ追加する。リンク内に削除操作をネストしない。既存の型付きSession削除APIを利用する。
+  - 確認dialogに開始日時、参加者、対局数と配下の全Matchも削除される旨を表示する。キャンセルではmutationせず、処理中は確定・キャンセルの両方を無効にする。
+  - 成功後はSession一覧とSeason詳細を再取得する。失敗時はsafe errorを示して両方を再取得し、対象が残る場合は確認から再試行できるようにする。再取得で対象が消えていた場合は確認対象を解除し、成功表示へ読み替えない。
+  - 完了時、キャンセルではDELETEが起きず、確定時にのみ一度要求が実行される。成功時は最新の一覧・Season集計が表示され、失敗時は成功表示をせず、safe errorと再取得結果を示し、対象が残る場合だけ再確認で再試行できる。
+  - _Depends: 3.1_
+  - _Requirements: 2.7, 2.8, 2.9, 2.10, 2.11, 6.3, 6.4_
+  - _Boundary: Session Hooks and UI_
+
+- [x] 9.2 Session削除フローとプロジェクト検証を確認する
+  - source reviewでリンクと削除操作の入れ子がなく、cancel/confirm/success/failure/retryの挙動を確認する。
+  - 既存のfrontend typecheck、lint、buildを実行し、削除追加後も対象routeとfeature APIの型境界を確認する。
+  - 完了時、2.7-2.11の各受け入れ経路が実際のhook/pageへ結びつき、既存検証が成功する。
+  - _Depends: 9.1_
+  - _Requirements: 2.7, 2.8, 2.9, 2.10, 2.11, 6.3, 6.4_
   - _Boundary: Validation Handoff_

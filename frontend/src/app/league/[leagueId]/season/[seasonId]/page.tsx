@@ -3,7 +3,7 @@
 import * as React from "react";
 
 import clsx from "clsx";
-import { Calendar, Crown, Pencil } from "lucide-react";
+import { Calendar, Crown, Pencil, Trash2 } from "lucide-react";
 
 import Link from "next/link";
 
@@ -32,6 +32,15 @@ const formatDate = (value: string | null) => {
   }).format(new Date(value));
 };
 
+const formatDateTime = (value: string) =>
+  new Intl.DateTimeFormat("ja-JP", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
+
 const SeasonPage: React.FC = () => {
   const {
     leagueId,
@@ -49,13 +58,66 @@ const SeasonPage: React.FC = () => {
     sessionsLoading,
     sessionsError,
     error,
+    deleteTargetSession,
+    deletingSessionId,
+    isSessionDeleteRequestInFlight,
+    sessionDeleteError,
+    sessionDeleteRetryAllowed,
+    sessionDeleteVerificationPending,
+    isRefreshingSessionDelete,
     retry,
     retrySessions,
+    handleRequestDeleteSession,
+    handleCancelDeleteSession,
+    handleRetrySessionDeleteStatus,
+    handleConfirmDeleteSession,
     handleStartRecording,
     handleToggleChartSeries,
   } = useSeasonPage();
+  const deleteDialogTitleRef = React.useRef<HTMLHeadingElement | null>(null);
+  const previousDeleteTargetIdRef = React.useRef<string | null>(null);
 
-  if (loading) {
+  React.useEffect(() => {
+    if (deleteTargetSession) {
+      previousDeleteTargetIdRef.current = String(deleteTargetSession.id);
+      deleteDialogTitleRef.current?.focus();
+      return;
+    }
+
+    const previousDeleteTargetId = previousDeleteTargetIdRef.current;
+    if (previousDeleteTargetId) {
+      if (
+        deletingSessionId ||
+        isRefreshingSessionDelete ||
+        loading ||
+        sessionsLoading
+      ) {
+        return;
+      }
+
+      window.requestAnimationFrame(() => {
+        const deleteTrigger = document.getElementById(
+          `delete-session-${previousDeleteTargetId}`
+        );
+        const focusTarget =
+          deleteTrigger ??
+          document.getElementById("session-list-section") ??
+          document.getElementById("season-detail-error-state") ??
+          document.getElementById("season-detail-empty-state");
+        focusTarget?.focus();
+      });
+      previousDeleteTargetIdRef.current = null;
+    }
+  }, [
+    deleteTargetSession,
+    deletingSessionId,
+    error,
+    isRefreshingSessionDelete,
+    loading,
+    sessionsLoading,
+  ]);
+
+  if (loading && !deleteTargetSession) {
     return (
       <AppShell mainClassName="min-h-screen bg-background font-jp">
         <LoadingState
@@ -66,11 +128,36 @@ const SeasonPage: React.FC = () => {
     );
   }
 
-  if (error) {
+  if (error && !deleteTargetSession) {
     return (
       <AppShell mainClassName="min-h-screen bg-background font-jp">
-        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-          <ErrorState message={error} onRetry={retry} />
+        <div
+          id="season-detail-error-state"
+          tabIndex={-1}
+          className="mx-auto max-w-7xl rounded-surface px-4 py-8 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus sm:px-6 lg:px-8"
+        >
+          {sessionDeleteVerificationPending ? (
+            <div className="mb-4 rounded-md bg-surface-muted p-3" role="status">
+              <p className="text-sm text-text-muted">
+                Sessionの状態を確認できていません。確認が完了するまで削除操作は再開できません。
+              </p>
+              <Button
+                variant="secondary"
+                className="mt-3"
+                onClick={handleRetrySessionDeleteStatus}
+                disabled={isRefreshingSessionDelete}
+                loading={isRefreshingSessionDelete}
+              >
+                状態を再取得
+              </Button>
+            </div>
+          ) : null}
+          <ErrorState
+            message={
+              sessionDeleteError ? `${sessionDeleteError} ${error}` : error
+            }
+            onRetry={retry}
+          />
         </div>
       </AppShell>
     );
@@ -79,7 +166,35 @@ const SeasonPage: React.FC = () => {
   if (!season) {
     return (
       <AppShell mainClassName="min-h-screen bg-background font-jp">
-        <div className="mx-auto max-w-2xl px-4 py-8 sm:px-6 lg:px-8">
+        <div
+          id="season-detail-empty-state"
+          tabIndex={-1}
+          className="mx-auto max-w-2xl rounded-surface px-4 py-8 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus sm:px-6 lg:px-8"
+        >
+          {sessionDeleteVerificationPending ? (
+            <div className="mb-4 rounded-md bg-surface-muted p-3" role="status">
+              <p className="text-sm text-text-muted">
+                Sessionの状態を確認できていません。確認が完了するまで削除操作は再開できません。
+              </p>
+              <Button
+                variant="secondary"
+                className="mt-3"
+                onClick={handleRetrySessionDeleteStatus}
+                disabled={isRefreshingSessionDelete}
+                loading={isRefreshingSessionDelete}
+              >
+                状態を再取得
+              </Button>
+            </div>
+          ) : null}
+          {sessionDeleteError ? (
+            <p
+              className="mb-3 rounded-md bg-error-bg px-3 py-2 text-sm text-error-text"
+              role="alert"
+            >
+              {sessionDeleteError}
+            </p>
+          ) : null}
           <EmptyState
             title={
               seasonNotFound
@@ -226,7 +341,11 @@ const SeasonPage: React.FC = () => {
           </SectionCard>
         </section>
 
-        <section className="mb-8">
+        <section
+          id="session-list-section"
+          tabIndex={-1}
+          className="mb-8 rounded-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+        >
           <SectionCard
             title="Session一覧"
             rightText={
@@ -239,6 +358,33 @@ const SeasonPage: React.FC = () => {
             }
             bodyClassName="p-4"
           >
+            {sessionDeleteError && !deleteTargetSession ? (
+              <p
+                className="mb-3 rounded-md bg-error-bg px-3 py-2 text-sm text-error-text"
+                role="alert"
+              >
+                {sessionDeleteError}
+              </p>
+            ) : null}
+            {sessionDeleteVerificationPending && !deleteTargetSession ? (
+              <div
+                className="mb-3 rounded-md bg-surface-muted p-3"
+                role="status"
+              >
+                <p className="text-sm text-text-muted">
+                  Sessionの状態を確認できていません。確認が完了するまで削除操作は再開できません。
+                </p>
+                <Button
+                  variant="secondary"
+                  className="mt-3"
+                  onClick={handleRetrySessionDeleteStatus}
+                  disabled={isRefreshingSessionDelete}
+                  loading={isRefreshingSessionDelete}
+                >
+                  状態を再取得
+                </Button>
+              </div>
+            ) : null}
             {sessionsLoading ? (
               <LoadingState label="Session一覧を読み込んでいます…" />
             ) : sessionsError ? (
@@ -250,41 +396,206 @@ const SeasonPage: React.FC = () => {
               />
             ) : (
               <div className="space-y-3">
-                {sessions.map((session) => (
-                  <Link
-                    key={String(session.id)}
-                    href={`/league/${leagueId}/season/${seasonId}/sessions/${session.id}/results`}
-                    className="block rounded-control border border-border p-4 transition-colors hover:border-brand-300 hover:bg-brand-50"
-                  >
-                    <div className="flex flex-wrap items-start justify-between gap-2">
-                      <div>
-                        <p className="font-semibold text-foreground">
-                          {formatDate(session.startedAt)}
-                        </p>
-                        <p className="mt-1 text-sm text-text-muted">
-                          {session.members
-                            .map((member) => member.userName)
-                            .join("・")}
-                        </p>
+                {sessions.map((session) => {
+                  const sessionId = String(session.id);
+
+                  return (
+                    <div
+                      key={sessionId}
+                      className="rounded-control border border-border p-4 transition-colors hover:border-brand-300 hover:bg-brand-50"
+                    >
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <Link
+                          href={`/league/${leagueId}/season/${seasonId}/sessions/${session.id}/results`}
+                          className="min-w-0 flex-1 rounded-control focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                        >
+                          <div className="flex flex-wrap items-start justify-between gap-2">
+                            <div>
+                              <p className="font-semibold text-foreground">
+                                {formatDate(session.startedAt)}
+                              </p>
+                              <p className="mt-1 text-sm text-text-muted">
+                                {session.members
+                                  .map((member) => member.userName)
+                                  .join("・")}
+                              </p>
+                            </div>
+                            <span className="rounded-full bg-surface-muted px-3 py-1 text-xs text-text-muted">
+                              {session.endedAt ? "終了" : "進行中"}
+                            </span>
+                          </div>
+                          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-text-muted">
+                            <span>参加者 {session.memberCount}人</span>
+                            <span>対局 {session.totalMatchCount}局</span>
+                            {session.tableLabel ? (
+                              <span>卓 {session.tableLabel}</span>
+                            ) : null}
+                          </div>
+                        </Link>
+                        <Button
+                          id={`delete-session-${sessionId}`}
+                          type="button"
+                          variant="danger"
+                          size="md"
+                          className="min-h-11 self-end sm:self-auto"
+                          aria-label={`Session ${formatDate(session.startedAt)} を削除`}
+                          aria-haspopup="dialog"
+                          disabled={
+                            isSessionDeleteRequestInFlight ||
+                            sessionDeleteVerificationPending ||
+                            isRefreshingSessionDelete
+                          }
+                          onClick={() => handleRequestDeleteSession(session)}
+                        >
+                          <Trash2 className="h-4 w-4" aria-hidden="true" />
+                          <span>削除</span>
+                        </Button>
                       </div>
-                      <span className="rounded-full bg-surface-muted px-3 py-1 text-xs text-text-muted">
-                        {session.endedAt ? "終了" : "進行中"}
-                      </span>
                     </div>
-                    <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-text-muted">
-                      <span>参加者 {session.memberCount}人</span>
-                      <span>対局 {session.totalMatchCount}局</span>
-                      {session.tableLabel ? (
-                        <span>卓 {session.tableLabel}</span>
-                      ) : null}
-                    </div>
-                  </Link>
-                ))}
+                  );
+                })}
               </div>
             )}
           </SectionCard>
         </section>
       </div>
+      {deleteTargetSession ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="session-delete-dialog-title"
+          aria-describedby="session-delete-dialog-description"
+          onKeyDown={(event) => {
+            if (event.key === "Escape") {
+              event.preventDefault();
+              handleCancelDeleteSession();
+              return;
+            }
+            if (event.key !== "Tab") return;
+
+            const focusableButtons = Array.from(
+              event.currentTarget.querySelectorAll<HTMLButtonElement>(
+                "button:not(:disabled)"
+              )
+            );
+            if (focusableButtons.length === 0) {
+              event.preventDefault();
+              deleteDialogTitleRef.current?.focus();
+              return;
+            }
+
+            const firstButton = focusableButtons[0];
+            const lastButton = focusableButtons[focusableButtons.length - 1];
+            if (
+              event.shiftKey &&
+              (document.activeElement === firstButton ||
+                document.activeElement === deleteDialogTitleRef.current)
+            ) {
+              event.preventDefault();
+              lastButton.focus();
+            } else if (
+              !event.shiftKey &&
+              (document.activeElement === lastButton ||
+                document.activeElement === deleteDialogTitleRef.current)
+            ) {
+              event.preventDefault();
+              firstButton.focus();
+            }
+          }}
+        >
+          <div className="w-full max-w-md rounded-surface bg-white p-6 shadow-xl">
+            <h2
+              id="session-delete-dialog-title"
+              ref={deleteDialogTitleRef}
+              tabIndex={-1}
+              className="text-lg font-bold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+            >
+              Sessionを削除しますか？
+            </h2>
+            <dl className="mt-4 space-y-2 text-sm text-text-muted">
+              <div className="flex flex-wrap gap-x-2">
+                <dt className="font-medium text-foreground">開始日時</dt>
+                <dd>{formatDateTime(deleteTargetSession.startedAt)}</dd>
+              </div>
+              <div className="flex flex-wrap gap-x-2">
+                <dt className="font-medium text-foreground">参加者</dt>
+                <dd>
+                  {deleteTargetSession.members
+                    .map((member) => member.userName)
+                    .join("・")}
+                </dd>
+              </div>
+              <div className="flex flex-wrap gap-x-2">
+                <dt className="font-medium text-foreground">対局数</dt>
+                <dd>{deleteTargetSession.totalMatchCount}局</dd>
+              </div>
+            </dl>
+            <p
+              id="session-delete-dialog-description"
+              className="mt-4 text-sm text-text-muted"
+            >
+              このSessionに含まれる対局結果もすべて削除されます。
+            </p>
+            {sessionDeleteError ? (
+              <p className="mt-3 text-sm text-error-text" role="alert">
+                {sessionDeleteError}
+              </p>
+            ) : null}
+            {error ? (
+              <p className="mt-3 text-sm text-error-text" role="alert">
+                {error}
+              </p>
+            ) : null}
+            {sessionsError && !sessionDeleteRetryAllowed ? (
+              <p className="mt-3 text-sm text-error-text" role="alert">
+                {sessionsError}
+              </p>
+            ) : null}
+            {!sessionDeleteRetryAllowed ? (
+              <div className="mt-4 rounded-md bg-surface-muted p-3">
+                <p className="text-sm text-text-muted">
+                  最新状態を確認するまで削除を再試行できません。
+                </p>
+                <Button
+                  variant="secondary"
+                  className="mt-3"
+                  onClick={handleRetrySessionDeleteStatus}
+                  disabled={isRefreshingSessionDelete}
+                  loading={isRefreshingSessionDelete}
+                >
+                  状態を再取得
+                </Button>
+              </div>
+            ) : null}
+            <div className="mt-6 flex justify-end gap-3">
+              <Button
+                variant="secondary"
+                onClick={handleCancelDeleteSession}
+                disabled={
+                  Boolean(deletingSessionId) || isRefreshingSessionDelete
+                }
+              >
+                キャンセル
+              </Button>
+              <Button
+                variant="danger"
+                onClick={() => void handleConfirmDeleteSession()}
+                disabled={
+                  Boolean(deletingSessionId) ||
+                  isRefreshingSessionDelete ||
+                  !sessionDeleteRetryAllowed
+                }
+                loading={
+                  Boolean(deletingSessionId) || isRefreshingSessionDelete
+                }
+              >
+                削除する
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </AppShell>
   );
 };

@@ -6,7 +6,7 @@ import { fetchLeagueDetail } from "@/features/league/api";
 import { toLeagueDetail } from "@/features/league/model/adapter";
 import { fetchSeasonDetail } from "@/features/season/api";
 import { toSeasonDetail } from "@/features/season/model/adapter";
-import { listSessions } from "@/features/session/api";
+import { deleteSession, listSessions } from "@/features/session/api";
 import { toSessionList } from "@/features/session/model/adapter";
 import { toPointProgressionChart } from "@/features/statistics/model/adapter";
 import { CHART_SERIES } from "@/features/statistics/model/chart";
@@ -14,6 +14,8 @@ import { ApiError, getApiErrorMessage } from "@/lib/api/core";
 
 const DEFAULT_ERROR_MESSAGE =
   "シーズン詳細の取得に失敗しました。時間をおいて再度お試しください。";
+const DEFAULT_DELETE_SESSION_ERROR_MESSAGE =
+  "Sessionの削除に失敗しました。時間をおいて再度お試しください。";
 
 type SeasonDetail = ReturnType<typeof toSeasonDetail>;
 type SessionSummary = ReturnType<typeof toSessionList>[number];
@@ -30,20 +32,74 @@ type Title = {
   value: string;
 };
 
+type SessionDeleteContext = {
+  routeKey: string;
+  sessionId: string;
+};
+
+type SessionDeleteTarget = {
+  routeKey: string;
+  session: SessionSummary;
+};
+
 const formatPercent = (value: number) => `${value.toFixed(2)}%`;
 
 export const useSeasonPage = () => {
   const router = useRouter();
   const params = useParams<{ leagueId: string; seasonId: string }>();
+  const routeKey = JSON.stringify([params.leagueId, params.seasonId]);
+  const currentRouteKeyRef = React.useRef(routeKey);
+  currentRouteKeyRef.current = routeKey;
   const [leagueName, setLeagueName] = React.useState("");
   const [season, setSeason] = React.useState<SeasonDetail | null>(null);
   const [sessions, setSessions] = React.useState<SessionSummary[]>([]);
+  const [loadedRouteKey, setLoadedRouteKey] = React.useState<string | null>(
+    null
+  );
   const [loading, setLoading] = React.useState(true);
   const [sessionsLoading, setSessionsLoading] = React.useState(true);
   const [sessionsError, setSessionsError] = React.useState<string | null>(null);
   const [seasonNotFound, setSeasonNotFound] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] =
+    React.useState<SessionDeleteTarget | null>(null);
+  const deleteTargetSession =
+    deleteTarget?.routeKey === routeKey ? deleteTarget.session : null;
+  const [deletingSession, setDeletingSession] =
+    React.useState<SessionDeleteContext | null>(null);
+  const deletingSessionId =
+    deletingSession?.routeKey === routeKey ? deletingSession.sessionId : null;
+  const [sessionDeleteError, setSessionDeleteError] = React.useState<
+    string | null
+  >(null);
+  const [sessionDeleteRetryAllowed, setSessionDeleteRetryAllowed] =
+    React.useState(false);
+  const [isRefreshingSessionDelete, setIsRefreshingSessionDelete] =
+    React.useState(false);
+  const [
+    sessionDeleteVerificationPending,
+    setSessionDeleteVerificationPending,
+  ] = React.useState(false);
+  const deletingSessionIdRef = React.useRef<SessionDeleteContext | null>(null);
+  const sessionDeleteRefreshTargetRef =
+    React.useRef<SessionDeleteContext | null>(null);
+  const sessionDeleteRefreshLockRef = React.useRef(false);
   const [retryCount, setRetryCount] = React.useState(0);
+
+  React.useEffect(() => {
+    setDeleteTarget((target) =>
+      target?.routeKey === routeKey ? target : null
+    );
+    const refreshTarget = sessionDeleteRefreshTargetRef.current;
+    if (refreshTarget && refreshTarget.routeKey !== routeKey) {
+      sessionDeleteRefreshTargetRef.current = null;
+      sessionDeleteRefreshLockRef.current = false;
+      setSessionDeleteVerificationPending(false);
+      setSessionDeleteRetryAllowed(false);
+      setSessionDeleteError(null);
+      setIsRefreshingSessionDelete(false);
+    }
+  }, [routeKey]);
 
   React.useEffect(() => {
     let isActive = true;
@@ -53,6 +109,7 @@ export const useSeasonPage = () => {
 
     if (!leagueId || !seasonId) {
       setError("leagueId または seasonId が指定されていません");
+      setLoadedRouteKey(routeKey);
       setLoading(false);
       return;
     }
@@ -90,16 +147,22 @@ export const useSeasonPage = () => {
       ) {
         setSeason(null);
         setSeasonNotFound(true);
+        setDeleteTarget(null);
+        setSessionDeleteRetryAllowed(false);
+        sessionDeleteRefreshTargetRef.current = null;
+        sessionDeleteRefreshLockRef.current = false;
+        setSessionDeleteVerificationPending(false);
+        setIsRefreshingSessionDelete(false);
         setError(null);
       } else {
         setError(
           getApiErrorMessage(seasonResult.reason, DEFAULT_ERROR_MESSAGE)
         );
       }
-      setLoading(false);
-
+      let refreshedSessions: SessionSummary[] | null = null;
       if (sessionsResult.status === "fulfilled") {
-        setSessions(toSessionList(sessionsResult.value));
+        refreshedSessions = toSessionList(sessionsResult.value);
+        setSessions(refreshedSessions);
       } else if (
         sessionsResult.reason instanceof ApiError &&
         sessionsResult.reason.status === 401
@@ -109,6 +172,7 @@ export const useSeasonPage = () => {
         sessionsResult.reason instanceof ApiError &&
         sessionsResult.reason.status === 404
       ) {
+        refreshedSessions = [];
         setSessions([]);
         setSessionsError(null);
       } else {
@@ -129,6 +193,38 @@ export const useSeasonPage = () => {
       ) {
         router.replace("/login");
       }
+
+      const refreshTarget = sessionDeleteRefreshTargetRef.current;
+      if (refreshTarget?.routeKey === routeKey) {
+        const targetExists = refreshedSessions?.some(
+          (session) => String(session.id) === refreshTarget.sessionId
+        );
+        const verificationCompleted =
+          refreshedSessions !== null && seasonResult.status === "fulfilled";
+        if (verificationCompleted && !targetExists) {
+          setDeleteTarget((target) =>
+            target?.routeKey === routeKey &&
+            String(target.session.id) === refreshTarget.sessionId
+              ? null
+              : target
+          );
+          setSessionDeleteRetryAllowed(false);
+          sessionDeleteRefreshTargetRef.current = null;
+          setSessionDeleteVerificationPending(false);
+        } else if (verificationCompleted && targetExists) {
+          setSessionDeleteRetryAllowed(true);
+          sessionDeleteRefreshTargetRef.current = null;
+          setSessionDeleteVerificationPending(false);
+        } else {
+          setSessionDeleteRetryAllowed(false);
+          setSessionDeleteVerificationPending(true);
+        }
+        sessionDeleteRefreshLockRef.current = false;
+        setIsRefreshingSessionDelete(false);
+      }
+
+      setLoadedRouteKey(routeKey);
+      setLoading(false);
     };
 
     void load();
@@ -136,11 +232,149 @@ export const useSeasonPage = () => {
     return () => {
       isActive = false;
     };
-  }, [params.leagueId, params.seasonId, retryCount, router]);
+  }, [params.leagueId, params.seasonId, retryCount, routeKey, router]);
 
   const retry = React.useCallback(() => {
     setRetryCount((count) => count + 1);
   }, []);
+
+  React.useEffect(() => {
+    if (
+      deleteTargetSession &&
+      !sessions.some((session) => session.id === deleteTargetSession.id)
+    ) {
+      setDeleteTarget(null);
+    }
+  }, [deleteTargetSession, sessions]);
+
+  const handleRequestDeleteSession = React.useCallback(
+    (session: SessionSummary) => {
+      const currentSession = sessions.find(
+        (item) => String(item.id) === String(session.id)
+      );
+      if (
+        loadedRouteKey !== routeKey ||
+        loading ||
+        sessionsLoading ||
+        !currentSession ||
+        deletingSessionIdRef.current ||
+        sessionDeleteRefreshLockRef.current ||
+        sessionDeleteVerificationPending ||
+        sessionDeleteRefreshTargetRef.current
+      ) {
+        return;
+      }
+      setSessionDeleteError(null);
+      setSessionDeleteRetryAllowed(true);
+      setDeleteTarget({ routeKey, session: currentSession });
+    },
+    [
+      loadedRouteKey,
+      loading,
+      routeKey,
+      sessions,
+      sessionsLoading,
+      sessionDeleteVerificationPending,
+    ]
+  );
+
+  const handleCancelDeleteSession = React.useCallback(() => {
+    if (deletingSessionIdRef.current || sessionDeleteRefreshLockRef.current) {
+      return;
+    }
+    setDeleteTarget(null);
+    setSessionDeleteRetryAllowed(false);
+    setSessionDeleteError(null);
+  }, []);
+
+  const handleRetrySessionDeleteStatus = React.useCallback(() => {
+    const refreshTarget = sessionDeleteRefreshTargetRef.current;
+    if (
+      !refreshTarget ||
+      refreshTarget.routeKey !== routeKey ||
+      sessionDeleteRefreshLockRef.current
+    ) {
+      return;
+    }
+
+    sessionDeleteRefreshLockRef.current = true;
+    setSessionDeleteVerificationPending(true);
+    setIsRefreshingSessionDelete(true);
+    retry();
+  }, [routeKey, retry]);
+
+  const handleConfirmDeleteSession = React.useCallback(async () => {
+    const { leagueId, seasonId } = params;
+    const requestRouteKey = routeKey;
+    if (
+      !leagueId ||
+      !seasonId ||
+      !deleteTargetSession ||
+      deleteTarget?.routeKey !== requestRouteKey ||
+      deletingSessionIdRef.current ||
+      sessionDeleteRefreshLockRef.current ||
+      sessionDeleteVerificationPending ||
+      !sessionDeleteRetryAllowed
+    ) {
+      return;
+    }
+
+    const sessionId = String(deleteTargetSession.id);
+    const request = { routeKey: requestRouteKey, sessionId };
+    deletingSessionIdRef.current = request;
+    setDeletingSession(request);
+    setSessionDeleteError(null);
+
+    try {
+      await deleteSession({ leagueId, seasonId, sessionId });
+      if (currentRouteKeyRef.current !== requestRouteKey) return;
+      sessionDeleteRefreshTargetRef.current = request;
+      sessionDeleteRefreshLockRef.current = true;
+      setSessionDeleteRetryAllowed(false);
+      setSessionDeleteVerificationPending(true);
+      setIsRefreshingSessionDelete(true);
+      setDeleteTarget(null);
+      setSessionDeleteError(null);
+    } catch (deleteError) {
+      if (deleteError instanceof ApiError && deleteError.status === 401) {
+        router.replace("/login");
+        return;
+      }
+
+      if (currentRouteKeyRef.current !== requestRouteKey) return;
+
+      setSessionDeleteError(
+        getApiErrorMessage(deleteError, DEFAULT_DELETE_SESSION_ERROR_MESSAGE)
+      );
+      sessionDeleteRefreshTargetRef.current = request;
+      sessionDeleteRefreshLockRef.current = true;
+      setSessionDeleteRetryAllowed(false);
+      setSessionDeleteVerificationPending(true);
+      setIsRefreshingSessionDelete(true);
+    } finally {
+      if (deletingSessionIdRef.current === request) {
+        deletingSessionIdRef.current = null;
+      }
+      setDeletingSession((deleting) =>
+        deleting?.routeKey === requestRouteKey &&
+        deleting.sessionId === sessionId
+          ? null
+          : deleting
+      );
+    }
+
+    if (currentRouteKeyRef.current === requestRouteKey) retry();
+  }, [
+    currentRouteKeyRef,
+    deleteTarget,
+    deleteTargetSession,
+    params,
+    retry,
+    routeKey,
+    router,
+    sessionDeleteRetryAllowed,
+    sessionDeleteVerificationPending,
+  ]);
 
   const titles: Title[] = React.useMemo(() => {
     if (!season) {
@@ -248,12 +482,23 @@ export const useSeasonPage = () => {
     chartSeries,
     visibleSeries,
     visibleUserIds,
-    loading,
+    loading: loading || loadedRouteKey !== routeKey,
     sessionsLoading,
     sessionsError,
     error,
+    deleteTargetSession,
+    deletingSessionId,
+    isSessionDeleteRequestInFlight: deletingSession !== null,
+    sessionDeleteError,
+    sessionDeleteRetryAllowed,
+    sessionDeleteVerificationPending,
+    isRefreshingSessionDelete,
     retry,
     retrySessions: retry,
+    handleRequestDeleteSession,
+    handleCancelDeleteSession,
+    handleRetrySessionDeleteStatus,
+    handleConfirmDeleteSession,
     handleStartRecording,
     handleToggleChartSeries,
   };

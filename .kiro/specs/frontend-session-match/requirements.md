@@ -10,6 +10,7 @@ Session・Matchを記録する利用者とFE実装者は、参加者選択、Ses
 
 - Seasonの参加者候補からのPlayer select
 - Sessionの作成、一覧、詳細、終了状態の表示
+- Season詳細のSession一覧からのSession削除
 - Session終了保存後のシーズン詳細遷移と、League ruleに応じたSession内の座順ローテーション初期値
 - 初回Match、追加Match、Match編集で共有する入力フォーム
 - 三麻/四麻の人数、wind、Session member一致、raw score、チョンボ発生、卓外供託の入力制約表示
@@ -34,6 +35,7 @@ Session・Matchを記録する利用者とFE実装者は、参加者選択、Ses
 - `frontend-league-season` のSeason詳細からのSession開始導線を受け取り、Session一覧・詳細とMatch画面を所有する。Season/Leagueの集計表示は所有しない。
 - `backend-foundation` のcamelCase DTO、ISO 8601、Session/Match route、status、`rank`・`point`・`matchIndex`、チョンボ発生・卓外供託・League ruleの座順ローテーション可否のresponse契約を正本として利用する。
 - `backend-integrity-lifecycle` のSession固定member、三麻の`east/south/west`、四麻の`east/south/west/north`、Match参加者完全一致、BE計算結果、欠番を許容するmatchIndex、League ruleに応じた外卓入力を画面へ反映する。
+- Session削除時はBEが配下のMatchも削除し、Season・League・overallの集計を再構築する契約を利用する。FEは削除後に最新の一覧とSeason詳細を表示する。
 
 ## 要件
 
@@ -51,7 +53,7 @@ Session・Matchを記録する利用者とFE実装者は、参加者選択、Ses
 
 1.6 If 参加者候補の取得中、空配列、401、403、404、transport errorのいずれかが発生した場合, the Session-Match Feature shall 対象領域のloading、正常なempty、認証遷移、権限・対象エラー、再試行可能なエラーを区別して表示する。
 
-### Requirement 2: Sessionの作成・一覧・詳細
+### Requirement 2: Sessionの作成・一覧・詳細・削除
 
 2.1 When Player Selectで保持した参加者を使って初回Matchを送信するとき, the Session-Match Feature shall Match作成の直前にBEのSession作成契約へ重複のないmemberUserIdsを一度だけ送信し、作成成功後のSession member snapshotをそのMatchと以後のMatch入力の正本として扱う。
 
@@ -64,6 +66,16 @@ Session・Matchを記録する利用者とFE実装者は、参加者選択、Ses
 2.5 If Session一覧または詳細の取得・更新に失敗した場合, the Session-Match Feature shall empty、validation、authentication、forbidden、not_found、conflict、transport/decode errorを区別し、入力を失わず再試行可能な状態を表示する。
 
 2.6 If 初回Match作成が、同じ送信で新規作成したSessionの後に失敗した場合, the Session-Match Feature shall その送信で作成したSessionだけをDELETEしてロールバックし、既存Sessionを削除せず、Match作成の失敗を入力保持付きで表示する。
+
+2.7 When Season配下のSession一覧を表示するとき, the Session-Match Feature shall 進行中・終了済みを問わず、各Sessionを削除する操作を提供する。
+
+2.8 When 利用者がSession削除を選択するとき, the Session-Match Feature shall 対象Sessionの開始日時・参加者・対局数を確認画面に表示し、配下の全Matchも削除されることを説明して、利用者が確定するまで削除を実行しない。
+
+2.9 If 利用者がSession削除の確認をキャンセルした場合, the Session-Match Feature shall Sessionと配下のMatchを削除せず、一覧に対象Sessionを表示したままにする。
+
+2.10 When 利用者がSession削除を確定し削除が成功するとき, the Session-Match Feature shall Session一覧とSeason詳細を再取得し、残存Session、対局数、standings、recordsにBEの最新値を表示する。
+
+2.11 If Session削除の要求が失敗した場合, the Session-Match Feature shall 削除成功として表示せず、Requirement 6.4に従うエラー状態を示し、Session一覧とSeason詳細を再取得してから再試行できる操作を提供する。
 
 ### Requirement 3: 初回・追加・編集の共通Matchフォーム
 
