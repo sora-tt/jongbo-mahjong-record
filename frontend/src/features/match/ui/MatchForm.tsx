@@ -1,10 +1,18 @@
 import * as React from "react";
 
+import {
+  addYakumanEvent,
+  removeYakumanEvent,
+  setYakumanEnabled,
+} from "@/features/session-match/model/match-form";
+import { YAKUMAN_OPTIONS } from "@/lib/yakuman";
+
 import { Button } from "@/components/ui/button";
 import { Dropdown } from "@/components/ui/dropdown";
 import { TextBox } from "@/components/ui/text-box";
 
 import type {
+  YakumanEntryError,
   MatchFormValues,
   MatchFormMode,
 } from "@/features/session-match/model/match-form";
@@ -41,6 +49,7 @@ type Props = {
   chomboPenaltyPoints: number;
   allowOffTableKyotaku: boolean;
   error: string | null;
+  yakumanErrors?: ReadonlyArray<YakumanEntryError>;
   isSubmitting: boolean;
   onChange: (values: MatchFormValues) => void;
   onSubmit: () => void;
@@ -55,6 +64,7 @@ export const MatchForm: React.FC<Props> = ({
   chomboPenaltyPoints,
   allowOffTableKyotaku,
   error,
+  yakumanErrors = [],
   isSubmitting,
   onChange,
   onSubmit,
@@ -64,6 +74,18 @@ export const MatchForm: React.FC<Props> = ({
     label: member.userName,
     value: String(member.userId),
   }));
+  const yakumanKindOptions = YAKUMAN_OPTIONS.map(({ kind, label }) => ({
+    label,
+    value: kind,
+  }));
+  const matchParticipantUserIds = new Set(
+    constraint.requiredWinds
+      .map((wind) => values.userIdByWind[wind])
+      .filter((userId): userId is string => userId !== null)
+  );
+  const yakumanWinnerOptions = options.filter((option) =>
+    matchParticipantUserIds.has(option.value)
+  );
   const title =
     mode === "edit"
       ? "対局編集"
@@ -122,6 +144,19 @@ export const MatchForm: React.FC<Props> = ({
     const chomboOffenderUserIds = [...values.chomboOffenderUserIds];
     chomboOffenderUserIds[index] = offenderUserId;
     onChange({ ...values, chomboOffenderUserIds });
+  };
+
+  const updateYakumanEvent = (
+    index: number,
+    field: "winnerUserId" | "kind",
+    value: string
+  ) => {
+    onChange({
+      ...values,
+      yakumanEvents: values.yakumanEvents.map((event, eventIndex) =>
+        eventIndex === index ? { ...event, [field]: value || null } : event
+      ),
+    });
   };
 
   return (
@@ -196,6 +231,107 @@ export const MatchForm: React.FC<Props> = ({
             </div>
           </div>
         ))}
+
+        <section className="space-y-3 border-t border-border pt-3">
+          <h2 className="text-sm font-semibold text-foreground">役満記録</h2>
+          <label className="flex min-h-11 items-center gap-2 text-sm text-foreground">
+            <input
+              type="checkbox"
+              checked={values.yakumanEnabled}
+              disabled={isSubmitting}
+              onChange={(event) =>
+                onChange(setYakumanEnabled(values, event.target.checked))
+              }
+            />
+            役満があった
+          </label>
+
+          {values.yakumanEnabled ? (
+            <div className="space-y-3">
+              {values.yakumanEvents.map((event, index) => {
+                const rowError = yakumanErrors.find(
+                  (entry) => entry.index === index
+                );
+                const errorId = `yakuman-error-${index}`;
+
+                return (
+                  <div
+                    key={`yakuman-${index}`}
+                    role="group"
+                    aria-label={`役満記録 ${index + 1}`}
+                    aria-describedby={rowError ? errorId : undefined}
+                    className="grid grid-cols-1 gap-2 rounded-control border border-border bg-surface-muted p-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end"
+                  >
+                    <label className="block min-w-0 text-xs font-medium text-foreground">
+                      和了者
+                      <Dropdown
+                        defaultOption="和了者を選択"
+                        options={yakumanWinnerOptions}
+                        value={event.winnerUserId ?? ""}
+                        onChange={(_, value) =>
+                          updateYakumanEvent(index, "winnerUserId", value)
+                        }
+                        disabled={isSubmitting}
+                        className="mt-1 min-h-11 w-full"
+                      />
+                    </label>
+                    <label className="block min-w-0 text-xs font-medium text-foreground">
+                      役満種
+                      <Dropdown
+                        defaultOption="役満種を選択"
+                        options={yakumanKindOptions}
+                        value={event.kind ?? ""}
+                        onChange={(_, value) =>
+                          updateYakumanEvent(index, "kind", value)
+                        }
+                        disabled={isSubmitting}
+                        className="mt-1 min-h-11 w-full"
+                      />
+                    </label>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="min-h-11 min-w-11 justify-self-end"
+                      aria-label={`役満記録 ${index + 1} を削除`}
+                      disabled={isSubmitting}
+                      onClick={() =>
+                        onChange(removeYakumanEvent(values, index))
+                      }
+                    >
+                      削除
+                    </Button>
+                    {rowError ? (
+                      <p
+                        id={errorId}
+                        role="alert"
+                        className="text-sm text-error-text sm:col-span-3"
+                      >
+                        {rowError.message}
+                      </p>
+                    ) : null}
+                  </div>
+                );
+              })}
+
+              {values.yakumanEvents.length > 0 &&
+              values.yakumanEvents.every((event) =>
+                Boolean(event.winnerUserId && event.kind)
+              ) ? (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  className="min-h-11"
+                  disabled={isSubmitting}
+                  onClick={() => onChange(addYakumanEvent(values))}
+                >
+                  ＋ 役満を追加
+                </Button>
+              ) : null}
+            </div>
+          ) : null}
+        </section>
 
         {mode === "edit" ? (
           <section className="space-y-1 border-t border-border pt-3 text-sm">
@@ -347,7 +483,11 @@ export const MatchForm: React.FC<Props> = ({
           </section>
         )}
 
-        {error ? <p className="text-sm text-error-text">{error}</p> : null}
+        {error ? (
+          <p role="alert" className="text-sm text-error-text">
+            {error}
+          </p>
+        ) : null}
 
         <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:justify-center">
           <Button
