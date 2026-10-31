@@ -10,7 +10,7 @@ export const AppShell: React.FC<AppShellProps> = ({
   children,
   mainClassName,
 }) => (
-  <div className="min-h-screen bg-background text-foreground">
+  <div className="safe-area-app-shell min-h-screen bg-background text-foreground">
     <Header />
     <main className={mainClassName}>{children}</main>
   </div>

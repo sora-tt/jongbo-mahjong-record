@@ -120,7 +120,7 @@ export const Header: React.FC = () => {
   return (
     <>
       <header className="sticky top-0 z-40 border-b border-border bg-white/95 backdrop-blur">
-        <div className="mx-auto flex min-h-16 max-w-7xl items-center justify-between gap-3 px-4 lg:items-start lg:gap-6 sm:px-6 lg:px-8">
+        <div className="safe-area-header-content mx-auto flex min-h-16 max-w-7xl items-center justify-between gap-3 px-4 lg:items-start lg:gap-6 sm:px-6 lg:px-8">
           <Link
             href="/"
             className="flex shrink-0 items-center gap-2 rounded-control py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
@@ -185,7 +185,7 @@ export const Header: React.FC = () => {
 
       <aside
         id="mobile-navigation"
-        className={`fixed inset-y-0 right-0 z-50 flex w-80 max-w-[88vw] flex-col border-l border-border bg-white shadow-xl transition-transform duration-200 motion-reduce:transition-none lg:hidden ${isMenuOpen ? "translate-x-0" : "translate-x-full"}`}
+        className={`fixed inset-y-0 right-0 z-50 safe-area-mobile-drawer flex w-80 max-w-[88vw] flex-col border-l border-border bg-white shadow-xl transition-transform duration-200 motion-reduce:transition-none lg:hidden ${isMenuOpen ? "translate-x-0" : "translate-x-full"}`}
         aria-hidden={!isMenuOpen}
         inert={!isMenuOpen}
       >

@@ -10,7 +10,7 @@
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 3.1, 3.2_
   - _Boundary: PWA起動metadata_
 
-- [ ] 1.2 共通シェルをsafe area内に配置する
+- [x] 1.2 共通シェルをsafe area内に配置する
   - AppShellとAuthFormShellに端末のsafe-area insetsを考慮するレイアウトを適用する。
   - sticky Headerの背景と内部上余白、固定モバイルドロワーの上下余白をシステム領域に対応させる。
   - safe-area値がない端末では現在の最小余白とレイアウトを保つ。
