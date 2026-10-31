@@ -30,6 +30,7 @@ const makeHistory = (overrides: Partial<StatisticsMatchHistoryResponse> = {}) =>
           rank: 1,
           rawScore: 42000,
           finalPoint: 12.0,
+          yakumanKinds: ["daisangen", "suuankouTanki"],
           opponents: [
             {
               userId: "user-2",
@@ -55,6 +56,7 @@ const makeHistory = (overrides: Partial<StatisticsMatchHistoryResponse> = {}) =>
           rank: 4,
           rawScore: 18000,
           finalPoint: -22,
+          yakumanKinds: [],
           opponents: [],
         },
       ],
@@ -78,6 +80,27 @@ test("history model preserves API order and formats playedAt in Tokyo time", () 
     [
       { matchId: "match-newer", playedAtLabel: "2026/10/04 00:30" },
       { matchId: "match-older", playedAtLabel: "2026/10/03 23:30" },
+    ]
+  );
+});
+
+test("history model maps only the current participant's yakuman kinds in order", () => {
+  const model = getStatisticsMatchHistoryModel({
+    status: "ready",
+    history: makeHistory(),
+  });
+
+  deepStrictEqual(
+    model.items.map(({ match, yakumanLabels }) => ({
+      matchId: match.matchId,
+      yakumanLabels,
+    })),
+    [
+      {
+        matchId: "match-newer",
+        yakumanLabels: ["大三元", "四暗刻単騎待ち"],
+      },
+      { matchId: "match-older", yakumanLabels: [] },
     ]
   );
 });

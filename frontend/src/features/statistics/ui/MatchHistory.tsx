@@ -137,6 +137,11 @@ const MatchHistoryItem: React.FC<{
                   {formatOpponentPoint(item.finalPoint)}
                 </span>
               </MatchDetail>
+              {item.yakumanLabels.length > 0 ? (
+                <MatchDetail label="役満">
+                  {item.yakumanLabels.join("、")}
+                </MatchDetail>
+              ) : null}
             </dl>
 
             <section
