@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import test from "node:test";
+import { FieldValue } from "firebase-admin/firestore";
+import type { YakumanKind } from "@/domain/match/yakuman.js";
 import type { UserMatchStatisticsRepository } from "@/domain/statistics/repository.js";
 import { asIsoDateString, asOpaqueId } from "@/domain/shared/types.js";
 import type { UserMatchStatistics } from "@/domain/statistics/types.js";
@@ -19,6 +21,7 @@ const createProjection = (input: {
   matchIndex?: number;
   playedAt?: string;
   gameType?: "sanma" | "yonma";
+  yakumanKinds?: YakumanKind[];
 }): UserMatchStatistics => ({
   id: asOpaqueId("caller-provided-id"),
   userId: asOpaqueId(input.userId),
@@ -40,6 +43,9 @@ const createProjection = (input: {
   finalPoint: input.finalPoint ?? 35,
   chomboCount: 0,
   opponents: [],
+  ...(input.yakumanKinds === undefined
+    ? {}
+    : { yakumanKinds: input.yakumanKinds }),
   updatedAt: asIsoDateString("2026-01-01T00:01:00.000Z"),
 });
 
@@ -699,6 +705,124 @@ test(
         repository.deleteLeague(leagueId),
         repository.deleteLeague(otherLeagueId),
       ]);
+    }
+  },
+);
+
+test(
+  "round trips yakuman kinds through history pages and defaults legacy projections to an empty list",
+  { skip: !emulatorAvailable },
+  async () => {
+    const db = getDb();
+    const repository = new FirestoreUserMatchStatisticsRepository(db);
+    const suffix = randomUUID();
+    const leagueId = `yakuman-history-league-${suffix}`;
+    const seasonId = `yakuman-history-season-${suffix}`;
+    const sessionId = `yakuman-history-session-${suffix}`;
+    const userId = `yakuman-history-user-${suffix}`;
+    const collection = db.collection("user_match_statistics");
+    const query = {
+      scopeType: "season" as const,
+      leagueId: asOpaqueId(leagueId),
+      seasonId: asOpaqueId(seasonId),
+      userId: asOpaqueId(userId),
+      limit: 1,
+    };
+
+    try {
+      await repository.replaceSeason({
+        leagueId: asOpaqueId(leagueId),
+        seasonId: asOpaqueId(seasonId),
+        rows: [
+          createProjection({
+            userId,
+            leagueId,
+            seasonId,
+            sessionId,
+            matchId: "multi-kind-match",
+            playedAt: "2026-01-03T00:00:00.000Z",
+            yakumanKinds: ["daisangen", "tsuuiisou"],
+          }),
+          createProjection({
+            userId,
+            leagueId,
+            seasonId,
+            sessionId,
+            matchId: "empty-kinds-match",
+            playedAt: "2026-01-02T00:00:00.000Z",
+            yakumanKinds: [],
+          }),
+          createProjection({
+            userId,
+            leagueId,
+            seasonId,
+            sessionId,
+            matchId: "legacy-match",
+            playedAt: "2026-01-01T00:00:00.000Z",
+          }),
+        ],
+      });
+
+      const savedRows = await collection
+        .where("league_id", "==", leagueId)
+        .where("season_id", "==", seasonId)
+        .get();
+      const multiKindDoc = savedRows.docs.find(
+        (doc) => doc.data().match_id === "multi-kind-match",
+      );
+      const emptyKindsDoc = savedRows.docs.find(
+        (doc) => doc.data().match_id === "empty-kinds-match",
+      );
+      const legacyDoc = savedRows.docs.find(
+        (doc) => doc.data().match_id === "legacy-match",
+      );
+      assert.ok(multiKindDoc);
+      assert.ok(emptyKindsDoc);
+      assert.ok(legacyDoc);
+      assert.deepEqual(multiKindDoc.data().yakuman_kinds, [
+        "daisangen",
+        "tsuuiisou",
+      ]);
+      assert.deepEqual(emptyKindsDoc.data().yakuman_kinds, []);
+      await legacyDoc.ref.update({ yakuman_kinds: FieldValue.delete() });
+
+      const storedRows = await repository.listForScope({
+        scopeType: "season",
+        leagueId: asOpaqueId(leagueId),
+        seasonId: asOpaqueId(seasonId),
+        userId: asOpaqueId(userId),
+      });
+      assert.deepEqual(
+        storedRows.find(({ matchId }) => matchId === "legacy-match")
+          ?.yakumanKinds,
+        [],
+      );
+
+      const firstPage = await repository.listPage(query);
+      assert.equal(firstPage.status, "ready");
+      assert.deepEqual(firstPage.items[0]?.yakumanKinds, [
+        "daisangen",
+        "tsuuiisou",
+      ]);
+      assert.ok(firstPage.nextCursor);
+
+      const secondPage = await repository.listPage({
+        ...query,
+        cursor: firstPage.nextCursor,
+      });
+      assert.equal(secondPage.status, "ready");
+      assert.deepEqual(secondPage.items[0]?.yakumanKinds, []);
+      assert.ok(secondPage.nextCursor);
+
+      const thirdPage = await repository.listPage({
+        ...query,
+        cursor: secondPage.nextCursor,
+      });
+      assert.equal(thirdPage.status, "ready");
+      assert.deepEqual(thirdPage.items[0]?.yakumanKinds, []);
+      assert.equal(thirdPage.nextCursor, null);
+    } finally {
+      await repository.deleteLeague(asOpaqueId(leagueId));
     }
   },
 );

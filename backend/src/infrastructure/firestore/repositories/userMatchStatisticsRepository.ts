@@ -6,6 +6,7 @@ import {
   type Firestore,
   type Query,
 } from "firebase-admin/firestore";
+import { YAKUMAN_KINDS, type YakumanKind } from "@/domain/match/yakuman.js";
 import { asIsoDateString, asOpaqueId } from "@/domain/shared/types.js";
 import type {
   UserMatchStatisticsDraft,
@@ -216,6 +217,24 @@ const mapProjection = (id: string, data: DocumentData): UserMatchStatistics => {
       data.chombo_count,
       "user_match_statistics.chombo_count",
     ),
+    yakumanKinds:
+      data.yakuman_kinds === undefined
+        ? []
+        : requiredArray(
+            data.yakuman_kinds,
+            "user_match_statistics.yakuman_kinds",
+          ).map((value) => {
+            const kind = requiredString(
+              value,
+              "user_match_statistics.yakuman_kinds[]",
+            );
+            if (!YAKUMAN_KINDS.includes(kind as YakumanKind)) {
+              throw new TypeError(
+                "invalid or missing Firestore field: user_match_statistics.yakuman_kinds[]",
+              );
+            }
+            return kind as YakumanKind;
+          }),
     opponents: requiredArray(
       data.opponents,
       "user_match_statistics.opponents",
@@ -314,6 +333,7 @@ const toFirestoreData = (row: UserMatchStatisticsDraft, id: string) => ({
     rank: opponent.rank,
     final_point: opponent.finalPoint,
   })),
+  yakuman_kinds: row.yakumanKinds ?? [],
   updated_at: Timestamp.fromDate(new Date(row.updatedAt)),
 });
 
