@@ -99,6 +99,25 @@ export const MatchForm: React.FC<Props> = ({
     });
   };
 
+  const isNegativeScore = (wind: Wind) =>
+    (values.rawScoreByWind[wind] ?? "").trimStart().startsWith("-");
+
+  const toggleScoreSign = (wind: Wind) => {
+    const currentValue = values.rawScoreByWind[wind] ?? "";
+    const valueWithoutLeadingWhitespace = currentValue.trimStart();
+    const leadingWhitespace = currentValue.slice(
+      0,
+      currentValue.length - valueWithoutLeadingWhitespace.length
+    );
+    const isNegative = valueWithoutLeadingWhitespace.startsWith("-");
+    const unsignedValue = valueWithoutLeadingWhitespace.replace(/^[-+]/, "");
+
+    updateScore(
+      wind,
+      `${leadingWhitespace}${isNegative ? "" : "-"}${unsignedValue}`
+    );
+  };
+
   const setChomboOffender = (index: number, offenderUserId: string) => {
     const chomboOffenderUserIds = [...values.chomboOffenderUserIds];
     chomboOffenderUserIds[index] = offenderUserId;
@@ -134,7 +153,7 @@ export const MatchForm: React.FC<Props> = ({
         {constraint.requiredWinds.map((wind) => (
           <div
             key={wind}
-            className="grid grid-cols-[2rem_minmax(0,1fr)_auto] items-center gap-2"
+            className="grid grid-cols-[2rem_minmax(0,1fr)] items-center gap-2 sm:grid-cols-[2rem_minmax(0,1fr)_auto]"
           >
             <span className="font-bold text-foreground">
               {WIND_LABELS[wind]}
@@ -147,7 +166,21 @@ export const MatchForm: React.FC<Props> = ({
               disabled={isSubmitting || mode === "edit"}
               className="w-full"
             />
-            <div className="flex items-center gap-2">
+            <div className="col-span-2 flex items-center justify-end gap-2 sm:col-span-1">
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                className="min-h-11 min-w-11 !px-0 !py-0 text-base"
+                aria-label={`${WIND_LABELS[wind]}の点数を${
+                  isNegativeScore(wind) ? "プラス" : "マイナス"
+                }にする`}
+                selected={isNegativeScore(wind)}
+                disabled={isSubmitting}
+                onClick={() => toggleScoreSign(wind)}
+              >
+                {isNegativeScore(wind) ? "+" : "−"}
+              </Button>
               <TextBox
                 variant="number"
                 type="text"
