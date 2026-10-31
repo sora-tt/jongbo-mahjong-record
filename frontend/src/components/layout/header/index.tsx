@@ -128,11 +128,11 @@ export const Header: React.FC = () => {
             aria-label="jongbo ホーム"
           >
             <Image
-              src="/icons/jongbo-logo.svg"
+              src="/icons/jongbo-header-logo-coral.png"
               alt=""
               aria-hidden="true"
-              width={610}
-              height={160}
+              width={2164}
+              height={727}
               priority
               className="h-10 w-auto"
             />
