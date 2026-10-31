@@ -30,6 +30,24 @@ export const validateMatchParticipants = (
   }
 };
 
+const validateYakumanParticipants = (
+  events: NonNullable<CreateMatchInput["yakumanEvents"]>,
+  members: Array<{ userId: string }>,
+) => {
+  const memberUserIds = new Set(members.map((member) => member.userId));
+  const invalidEventIndex = events.findIndex(
+    ({ winnerUserId }) => !memberUserIds.has(winnerUserId),
+  );
+  if (invalidEventIndex >= 0) {
+    const invalidEvent = events[invalidEventIndex]!;
+    throw new ValidationError("yakuman winner must belong to session", {
+      field: "yakumanEvents.winnerUserId",
+      index: invalidEventIndex,
+      winnerUserId: invalidEvent.winnerUserId,
+    });
+  }
+};
+
 export class MatchService {
   constructor(
     private readonly leagueRepository: LeagueRepository,
@@ -72,6 +90,7 @@ export class MatchService {
       this.leagueRepository.getRule(leagueId),
       this.sessionRepository.get(leagueId, seasonId, sessionId),
     ]);
+    validateYakumanParticipants(input.yakumanEvents ?? [], session.members);
     const chomboEvents = input.chomboEvents ?? [];
     const offTableKyotakuCount = input.offTableKyotakuCount ?? 0;
     const results = this.buildMatchResults(
@@ -110,6 +129,7 @@ export class MatchService {
       this.sessionRepository.get(leagueId, seasonId, sessionId),
       this.matchRepository.get(leagueId, seasonId, sessionId, matchId),
     ]);
+    validateYakumanParticipants(input.yakumanEvents ?? [], session.members);
 
     const chomboEvents = input.chomboEvents ?? existing.chomboEvents;
     const offTableKyotakuCount =
