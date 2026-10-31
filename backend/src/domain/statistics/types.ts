@@ -1,3 +1,4 @@
+import type { YakumanKind } from "@/domain/match/yakuman.js";
 import type {
   GameType,
   IsoDateString,
@@ -302,6 +303,7 @@ export type StatisticsMatchItem = {
     rank: number;
     finalPoint: number;
   }>;
+  yakumanKinds: YakumanKind[];
 };
 
 export type StatisticsMatchPage =
@@ -351,6 +353,8 @@ export type UserMatchStatistics = {
   rawScore: number;
   finalPoint: number;
   chomboCount: number;
+  /** Optional until older projection rows are rebuilt with this field. */
+  yakumanKinds?: YakumanKind[];
   opponents: Array<{
     userId: UserId;
     userName: string;

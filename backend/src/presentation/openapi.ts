@@ -726,6 +726,10 @@ const statisticsSchemas = {
         type: "array",
         items: statisticsComponentRef("StatisticsOpponentReference"),
       },
+      yakumanKinds: {
+        type: "array",
+        items: statisticsComponentRef("YakumanKind"),
+      },
     },
     required: [
       "match",
@@ -735,6 +739,7 @@ const statisticsSchemas = {
       "rawScore",
       "finalPoint",
       "opponents",
+      "yakumanKinds",
     ],
   },
   StatisticsMatchHistoryReady: {

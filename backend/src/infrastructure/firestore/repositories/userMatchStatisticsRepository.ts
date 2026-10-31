@@ -266,6 +266,7 @@ const toHistoryItem = (row: UserMatchStatistics) => ({
   rawScore: row.rawScore,
   finalPoint: row.finalPoint,
   opponents: row.opponents,
+  yakumanKinds: row.yakumanKinds ?? [],
 });
 
 /** Stable for the same user, league, season, session, and match tuple. */

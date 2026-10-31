@@ -105,7 +105,10 @@ const toResult = (
     scope,
     generatedAt,
     timeZone: TIME_ZONE,
-    items: page.items,
+    items: page.items.map((item) => ({
+      ...item,
+      yakumanKinds: item.yakumanKinds ?? [],
+    })),
     nextCursor: page.nextCursor,
   };
 };
