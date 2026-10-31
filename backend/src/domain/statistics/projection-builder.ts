@@ -172,6 +172,9 @@ export const buildUserMatchStatisticsProjections = (
     rawScore: result.rawScore,
     finalPoint: result.point,
     chomboCount: chomboCounts.get(result.userId) ?? 0,
+    yakumanKinds: match.yakumanEvents
+      .filter(({ winnerUserId }) => winnerUserId === result.userId)
+      .map(({ kind }) => kind),
     opponents: match.results
       .filter((opponent) => opponent.userId !== result.userId)
       .map((opponent) => ({
