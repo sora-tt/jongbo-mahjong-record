@@ -379,7 +379,7 @@ components:
     Match:
       type: object
       description: 対局の基本情報
-      required: [id, leagueId, seasonId, tableId, playedAt, results, chomboEvents, offTableKyotakuCount, createdAt, updatedAt]
+      required: [id, leagueId, seasonId, tableId, playedAt, results, chomboEvents, yakumanEvents, offTableKyotakuCount, createdAt, updatedAt]
       properties:
         id:
           type: string
@@ -406,6 +406,11 @@ components:
           description: チョンボ発生ごとの違反者。重複は複数回の発生を表す
           items:
             $ref: '#/components/schemas/ChomboEvent'
+        yakumanEvents:
+          type: array
+          description: 和了者と役満種の記録。複合役満はイベントを複数持つ
+          items:
+            $ref: '#/components/schemas/YakumanEvent'
         offTableKyotakuCount:
           type: integer
           minimum: 0
@@ -464,6 +469,38 @@ components:
           type: string
           description: チョンボしたユーザー ID
 
+    YakumanEvent:
+      type: object
+      description: 1 件の役満記録
+      required: [winnerUserId, kind]
+      properties:
+        winnerUserId:
+          type: string
+          format: uuid
+          description: 和了者のユーザー ID
+        kind:
+          $ref: '#/components/schemas/YakumanKind'
+
+    YakumanKind:
+      type: string
+      description: 記録可能な一般的な役満種。ローカル役満は含まない
+      enum:
+        - kokushiMusou
+        - kokushi13Wait
+        - suuankou
+        - suuankouTanki
+        - daisangen
+        - shousuushi
+        - daisuushi
+        - tsuuiisou
+        - chinroutou
+        - ryuuiisou
+        - chuurenPoutou
+        - junseiChuurenPoutou
+        - suukantsu
+        - tenhou
+        - chiihou
+
     # 詳細型
     MatchDetail:
       allOf:
@@ -504,6 +541,11 @@ components:
           description: チョンボ発生の一覧。同一ユーザーの複数回発生を許可
           items:
             $ref: '#/components/schemas/ChomboEvent'
+        yakumanEvents:
+          type: array
+          description: 省略時は役満記録なし。複合役満はイベントを複数指定する
+          items:
+            $ref: '#/components/schemas/YakumanEvent'
         offTableKyotakuCount:
           type: integer
           minimum: 0
@@ -533,6 +575,11 @@ components:
           description: 更新後のチョンボ発生一覧
           items:
             $ref: '#/components/schemas/ChomboEvent'
+        yakumanEvents:
+          type: array
+          description: 省略時は既存値を保持し、空配列は全件削除する
+          items:
+            $ref: '#/components/schemas/YakumanEvent'
         offTableKyotakuCount:
           type: integer
           minimum: 0

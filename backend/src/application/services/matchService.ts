@@ -89,6 +89,7 @@ export class MatchService {
       playedAt: input.playedAt,
       results,
       chomboEvents,
+      yakumanEvents: input.yakumanEvents ?? [],
       offTableKyotakuCount,
     });
     await this.statsRebuilder.rebuildSeason(leagueId, seasonId);
@@ -142,6 +143,7 @@ export class MatchService {
       playedAt: input.playedAt ?? existing.playedAt,
       results: nextResults,
       chomboEvents: input.chomboEvents === undefined ? undefined : chomboEvents,
+      yakumanEvents: input.yakumanEvents,
       offTableKyotakuCount:
         input.offTableKyotakuCount === undefined
           ? undefined

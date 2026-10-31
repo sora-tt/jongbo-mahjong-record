@@ -9,6 +9,119 @@ import { buildAuthRouter } from "@/presentation/routes/auth.js";
 import { createApp } from "@/presentation/app.js";
 import { buildLeaguesRouter } from "@/presentation/routes/leagues.js";
 import { createLeagueSchema } from "@/presentation/schemas/league.js";
+import {
+  createMatchSchema,
+  updateMatchSchema,
+} from "@/presentation/schemas/match.js";
+
+const yakumanKinds = [
+  "kokushiMusou",
+  "kokushi13Wait",
+  "suuankou",
+  "suuankouTanki",
+  "daisangen",
+  "shousuushi",
+  "daisuushi",
+  "tsuuiisou",
+  "chinroutou",
+  "ryuuiisou",
+  "chuurenPoutou",
+  "junseiChuurenPoutou",
+  "suukantsu",
+  "tenhou",
+  "chiihou",
+] as const;
+
+test("Match yakuman contract accepts multiple supported events and rejects unknown kinds", () => {
+  const events = [
+    { winnerUserId: "user-1", kind: "suuankouTanki" },
+    { winnerUserId: "user-1", kind: "kokushi13Wait" },
+    { winnerUserId: "user-2", kind: "junseiChuurenPoutou" },
+  ];
+  const createInput = {
+    playedAt: "2026-01-01T00:00:00.000Z",
+    results: [
+      { userId: "user-1", wind: "east", rawScore: 35000 },
+      { userId: "user-2", wind: "south", rawScore: 35000 },
+      { userId: "user-3", wind: "west", rawScore: 30000 },
+    ],
+    yakumanEvents: events,
+  };
+
+  const parsedCreate = createMatchSchema.safeParse(createInput);
+  assert.equal(parsedCreate.success, true);
+  if (parsedCreate.success) {
+    assert.deepEqual(parsedCreate.data.yakumanEvents, events);
+  }
+  const createInputWithoutEvents = {
+    playedAt: createInput.playedAt,
+    results: createInput.results,
+  };
+  assert.equal(
+    "yakumanEvents" in createMatchSchema.parse(createInputWithoutEvents),
+    false,
+  );
+
+  const parsedUpdate = updateMatchSchema.parse({ yakumanEvents: events });
+  assert.deepEqual(parsedUpdate.yakumanEvents, events);
+  assert.deepEqual(
+    updateMatchSchema.parse({ yakumanEvents: [] }).yakumanEvents,
+    [],
+  );
+  assert.equal("yakumanEvents" in updateMatchSchema.parse({}), false);
+  assert.equal(
+    createMatchSchema.safeParse({
+      ...createInput,
+      yakumanEvents: [{ winnerUserId: "user-1", kind: "localYakuman" }],
+    }).success,
+    false,
+  );
+});
+
+test("runtime OpenAPI publishes the 15-kind Match yakuman contract", async () => {
+  const response = await createApp().request("/doc");
+  const document = (await response.json()) as {
+    paths: Record<
+      string,
+      {
+        patch?: {
+          requestBody?: {
+            content?: {
+              "application/json"?: {
+                schema?: { properties?: Record<string, unknown> };
+              };
+            };
+          };
+        };
+      }
+    >;
+    components: {
+      schemas: Record<
+        string,
+        {
+          enum?: string[];
+          properties?: Record<string, unknown>;
+          required?: string[];
+        }
+      >;
+    };
+  };
+  const schemas = document.components.schemas;
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(schemas.YakumanKind?.enum, yakumanKinds);
+  assert.deepEqual(schemas.YakumanEvent?.required, ["winnerUserId", "kind"]);
+  assert.ok("yakumanEvents" in (schemas.Match?.properties ?? {}));
+  assert.ok(schemas.Match?.required?.includes("yakumanEvents"));
+  assert.ok("yakumanEvents" in (schemas.CreateMatchInput?.properties ?? {}));
+  assert.ok(
+    "yakumanEvents" in
+      (document.paths[
+        "/api/leagues/{leagueId}/seasons/{seasonId}/sessions/{sessionId}/matches/{matchId}"
+      ].patch?.requestBody?.content?.["application/json"]?.schema?.properties ??
+        {}),
+  );
+});
 
 const floatingRule = {
   gameType: "yonma",
@@ -1189,7 +1302,7 @@ test("OpenAPI publishes the canonical auth and match request contracts", async (
       document.paths["/api/leagues/{leagueId}/seasons/{seasonId}"].patch
         ?.requestBody?.content?.["application/json"]?.schema?.properties ?? {},
     ).sort(),
-    ["name", "status"],
+    ["addMemberUserIds", "name", "status"],
   );
   const seasonPath =
     document.paths["/api/leagues/{leagueId}/seasons/{seasonId}"];
@@ -1224,5 +1337,6 @@ test("OpenAPI publishes the canonical auth and match request contracts", async (
     "offTableKyotakuCount",
     "playedAt",
     "results",
+    "yakumanEvents",
   ]);
 });

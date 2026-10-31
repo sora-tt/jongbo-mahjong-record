@@ -1000,6 +1000,30 @@ League ruleには`chomboPenaltyPoints`（チョンボ1回あたりに本人のpo
 
 ## 8. Matches
 
+Matchは`yakumanEvents`に0件以上の役満記録を持ちます。各イベントは和了者`winnerUserId`と役満種`kind`の組です。同じ和了者に異なる役満種を複数記録でき、配列の順序は応答でも保たれます。和了者は対象Sessionの参加者に限られます。
+
+`kind`で指定できる値は次の15種類です。記載のないローカル役満は受け付けません。
+
+| `kind` | 表示名 |
+|---|---|
+| `kokushiMusou` | 国士無双 |
+| `kokushi13Wait` | 国士無双十三面待ち |
+| `suuankou` | 四暗刻 |
+| `suuankouTanki` | 四暗刻単騎待ち |
+| `daisangen` | 大三元 |
+| `shousuushi` | 小四喜 |
+| `daisuushi` | 大四喜 |
+| `tsuuiisou` | 字一色 |
+| `chinroutou` | 清老頭 |
+| `ryuuiisou` | 緑一色 |
+| `chuurenPoutou` | 九蓮宝燈 |
+| `junseiChuurenPoutou` | 純正九蓮宝燈 |
+| `suukantsu` | 四槓子 |
+| `tenhou` | 天和 |
+| `chiihou` | 地和 |
+
+作成・更新リクエストの`yakumanEvents`は省略可能です。作成時の省略は記録なしとして保存され、Match応答では常に配列を返します。更新時は`yakumanEvents`の省略が既存値の保持、`[]`が全件削除、配列指定が記録全体の置換を意味します。Match一覧・詳細・作成・更新の各応答には`yakumanEvents`が含まれ、旧Matchで保存値がない場合は空配列として返ります。不正な種別やSession参加者以外の和了者は`400 validation_error`で拒否されます。
+
 ### GET /api/leagues/:leagueId/seasons/:seasonId/sessions/:sessionId/matches
 
 概要:
@@ -1035,6 +1059,7 @@ League ruleには`chomboPenaltyPoints`（チョンボ1回あたりに本人のpo
           "point": 32
         }
       ],
+      "yakumanEvents": [],
       "createdAt": "2026-03-15T10:00:00.000Z",
       "updatedAt": "2026-03-15T10:00:00.000Z"
     }
@@ -1056,6 +1081,11 @@ League ruleには`chomboPenaltyPoints`（チョンボ1回あたりに本人のpo
   "playedAt": "2026-03-15T10:00:00.000Z",
   "chomboEvents": [],
   "offTableKyotakuCount": 0,
+  "yakumanEvents": [
+    { "winnerUserId": "0001", "kind": "daisangen" },
+    { "winnerUserId": "0001", "kind": "tsuuiisou" },
+    { "winnerUserId": "0003", "kind": "kokushi13Wait" }
+  ],
   "results": [
     {
       "userId": "0001",
@@ -1093,6 +1123,11 @@ League ruleには`chomboPenaltyPoints`（チョンボ1回あたりに本人のpo
     "matchIndex": 1,
     "playedAt": "2026-03-15T10:00:00.000Z",
     "chomboEvents": [],
+    "yakumanEvents": [
+      { "winnerUserId": "0001", "kind": "daisangen" },
+      { "winnerUserId": "0001", "kind": "tsuuiisou" },
+      { "winnerUserId": "0003", "kind": "kokushi13Wait" }
+    ],
     "offTableKyotakuCount": 0,
     "results": [
       {
@@ -1110,7 +1145,7 @@ League ruleには`chomboPenaltyPoints`（チョンボ1回あたりに本人のpo
 }
 ```
 
-Match responseには`chomboEvents`と`offTableKyotakuCount`が含まれます。`chomboEvents`は1要素をチョンボ1回として扱い、同一ユーザーの重複を許可します。`offenderUserId`はSession参加者に限ります。`offTableKyotakuCount`は非負整数で、League ruleが許可しているときだけ正数を指定できます。旧Matchは空配列と0本として返されます。Match updateでfieldを省略すると既存値を保持し、空配列または0を明示すると消去できます。
+Match responseには`chomboEvents`、`yakumanEvents`、`offTableKyotakuCount`が含まれます。`chomboEvents`は1要素をチョンボ1回として扱い、同一ユーザーの重複を許可します。`offenderUserId`はSession参加者に限ります。`offTableKyotakuCount`は非負整数で、League ruleが許可しているときだけ正数を指定できます。旧Matchは空配列と0本として返されます。Match updateでは各fieldの省略が既存値の保持を意味し、`chomboEvents`と`yakumanEvents`の`[]`は全件削除、`offTableKyotakuCount`の`0`は0本を指定します。`yakumanEvents`のみの変更では素点、順位、pointは再計算されません。
 
 ### GET /api/leagues/:leagueId/seasons/:seasonId/sessions/:sessionId/matches/:matchId
 
@@ -1147,6 +1182,7 @@ Match responseには`chomboEvents`と`offTableKyotakuCount`が含まれます。
         "point": 32
       }
     ],
+    "yakumanEvents": [],
     "createdAt": "2026-03-15T10:00:00.000Z",
     "updatedAt": "2026-03-15T10:00:00.000Z"
   }
@@ -1164,6 +1200,10 @@ Match responseには`chomboEvents`と`offTableKyotakuCount`が含まれます。
 ```json
 {
   "playedAt": "2026-03-15T11:00:00.000Z",
+  "yakumanEvents": [
+    { "winnerUserId": "0001", "kind": "daisangen" },
+    { "winnerUserId": "0001", "kind": "tsuuiisou" }
+  ],
   "results": [
     {
       "userId": "0001",
@@ -1200,6 +1240,10 @@ Match responseには`chomboEvents`と`offTableKyotakuCount`が含まれます。
     "sessionId": "demo-session",
     "matchIndex": 1,
     "playedAt": "2026-03-15T11:00:00.000Z",
+    "yakumanEvents": [
+      { "winnerUserId": "0001", "kind": "daisangen" },
+      { "winnerUserId": "0001", "kind": "tsuuiisou" }
+    ],
     "results": [
       {
         "userId": "0001",

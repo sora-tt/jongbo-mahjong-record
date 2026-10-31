@@ -14,6 +14,7 @@ const baseMatch = (results: MatchResult[]): Match => ({
   playedAt: asIsoDateString("2026-09-30T15:04:05.000Z"),
   results,
   chomboEvents: [],
+  yakumanEvents: [],
   offTableKyotakuCount: 0,
   createdAt: asIsoDateString("2026-09-30T15:00:00.000Z"),
   updatedAt: asIsoDateString("2026-09-30T15:05:00.000Z"),

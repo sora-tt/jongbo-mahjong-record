@@ -1,3 +1,5 @@
+import { YAKUMAN_KINDS } from "@/domain/match/yakuman.js";
+
 const jsonContent = (schema: Record<string, unknown>) => ({
   "application/json": {
     schema,
@@ -1919,6 +1921,10 @@ export const openApiDocument = {
                   type: "array",
                   items: { $ref: "#/components/schemas/ChomboEvent" },
                 },
+                yakumanEvents: {
+                  type: "array",
+                  items: { $ref: "#/components/schemas/YakumanEvent" },
+                },
                 offTableKyotakuCount: { type: "integer", minimum: 0 },
               },
             }),
@@ -2149,16 +2155,32 @@ export const openApiDocument = {
             type: "array",
             items: { $ref: "#/components/schemas/ChomboEvent" },
           },
+          yakumanEvents: {
+            type: "array",
+            items: { $ref: "#/components/schemas/YakumanEvent" },
+          },
           offTableKyotakuCount: { type: "integer", minimum: 0 },
           createdAt: { type: "string", format: "date-time" },
           updatedAt: { type: "string", format: "date-time" },
         },
-        required: ["chomboEvents", "offTableKyotakuCount"],
+        required: ["chomboEvents", "yakumanEvents", "offTableKyotakuCount"],
       },
       ChomboEvent: {
         type: "object",
         properties: { offenderUserId: { type: "string" } },
         required: ["offenderUserId"],
+      },
+      YakumanEvent: {
+        type: "object",
+        properties: {
+          winnerUserId: { type: "string" },
+          kind: { $ref: "#/components/schemas/YakumanKind" },
+        },
+        required: ["winnerUserId", "kind"],
+      },
+      YakumanKind: {
+        type: "string",
+        enum: YAKUMAN_KINDS,
       },
       CreateLeagueInput: {
         type: "object",
@@ -2484,6 +2506,10 @@ export const openApiDocument = {
           chomboEvents: {
             type: "array",
             items: { $ref: "#/components/schemas/ChomboEvent" },
+          },
+          yakumanEvents: {
+            type: "array",
+            items: { $ref: "#/components/schemas/YakumanEvent" },
           },
           offTableKyotakuCount: { type: "integer", minimum: 0 },
         },

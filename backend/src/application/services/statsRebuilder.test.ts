@@ -37,6 +37,7 @@ const match: Match = {
     point: [30, 10, -10, -30][index]!,
   })),
   chomboEvents: [],
+  yakumanEvents: [],
   offTableKyotakuCount: 0,
   createdAt: playedAt,
   updatedAt: playedAt,
