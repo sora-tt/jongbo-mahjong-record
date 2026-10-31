@@ -121,7 +121,7 @@ curl -X DELETE http://127.0.0.1:8080/api/auth/session \
   - 省略時は `http://127.0.0.1:3000,http://localhost:3000`
 - `SESSION_COOKIE_MAX_AGE_SECONDS`
   - session cookie の寿命
-  - 省略時は `432000` 秒 = 5 日
+  - 省略時は `5184000` 秒 = 60 日 = 2 か月
 - `GOOGLE_CLOUD_PROJECT`
   - Firebase project id
 - `FIREBASE_SERVICE_ACCOUNT_KEY`
