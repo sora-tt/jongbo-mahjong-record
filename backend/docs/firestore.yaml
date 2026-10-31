@@ -68,6 +68,32 @@ leagues:
                       raw_score: number
                       point: number
 
+                yakuman_events:
+                  type: array
+                  description: 和了者と役満種の一覧。旧Match文書では項目欠落を空配列として扱う
+                  items:
+                    type: object
+                    fields:
+                      winner_user_id: string
+                      kind:
+                        type: string
+                        enum:
+                          - kokushiMusou
+                          - kokushi13Wait
+                          - suuankou
+                          - suuankouTanki
+                          - daisangen
+                          - shousuushi
+                          - daisuushi
+                          - tsuuiisou
+                          - chinroutou
+                          - ryuuiisou
+                          - chuurenPoutou
+                          - junseiChuurenPoutou
+                          - suukantsu
+                          - tenhou
+                          - chiihou
+
                 created_at: timestamp
                 updated_at: timestamp
 

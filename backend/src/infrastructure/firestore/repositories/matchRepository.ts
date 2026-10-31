@@ -1,5 +1,11 @@
 import { Timestamp, type Firestore } from "firebase-admin/firestore";
-import type { Match, MatchResult } from "@/domain/match/types.js";
+import type {
+  Match,
+  MatchResult,
+  YakumanEventInput,
+  YakumanEvent,
+} from "@/domain/match/types.js";
+import { YAKUMAN_KINDS, type YakumanKind } from "@/domain/match/yakuman.js";
 import type { MatchRepository } from "@/domain/match/repository.js";
 import {
   requiredArray,
@@ -105,6 +111,7 @@ export class FirestoreMatchRepository implements MatchRepository {
     playedAt: string;
     results: MatchResult[];
     chomboEvents?: Array<{ offenderUserId: string }>;
+    yakumanEvents?: YakumanEventInput[];
     offTableKyotakuCount?: number;
   }): Promise<Match> {
     const collection = this.collection(
@@ -160,6 +167,7 @@ export class FirestoreMatchRepository implements MatchRepository {
         played_at: toTimestamp(params.playedAt),
         results: this.toResultsDoc(params.results),
         chombo_events: this.toChomboEventsDoc(params.chomboEvents ?? []),
+        yakuman_events: this.toYakumanEventsDoc(params.yakumanEvents ?? []),
         off_table_kyotaku_count: params.offTableKyotakuCount ?? 0,
         created_at: now,
         updated_at: now,
@@ -185,6 +193,7 @@ export class FirestoreMatchRepository implements MatchRepository {
     playedAt?: string;
     results?: MatchResult[];
     chomboEvents?: Array<{ offenderUserId: string }>;
+    yakumanEvents?: YakumanEventInput[];
     offTableKyotakuCount?: number;
   }): Promise<Match> {
     const ref = this.collection(
@@ -206,6 +215,9 @@ export class FirestoreMatchRepository implements MatchRepository {
     }
     if (params.chomboEvents !== undefined) {
       patch.chombo_events = this.toChomboEventsDoc(params.chomboEvents);
+    }
+    if (params.yakumanEvents !== undefined) {
+      patch.yakuman_events = this.toYakumanEventsDoc(params.yakumanEvents);
     }
     if (params.offTableKyotakuCount !== undefined) {
       patch.off_table_kyotaku_count = params.offTableKyotakuCount;
@@ -292,6 +304,13 @@ export class FirestoreMatchRepository implements MatchRepository {
     return events.map((event) => ({ offender_user_id: event.offenderUserId }));
   }
 
+  private toYakumanEventsDoc(events: YakumanEventInput[]) {
+    return events.map(({ winnerUserId, kind }) => ({
+      winner_user_id: winnerUserId,
+      kind,
+    }));
+  }
+
   private map(
     leagueId: string,
     seasonId: string,
@@ -344,6 +363,29 @@ export class FirestoreMatchRepository implements MatchRepository {
         ),
       };
     });
+    const yakumanEvents = (
+      data.yakuman_events === undefined
+        ? []
+        : requiredArray(data.yakuman_events, "matches.yakuman_events")
+    ).map((value): YakumanEvent => {
+      const event = requiredObject(value, "matches.yakuman_events[]");
+      const kind = requiredString(event.kind, "matches.yakuman_events[].kind");
+      if (!YAKUMAN_KINDS.includes(kind as YakumanKind)) {
+        throw new TypeError(
+          "invalid or missing Firestore field: matches.yakuman_events[].kind",
+        );
+      }
+
+      return {
+        winnerUserId: asOpaqueId(
+          requiredString(
+            event.winner_user_id,
+            "matches.yakuman_events[].winner_user_id",
+          ),
+        ),
+        kind: kind as YakumanKind,
+      };
+    });
 
     return {
       id: asOpaqueId(matchId),
@@ -354,6 +396,7 @@ export class FirestoreMatchRepository implements MatchRepository {
       playedAt: toIsoString(data.played_at),
       results,
       chomboEvents,
+      yakumanEvents,
       offTableKyotakuCount:
         data.off_table_kyotaku_count === undefined
           ? 0

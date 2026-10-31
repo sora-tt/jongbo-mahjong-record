@@ -701,6 +701,10 @@ components:
       $ref: './components/schemas.yml#/components/schemas/UpdateMatchRequest'
     MatchResultInput:
       $ref: './components/schemas.yml#/components/schemas/MatchResultInput'
+    YakumanEvent:
+      $ref: './components/schemas.yml#/components/schemas/YakumanEvent'
+    YakumanKind:
+      $ref: './components/schemas.yml#/components/schemas/YakumanKind'
     PaginatedMatches:
       $ref: './components/schemas.yml#/components/schemas/PaginatedMatches'
     

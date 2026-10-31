@@ -14,6 +14,7 @@ const baseMatch = (results: MatchResult[]): Match => ({
   playedAt: asIsoDateString("2026-09-30T15:04:05.000Z"),
   results,
   chomboEvents: [],
+  yakumanEvents: [],
   offTableKyotakuCount: 0,
   createdAt: asIsoDateString("2026-09-30T15:00:00.000Z"),
   updatedAt: asIsoDateString("2026-09-30T15:05:00.000Z"),
@@ -93,6 +94,38 @@ test("builds one projection per confirmed result in result order and preserves c
   assert.ok(rows.every((row) => row.playedAt === match.playedAt));
   assert.ok(rows.every((row) => row.matchIndex === match.matchIndex));
   assert.ok(rows.every((row) => row.updatedAt === match.updatedAt));
+});
+
+test("projects only each winner's yakuman kinds while preserving event order", () => {
+  const match: Match = {
+    ...baseMatch([
+      result("user-1", 1, "east", 42_000, 42),
+      result("user-2", 2, "south", 30_000, 5),
+      result("user-3", 3, "west", 18_000, -22),
+    ]),
+    yakumanEvents: [
+      { winnerUserId: asOpaqueId("user-1"), kind: "daisangen" },
+      { winnerUserId: asOpaqueId("user-1"), kind: "tsuuiisou" },
+      { winnerUserId: asOpaqueId("user-2"), kind: "kokushi13Wait" },
+    ],
+  };
+
+  const rows = buildUserMatchStatisticsProjections({ match, ...context });
+
+  assert.deepEqual(
+    rows.map(({ userId, yakumanKinds }) => ({ userId, yakumanKinds })),
+    [
+      {
+        userId: asOpaqueId("user-1"),
+        yakumanKinds: ["daisangen", "tsuuiisou"],
+      },
+      {
+        userId: asOpaqueId("user-2"),
+        yakumanKinds: ["kokushi13Wait"],
+      },
+      { userId: asOpaqueId("user-3"), yakumanKinds: [] },
+    ],
+  );
 });
 
 test("derives Sanma and Yonma independently from each match's confirmed result count", () => {

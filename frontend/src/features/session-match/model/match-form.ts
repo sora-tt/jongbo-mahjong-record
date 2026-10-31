@@ -10,13 +10,123 @@ import type { ApiMatch } from "@/lib/api/contracts";
 
 export type MatchFormMode = "initial" | "additional" | "edit";
 
+export type YakumanFormEntry = {
+  winnerUserId: string | null;
+  kind: ApiMatch["yakumanEvents"][number]["kind"] | null;
+};
+
 export type MatchFormValues = {
   playedAt: string;
   userIdByWind: ParticipantByWind;
   rawScoreByWind: Readonly<Record<Wind, string>>;
+  yakumanEnabled: boolean;
+  yakumanEvents: YakumanFormEntry[];
   chomboOffenderUserIds: string[];
   offTableKyotakuPresent: boolean;
   offTableKyotakuCount: string;
+};
+
+const createEmptyYakumanFormEntry = (): YakumanFormEntry => ({
+  winnerUserId: null,
+  kind: null,
+});
+
+export const setYakumanEnabled = (
+  values: MatchFormValues,
+  enabled: boolean
+): MatchFormValues => {
+  return {
+    ...values,
+    yakumanEnabled: enabled,
+    yakumanEvents:
+      enabled && values.yakumanEvents.length === 0
+        ? [createEmptyYakumanFormEntry()]
+        : values.yakumanEvents,
+  };
+};
+
+export const addYakumanEvent = (values: MatchFormValues): MatchFormValues => {
+  if (
+    !values.yakumanEnabled ||
+    values.yakumanEvents.length === 0 ||
+    values.yakumanEvents.some((event) => !event.winnerUserId || !event.kind)
+  ) {
+    return values;
+  }
+
+  return {
+    ...values,
+    yakumanEvents: [...values.yakumanEvents, createEmptyYakumanFormEntry()],
+  };
+};
+
+export const removeYakumanEvent = (
+  values: MatchFormValues,
+  index: number
+): MatchFormValues => {
+  if (index < 0 || index >= values.yakumanEvents.length) {
+    return values;
+  }
+
+  const yakumanEvents = values.yakumanEvents.filter(
+    (_event, eventIndex) => eventIndex !== index
+  );
+  return {
+    ...values,
+    yakumanEnabled: yakumanEvents.length === 0 ? false : values.yakumanEnabled,
+    yakumanEvents,
+  };
+};
+
+export type YakumanEntryError = {
+  index: number;
+  message: string;
+};
+
+const validateYakumanEntries = (
+  values: MatchFormValues,
+  participantUserIds: ReadonlySet<string>
+) => {
+  if (!values.yakumanEnabled) {
+    return { events: [], errors: [] as YakumanEntryError[] };
+  }
+
+  if (values.yakumanEvents.length === 0) {
+    return {
+      events: [],
+      errors: [
+        { index: 0, message: "役満記録を追加してください" },
+      ] satisfies YakumanEntryError[],
+    };
+  }
+
+  const events: Array<{
+    winnerUserId: string;
+    kind: ApiMatch["yakumanEvents"][number]["kind"];
+  }> = [];
+  const errors: YakumanEntryError[] = [];
+
+  values.yakumanEvents.forEach((event, index) => {
+    if (!event.winnerUserId || !event.kind) {
+      errors.push({
+        index,
+        message: "和了者と役満種を選択してください",
+      });
+      return;
+    }
+
+    if (!participantUserIds.has(event.winnerUserId)) {
+      errors.push({
+        index,
+        message: "和了者はMatchの参加者から選択してください",
+      });
+      return;
+    }
+
+    events.push({ winnerUserId: event.winnerUserId, kind: event.kind });
+  });
+
+  return { events, errors };
 };
 
 export type MatchInputResult = {
@@ -56,6 +166,23 @@ export const validateMatchForm = (input: MatchValidationInput) => {
   });
   if (participantError) {
     return { message: participantError, results: null };
+  }
+
+  const selectedParticipantIds = new Set(
+    input.constraint.requiredWinds.map((wind) =>
+      String(input.values.userIdByWind[wind])
+    )
+  );
+  const yakumanValidation = validateYakumanEntries(
+    input.values,
+    selectedParticipantIds
+  );
+  if (yakumanValidation.errors.length > 0) {
+    return {
+      message: "役満記録を確認してください",
+      results: null,
+      yakumanErrors: yakumanValidation.errors,
+    };
   }
 
   if (
@@ -119,6 +246,8 @@ export const validateMatchForm = (input: MatchValidationInput) => {
   return {
     message: null,
     results,
+    yakumanEvents: yakumanValidation.events,
+    yakumanErrors: [],
     chomboEvents: input.values.chomboOffenderUserIds.map((offenderUserId) => ({
       offenderUserId,
     })),
@@ -134,6 +263,8 @@ export const createEmptyMatchFormValues = (): MatchFormValues => ({
     west: null,
     north: null,
   },
+  yakumanEnabled: false,
+  yakumanEvents: [],
   rawScoreByWind: {
     east: "",
     south: "",
@@ -168,6 +299,11 @@ export const toMatchFormValues = (match: ApiMatch): MatchFormValues => {
     playedAt: match.playedAt,
     userIdByWind,
     rawScoreByWind,
+    yakumanEnabled: match.yakumanEvents.length > 0,
+    yakumanEvents: match.yakumanEvents.map((event) => ({
+      winnerUserId: String(event.winnerUserId),
+      kind: event.kind,
+    })),
     chomboOffenderUserIds: match.chomboEvents.map((event) =>
       String(event.offenderUserId)
     ),

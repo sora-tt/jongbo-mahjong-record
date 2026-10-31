@@ -1,3 +1,5 @@
+import { YAKUMAN_LABELS } from "@/lib/yakuman";
+
 import { formatStatisticsTrendDateTime } from "./trend";
 
 import type { StatisticsMatchHistoryResponse } from "../api";
@@ -22,6 +24,7 @@ type MatchHistoryItem = ReadyHistory["items"][number];
 
 export type StatisticsMatchHistoryDisplayItem = MatchHistoryItem & {
   playedAtLabel: string;
+  yakumanLabels: string[];
 };
 
 export const getStatisticsMatchHistoryModel = (input: {
@@ -39,6 +42,7 @@ export const getStatisticsMatchHistoryModel = (input: {
       ? readyHistory.items.map((item) => ({
           ...item,
           playedAtLabel: formatStatisticsTrendDateTime(item.match.playedAt),
+          yakumanLabels: item.yakumanKinds.map((kind) => YAKUMAN_LABELS[kind]),
         }))
       : ([] as StatisticsMatchHistoryDisplayItem[]),
     nextCursor: readyHistory?.nextCursor ?? null,

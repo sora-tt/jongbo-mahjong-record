@@ -15,7 +15,7 @@ import { useRecordMatchPage } from "./hooks";
 const NewMatchPage: React.FC = () => {
   const {
     values,
-    setValues,
+    onValuesChange,
     constraint,
     members,
     chomboPenaltyPoints,
@@ -24,6 +24,7 @@ const NewMatchPage: React.FC = () => {
     notFound,
     isSubmitting,
     error,
+    yakumanErrors,
     ready,
     handleSubmit,
     handleBack,
@@ -61,8 +62,9 @@ const NewMatchPage: React.FC = () => {
           chomboPenaltyPoints={chomboPenaltyPoints}
           allowOffTableKyotaku={allowOffTableKyotaku}
           error={error}
+          yakumanErrors={yakumanErrors}
           isSubmitting={isSubmitting}
-          onChange={setValues}
+          onChange={onValuesChange}
           onSubmit={() => void handleSubmit()}
           onBack={handleBack}
         />

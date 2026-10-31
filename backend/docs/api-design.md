@@ -344,11 +344,19 @@ League ruleのdomain validation errorも共通ErrorEnvelopeを使い、details�
 
 ### 7.7 試合
 
+Matchの作成・更新APIは、既存の試合記録に任意の役満イベント配列`yakumanEvents`を加える。各要素は`winnerUserId`（Session参加者）と`kind`（役満種の固定識別子）を持つ。同じ和了者の複数イベントを受け付け、配列順を保ってMatch応答に返す。作成時の省略は空配列、更新時の省略は既存値保持、更新時の明示的な空配列は全件削除を意味する。
+
+役満種はdomainの`YAKUMAN_KINDS`を入力schemaとOpenAPIで共有し、未対応値は入力境界で拒否する。イベントはMatch正本に保存し、Firestoreでは`yakuman_events`配列の`winner_user_id`と`kind`として保持して履歴projectionへ渡す一方、`results`や点数計算には渡さない。したがって役満イベントの追加・変更だけでは素点、順位、pointを再計算せず、既存のMatch作成・更新後の統計再構築は引き続き行う。
+
 `POST /api/leagues/:leagueId/seasons/:seasonId/sessions/:sessionId/matches`
 
 ```json
 {
   "playedAt": "2026-03-14T04:10:00.000Z",
+  "yakumanEvents": [
+    { "winnerUserId": "user_001", "kind": "daisangen" },
+    { "winnerUserId": "user_001", "kind": "tsuuiisou" }
+  ],
   "results": [
     {
       "userId": "user_001",
@@ -382,6 +390,10 @@ League ruleのdomain validation errorも共通ErrorEnvelopeを使い、details�
     "id": "match_001",
     "matchIndex": 4,
     "playedAt": "2026-03-14T04:10:00.000Z",
+    "yakumanEvents": [
+      { "winnerUserId": "user_001", "kind": "daisangen" },
+      { "winnerUserId": "user_001", "kind": "tsuuiisou" }
+    ],
     "results": [
       {
         "userId": "user_001",
@@ -431,6 +443,10 @@ League ruleのdomain validation errorも共通ErrorEnvelopeを使い、details�
 - `rawScore` 合計はルールの `oka.starting_points * memberCount` と一致させるか、少なくとも入力方式を明示する。
 - `point` はクライアント入力不可、サーバ計算。
 - `matchIndex` はサーバ採番。
+- `yakumanEvents`は省略可能。各イベントは`winnerUserId`と`kind`を持ち、和了者はSession参加者に限り、`kind`はdomainの役満種カタログに含まれる値のみ許可する。
+- 同じ和了者の複数イベントを許可する。イベント配列はMatchに保存し、応答では常に配列で返す。
+- 作成時に`yakumanEvents`を省略した場合は空配列とする。更新時の省略は既存値を保ち、空配列は全件削除、値を指定した場合は配列全体を置き換える。
+- 役満イベントは点数計算入力と分離する。役満イベントだけの変更では`results`の素点・順位・pointを再計算しない。
 
 ## 9. 集計更新方針
 

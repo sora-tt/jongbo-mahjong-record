@@ -42,6 +42,7 @@ const makeItem = (matchId = "match-1"): StatisticsMatchItem => ({
   rawScore: 45_000,
   finalPoint: 55,
   opponents: [],
+  yakumanKinds: [],
 });
 
 const makeStatsRecord = (version = 1): UserStatsWithPersonalStatistics =>
@@ -311,5 +312,30 @@ test("maps a non-empty computed page to ready while preserving its cursor and re
   assert.equal(result.status, "ready");
   assert.equal(result.generatedAt, generatedAt);
   assert.deepEqual(result.items, [item]);
+  assert.equal(result.nextCursor, "next-page");
+});
+
+test("preserves multiple yakuman kinds and defaults a legacy history item to an empty list", async () => {
+  const yakumanKinds: StatisticsMatchItem["yakumanKinds"] = [
+    "daisangen",
+    "tsuuiisou",
+  ];
+  const itemWithYakumanKinds = {
+    ...makeItem("match-with-yakuman"),
+    yakumanKinds,
+  };
+  const legacyItem = { ...makeItem("legacy-match") };
+  Reflect.deleteProperty(legacyItem, "yakumanKinds");
+  const fixture = makeFixture({
+    page: makePage([itemWithYakumanKinds, legacyItem], "next-page"),
+  });
+
+  const result = await fixture.reader.getMatchHistory(makeQuery());
+
+  assert.equal(result.status, "ready");
+  assert.deepEqual(
+    result.items.map((item) => item.yakumanKinds),
+    [yakumanKinds, []],
+  );
   assert.equal(result.nextCursor, "next-page");
 });

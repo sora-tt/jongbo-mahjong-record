@@ -1,4 +1,8 @@
-import type { Match, MatchResult } from "@/domain/match/types.js";
+import type {
+  Match,
+  MatchResult,
+  YakumanEventInput,
+} from "@/domain/match/types.js";
 import type { Wind } from "@/domain/shared/types.js";
 
 export type CreateMatchInput = {
@@ -9,6 +13,7 @@ export type CreateMatchInput = {
     rawScore: number;
   }>;
   chomboEvents?: Array<{ offenderUserId: string }>;
+  yakumanEvents?: YakumanEventInput[];
   offTableKyotakuCount?: number;
 };
 
@@ -20,6 +25,7 @@ export type UpdateMatchInput = {
     rawScore: number;
   }>;
   chomboEvents?: Array<{ offenderUserId: string }>;
+  yakumanEvents?: YakumanEventInput[];
   offTableKyotakuCount?: number;
 };
 
@@ -41,6 +47,7 @@ export interface MatchRepository {
     playedAt: string;
     results: MatchResult[];
     chomboEvents?: Array<{ offenderUserId: string }>;
+    yakumanEvents?: YakumanEventInput[];
     offTableKyotakuCount?: number;
   }): Promise<Match>;
   update(params: {
@@ -51,6 +58,7 @@ export interface MatchRepository {
     playedAt?: string;
     results?: MatchResult[];
     chomboEvents?: Array<{ offenderUserId: string }>;
+    yakumanEvents?: YakumanEventInput[];
     offTableKyotakuCount?: number;
   }): Promise<Match>;
   delete(

@@ -15,7 +15,7 @@ import { useEditMatchPage } from "./hooks";
 const EditMatchPage: React.FC = () => {
   const {
     values,
-    setValues,
+    onValuesChange,
     constraint,
     members,
     chomboPenaltyPoints,
@@ -24,6 +24,7 @@ const EditMatchPage: React.FC = () => {
     notFound,
     isSubmitting,
     error,
+    yakumanErrors,
     retry,
     handleSubmit,
     handleBack,
@@ -64,8 +65,9 @@ const EditMatchPage: React.FC = () => {
           chomboPenaltyPoints={chomboPenaltyPoints}
           allowOffTableKyotaku={allowOffTableKyotaku}
           error={error}
+          yakumanErrors={yakumanErrors}
           isSubmitting={isSubmitting}
-          onChange={setValues}
+          onChange={onValuesChange}
           onSubmit={() => void handleSubmit()}
           onBack={handleBack}
         />

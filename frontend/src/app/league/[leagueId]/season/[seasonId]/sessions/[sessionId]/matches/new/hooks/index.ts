@@ -6,6 +6,7 @@ import { listMatches } from "@/features/match/api";
 import {
   createEmptyMatchFormValues,
   validateMatchForm,
+  type YakumanEntryError,
   type MatchFormValues,
 } from "@/features/session-match/model/match-form";
 import {
@@ -51,7 +52,15 @@ export const useRecordMatchPage = () => {
   const [notFound, setNotFound] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [yakumanErrors, setYakumanErrors] = React.useState<YakumanEntryError[]>(
+    []
+  );
   const [ready, setReady] = React.useState(false);
+
+  const onValuesChange = React.useCallback((nextValues: MatchFormValues) => {
+    setValues(nextValues);
+    setYakumanErrors([]);
+  }, []);
 
   React.useEffect(() => {
     let isActive = true;
@@ -156,9 +165,11 @@ export const useRecordMatchPage = () => {
       mode: "additional",
     });
     if (validation.message || !validation.results) {
+      setYakumanErrors(validation.yakumanErrors ?? []);
       setError(validation.message ?? DEFAULT_SUBMIT_ERROR_MESSAGE);
       return;
     }
+    setYakumanErrors([]);
 
     setIsSubmitting(true);
     setError(null);
@@ -169,6 +180,7 @@ export const useRecordMatchPage = () => {
         sessionId,
         playedAt: values.playedAt,
         results: validation.results,
+        yakumanEvents: validation.yakumanEvents,
         chomboEvents: validation.chomboEvents,
         offTableKyotakuCount: validation.offTableKyotakuCount,
       });
@@ -216,7 +228,9 @@ export const useRecordMatchPage = () => {
     notFound,
     isSubmitting,
     error,
+    yakumanErrors,
     ready,
+    onValuesChange,
     handleSubmit,
     handleBack,
   };

@@ -35,6 +35,7 @@ type OpenApiSchema = {
   nullable?: boolean;
   enum?: unknown[];
   properties?: Record<string, OpenApiSchema>;
+  required?: string[];
   allOf?: Array<{ $ref?: string }>;
   items?: OpenApiSchema;
   maxItems?: number;
@@ -161,6 +162,13 @@ test("statistics OpenAPI components describe result status, dimensions, and opaq
   for (const name of statisticsSchemas) {
     assert.ok(schemas[name], `missing component schema ${name}`);
   }
+
+  const matchItem = schemas.StatisticsMatchItem as OpenApiSchema;
+  assert.deepEqual(matchItem.properties?.yakumanKinds, {
+    type: "array",
+    items: { $ref: "#/components/schemas/YakumanKind" },
+  });
+  assert.ok(matchItem.required?.includes("yakumanKinds"));
 
   const statusValues = (resultName: string) => {
     const result = schemas[resultName] as {

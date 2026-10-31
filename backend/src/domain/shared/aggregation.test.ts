@@ -45,6 +45,7 @@ const match = (
     },
   ],
   chomboEvents: [],
+  yakumanEvents: [],
   offTableKyotakuCount: 0,
   createdAt: asIsoDateString("2026-01-01T00:00:00.000Z"),
   updatedAt: asIsoDateString("2026-01-01T00:00:00.000Z"),
