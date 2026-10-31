@@ -218,6 +218,13 @@ export const Header: React.FC = () => {
           />
         </div>
         <div className="border-t border-border p-4">
+          <Link
+            href="/install"
+            onClick={closeMenu}
+            className="mb-2 block w-full rounded-control px-3 py-2 text-left text-sm text-text-muted hover:bg-brand-50 hover:text-brand-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+          >
+            ホーム画面に追加する
+          </Link>
           <button
             type="button"
             className="w-full rounded-control px-3 py-2 text-left text-sm text-text-muted hover:bg-brand-50 hover:text-brand-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:opacity-60"

@@ -27,6 +27,7 @@ const LoginPage: React.FC = () => {
       onSubmit={handleSubmit}
       footerLinks={[
         { href: "/", label: "パスワードを忘れた方はこちら" },
+        { href: "/install", label: "ホーム画面に追加する" },
         { href: "/signup", label: "新規登録はこちら" },
       ]}
     >
