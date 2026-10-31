@@ -113,7 +113,7 @@
   - _Boundary: Match記録ライフサイクル、個人別履歴projection_
   - _Requirements: 1.6, 2.1, 2.2, 2.3, 3.1, 3.2, 3.3_
 
-- [ ] 3.3 関連テストと型・lint検証を完了する
+- [x] 3.3 関連テストと型・lint検証を完了する
   - Match schema、service、repository、projection、履歴UIの関連テストを実行する。
   - BackendとFrontendのtypecheckおよびlintを実行し、役満契約の型ずれや既存機能の回帰を修正する。
   - 全15種、旧項目の空配列、点数不変、対象者分離、cursorページングの検証結果を確認する。
