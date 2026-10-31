@@ -27,7 +27,7 @@ export const AuthFormShell: React.FC<AuthFormShellProps> = ({
   footerLinks,
   children,
 }) => (
-  <main className="flex min-h-screen items-center justify-center bg-background px-4 py-10 text-foreground">
+  <main className="safe-area-auth-shell flex min-h-screen items-center justify-center bg-background px-4 py-10 text-foreground">
     <section className="w-full max-w-md rounded-surface border border-border bg-white p-6 shadow-sm sm:p-8">
       <h1 className="text-center text-2xl font-bold text-foreground">
         {title}

@@ -12,6 +12,7 @@ import {
   X,
 } from "lucide-react";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
@@ -120,23 +121,21 @@ export const Header: React.FC = () => {
   return (
     <>
       <header className="sticky top-0 z-40 border-b border-border bg-white/95 backdrop-blur">
-        <div className="mx-auto flex min-h-16 max-w-7xl items-center justify-between gap-3 px-4 lg:items-start lg:gap-6 sm:px-6 lg:px-8">
+        <div className="safe-area-header-content mx-auto flex min-h-16 max-w-7xl items-center justify-between gap-3 px-4 lg:items-start lg:gap-6 sm:px-6 lg:px-8">
           <Link
             href="/"
             className="flex shrink-0 items-center gap-2 rounded-control py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
             aria-label="jongbo ホーム"
           >
-            <span
-              className="grid h-9 w-9 grid-cols-2 gap-0.5 rounded-control bg-brand-600 p-1.5 shadow-sm"
+            <Image
+              src="/icons/jongbo-header-logo-coral.png"
+              alt=""
               aria-hidden="true"
-            >
-              {Array.from({ length: 4 }).map((_, index) => (
-                <span key={index} className="rounded-[2px] bg-white/80" />
-              ))}
-            </span>
-            <span className="text-xl font-bold tracking-tight text-brand-strong">
-              jongbo
-            </span>
+              width={2164}
+              height={727}
+              priority
+              className="h-10 w-auto"
+            />
           </Link>
 
           <NavigationSections
@@ -185,7 +184,7 @@ export const Header: React.FC = () => {
 
       <aside
         id="mobile-navigation"
-        className={`fixed inset-y-0 right-0 z-50 flex w-80 max-w-[88vw] flex-col border-l border-border bg-white shadow-xl transition-transform duration-200 motion-reduce:transition-none lg:hidden ${isMenuOpen ? "translate-x-0" : "translate-x-full"}`}
+        className={`fixed inset-y-0 right-0 z-50 safe-area-mobile-drawer flex w-80 max-w-[88vw] flex-col border-l border-border bg-white shadow-xl transition-transform duration-200 motion-reduce:transition-none lg:hidden ${isMenuOpen ? "translate-x-0" : "translate-x-full"}`}
         aria-hidden={!isMenuOpen}
         inert={!isMenuOpen}
       >
@@ -218,6 +217,13 @@ export const Header: React.FC = () => {
           />
         </div>
         <div className="border-t border-border p-4">
+          <Link
+            href="/install"
+            onClick={closeMenu}
+            className="mb-2 block w-full rounded-control px-3 py-2 text-left text-sm text-text-muted hover:bg-brand-50 hover:text-brand-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+          >
+            ホーム画面に追加する
+          </Link>
           <button
             type="button"
             className="w-full rounded-control px-3 py-2 text-left text-sm text-text-muted hover:bg-brand-50 hover:text-brand-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:opacity-60"
