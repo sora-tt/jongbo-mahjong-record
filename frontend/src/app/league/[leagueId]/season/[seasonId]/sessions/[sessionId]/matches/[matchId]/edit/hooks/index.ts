@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import {
   toMatchFormValues,
   validateMatchForm,
+  type YakumanEntryError,
   type MatchFormValues,
 } from "@/features/session-match/model/match-form";
 import { getParticipantConstraint } from "@/features/session-match/model/participants";
@@ -42,7 +43,15 @@ export const useEditMatchPage = () => {
   const [notFound, setNotFound] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [yakumanErrors, setYakumanErrors] = React.useState<YakumanEntryError[]>(
+    []
+  );
   const [retryCount, setRetryCount] = React.useState(0);
+
+  const onValuesChange = React.useCallback((nextValues: MatchFormValues) => {
+    setValues(nextValues);
+    setYakumanErrors([]);
+  }, []);
 
   React.useEffect(() => {
     let isActive = true;
@@ -121,9 +130,11 @@ export const useEditMatchPage = () => {
       mode: "edit",
     });
     if (validation.message || !validation.results) {
+      setYakumanErrors(validation.yakumanErrors ?? []);
       setError(validation.message ?? DEFAULT_SUBMIT_ERROR_MESSAGE);
       return;
     }
+    setYakumanErrors([]);
     setIsSubmitting(true);
     setError(null);
     try {
@@ -134,6 +145,7 @@ export const useEditMatchPage = () => {
         matchId,
         playedAt: values.playedAt,
         results: validation.results,
+        yakumanEvents: validation.yakumanEvents,
       });
       router.push(
         `/league/${leagueId}/season/${seasonId}/sessions/${sessionId}/results`
@@ -179,6 +191,8 @@ export const useEditMatchPage = () => {
     notFound,
     isSubmitting,
     error,
+    yakumanErrors,
+    onValuesChange,
     retry: () => setRetryCount((count) => count + 1),
     handleSubmit,
     handleBack,

@@ -7,9 +7,15 @@ import {
 } from "@/lib/api/core";
 
 import type {
+  ApiMatch,
   MatchChomboEventInput,
   MatchResultInput,
 } from "@/lib/api/contracts";
+
+export type MatchYakumanEventInput = Array<{
+  winnerUserId: string;
+  kind: ApiMatch["yakumanEvents"][number]["kind"];
+}>;
 
 const listMatchesRequest =
   apiClient.api.leagues[":leagueId"].seasons[":seasonId"].sessions[":sessionId"]
@@ -61,6 +67,7 @@ export const createMatch = async (input: {
   results: MatchResultInput;
   chomboEvents: MatchChomboEventInput;
   offTableKyotakuCount: number;
+  yakumanEvents?: MatchYakumanEventInput;
 }) =>
   executeApiRequest<CreateMatchResponse>(() =>
     createMatchRequest({
@@ -74,6 +81,9 @@ export const createMatch = async (input: {
         results: input.results,
         chomboEvents: input.chomboEvents,
         offTableKyotakuCount: input.offTableKyotakuCount,
+        ...(input.yakumanEvents !== undefined
+          ? { yakumanEvents: input.yakumanEvents }
+          : {}),
       },
     })
   );
@@ -85,6 +95,7 @@ export const updateMatch = async (input: {
   matchId: string;
   playedAt?: string;
   results?: MatchResultInput;
+  yakumanEvents?: MatchYakumanEventInput;
 }) =>
   executeApiRequest<UpdateMatchResponse>(() =>
     updateMatchRequest({
@@ -94,7 +105,13 @@ export const updateMatch = async (input: {
         sessionId: input.sessionId,
         matchId: input.matchId,
       },
-      json: { playedAt: input.playedAt, results: input.results },
+      json: {
+        playedAt: input.playedAt,
+        results: input.results,
+        ...(input.yakumanEvents !== undefined
+          ? { yakumanEvents: input.yakumanEvents }
+          : {}),
+      },
     })
   );
 
