@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
 import test from "node:test";
 import { FieldValue } from "firebase-admin/firestore";
 import { getDb } from "@/infrastructure/firestore/client.js";
@@ -568,6 +569,201 @@ test(
         }),
         /league rule is locked after the first match/,
       );
+    } finally {
+      await db.recursiveDelete(leagueRef);
+      await userStatsRepository.deleteStatsForLeague(league.id);
+      await userMatchStatisticsRepository.deleteLeague(league.id);
+    }
+  },
+);
+
+test(
+  "projects composite yakuman through Match create, update, and delete",
+  { skip: !emulatorAvailable },
+  async () => {
+    const db = getDb();
+    const userRepository = new FirestoreUserRepository(db);
+    const leagueRepository = new FirestoreLeagueRepository(db, userRepository);
+    const seasonRepository = new FirestoreSeasonRepository(db);
+    const sessionRepository = new FirestoreSessionRepository(db);
+    const matchRepository = new FirestoreMatchRepository(db);
+    const userStatsRepository = new FirestoreUserStatsRepository(db);
+    const userMatchStatisticsRepository =
+      new FirestoreUserMatchStatisticsRepository(db);
+    const statsRebuilder = new StatsRebuilder(
+      leagueRepository,
+      seasonRepository,
+      sessionRepository,
+      matchRepository,
+      userStatsRepository,
+      userMatchStatisticsRepository,
+    );
+    const matchService = new MatchService(
+      leagueRepository,
+      seasonRepository,
+      sessionRepository,
+      matchRepository,
+      statsRebuilder,
+    );
+    const suffix = randomUUID();
+    const memberIds = [1, 2, 3, 4].map((index) => `${suffix}-user-${index}`);
+    const members = memberIds.map((userId, index) => ({
+      userId: asOpaqueId(userId),
+      userName: `Yakuman ${index + 1}`,
+    }));
+    const league = await leagueRepository.create({
+      name: `yakuman lifecycle ${suffix}`,
+      rule: makeFixedRule(),
+      memberUserIds: memberIds,
+    });
+    const leagueRef = db.collection("leagues").doc(league.id);
+
+    try {
+      const season = await seasonRepository.create(
+        league.id,
+        {
+          name: `yakuman lifecycle ${suffix}`,
+          memberUserIds: memberIds,
+          status: "active",
+        },
+        members,
+      );
+      const projectionFor = (userId: string) =>
+        userMatchStatisticsRepository.listForScope({
+          scopeType: "season",
+          leagueId: league.id,
+          seasonId: season.id,
+          userId: asOpaqueId(userId),
+        });
+      const rowsForMatch = async (matchId: string) =>
+        Promise.all(
+          memberIds.map(
+            async (userId) =>
+              (await projectionFor(userId)).find(
+                (row) => row.matchId === matchId,
+              ) ?? null,
+          ),
+        );
+      const assertProjectedKinds = async (
+        matchId: string,
+        expectedByUser: string[][],
+      ) => {
+        const rows = await rowsForMatch(matchId);
+        assert.deepEqual(
+          rows.map((row) => row?.yakumanKinds ?? []),
+          expectedByUser,
+        );
+      };
+      const session = await sessionRepository.create(
+        league.id,
+        season.id,
+        {
+          startedAt: "2026-01-01T00:00:00.000Z",
+          memberUserIds: memberIds,
+          createdBy: memberIds[0]!,
+        },
+        members,
+      );
+
+      const createdMatch = await matchService.createMatch(
+        memberIds[0]!,
+        league.id,
+        season.id,
+        session.id,
+        {
+          playedAt: "2026-01-01T00:01:00.000Z",
+          results: members.map((member, index) => ({
+            userId: member.userId,
+            wind: (["east", "south", "west", "north"] as const)[index]!,
+            rawScore: [40000, 30000, 20000, 10000][index]!,
+          })),
+          yakumanEvents: [
+            { winnerUserId: memberIds[0]!, kind: "daisangen" },
+            { winnerUserId: memberIds[1]!, kind: "kokushi13Wait" },
+            { winnerUserId: memberIds[0]!, kind: "suuankouTanki" },
+          ],
+        },
+      );
+      const storedMatchAfterCreate = await matchRepository.get(
+        league.id,
+        season.id,
+        session.id,
+        createdMatch.id,
+      );
+      const resultsAfterCreate = storedMatchAfterCreate.results;
+      assert.deepEqual(
+        storedMatchAfterCreate.yakumanEvents.map(({ winnerUserId, kind }) => ({
+          winnerUserId,
+          kind,
+        })),
+        [
+          { winnerUserId: memberIds[0], kind: "daisangen" },
+          { winnerUserId: memberIds[1], kind: "kokushi13Wait" },
+          { winnerUserId: memberIds[0], kind: "suuankouTanki" },
+        ],
+      );
+
+      await assertProjectedKinds(createdMatch.id, [
+        ["daisangen", "suuankouTanki"],
+        ["kokushi13Wait"],
+        [],
+        [],
+      ]);
+
+      await matchService.updateMatch(
+        memberIds[0]!,
+        league.id,
+        season.id,
+        session.id,
+        createdMatch.id,
+        {
+          yakumanEvents: [
+            { winnerUserId: memberIds[1]!, kind: "kokushi13Wait" },
+            { winnerUserId: memberIds[0]!, kind: "suuankouTanki" },
+          ],
+        },
+      );
+      const storedMatchAfterUpdate = await matchRepository.get(
+        league.id,
+        season.id,
+        session.id,
+        createdMatch.id,
+      );
+      assert.deepEqual(
+        storedMatchAfterUpdate.yakumanEvents.map(({ winnerUserId, kind }) => ({
+          winnerUserId,
+          kind,
+        })),
+        [
+          { winnerUserId: memberIds[1], kind: "kokushi13Wait" },
+          { winnerUserId: memberIds[0], kind: "suuankouTanki" },
+        ],
+      );
+      assert.deepEqual(storedMatchAfterUpdate.results, resultsAfterCreate);
+
+      await assertProjectedKinds(createdMatch.id, [
+        ["suuankouTanki"],
+        ["kokushi13Wait"],
+        [],
+        [],
+      ]);
+
+      await matchService.deleteMatch(
+        memberIds[0]!,
+        league.id,
+        season.id,
+        session.id,
+        createdMatch.id,
+      );
+      await assert.rejects(
+        matchRepository.get(league.id, season.id, session.id, createdMatch.id),
+      );
+      assert.deepEqual(await rowsForMatch(createdMatch.id), [
+        null,
+        null,
+        null,
+        null,
+      ]);
     } finally {
       await db.recursiveDelete(leagueRef);
       await userStatsRepository.deleteStatsForLeague(league.id);
