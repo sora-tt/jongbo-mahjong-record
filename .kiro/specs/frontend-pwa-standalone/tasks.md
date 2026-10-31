@@ -73,4 +73,3 @@
 ## Implementation Notes
 
 - 4.1: 本番ビルドのlocalhost smokeで `/`、`/install`、`/login`、`/manifest.webmanifest` がHTTP 200、通常Chromeのウィンドウで `/` と `/install` を確認。localhost bind/connect は実行環境の制限により承認付きで実施した。
-
