@@ -59,6 +59,7 @@
   - _Depends: 3.1_
   - _Requirements: 1.1, 1.3, 3.1, 3.2, 3.3, 4.1, 4.2_
   - _Boundary: PWA起動metadata, SafeAreaShells, ExistingAuthEntry_
+  - _Blocked: iOS 16.4以降の実機がなく、iOS Simulatorの`simctl`も利用できないため、ホーム画面起動・safe area・認証を実機確認できない。_
 
 - [ ] 4.3 Android Chromeのインストール起動と認証・safe areaを実機確認する
   - Android Chromeからインストールまたはホーム画面追加を行い、アイコンから起動する。
