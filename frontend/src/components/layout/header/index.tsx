@@ -12,6 +12,7 @@ import {
   X,
 } from "lucide-react";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
@@ -126,17 +127,15 @@ export const Header: React.FC = () => {
             className="flex shrink-0 items-center gap-2 rounded-control py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
             aria-label="jongbo ホーム"
           >
-            <span
-              className="grid h-9 w-9 grid-cols-2 gap-0.5 rounded-control bg-brand-600 p-1.5 shadow-sm"
+            <Image
+              src="/icons/jongbo-logo.svg"
+              alt=""
               aria-hidden="true"
-            >
-              {Array.from({ length: 4 }).map((_, index) => (
-                <span key={index} className="rounded-[2px] bg-white/80" />
-              ))}
-            </span>
-            <span className="text-xl font-bold tracking-tight text-brand-strong">
-              jongbo
-            </span>
+              width={610}
+              height={160}
+              priority
+              className="h-10 w-auto"
+            />
           </Link>
 
           <NavigationSections
