@@ -21,7 +21,7 @@
 
 ## 2. Core: ホーム画面への追加方法を案内する
 
-- [ ] 2.1 iPhoneとAndroidのインストール案内を公開する
+- [x] 2.1 iPhoneとAndroidのインストール案内を公開する
   - 認証不要の /install ページにiPhone SafariとAndroid Chromeの手順をそれぞれ掲載する。
   - iOSの「Webアプリとして開く」が表示された場合に有効化する手順を明記する。
   - Android Chromeのメニュー名が異なる可能性を説明し、特定OSの判定や分岐は行わない。
