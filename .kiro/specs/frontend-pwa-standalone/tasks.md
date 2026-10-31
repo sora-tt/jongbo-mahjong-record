@@ -43,7 +43,7 @@
 
 ## 4. Validation: 対応環境で受け入れ条件を確認する
 
-- [ ] 4.1 通常ブラウザー表示とインストール案内の到達性を確認する
+- [x] 4.1 通常ブラウザー表示とインストール案内の到達性を確認する
   - 通常のブラウザーで / を開いた場合にブラウザー操作部分を含むWebサイト表示が維持される。
   - ログイン画面とモバイルドロワーのリンクから /install に移動し、両OSの手順を確認できる。
   - 完了時に / と /install が通常のブラウザーで閲覧でき、iOS手順に起動選択の説明が含まれている。
@@ -68,4 +68,8 @@
   - _Depends: 3.1_
   - _Requirements: 1.2, 1.3, 3.1, 3.2, 3.3, 4.1, 4.2_
   - _Boundary: PWA起動metadata, SafeAreaShells, ExistingAuthEntry_
+
+## Implementation Notes
+
+- 4.1: 本番ビルドのlocalhost smokeで `/`、`/install`、`/login`、`/manifest.webmanifest` がHTTP 200、通常Chromeのウィンドウで `/` と `/install` を確認。localhost bind/connect は実行環境の制限により承認付きで実施した。
 
