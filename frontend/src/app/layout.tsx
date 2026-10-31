@@ -3,6 +3,7 @@ import * as React from "react";
 import "./styles/globals.css";
 
 import { NavigationModelProvider } from "@/app/navigation-model-provider";
+
 import { AppProviders } from "@/components/app/providers";
 
 import type { Metadata, Viewport } from "next";
