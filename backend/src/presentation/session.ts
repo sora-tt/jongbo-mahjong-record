@@ -1,6 +1,6 @@
 export const SESSION_COOKIE_NAME = "jongbo_session";
 
-const DEFAULT_SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 5;
+const DEFAULT_SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 60;
 
 export const getSessionMaxAgeSeconds = () => {
   const raw = process.env.SESSION_COOKIE_MAX_AGE_SECONDS;
