@@ -118,3 +118,24 @@ test("updateMatch omits yakumanEvents when a caller does not provide it", async 
 
   assert.equal("yakumanEvents" in capturedRequests[0].body, false);
 });
+
+test("updateMatch sends changed or cleared off-table records", async () => {
+  mockFetch(200);
+  const ids = {
+    leagueId: "league-1",
+    seasonId: "season-1",
+    sessionId: "session-1",
+    matchId: "match-1",
+  };
+  const events = [{ offenderUserId: "user-1" }, { offenderUserId: "user-2" }];
+  await updateMatch({ ...ids, chomboEvents: events, offTableKyotakuCount: 2 });
+  await updateMatch({ ...ids, chomboEvents: [], offTableKyotakuCount: 0 });
+  await updateMatch(ids);
+
+  assert.deepEqual(capturedRequests[0].body.chomboEvents, events);
+  assert.equal(capturedRequests[0].body.offTableKyotakuCount, 2);
+  assert.deepEqual(capturedRequests[1].body.chomboEvents, []);
+  assert.equal(capturedRequests[1].body.offTableKyotakuCount, 0);
+  assert.equal("chomboEvents" in capturedRequests[2].body, false);
+  assert.equal("offTableKyotakuCount" in capturedRequests[2].body, false);
+});

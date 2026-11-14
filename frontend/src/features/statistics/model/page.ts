@@ -41,8 +41,10 @@ const getSafeReturnPath = (value: string | null) => {
     const parsedUrl = new URL(value, baseUrl);
     const isKnownRoute =
       value === "/" ||
+      value === "/v2" ||
       value === "/stats" ||
-      /^\/league\/[^/?#%]+(?:\/season\/[^/?#%]+)?$/.test(value);
+      value === "/v2/stats" ||
+      /^\/(?:v2\/)?league\/[^/?#%]+(?:\/season\/[^/?#%]+)?$/.test(value);
 
     return parsedUrl.origin === baseUrl &&
       parsedUrl.pathname === value &&
@@ -103,6 +105,7 @@ export const buildStatisticsHref = (input: {
   activeView?: StatisticsView;
   scopeLabel?: string;
   returnTo?: string | null;
+  routePrefix?: string;
 }) => {
   const params = new URLSearchParams({
     scopeType: input.scope.scopeType,
@@ -114,7 +117,7 @@ export const buildStatisticsHref = (input: {
   if (input.scope.seasonId) params.set("seasonId", input.scope.seasonId);
   if (input.scopeLabel) params.set("scopeLabel", input.scopeLabel);
   if (input.returnTo) params.set("returnTo", input.returnTo);
-  return `/stats?${params.toString()}`;
+  return `${input.routePrefix ?? ""}/stats?${params.toString()}`;
 };
 
 export type StatisticsPageQueryStatus =

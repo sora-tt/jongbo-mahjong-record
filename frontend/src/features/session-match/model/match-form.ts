@@ -213,7 +213,7 @@ export const validateMatchForm = (input: MatchValidationInput) => {
         results: null,
       };
     }
-    if (!input.allowOffTableKyotaku && input.mode !== "edit") {
+    if (!input.allowOffTableKyotaku) {
       return {
         message: "このリーグでは卓外供託を記録できません",
         results: null,

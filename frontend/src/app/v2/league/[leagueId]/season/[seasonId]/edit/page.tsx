@@ -1,0 +1,128 @@
+"use client";
+import { useSeasonEdit } from "@/features/season/hooks/use-season-edit";
+import { SeasonFormActions } from "@/features/season/ui/v2/season-form-actions";
+import { SeasonIdentity } from "@/features/season/ui/v2/season-identity";
+import { SeasonMembers } from "@/features/season/ui/v2/season-members";
+import { SeasonMembersSection } from "@/features/season/ui/v2/season-members-section";
+
+import { AppShell } from "@/components/v2/layout/app-shell";
+import { Button } from "@/components/v2/ui/button";
+import { PageLoading } from "@/components/v2/ui/page-loading";
+import { Panel } from "@/components/v2/ui/panel";
+import { Status } from "@/components/v2/ui/status";
+
+const SeasonEditPage = () => {
+  const state = useSeasonEdit("/v2", true);
+  const {
+    leagueId,
+    seasonId,
+    leagueName,
+    seasonName,
+    status,
+    members,
+    candidateMembers,
+    selectedMembers,
+    isLoading,
+    areLeagueMembersLoading,
+    leagueMembersError,
+    isLoaded,
+    notFound,
+    isSubmitting,
+    error,
+    setSeasonName,
+    setStatus,
+    handleMemberToggle,
+    handleSubmit,
+    retry,
+    retryLeagueMembers,
+  } = state;
+  const backHref =
+    leagueId && seasonId ? `/v2/league/${leagueId}/season/${seasonId}` : "/v2";
+  if (isLoading) {
+    return (
+      <AppShell>
+        <PageLoading label="シーズン情報を読み込んでいます…" />
+      </AppShell>
+    );
+  }
+  return (
+    <AppShell>
+      <main className="mx-auto flex max-w-[480px] flex-col gap-4 px-4 pb-10 pt-5">
+        <h1 className="mb-1 text-center text-v2-display font-bold">
+          シーズン設定
+        </h1>
+        {notFound ? (
+          <Status message="シーズンが見つかりません" />
+        ) : error && !isLoaded ? (
+          <Status message={error} onRetry={retry} />
+        ) : (
+          <>
+            <SeasonIdentity
+              leagueName={leagueName}
+              leagueHref={`/v2/league/${leagueId}`}
+              value={seasonName}
+              onChange={(event) => setSeasonName(event.target.value)}
+              required
+            />
+            <SeasonMembersSection
+              count={members.length + Object.keys(selectedMembers).length}
+            >
+              <p className="mb-2 text-v2-caption text-v2-text-secondary">
+                既存の参加者を維持したまま、リーグ参加者を追加できます。
+              </p>
+              {areLeagueMembersLoading ? (
+                <Status loading message="リーグ参加者を読み込んでいます…" />
+              ) : leagueMembersError ? (
+                <Status
+                  message={leagueMembersError}
+                  onRetry={retryLeagueMembers}
+                />
+              ) : (
+                <SeasonMembers
+                  members={[...members, ...candidateMembers]}
+                  lockedIds={members.map((member) => member.userId)}
+                  selectedIds={Object.keys(selectedMembers)}
+                  onToggle={handleMemberToggle}
+                  disabled={isSubmitting}
+                />
+              )}
+            </SeasonMembersSection>
+            <Panel>
+              <p className="mb-2 text-v2-caption text-v2-text-secondary">
+                状態
+              </p>
+              <div className="flex gap-2">
+                {(
+                  [
+                    { value: "active", label: "進行中" },
+                    { value: "archived", label: "終了" },
+                  ] as const
+                ).map((item) => (
+                  <Button
+                    key={item.value}
+                    type="button"
+                    variant="selection"
+                    size="sm"
+                    selected={status === item.value}
+                    disabled={isSubmitting}
+                    onClick={() => setStatus(item.value)}
+                  >
+                    {item.label}
+                  </Button>
+                ))}
+              </div>
+            </Panel>
+            {error && <Status message={error} />}
+            <SeasonFormActions
+              label="変更を保存"
+              onSubmit={handleSubmit}
+              loading={isSubmitting}
+              backHref={backHref}
+            />
+          </>
+        )}
+      </main>
+    </AppShell>
+  );
+};
+export default SeasonEditPage;

@@ -193,3 +193,42 @@ test("removing the final yakuman row turns yakuman off", () => {
   assert.equal(removed.yakumanEnabled, false);
   assert.deepEqual(removed.yakumanEvents, []);
 });
+
+test("edit validates off-table deposits against league rules and score total", () => {
+  const values = makeValues({
+    chomboOffenderUserIds: ["user-1", "user-1"],
+    offTableKyotakuPresent: true,
+    offTableKyotakuCount: "1",
+    rawScoreByWind: { east: "390", south: "300", west: "200", north: "100" },
+  });
+  assert.equal(
+    validate(values).message,
+    "このリーグでは卓外供託を記録できません"
+  );
+  const allowed = validateMatchForm({
+    values,
+    constraint: getParticipantConstraint("yonma"),
+    allowedMembers,
+    startingPoints: 25_000,
+    allowOffTableKyotaku: true,
+    mode: "edit",
+  });
+  assert.equal(allowed.message, null);
+  assert.deepEqual(allowed.chomboEvents, [
+    { offenderUserId: "user-1" },
+    { offenderUserId: "user-1" },
+  ]);
+  assert.equal(allowed.offTableKyotakuCount, 1);
+  const mismatch = validateMatchForm({
+    values: { ...values, offTableKyotakuCount: "2" },
+    constraint: getParticipantConstraint("yonma"),
+    allowedMembers,
+    startingPoints: 25_000,
+    allowOffTableKyotaku: true,
+    mode: "edit",
+  });
+  assert.equal(
+    mismatch.message,
+    "合計点数は 98,000 点になるよう入力してください"
+  );
+});

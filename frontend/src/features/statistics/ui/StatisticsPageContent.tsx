@@ -4,7 +4,7 @@ import * as React from "react";
 
 import Link from "next/link";
 
-import { useStatistics } from "@/app/stats/hooks";
+import { useStatistics } from "@/features/statistics/hooks/use-statistics";
 import {
   getStatisticsPagePanelState,
   getStatisticsPageScopeOptions,

@@ -2,7 +2,7 @@
 
 import * as React from "react";
 
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 import { fetchLeagues } from "@/features/league/api";
 import { toLeagueSummary } from "@/features/league/model/adapter";
@@ -40,6 +40,9 @@ const toSeasonLink = (
 
 export const useLeagueNavigation = () => {
   const router = useRouter();
+  const pathname = usePathname();
+  const loginPath =
+    pathname === "/v2" || pathname.startsWith("/v2/") ? "/v2/login" : "/login";
   const [leagues, setLeagues] =
     React.useState<NavigationLoadState<LeagueNavigationItem>>(
       INITIAL_LEAGUE_STATE
@@ -136,7 +139,7 @@ export const useLeagueNavigation = () => {
         }
 
         if (loadError instanceof ApiError && loadError.status === 401) {
-          router.replace("/login");
+          router.replace(loginPath);
         }
         commitLeagues({
           status: "error",
@@ -148,7 +151,7 @@ export const useLeagueNavigation = () => {
         });
       }
     },
-    [commitLeagues, router]
+    [commitLeagues, loginPath, router]
   );
 
   const loadSeasonList = React.useCallback(
@@ -189,7 +192,7 @@ export const useLeagueNavigation = () => {
         }
 
         if (loadError instanceof ApiError && loadError.status === 401) {
-          router.replace("/login");
+          router.replace(loginPath);
           return;
         }
         if (loadError instanceof ApiError && loadError.status === 404) {
@@ -206,7 +209,7 @@ export const useLeagueNavigation = () => {
         });
       }
     },
-    [router, setSeasonState]
+    [loginPath, router, setSeasonState]
   );
 
   const loadLeagues = React.useCallback(() => {
