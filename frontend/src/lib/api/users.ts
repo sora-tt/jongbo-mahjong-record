@@ -2,7 +2,7 @@ import { type InferResponseType } from "hono/client";
 
 import { apiClient, executeApiRequest } from "@/lib/api/core";
 
-import type { CreateMeInput } from "@/lib/api/contracts";
+import type { CreateMeInput, UpdateMeInput } from "@/lib/api/contracts";
 
 const searchUsersRequest = apiClient.api.users.$get;
 
@@ -13,6 +13,9 @@ type CreateMeResponse = InferResponseType<
 type FetchMeResponse = InferResponseType<
   typeof apiClient.api.users.me.$get
 >["data"];
+type UpdateMeResponse = InferResponseType<
+  typeof apiClient.api.users.me.$patch
+>["data"];
 type SearchUsersResponse = InferResponseType<typeof searchUsersRequest>["data"];
 
 export const createMe = async (input: CreateMeInput) =>
@@ -22,6 +25,11 @@ export const createMe = async (input: CreateMeInput) =>
 
 export const fetchMe = async () =>
   executeApiRequest<FetchMeResponse>(() => apiClient.api.users.me.$get());
+
+export const updateMe = async (input: UpdateMeInput) =>
+  executeApiRequest<UpdateMeResponse>(() =>
+    apiClient.api.users.me.$patch({ json: input })
+  );
 
 export const searchUsers = async (query: string) =>
   executeApiRequest<SearchUsersResponse>(() =>

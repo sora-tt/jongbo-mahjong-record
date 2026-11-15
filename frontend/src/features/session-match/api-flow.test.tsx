@@ -197,15 +197,15 @@ let cleanup!: typeof import("@testing-library/react").cleanup;
 let act!: typeof import("@testing-library/react").act;
 let renderHook!: typeof import("@testing-library/react").renderHook;
 let waitFor!: typeof import("@testing-library/react").waitFor;
-let useInitialMatchPage!: typeof import("@/app/league/[leagueId]/season/[seasonId]/sessions/start/match/hooks").useRecordMatchPage;
-let useAdditionalMatchPage!: typeof import("@/app/league/[leagueId]/season/[seasonId]/sessions/[sessionId]/matches/new/hooks").useRecordMatchPage;
-let useEditMatchPage!: typeof import("@/app/league/[leagueId]/season/[seasonId]/sessions/[sessionId]/matches/[matchId]/edit/hooks").useEditMatchPage;
+let useInitialMatchPage!: typeof import("@/features/match/hooks/use-initial-match").useRecordMatchPage;
+let useAdditionalMatchPage!: typeof import("@/features/match/hooks/use-additional-match").useRecordMatchPage;
+let useEditMatchPage!: typeof import("@/features/match/hooks/use-edit-match").useEditMatchPage;
 
 const setup = Promise.all([
   import("@testing-library/react"),
-  import("@/app/league/[leagueId]/season/[seasonId]/sessions/start/match/hooks"),
-  import("@/app/league/[leagueId]/season/[seasonId]/sessions/[sessionId]/matches/new/hooks"),
-  import("@/app/league/[leagueId]/season/[seasonId]/sessions/[sessionId]/matches/[matchId]/edit/hooks"),
+  import("@/features/match/hooks/use-initial-match"),
+  import("@/features/match/hooks/use-additional-match"),
+  import("@/features/match/hooks/use-edit-match"),
 ]).then(([testingLibrary, initialModule, additionalModule, editModule]) => {
   ({ cleanup, act, renderHook, waitFor } = testingLibrary);
   ({ useRecordMatchPage: useInitialMatchPage } = initialModule);
@@ -217,7 +217,7 @@ const router = {
   back: () => {},
   forward: () => {},
   push: () => {},
-  replace: () => {},
+  replace: (_href: string) => {},
   refresh: () => {},
   prefetch: async () => {},
 };
@@ -370,4 +370,159 @@ test("edit Match update sends restored yakuman and retains values after save fai
   );
   assert.deepEqual(result.current.values, submittedValues);
   assert.ok(result.current.error);
+});
+
+test("editing off-table records sends the changed values and keeps them on failure", async () => {
+  await setup;
+  mockMatchSaveFailure();
+  const { result } = renderHook(() => useEditMatchPage("/v2"), {
+    wrapper: createWrapper({
+      leagueId: "league-1",
+      seasonId: "season-1",
+      sessionId: "session-1",
+      matchId: "match-1",
+    }),
+  });
+  await waitFor(() => assert.equal(result.current.isLoading, false));
+  const initial = result.current.values;
+  assert.ok(initial);
+  const changed: MatchFormValues = {
+    ...initial,
+    chomboOffenderUserIds: ["user-1", "user-2"],
+    offTableKyotakuPresent: true,
+    offTableKyotakuCount: "1",
+    rawScoreByWind: { ...initial.rawScoreByWind, east: "240" },
+  };
+  act(() => result.current.onValuesChange(changed));
+  await act(async () => result.current.handleSubmit());
+  const body = findRequest(
+    "PATCH",
+    "/sessions/session-1/matches/match-1"
+  )?.body;
+  assert.deepEqual(body?.chomboEvents, [
+    { offenderUserId: "user-1" },
+    { offenderUserId: "user-2" },
+  ]);
+  assert.equal(body?.offTableKyotakuCount, 1);
+  assert.deepEqual(result.current.values, changed);
+  assert.ok(result.current.error);
+});
+
+test("v2 initial match retries a failed load without discarding player selection", async () => {
+  await setup;
+  store.dispatch(
+    setRecordingFlow({
+      leagueId: "league-1",
+      seasonId: "season-1",
+      sessionId: null,
+      selectedPlayerIds: ["user-1", "user-2", "user-3", "user-4"],
+      selectedPlayersBySeat: {
+        east: "user-1",
+        south: "user-2",
+        west: "user-3",
+        north: "user-4",
+      },
+    })
+  );
+  let leagueAttempts = 0;
+  globalThis.fetch = (async (input, init) => {
+    const request = input instanceof Request ? input : new Request(input, init);
+    const pathname = new URL(request.url).pathname;
+    if (pathname === "/api/leagues/league-1") {
+      leagueAttempts += 1;
+      return leagueAttempts === 1 ? failureResponse() : response(league);
+    }
+    if (pathname === basePath) return response(season);
+    throw new Error(`Unexpected API request: ${pathname}`);
+  }) as typeof fetch;
+  const { result } = renderHook(() => useInitialMatchPage("/v2"), {
+    wrapper: createWrapper({ leagueId: "league-1", seasonId: "season-1" }),
+  });
+  await waitFor(() =>
+    assert.ok(!result.current.isLoading && result.current.error)
+  );
+  act(() => result.current.retry());
+  await waitFor(() => assert.equal(result.current.members.length, 4));
+  assert.equal(result.current.error, null);
+  assert.equal(result.current.values.userIdByWind.east, "user-1");
+});
+
+test("v2 additional match retries a failed load", async () => {
+  await setup;
+  let sessionAttempts = 0;
+  globalThis.fetch = (async (input, init) => {
+    const request = input instanceof Request ? input : new Request(input, init);
+    const pathname = new URL(request.url).pathname;
+    if (pathname === "/api/leagues/league-1") return response(league);
+    if (pathname === `${basePath}/sessions/session-1`) {
+      sessionAttempts += 1;
+      return sessionAttempts === 1 ? failureResponse() : response(session);
+    }
+    throw new Error(`Unexpected API request: ${pathname}`);
+  }) as typeof fetch;
+  const { result } = renderHook(() => useAdditionalMatchPage("/v2"), {
+    wrapper: createWrapper({
+      leagueId: "league-1",
+      seasonId: "season-1",
+      sessionId: "session-1",
+    }),
+  });
+  await waitFor(() =>
+    assert.ok(!result.current.isLoading && result.current.error)
+  );
+  act(() => result.current.retry());
+  await waitFor(() => assert.equal(result.current.ready, true));
+  assert.equal(result.current.error, null);
+});
+
+test("authentication failure keeps v2 recording in the v2 login flow", async () => {
+  await setup;
+  const redirects: string[] = [];
+  const originalReplace = router.replace;
+  router.replace = (href: string) => {
+    redirects.push(href);
+  };
+  globalThis.fetch = (async () =>
+    new Response(
+      JSON.stringify({
+        error: {
+          code: "authentication_error",
+          message: "unauthorized",
+          details: {},
+        },
+      }),
+      { status: 401, headers: { "content-type": "application/json" } }
+    )) as typeof fetch;
+  try {
+    renderHook(() => useAdditionalMatchPage("/v2"), {
+      wrapper: createWrapper({
+        leagueId: "league-1",
+        seasonId: "season-1",
+        sessionId: "session-1",
+      }),
+    });
+    await waitFor(() => assert.ok(redirects.includes("/v2/login")));
+  } finally {
+    router.replace = originalReplace;
+  }
+});
+
+test("season edit loads its league name alongside the existing season", async () => {
+  await setup;
+  const { useSeasonEdit } =
+    await import("@/features/season/hooks/use-season-edit");
+  globalThis.fetch = (async (input, init) => {
+    const request = input instanceof Request ? input : new Request(input, init);
+    const pathname = new URL(request.url).pathname;
+    if (pathname === "/api/leagues/league-1") return response(league);
+    if (pathname === "/api/leagues/league-1/members") return response(members);
+    if (pathname === basePath) return response(season);
+    throw new Error(`Unexpected API request: ${pathname}`);
+  }) as typeof fetch;
+  const { result } = renderHook(() => useSeasonEdit("/v2", true), {
+    wrapper: createWrapper({ leagueId: "league-1", seasonId: "season-1" }),
+  });
+  await waitFor(() => assert.equal(result.current.isLoaded, true));
+  assert.equal(result.current.leagueName, "リーグ");
+  assert.equal(result.current.seasonName, "秋季");
 });

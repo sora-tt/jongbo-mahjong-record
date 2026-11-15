@@ -91,6 +91,8 @@ const readySummary = {
     {
       gameType: "yonma",
       matchCount: 12,
+      totalPoints: 25.5,
+      averageFinalPoint: 2.125,
       averageRank: 2.5,
       topRate: 0.25,
       topTwoRate: 0.5,
@@ -292,7 +294,7 @@ test("hook loads summary first and fetches analysis/history only when selected",
   await waitFor(() => {
     assert.equal(result.current.analysisStatus, "uncomputed");
   });
-  assert.equal(calls.analyses.length, 3);
+  assert.equal(calls.analyses.length, 1);
   assert.equal(calls.histories.length, 0);
 
   act(() => result.current.onChangeActiveView("history"));
@@ -305,7 +307,7 @@ test("hook loads summary first and fetches analysis/history only when selected",
   await waitFor(() => {
     assert.equal(result.current.analysisStatus, "uncomputed");
   });
-  assert.equal(calls.analyses.length, 3);
+  assert.equal(calls.analyses.length, 1);
 });
 
 test("hook caches scope rosters, keeps filters on target change and discards a stale summary", async () => {
@@ -493,7 +495,7 @@ test("ready statistics page announces metric values and exposes chart data in a 
   await waitFor(() => {
     assert.ok(screen.getByRole("heading", { name: "総合" }));
   });
-  assert.ok(screen.getByText("対局数"));
+  assert.ok(screen.getByText("全12対局の合計ポイント"));
   assert.ok(screen.getByText("総合ポイント"));
   assert.ok(screen.getByText("平均順位"));
   assert.ok(screen.getByText("2.50"));
@@ -506,7 +508,7 @@ test("ready statistics page announces metric values and exposes chart data in a 
   await waitFor(() => {
     assert.ok(screen.getByRole("heading", { name: "成績推移" }));
   });
-  assert.equal(calls.analyses.length, 3);
+  assert.equal(calls.analyses.length, 1);
   assert.ok(
     screen.getByRole("img", {
       name: /月別の総合ポイントを示す棒グラフ/,
@@ -555,4 +557,103 @@ test("statistics tabs expose selected panel and move focus with arrow keys", asy
     screen.getByRole("tabpanel").textContent,
     "月別累計ポイント 25.0 pt"
   );
+});
+
+test("v2 statistics uses v2 routes and switches views without changing API behavior", async () => {
+  await setup;
+  const { StatisticsPageContent: V2PageContent } =
+    await import("@/features/statistics/ui/v2/page-content");
+  const base = readySummary as unknown as {
+    scoreByGameType: Array<{ rawScore: unknown; finalPoint: unknown }>;
+  };
+  const { api, calls } = createMockApi({
+    getPersonalStatisticsSummary: async (input) => {
+      calls.summaries.push(input);
+      return {
+        ...(readySummary as object),
+        rawScore: base.scoreByGameType[0].rawScore,
+        finalPoint: base.scoreByGameType[0].finalPoint,
+      } as never;
+    },
+    getPersonalStatisticsAnalysis: async (input) => {
+      calls.analyses.push(input);
+      return readyAnalysis;
+    },
+  });
+  const routes: string[] = [];
+  const router = {
+    replace: (href: string) => {
+      routes.push(href);
+    },
+  };
+  const useRouter = () => router as never;
+  const useStatistics = createHook(api, useRouter);
+  render(
+    <V2PageContent useStatisticsHook={useStatistics} includeAppShell={false} />
+  );
+  await waitFor(() => assert.ok(screen.getByText("総合ポイント")));
+  assert.ok(screen.getByText("+25.5 pt"));
+  assert.equal(calls.summaries.length, 1);
+  fireEvent.keyDown(screen.getByRole("tab", { name: "総合" }), {
+    key: "ArrowRight",
+  });
+  await waitFor(() =>
+    assert.ok(screen.getByRole("heading", { name: "月別の成績" }))
+  );
+  assert.equal(
+    document.activeElement,
+    screen.getByRole("tab", { name: "推移" })
+  );
+  assert.ok(
+    routes.some(
+      (href) => href.startsWith("/v2/stats?") && href.includes("view=trend")
+    )
+  );
+  assert.equal(calls.analyses.length, 1);
+});
+
+test("v2 overview displays each game type's points and absolute rank percentages", async () => {
+  await setup;
+  const { StatisticsOverview } =
+    await import("@/features/statistics/ui/v2/overview");
+  const base = readySummary as unknown as {
+    byGameType: Array<Record<string, unknown>>;
+    scoreByGameType: Array<{ rawScore: unknown; finalPoint: unknown }>;
+  };
+  const yonma = base.byGameType[0];
+  const summary = {
+    ...(readySummary as object),
+    rawScore: base.scoreByGameType[0].rawScore,
+    finalPoint: base.scoreByGameType[0].finalPoint,
+    byGameType: [
+      {
+        ...yonma,
+        gameType: "sanma",
+        matchCount: 4,
+        totalPoints: 10,
+        ranks: [
+          { rank: 1, count: 2, rate: 0.5 },
+          { rank: 2, count: 1, rate: 0.25 },
+          { rank: 3, count: 1, rate: 0.25 },
+        ],
+      },
+      { ...yonma, totalPoints: 15.5 },
+    ],
+  };
+  const { container } = render(
+    <StatisticsOverview
+      summary={summary as never}
+      startingPoints={null}
+      startingPointsByLeagueId={{}}
+    />
+  );
+  assert.ok(screen.getByText("+10 pt"));
+  assert.ok(screen.getByText("+15.5 pt"));
+  assert.equal(
+    container.querySelector<HTMLElement>("li span span[style]")?.style.width,
+    "50%"
+  );
+  assert.ok(screen.getByText("素点合計"));
+  assert.ok(screen.getByText("順位点・オカ"));
+  assert.ok(screen.getByText("最多役満"));
 });

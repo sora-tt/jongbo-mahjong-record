@@ -1,0 +1,193 @@
+/* Penpot: 00 · Foundations. Scoped so the existing application keeps its theme. */
+.v2 {
+  --v2-coral-50: #fff8f9;
+  --v2-coral-100: #fff5f6;
+  --v2-coral-200: #ffebed;
+  --v2-coral-300: #ffe1e4;
+  --v2-coral-400: #ffd7db;
+  --v2-coral-500: #ffb9c1;
+  --v2-coral-600: #da9ea5;
+  --v2-coral-700: #ff7988;
+  --v2-coral-800: #6d4f52;
+  --v2-coral-900: #241a1b;
+  --v2-neutral-0: #fff;
+  --v2-neutral-50: #fffbfa;
+  --v2-neutral-100: #f8f3f2;
+  --v2-neutral-200: #efe7e6;
+  --v2-neutral-300: #e5d9d7;
+  --v2-neutral-500: #77716f;
+  --v2-neutral-700: #3f3a39;
+  --v2-neutral-900: #241818;
+  --v2-blue-600: #2563eb;
+  --v2-green-600: #247a55;
+  --v2-yellow-700: #9a6700;
+  --v2-red-600: #c9424a;
+  --v2-purple-600: #9333ea;
+  --v2-cyan-600: #0891b2;
+  --v2-orange-600: #ea580c;
+  --v2-pink-600: #db2777;
+  --v2-canvas: var(--v2-coral-50);
+  --v2-surface: var(--v2-neutral-0);
+  --v2-surface-subtle: var(--v2-neutral-50);
+  --v2-surface-muted: var(--v2-coral-50);
+  --v2-text: var(--v2-neutral-900);
+  --v2-text-heading: #262120;
+  --v2-text-secondary: var(--v2-neutral-500);
+  --v2-text-inverse: var(--v2-neutral-0);
+  --v2-brand-soft: var(--v2-coral-100);
+  --v2-brand-border: var(--v2-coral-300);
+  --v2-brand: var(--v2-coral-500);
+  --v2-brand-strong: var(--v2-coral-800);
+  --v2-action-primary: var(--v2-coral-700);
+  --v2-action-secondary: var(--v2-coral-200);
+  --v2-border: var(--v2-coral-300);
+  --v2-border-subtle: var(--v2-neutral-100);
+  --v2-focus: var(--v2-coral-800);
+  --v2-success: var(--v2-green-600);
+  --v2-warning: var(--v2-yellow-700);
+  --v2-danger: var(--v2-red-600);
+  --v2-rank-first: #c69214;
+  --v2-rank-second: #718096;
+  --v2-rank-third: #a66a43;
+  --v2-rank-fourth: var(--v2-neutral-500);
+  --v2-data-positive: var(--v2-blue-600);
+  --v2-data-negative: var(--v2-red-600);
+  --v2-data-neutral: var(--v2-neutral-500);
+  --v2-chart-1: var(--v2-coral-700);
+  --v2-chart-2: var(--v2-blue-600);
+  --v2-chart-3: var(--v2-green-600);
+  --v2-chart-4: var(--v2-yellow-700);
+  --v2-chart-5: var(--v2-purple-600);
+  --v2-chart-6: var(--v2-pink-600);
+  --v2-chart-7: var(--v2-orange-600);
+  --v2-chart-8: var(--v2-cyan-600);
+  --v2-space-0: 0px;
+  --v2-space-1: 4px;
+  --v2-space-2: 8px;
+  --v2-space-3: 12px;
+  --v2-space-4: 16px;
+  --v2-space-5: 20px;
+  --v2-space-6: 24px;
+  --v2-space-8: 32px;
+  --v2-space-10: 40px;
+  --v2-space-12: 48px;
+  --v2-radius-none: 0px;
+  --v2-radius-sm: 6px;
+  --v2-radius-control: 10px;
+  --v2-radius-card: 12px;
+  --v2-radius-panel: 16px;
+  --v2-radius-feature: 26px;
+  --v2-radius-pill: 999px;
+  --v2-size-touch-min: 44px;
+  --v2-size-touch-comfortable: 48px;
+  --v2-size-control-sm: 36px;
+  --v2-size-control-md: 44px;
+  --v2-size-control-lg: 52px;
+  --v2-size-icon-sm: 16px;
+  --v2-size-icon-md: 20px;
+  --v2-size-icon-lg: 24px;
+  --v2-size-icon-xl: 32px;
+  --v2-border-width: 1px;
+  --v2-border-focus: 2px;
+  --v2-opacity-disabled: 0.48;
+  --v2-opacity-scrim: 0.4;
+  --v2-font-family: "M PLUS 2", sans-serif;
+  --v2-shadow-input: 0 4px 12px rgba(109, 79, 82, 0.08);
+  --v2-shadow-input-focus: 0 4px 12px rgba(217, 95, 89, 0.12);
+  --v2-shadow-input-error: 0 4px 12px rgba(201, 66, 74, 0.14);
+  --v2-shadow-card: 0 3px 12px rgba(109, 79, 82, 0.09);
+  --v2-shadow-feature: 0 6px 18px rgba(109, 79, 82, 0.1);
+  color: var(--v2-text);
+  font-family: var(--v2-font-family);
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+/* Expose v2 tokens as Tailwind utilities without replacing the current theme. */
+@theme inline {
+  --color-v2-canvas: var(--v2-canvas);
+  --color-v2-surface: var(--v2-surface);
+  --color-v2-surface-subtle: var(--v2-surface-subtle);
+  --color-v2-text: var(--v2-text);
+  --color-v2-text-secondary: var(--v2-text-secondary);
+  --color-v2-on-primary: var(--v2-text-inverse);
+  --color-v2-brand-soft: var(--v2-brand-soft);
+  --color-v2-brand-strong: var(--v2-brand-strong);
+  --color-v2-action-primary: var(--v2-action-primary);
+  --color-v2-border: var(--v2-border);
+  --color-v2-border-subtle: var(--v2-border-subtle);
+  --color-v2-focus: var(--v2-focus);
+  --color-v2-success: var(--v2-success);
+  --color-v2-danger: var(--v2-danger);
+  --color-v2-neutral-300: var(--v2-neutral-300);
+  --radius-v2-control: var(--v2-radius-control);
+  --radius-v2-panel: var(--v2-radius-panel);
+  --shadow-v2-input: var(--v2-shadow-input);
+  --shadow-v2-input-focus: var(--v2-shadow-input-focus);
+  --shadow-v2-input-error: var(--v2-shadow-input-error);
+  --shadow-v2-card: var(--v2-shadow-card);
+  --shadow-v2-feature: var(--v2-shadow-feature);
+  --font-v2: var(--v2-font-family);
+  --text-v2-display: 24px;
+  --text-v2-display--line-height: 1.25;
+  --text-v2-heading-1: 22px;
+  --text-v2-heading-1--line-height: 1.3;
+  --text-v2-heading-2: 18px;
+  --text-v2-heading-2--line-height: 1.35;
+  --text-v2-body: 16px;
+  --text-v2-body--line-height: 1.5;
+  --text-v2-label: 14px;
+  --text-v2-label--line-height: 1.4;
+  --text-v2-caption: 12px;
+  --text-v2-caption--line-height: 1.4;
+  --text-v2-data: 22px;
+  --text-v2-data--line-height: 1.1;
+}
+
+.v2 :is(button, a, input, select, textarea):focus-visible {
+  outline: 2px solid var(--v2-focus);
+  outline-offset: 2px;
+}
+
+.login-loading {
+  position: fixed;
+  z-index: 100;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  padding: 32px 20px;
+  background: var(--v2-canvas);
+  color: #746568;
+  font: 400 13px/1.5 system-ui, sans-serif;
+}
+
+.login-loading__logo {
+  display: block;
+  width: min(100%, 360px);
+  height: auto;
+  overflow: visible;
+}
+
+.login-loading__letter {
+  animation: login-letter-bounce 1800ms ease-in-out infinite;
+}
+
+.login-loading__logo > g > g:nth-child(2) .login-loading__letter { animation-delay: 140ms; }
+.login-loading__logo > g > g:nth-child(3) .login-loading__letter { animation-delay: 280ms; }
+.login-loading__logo > g > g:nth-child(4) .login-loading__letter { animation-delay: 420ms; }
+.login-loading__logo > g > g:nth-child(5) .login-loading__letter { animation-delay: 560ms; }
+.login-loading__logo > g > g:nth-child(6) .login-loading__letter { animation-delay: 700ms; }
+
+@keyframes login-letter-bounce {
+  0% { transform: translateY(0); }
+  12% { transform: translateY(-5px); }
+  23% { transform: translateY(0.5px); }
+  30%, 100% { transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-loading__letter { animation: none; }
+}

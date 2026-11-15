@@ -95,6 +95,8 @@ export const updateMatch = async (input: {
   matchId: string;
   playedAt?: string;
   results?: MatchResultInput;
+  chomboEvents?: MatchChomboEventInput;
+  offTableKyotakuCount?: number;
   yakumanEvents?: MatchYakumanEventInput;
 }) =>
   executeApiRequest<UpdateMatchResponse>(() =>
@@ -108,6 +110,12 @@ export const updateMatch = async (input: {
       json: {
         playedAt: input.playedAt,
         results: input.results,
+        ...(input.chomboEvents !== undefined
+          ? { chomboEvents: input.chomboEvents }
+          : {}),
+        ...(input.offTableKyotakuCount !== undefined
+          ? { offTableKyotakuCount: input.offTableKyotakuCount }
+          : {}),
         ...(input.yakumanEvents !== undefined
           ? { yakumanEvents: input.yakumanEvents }
           : {}),

@@ -1,0 +1,56 @@
+import * as React from "react";
+
+import { CalendarDays } from "lucide-react";
+
+import { SessionHistory } from "@/features/session/ui/v2/session-history";
+
+import { EmptyState } from "@/components/v2/ui/empty-state";
+import { ErrorState } from "@/components/v2/ui/error-state";
+import { LoadingState } from "@/components/v2/ui/loading-state";
+import { SectionCard } from "@/components/v2/ui/section-card";
+
+import type { useSeasonPage } from "@/features/season/hooks/use-season-page";
+
+type Props = Pick<
+  ReturnType<typeof useSeasonPage>,
+  | "leagueId"
+  | "seasonId"
+  | "sessions"
+  | "sessionsLoading"
+  | "sessionsError"
+  | "retrySessions"
+>;
+export const SeasonSessionHistory = ({
+  leagueId,
+  seasonId,
+  sessions,
+  sessionsLoading,
+  sessionsError,
+  retrySessions,
+}: Props) => (
+  <SectionCard
+    title={
+      <span className="flex items-center gap-2">
+        <CalendarDays size={24} strokeWidth={1.75} aria-hidden="true" />
+        対局履歴
+      </span>
+    }
+  >
+    {sessionsLoading ? (
+      <LoadingState label="対局履歴を読み込んでいます…" />
+    ) : sessionsError ? (
+      <ErrorState message={sessionsError} onRetry={retrySessions} />
+    ) : sessions.length === 0 ? (
+      <EmptyState
+        title="対局履歴がありません"
+        className="!border-0 !bg-transparent p-0"
+      />
+    ) : (
+      <SessionHistory
+        sessions={sessions}
+        leagueId={leagueId}
+        seasonId={seasonId}
+      />
+    )}
+  </SectionCard>
+);

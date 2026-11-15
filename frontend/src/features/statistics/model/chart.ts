@@ -32,3 +32,11 @@ export const CHART_SERIES = [
     stroke: "var(--chart-series-8)",
   },
 ] as const;
+
+export const getChartDomainIncludingZero = (
+  values: readonly number[]
+): [number, number] => {
+  const minimum = Math.min(0, ...values);
+  const maximum = Math.max(0, ...values);
+  return minimum === maximum ? [-1, 1] : [minimum, maximum];
+};

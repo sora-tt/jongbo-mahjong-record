@@ -125,14 +125,17 @@ const makeCreateInput = (yakumanEvents?: YakumanEventInput[]) => ({
   ...(yakumanEvents === undefined ? {} : { yakumanEvents }),
 });
 
-const makeServiceFixture = () => {
+const makeServiceFixture = (
+  fixtureRule: LeagueRule = rule,
+  fixtureMatch: Match = existingMatch,
+) => {
   let createCallCount = 0;
   let updateInput: Parameters<MatchRepository["update"]>[0] | undefined;
   let deleteCallCount = 0;
   let rebuildCallCount = 0;
 
   const leagueRepository = {
-    getRule: async () => rule,
+    getRule: async () => fixtureRule,
   } as unknown as LeagueRepository;
   const seasonRepository = {
     listMembers: async () => sessionMembers,
@@ -141,7 +144,7 @@ const makeServiceFixture = () => {
     get: async () => ({ members: sessionMembers }),
   } as unknown as SessionRepository;
   const matchRepository = {
-    get: async () => existingMatch,
+    get: async () => fixtureMatch,
     create: async () => {
       createCallCount += 1;
       return existingMatch;
@@ -244,6 +247,81 @@ test("yakuman-only updates preserve score results and rebuild statistics", async
       kind,
     })),
     yakumanEvents,
+  );
+  assert.equal(fixture.getRebuildCallCount(), 1);
+});
+
+test("off-table updates recalculate points and rebuild season statistics", async () => {
+  const fixture = makeServiceFixture({ ...rule, allowOffTableKyotaku: true });
+  const results = createResults.map((entry, index) =>
+    index === 0 ? { ...entry, rawScore: entry.rawScore - 1000 } : entry,
+  );
+  await fixture.service.updateMatch(
+    "u1",
+    "league-1",
+    "season-1",
+    "session-1",
+    "match-1",
+    {
+      results,
+      chomboEvents: [{ offenderUserId: "u1" }],
+      offTableKyotakuCount: 1,
+    },
+  );
+  const updated = fixture.getUpdateInput();
+  assert.deepEqual(updated?.chomboEvents, [{ offenderUserId: "u1" }]);
+  assert.equal(updated?.offTableKyotakuCount, 1);
+  assert.equal(
+    updated?.results?.find(({ userId }) => userId === "u1")?.point,
+    -1951,
+  );
+  assert.equal(fixture.getRebuildCallCount(), 1);
+});
+
+test("off-table updates reject a mismatched score total before saving", async () => {
+  const fixture = makeServiceFixture({ ...rule, allowOffTableKyotaku: true });
+  await assert.rejects(
+    fixture.service.updateMatch(
+      "u1",
+      "league-1",
+      "season-1",
+      "session-1",
+      "match-1",
+      { results: createResults, offTableKyotakuCount: 1 },
+    ),
+    /rawScore total does not match table total/,
+  );
+  assert.equal(fixture.getUpdateInput(), undefined);
+  assert.equal(fixture.getRebuildCallCount(), 0);
+});
+
+test("clearing saved off-table records resets points and rebuilds statistics", async () => {
+  const savedMatch: Match = {
+    ...existingMatch,
+    results: existingMatch.results.map((entry, index) =>
+      index === 0 ? { ...entry, rawScore: entry.rawScore - 1000 } : entry,
+    ),
+    chomboEvents: [{ offenderUserId: asOpaqueId("u1") }],
+    offTableKyotakuCount: 1,
+  };
+  const fixture = makeServiceFixture(
+    { ...rule, allowOffTableKyotaku: true },
+    savedMatch,
+  );
+  await fixture.service.updateMatch(
+    "u1",
+    "league-1",
+    "season-1",
+    "session-1",
+    "match-1",
+    { results: createResults, chomboEvents: [], offTableKyotakuCount: 0 },
+  );
+  const updated = fixture.getUpdateInput();
+  assert.deepEqual(updated?.chomboEvents, []);
+  assert.equal(updated?.offTableKyotakuCount, 0);
+  assert.equal(
+    updated?.results?.find(({ userId }) => userId === "u1")?.point,
+    50,
   );
   assert.equal(fixture.getRebuildCallCount(), 1);
 });

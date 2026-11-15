@@ -25,3 +25,8 @@ export const createNameSuffixModel = (suffix: NameSuffix): NameSuffixModel => ({
 
 export const LEAGUE_NAME_SUFFIX_MODEL = createNameSuffixModel("リーグ");
 export const SEASON_NAME_SUFFIX_MODEL = createNameSuffixModel("シーズン");
+
+export const formatDetailTitle = (
+  name: string | null | undefined,
+  suffix: NameSuffix
+) => (name?.trim() ? createNameSuffixModel(suffix).toCanonicalName(name) : "");

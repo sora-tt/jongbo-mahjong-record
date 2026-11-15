@@ -13,6 +13,7 @@ export type ApiErrorCode =
 type AppClient = AppApiClient;
 type UserMeGetRequest = AppClient["api"]["users"]["me"]["$get"];
 type UserMePostRequest = AppClient["api"]["users"]["me"]["$post"];
+type UserMePatchRequest = AppClient["api"]["users"]["me"]["$patch"];
 type UserStatsRequest = AppClient["api"]["users"][":userId"]["stats"]["$get"];
 type JoiningSeasonsRequest =
   AppClient["api"]["users"][":userId"]["joining-seasons"]["$get"];
@@ -68,6 +69,7 @@ export type ApiMatch = InferResponseType<MatchesGetRequest>["data"][number];
 export type ApiMatchDetail = InferResponseType<MatchGetRequest>["data"];
 
 export type CreateMeInput = InferRequestType<UserMePostRequest>["json"];
+export type UpdateMeInput = InferRequestType<UserMePatchRequest>["json"];
 export type CreateLeagueInput = InferRequestType<LeaguePostRequest>["json"];
 export type UpdateLeagueInput = InferRequestType<LeaguePatchRequest>["json"];
 export type CreateSeasonInput = InferRequestType<SeasonPostRequest>["json"];

@@ -7,7 +7,34 @@ import {
   getStatisticsPageSubjectLabel,
   getStatisticsPageScopeOptions,
   mergeStatisticsAnalysisPages,
+  parseStatisticsRouteContext,
 } from "./page";
+
+test("statistics return paths allow v2 pages but reject external or unsafe routes", () => {
+  for (const path of [
+    "/v2",
+    "/v2/stats",
+    "/v2/league/123",
+    "/v2/league/123/season/456",
+  ]) {
+    strictEqual(
+      parseStatisticsRouteContext(`?returnTo=${encodeURIComponent(path)}`)
+        .returnTo,
+      path
+    );
+  }
+  for (const path of [
+    "//evil.example",
+    "/v2/league/123?next=evil",
+    "/v2/league/%2f%2fevil",
+  ]) {
+    strictEqual(
+      parseStatisticsRouteContext(`?returnTo=${encodeURIComponent(path)}`)
+        .returnTo,
+      null
+    );
+  }
+});
 
 test("joining season options are mapped to the shared statistics scope shape", () => {
   deepStrictEqual(

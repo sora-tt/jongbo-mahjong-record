@@ -80,7 +80,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({
       return;
     }
 
-    if (pathname === "/login" || pathname === "/signup") {
+    if (["/login", "/signup", "/v2/login", "/v2/signup"].includes(pathname)) {
       return;
     }
 

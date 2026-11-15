@@ -1,0 +1,254 @@
+import * as React from "react";
+
+import { useParams, useRouter } from "next/navigation";
+
+import {
+  createEmptyMatchFormValues,
+  validateMatchForm,
+  type YakumanEntryError,
+  type MatchFormValues,
+} from "@/features/session-match/model/match-form";
+import {
+  getParticipantConstraint,
+  type ParticipantConstraint,
+} from "@/features/session-match/model/participants";
+import { ApiError, getApiErrorMessage } from "@/lib/api/core";
+import { fetchLeagueDetail } from "@/lib/api/leagues";
+import { createMatch } from "@/lib/api/matches";
+import { fetchSeasonDetail } from "@/lib/api/seasons";
+import { createSession, deleteSession } from "@/lib/api/sessions";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { selectRecordingFlow } from "@/store/selectors/recording-flow-selectors";
+import { clearRecordingFlow } from "@/store/slices/recording-flow-slice";
+
+const DEFAULT_ERROR_MESSAGE =
+  "対局記録画面の取得に失敗しました。時間をおいて再度お試しください。";
+const DEFAULT_SUBMIT_ERROR_MESSAGE =
+  "対局の保存に失敗しました。入力内容を確認して再度お試しください。";
+
+export const useRecordMatchPage = (routePrefix = "") => {
+  const dispatch = useAppDispatch();
+  const router = useRouter();
+  const params = useParams<{ leagueId: string; seasonId: string }>();
+  const recordingFlow = useAppSelector(selectRecordingFlow);
+  const isNavigatingAfterSubmitRef = React.useRef(false);
+  const [members, setMembers] = React.useState<
+    Awaited<ReturnType<typeof fetchSeasonDetail>>["members"]
+  >([]);
+  const [constraint, setConstraint] = React.useState<ParticipantConstraint>(
+    getParticipantConstraint("yonma")
+  );
+  const [startingPoints, setStartingPoints] = React.useState<number | null>(
+    null
+  );
+  const [chomboPenaltyPoints, setChomboPenaltyPoints] = React.useState(0);
+  const [allowOffTableKyotaku, setAllowOffTableKyotaku] = React.useState(false);
+  const [values, setValues] = React.useState<MatchFormValues>(() => {
+    const initial = createEmptyMatchFormValues();
+    return {
+      ...initial,
+      userIdByWind: {
+        east: recordingFlow.selectedPlayersBySeat.east || null,
+        south: recordingFlow.selectedPlayersBySeat.south || null,
+        west: recordingFlow.selectedPlayersBySeat.west || null,
+        north: recordingFlow.selectedPlayersBySeat.north || null,
+      },
+    };
+  });
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [retryCount, setRetryCount] = React.useState(0);
+  const [notFound, setNotFound] = React.useState(false);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  const [yakumanErrors, setYakumanErrors] = React.useState<YakumanEntryError[]>(
+    []
+  );
+
+  const onValuesChange = React.useCallback((nextValues: MatchFormValues) => {
+    setValues(nextValues);
+    setYakumanErrors([]);
+  }, []);
+
+  React.useEffect(() => {
+    if (isNavigatingAfterSubmitRef.current) return;
+
+    let isActive = true;
+    const { leagueId, seasonId } = params;
+
+    if (!leagueId || !seasonId || recordingFlow.selectedPlayerIds.length < 3) {
+      router.replace(
+        leagueId && seasonId
+          ? `${routePrefix}/league/${leagueId}/season/${seasonId}/sessions/start/players`
+          : routePrefix || "/"
+      );
+      return;
+    }
+
+    const load = async () => {
+      setIsLoading(true);
+      setNotFound(false);
+      setError(null);
+      try {
+        const [league, season] = await Promise.all([
+          fetchLeagueDetail(leagueId),
+          fetchSeasonDetail(leagueId, seasonId),
+        ]);
+        if (!isActive) return;
+
+        const nextConstraint = getParticipantConstraint(league.rule.gameType);
+        const selectedIds = new Set(recordingFlow.selectedPlayerIds);
+        const selectedMembers = season.members.filter((member) =>
+          selectedIds.has(String(member.userId))
+        );
+        if (selectedMembers.length !== nextConstraint.memberCount) {
+          setError(
+            "Sessionの参加者を正しく取得できませんでした。前の画面から選び直してください。"
+          );
+          return;
+        }
+
+        setMembers(selectedMembers);
+        setConstraint(nextConstraint);
+        setStartingPoints(league.rule.oka.startingPoints);
+        setChomboPenaltyPoints(league.rule.chomboPenaltyPoints ?? 0);
+        setAllowOffTableKyotaku(league.rule.allowOffTableKyotaku ?? false);
+      } catch (loadError) {
+        if (!isActive) return;
+        if (loadError instanceof ApiError && loadError.status === 401) {
+          router.replace(`${routePrefix}/login`);
+          return;
+        }
+        if (loadError instanceof ApiError && loadError.status === 404) {
+          setNotFound(true);
+          return;
+        }
+        setError(getApiErrorMessage(loadError, DEFAULT_ERROR_MESSAGE));
+      } finally {
+        if (isActive) setIsLoading(false);
+      }
+    };
+
+    void load();
+    return () => {
+      isActive = false;
+    };
+  }, [
+    params,
+    params.leagueId,
+    params.seasonId,
+    recordingFlow.selectedPlayerIds,
+    routePrefix,
+    retryCount,
+    router,
+  ]);
+
+  const handleSubmit = React.useCallback(async () => {
+    const { leagueId, seasonId } = params;
+    if (!leagueId || !seasonId || startingPoints === null) {
+      setError(DEFAULT_ERROR_MESSAGE);
+      return;
+    }
+
+    const validation = validateMatchForm({
+      values,
+      constraint,
+      allowedMembers: members,
+      startingPoints,
+      allowOffTableKyotaku,
+      mode: "initial",
+    });
+    if (validation.message || !validation.results) {
+      setYakumanErrors(validation.yakumanErrors ?? []);
+      setError(validation.message ?? DEFAULT_SUBMIT_ERROR_MESSAGE);
+      return;
+    }
+    setYakumanErrors([]);
+
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      const session = await createSession(leagueId, seasonId, {
+        startedAt: new Date().toISOString(),
+        memberUserIds: validation.results.map((result) => result.userId),
+        tableLabel: null,
+      });
+      const createdSessionId = String(session.id);
+
+      try {
+        await createMatch({
+          leagueId,
+          seasonId,
+          sessionId: createdSessionId,
+          playedAt: values.playedAt,
+          results: validation.results,
+          yakumanEvents: validation.yakumanEvents,
+          chomboEvents: validation.chomboEvents,
+          offTableKyotakuCount: validation.offTableKyotakuCount,
+        });
+      } catch (matchError) {
+        try {
+          await deleteSession({
+            leagueId,
+            seasonId,
+            sessionId: createdSessionId,
+          });
+        } catch {
+          // 元のMatchエラーを優先して表示する
+        }
+        throw matchError;
+      }
+
+      isNavigatingAfterSubmitRef.current = true;
+      dispatch(clearRecordingFlow());
+      router.push(
+        `${routePrefix}/league/${leagueId}/season/${seasonId}/sessions/${createdSessionId}/results`
+      );
+    } catch (submitError) {
+      if (submitError instanceof ApiError && submitError.status === 401) {
+        router.replace(`${routePrefix}/login`);
+        return;
+      }
+      setError(getApiErrorMessage(submitError, DEFAULT_SUBMIT_ERROR_MESSAGE));
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [
+    allowOffTableKyotaku,
+    constraint,
+    dispatch,
+    members,
+    params,
+    routePrefix,
+    router,
+    startingPoints,
+    values,
+  ]);
+
+  const handleBack = React.useCallback(() => {
+    if (params.leagueId && params.seasonId) {
+      router.push(
+        `${routePrefix}/league/${params.leagueId}/season/${params.seasonId}/sessions/start/players`
+      );
+    } else {
+      router.push(routePrefix || "/");
+    }
+  }, [params.leagueId, params.seasonId, routePrefix, router]);
+
+  return {
+    values,
+    onValuesChange,
+    yakumanErrors,
+    constraint,
+    members,
+    chomboPenaltyPoints,
+    allowOffTableKyotaku,
+    isLoading,
+    notFound,
+    isSubmitting,
+    error,
+    handleSubmit,
+    handleBack,
+    retry: () => setRetryCount((count) => count + 1),
+  };
+};
