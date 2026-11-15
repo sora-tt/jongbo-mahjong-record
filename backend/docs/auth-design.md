@@ -69,7 +69,7 @@
   - `httpOnly`
   - `sameSite=lax`
   - `secure` は production のみ有効
-  - デフォルト寿命は 5 日
+  - デフォルト寿命は 60 日（2 か月）
 
 ### 4.2 メール認証のトークン設計
 

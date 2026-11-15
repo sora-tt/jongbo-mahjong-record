@@ -5,18 +5,18 @@ import {
   getSessionMaxAgeSeconds,
 } from "@/presentation/session.js";
 
-test("session cookie defaults to a five-day HttpOnly cookie", () => {
+test("session cookie defaults to a two-month HttpOnly cookie", () => {
   const previous = process.env.SESSION_COOKIE_MAX_AGE_SECONDS;
   delete process.env.SESSION_COOKIE_MAX_AGE_SECONDS;
 
   try {
-    assert.equal(getSessionMaxAgeSeconds(), 60 * 60 * 24 * 5);
+    assert.equal(getSessionMaxAgeSeconds(), 60 * 60 * 24 * 60);
     assert.deepEqual(getSessionCookieOptions(), {
       path: "/",
       httpOnly: true,
       sameSite: "Lax",
       secure: false,
-      maxAge: 60 * 60 * 24 * 5,
+      maxAge: 60 * 60 * 24 * 60,
     });
   } finally {
     if (previous === undefined) {
@@ -55,7 +55,7 @@ test("production session cookies allow cross-site browser requests", () => {
       httpOnly: true,
       sameSite: "None",
       secure: true,
-      maxAge: 60 * 60 * 24 * 5,
+      maxAge: 60 * 60 * 24 * 60,
     });
   } finally {
     if (previousNodeEnv === undefined) {
