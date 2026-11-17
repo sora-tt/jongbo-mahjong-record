@@ -34,7 +34,9 @@ test("v2 history preserves yakuman records, display order and pagination", () =>
         rank: 1,
         rawScore: 40000,
         finalPoint: 10,
-        opponents: [],
+        opponents: [
+          { userId: "user-2", userName: "花子", rank: 2, finalPoint: -10 },
+        ],
         yakumanKinds: ["daisangen", "suuankouTanki"],
       },
     ],
@@ -51,4 +53,13 @@ test("v2 history preserves yakuman records, display order and pagination", () =>
   strictEqual(markup.includes("10月04日（日）"), true);
   strictEqual(markup.includes("さらに読み込む"), true);
   strictEqual(markup.includes("40,000点"), true);
+  strictEqual(markup.includes("対局日時："), true);
+  strictEqual(markup.includes("同卓者"), true);
+  strictEqual(markup.includes("花子"), true);
+  strictEqual(markup.includes("grid-cols-3"), true);
+  strictEqual(markup.includes("2位・-10"), true);
+  strictEqual(markup.includes("pt</p>"), true);
+  strictEqual(markup.includes("形式："), false);
+  strictEqual(markup.includes("セッション："), false);
+  strictEqual(markup.includes("表示対象："), false);
 });

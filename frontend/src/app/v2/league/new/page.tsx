@@ -7,14 +7,14 @@ import { AppShell } from "@/components/v2/layout/app-shell";
 const NewLeaguePage = () => {
   const state = useLeagueNew("/v2");
   return (
-    <AppShell>
+    <AppShell title="リーグ作成" backHref="/v2">
       <LeagueForm
         state={state}
-        title="リーグ作成"
         creatorName={state.creatorName}
         disabled={state.isAuthLoading}
         backHref="/v2"
         submitLabel="リーグを作成"
+        showBackLink={false}
       />
     </AppShell>
   );

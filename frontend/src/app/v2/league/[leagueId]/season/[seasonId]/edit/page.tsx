@@ -1,4 +1,7 @@
 "use client";
+import { useRouter } from "next/navigation";
+
+import { deleteSeason } from "@/features/season/api";
 import { useSeasonEdit } from "@/features/season/hooks/use-season-edit";
 import { SeasonFormActions } from "@/features/season/ui/v2/season-form-actions";
 import { SeasonIdentity } from "@/features/season/ui/v2/season-identity";
@@ -7,12 +10,14 @@ import { SeasonMembersSection } from "@/features/season/ui/v2/season-members-sec
 
 import { AppShell } from "@/components/v2/layout/app-shell";
 import { Button } from "@/components/v2/ui/button";
+import { DeleteResourceControl } from "@/components/v2/ui/delete-resource-control";
 import { PageLoading } from "@/components/v2/ui/page-loading";
 import { Panel } from "@/components/v2/ui/panel";
 import { Status } from "@/components/v2/ui/status";
 
 const SeasonEditPage = () => {
   const state = useSeasonEdit("/v2", true);
+  const router = useRouter();
   const {
     leagueId,
     seasonId,
@@ -40,17 +45,14 @@ const SeasonEditPage = () => {
     leagueId && seasonId ? `/v2/league/${leagueId}/season/${seasonId}` : "/v2";
   if (isLoading) {
     return (
-      <AppShell>
+      <AppShell title="シーズン編集" backHref={backHref}>
         <PageLoading label="シーズン情報を読み込んでいます…" />
       </AppShell>
     );
   }
   return (
-    <AppShell>
+    <AppShell title="シーズン編集" backHref={backHref}>
       <main className="mx-auto flex max-w-[480px] flex-col gap-4 px-4 pb-10 pt-5">
-        <h1 className="mb-1 text-center text-v2-display font-bold">
-          シーズン設定
-        </h1>
         {notFound ? (
           <Status message="シーズンが見つかりません" />
         ) : error && !isLoaded ? (
@@ -118,6 +120,18 @@ const SeasonEditPage = () => {
               onSubmit={handleSubmit}
               loading={isSubmitting}
               backHref={backHref}
+              showBackLink={false}
+              footerAction={
+                <DeleteResourceControl
+                  resourceName="シーズン"
+                  description="シーズン内の対局記録も削除され、元に戻せません。参加者全員の成績に反映されます。"
+                  uncertainMessage="削除状況を確認できませんでした。リーグ画面からシーズンの状態を確認してください。"
+                  disabled={isSubmitting || !leagueId || !seasonId}
+                  onDelete={() => deleteSeason(leagueId, seasonId)}
+                  onDeleted={() => router.replace(`/v2/league/${leagueId}`)}
+                  onAuthenticationError={() => router.replace("/v2/login")}
+                />
+              }
             />
           </>
         )}

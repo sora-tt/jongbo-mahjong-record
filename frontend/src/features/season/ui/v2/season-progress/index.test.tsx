@@ -68,3 +68,30 @@ test("凡例は背景なしで選択状態を示し、タップで切り替え�
   fireEvent.click(visible);
   assert.deepEqual(toggled, ["user-1"]);
 });
+
+test("参加記録のないプレイヤーだけを選択した場合は空のグラフを表示しない", async () => {
+  const [{ render, screen }, { SeasonProgress }] = await setup;
+  render(
+    <SeasonProgress
+      pointProgressionChart={{
+        isEmpty: false,
+        isUncomputed: false,
+        series: [{ userId: "user-1", userName: "太郎" }],
+        data: [{ matchIndex: 1, "user-1": 10, "user-2": null }],
+      }}
+      chartSeries={[
+        {
+          userId: "user-2",
+          userName: "花子",
+          colorClassName: "bg-chart-series-2",
+          strokeColor: "var(--chart-series-2)",
+        },
+      ]}
+      visibleUserIds={["user-2"]}
+      handleToggleChartSeries={() => {}}
+    />
+  );
+
+  assert.ok(screen.getByText("選択したプレイヤーの対局データがありません"));
+  assert.equal(screen.queryByText("対局数"), null);
+});

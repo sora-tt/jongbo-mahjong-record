@@ -24,12 +24,14 @@ type FormState = Omit<
 >;
 type Props = {
   state: FormState;
-  title: string;
+  title?: string;
   creatorName?: string;
   ruleLocked?: boolean;
   disabled?: boolean;
   backHref: string;
   submitLabel: string;
+  showBackLink?: boolean;
+  footerAction?: React.ReactNode;
 };
 export const LeagueForm = ({
   state,
@@ -39,6 +41,8 @@ export const LeagueForm = ({
   disabled = false,
   backHref,
   submitLabel,
+  showBackLink = true,
+  footerAction,
 }: Props) => {
   const {
     leagueName,
@@ -68,7 +72,9 @@ export const LeagueForm = ({
   } = state;
   return (
     <div className="mx-auto flex max-w-[480px] flex-col gap-4 px-4 pb-10 pt-5">
-      <h1 className="mb-1 text-center text-v2-display font-bold">{title}</h1>
+      {title && (
+        <h1 className="mb-1 text-center text-v2-display font-bold">{title}</h1>
+      )}
       <Panel>
         <div className="flex items-end gap-3">
           <Input
@@ -257,12 +263,15 @@ export const LeagueForm = ({
         >
           {submitLabel}
         </Button>
-        <Link
-          href={backHref}
-          className="text-v2-label font-normal text-v2-text-secondary"
-        >
-          ← 戻る
-        </Link>
+        {showBackLink && (
+          <Link
+            href={backHref}
+            className="text-v2-label font-normal text-v2-text-secondary"
+          >
+            ← 戻る
+          </Link>
+        )}
+        {footerAction && <div className="mt-4 w-full">{footerAction}</div>}
       </div>
     </div>
   );

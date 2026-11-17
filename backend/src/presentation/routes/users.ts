@@ -9,7 +9,7 @@ import {
 import {
   statisticsAnalysisQuerySchema,
   statisticsMatchHistoryQuerySchema,
-  statisticsScopeQuerySchema,
+  statisticsSummaryQuerySchema,
 } from "@/presentation/schemas/statistics.js";
 import { AppError } from "@/domain/shared/errors.js";
 import { asOpaqueId } from "@/domain/shared/types.js";
@@ -103,7 +103,7 @@ export const buildUsersRouter = (services: Services) => {
   const statisticsRouter = new Hono<AppBindings>()
     .get(
       "/:userId/statistics",
-      validateQuery(statisticsScopeQuerySchema),
+      validateQuery(statisticsSummaryQuerySchema),
       async (c) => {
         const authUser = c.get("authUser");
         const targetUserId = asOpaqueId(c.req.param("userId"));

@@ -12,6 +12,7 @@ const dom = new JSDOM("<!doctype html><html><body></body></html>", {
 
 Object.defineProperties(globalThis, {
   window: { configurable: true, value: dom.window },
+  self: { configurable: true, value: dom.window },
   document: { configurable: true, value: dom.window.document },
   navigator: { configurable: true, value: dom.window.navigator },
   HTMLElement: { configurable: true, value: dom.window.HTMLElement },
@@ -264,9 +265,13 @@ const createMockApi = (overrides: Partial<HookApi> = {}) => {
   return { api, calls, useRouter };
 };
 
-const createHook = (api: HookApi, useRouter: () => never) => {
+const createHook = (
+  api: HookApi,
+  useRouter: () => never,
+  search = `?scopeType=overall&targetUserId=${viewer.id}`
+) => {
   dom.reconfigure({
-    url: `http://localhost/stats?scopeType=overall&targetUserId=${viewer.id}`,
+    url: `http://localhost/stats${search}`,
   });
   const useSearchParams = () => new URLSearchParams(window.location.search);
   return createUseStatistics(api, useRouter as never, useSearchParams as never);
@@ -587,13 +592,19 @@ test("v2 statistics uses v2 routes and switches views without changing API behav
     },
   };
   const useRouter = () => router as never;
-  const useStatistics = createHook(api, useRouter);
+  const useStatistics = createHook(
+    api,
+    useRouter,
+    "?scopeType=league&leagueId=league-1"
+  );
   render(
     <V2PageContent useStatisticsHook={useStatistics} includeAppShell={false} />
   );
   await waitFor(() => assert.ok(screen.getByText("総合ポイント")));
-  assert.ok(screen.getByText("+25.5 pt"));
+  assert.ok(screen.getByText("+25.5"));
   assert.equal(calls.summaries.length, 1);
+  assert.equal(calls.summaries[0].query.includePointBreakdown, "true");
+  assert.equal(calls.summaries[0].query.includeYakumanCounts, "true");
   fireEvent.keyDown(screen.getByRole("tab", { name: "総合" }), {
     key: "ArrowRight",
   });
@@ -612,7 +623,62 @@ test("v2 statistics uses v2 routes and switches views without changing API behav
   assert.equal(calls.analyses.length, 1);
 });
 
-test("v2 overview displays each game type's points and absolute rank percentages", async () => {
+test("v2 全リーグは順位中心の画面を表示し、古い推移 URL でも分析を取得しない", async () => {
+  await setup;
+  const { StatisticsPageContent: V2PageContent } =
+    await import("@/features/statistics/ui/v2/page-content");
+  const { api, calls, useRouter } = createMockApi({
+    getPersonalStatisticsSummary: async (input) => {
+      calls.summaries.push(input);
+      return { ...(readySummary as object), yakumanCounts: [] } as never;
+    },
+  });
+  const useStatistics = createHook(
+    api,
+    useRouter,
+    "?scopeType=overall&gameType=yonma&view=trend"
+  );
+  render(
+    <V2PageContent useStatisticsHook={useStatistics} includeAppShell={false} />
+  );
+  await waitFor(() => assert.ok(screen.getByText("12 対局")));
+  assert.ok(screen.getByRole("heading", { name: "全リーグの成績" }));
+  assert.ok(screen.getByRole("heading", { name: "四麻・全期間" }));
+  assert.equal(
+    screen.getByRole("link", { name: "成績に戻る" }).getAttribute("href"),
+    "/v2/stats"
+  );
+  assert.equal(screen.queryByRole("tablist"), null);
+  assert.equal(screen.queryByText("総合ポイント"), null);
+  assert.equal(calls.analyses.length, 0);
+  assert.equal(calls.summaries[0].query.gameType, "yonma");
+  assert.equal(calls.summaries[0].query.includePointBreakdown, undefined);
+  assert.equal(calls.summaries[0].query.includeYakumanCounts, "true");
+});
+
+test("v2 全リーグの対局種別未指定 URL は三麻と四麻の選択を表示する", async () => {
+  await setup;
+  const { StatisticsPageContent: V2PageContent } =
+    await import("@/features/statistics/ui/v2/page-content");
+  const { api, useRouter } = createMockApi();
+  const useStatistics = createHook(api, useRouter);
+  render(
+    <V2PageContent useStatisticsHook={useStatistics} includeAppShell={false} />
+  );
+  await waitFor(() =>
+    assert.ok(screen.getByRole("link", { name: "三麻の成績" }))
+  );
+  assert.match(
+    screen.getByRole("link", { name: "三麻の成績" }).getAttribute("href") ?? "",
+    /gameType=sanma/
+  );
+  assert.match(
+    screen.getByRole("link", { name: "四麻の成績" }).getAttribute("href") ?? "",
+    /gameType=yonma/
+  );
+});
+
+test("v2 overview groups point breakdown, rank percentages, and streaks", async () => {
   await setup;
   const { StatisticsOverview } =
     await import("@/features/statistics/ui/v2/overview");
@@ -623,6 +689,7 @@ test("v2 overview displays each game type's points and absolute rank percentages
   const yonma = base.byGameType[0];
   const summary = {
     ...(readySummary as object),
+    pointBreakdown: { rawPoint: 5.5, rankPoint: 25, chomboPenalty: -5 },
     rawScore: base.scoreByGameType[0].rawScore,
     finalPoint: base.scoreByGameType[0].finalPoint,
     byGameType: [
@@ -647,13 +714,112 @@ test("v2 overview displays each game type's points and absolute rank percentages
       startingPointsByLeagueId={{}}
     />
   );
-  assert.ok(screen.getByText("+10 pt"));
-  assert.ok(screen.getByText("+15.5 pt"));
+  assert.ok(screen.getByText("+25.5"));
+  assert.ok(screen.getByText("+5.5 pt"));
+  assert.ok(screen.getByText("+25 pt"));
+  assert.ok(screen.getByText("-5 pt"));
   assert.equal(
     container.querySelector<HTMLElement>("li span span[style]")?.style.width,
     "50%"
   );
-  assert.ok(screen.getByText("素点合計"));
+  assert.ok(screen.getByText("素点由来"));
   assert.ok(screen.getByText("順位点・オカ"));
-  assert.ok(screen.getByText("最多役満"));
+  assert.ok(screen.getByText("連続記録"));
+  assert.equal(screen.getAllByText("ラス回避率").length, 2);
+  assert.equal(screen.queryByText("最多役満"), null);
+});
+
+test("v2 score analysis shows the result distribution and rank table", async () => {
+  await setup;
+  const { ScoreBreakdown } =
+    await import("@/features/statistics/ui/v2/score-breakdown");
+  render(<ScoreBreakdown summary={readySummary} />);
+  assert.ok(screen.getByRole("heading", { name: "スコア分析" }));
+  assert.ok(screen.getByText("プラス・マイナス"));
+  assert.ok(screen.getByText("順位別スコア"));
+  assert.ok(screen.getByText("7回"));
+});
+
+test("v2 score analysis shows a dash for missing values but preserves zero", async () => {
+  const [{ within }] = await Promise.all([
+    import("@testing-library/react"),
+    setup,
+  ]);
+  const { ScoreBreakdown } =
+    await import("@/features/statistics/ui/v2/score-breakdown");
+  const base = readySummary as unknown as {
+    scoreByGameType: Array<{
+      gameType: string;
+      rawScore: object;
+      finalPoint: object;
+    }>;
+  };
+  const format = base.scoreByGameType[0];
+  const summary = {
+    ...(readySummary as object),
+    scoreByGameType: [
+      {
+        ...format,
+        finalPoint: {
+          ...format.finalPoint,
+          positive: { count: 0, denominator: 0, rate: null },
+          negative: { count: 0, denominator: 1, rate: 0 },
+          even: { count: 1, denominator: 1, rate: 1 },
+        },
+      },
+    ],
+    scoreByRank: [
+      {
+        gameType: "yonma",
+        rank: 1,
+        matchCount: 0,
+        averageRawScore: null,
+        averageFinalPoint: null,
+      },
+      {
+        gameType: "yonma",
+        rank: 2,
+        matchCount: 1,
+        averageRawScore: 0,
+        averageFinalPoint: 0,
+      },
+    ],
+  };
+  render(<ScoreBreakdown summary={summary as never} />);
+  const missingRank = screen.getByRole("row", { name: /1位/ });
+  assert.equal(within(missingRank).getAllByText("—").length, 2);
+  assert.ok(
+    screen.getByRole("row", { name: /2位/ }).textContent?.includes("0 点")
+  );
+  assert.ok(within(screen.getByRole("row", { name: /プラス/ })).getByText("—"));
+  assert.ok(
+    within(screen.getByRole("row", { name: /マイナス/ })).getByText("0.0%")
+  );
+  assert.equal(screen.queryByText(/未算出/), null);
+});
+
+test("v2 overview shows a dash without a unit for an unavailable average rank", async () => {
+  await setup;
+  const { StatisticsOverview } =
+    await import("@/features/statistics/ui/v2/overview");
+  const base = readySummary as unknown as {
+    byGameType: Array<Record<string, unknown>>;
+  };
+  render(
+    <StatisticsOverview
+      summary={
+        {
+          ...(readySummary as object),
+          byGameType: [
+            { ...base.byGameType[0], averageRank: null, topRate: 0 },
+          ],
+        } as never
+      }
+      startingPoints={null}
+      startingPointsByLeagueId={{}}
+    />
+  );
+  const average = screen.getByText("平均順位").parentElement;
+  assert.equal(average?.textContent, "平均順位—");
+  assert.ok(screen.getByText("0.0%"));
 });

@@ -15,7 +15,7 @@ type Props = {
 const viewOptions: readonly { value: StatisticsView; label: string }[] = [
   { value: "overview", label: "総合" },
   { value: "trend", label: "推移" },
-  { value: "comparisons", label: "相手・席" },
+  { value: "comparisons", label: "分析" },
   { value: "history", label: "履歴" },
 ];
 

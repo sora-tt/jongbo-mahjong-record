@@ -26,12 +26,14 @@ const pointColor = (point: number) =>
 export const MatchList = ({
   players,
   matches,
+  editable,
   deletingMatchId,
   onEdit,
   onDelete,
 }: {
   players: readonly Player[];
   matches: readonly Match[];
+  editable: boolean;
   deletingMatchId: string | null;
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
@@ -62,26 +64,28 @@ export const MatchList = ({
                   >
                     局
                   </th>
-                  {players.map((player) => (
+                  {players.map((player, index) => (
                     <th
                       key={String(player.userId)}
                       scope="col"
-                      className="overflow-hidden px-0.5 font-semibold"
+                      className={`overflow-hidden px-0.5 font-semibold ${!editable && index === players.length - 1 ? "rounded-r-[10px]" : ""}`}
                       title={player.userName}
                     >
                       <span className="block truncate">{player.userName}</span>
                     </th>
                   ))}
-                  <th className="w-[72px] rounded-r-[10px]">
-                    <span className="sr-only">操作</span>
-                  </th>
+                  {editable && (
+                    <th className="w-[72px] rounded-r-[10px]">
+                      <span className="sr-only">操作</span>
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody>
-                {matches.map((match) => (
+                {matches.map((match, index) => (
                   <tr
                     key={String(match.id)}
-                    className="h-12 cursor-pointer border-b border-v2-border-subtle"
+                    className={`h-12 cursor-pointer ${index < matches.length - 1 ? "border-b border-v2-border-subtle" : ""}`}
                     onClick={() => setSelectedId(String(match.id))}
                   >
                     <td>
@@ -115,40 +119,42 @@ export const MatchList = ({
                         </td>
                       );
                     })}
-                    <td>
-                      <div className="flex justify-end">
-                        <IconButton
-                          variant="tertiary"
-                          size="sm"
-                          className="!border-0 !bg-transparent !text-v2-text-secondary"
-                          aria-label={`対局 ${match.matchIndex} を編集`}
-                          disabled={Boolean(deletingMatchId)}
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            onEdit(String(match.id));
-                          }}
-                        >
-                          <Pencil size={18} aria-hidden="true" />
-                        </IconButton>
-                        <IconButton
-                          variant="tertiary"
-                          size="sm"
-                          className="!border-0 !bg-transparent !text-v2-text-secondary"
-                          aria-label={`対局 ${match.matchIndex} を削除`}
-                          disabled={Boolean(deletingMatchId)}
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            onDelete(String(match.id));
-                          }}
-                        >
-                          <Trash2 size={18} aria-hidden="true" />
-                        </IconButton>
-                      </div>
-                    </td>
+                    {editable && (
+                      <td>
+                        <div className="flex justify-end">
+                          <IconButton
+                            variant="tertiary"
+                            size="sm"
+                            className="!border-0 !bg-transparent !text-v2-text-secondary"
+                            aria-label={`対局 ${match.matchIndex} を編集`}
+                            disabled={Boolean(deletingMatchId)}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              onEdit(String(match.id));
+                            }}
+                          >
+                            <Pencil size={18} aria-hidden="true" />
+                          </IconButton>
+                          <IconButton
+                            variant="tertiary"
+                            size="sm"
+                            className="!border-0 !bg-transparent !text-v2-text-secondary"
+                            aria-label={`対局 ${match.matchIndex} を削除`}
+                            disabled={Boolean(deletingMatchId)}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              onDelete(String(match.id));
+                            }}
+                          >
+                            <Trash2 size={18} aria-hidden="true" />
+                          </IconButton>
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 ))}
                 <tr aria-hidden="true">
-                  <td colSpan={players.length + 2}>
+                  <td colSpan={players.length + 1 + (editable ? 1 : 0)}>
                     <div className="mt-1 border-t-2 border-v2-action-primary" />
                   </td>
                 </tr>
@@ -175,7 +181,7 @@ export const MatchList = ({
                       </td>
                     );
                   })}
-                  <td />
+                  {editable && <td />}
                 </tr>
               </tbody>
             </Table>

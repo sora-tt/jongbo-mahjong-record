@@ -75,7 +75,6 @@ test("対局入力で符号、席の入れ替え、役満と外卓記録を保�
         isSubmitting={false}
         onChange={setValues}
         onSubmit={() => {}}
-        onBack={() => {}}
       />
     );
   };
@@ -136,11 +135,70 @@ test("三麻では北の入力を表示しない", async () => {
       isSubmitting={false}
       onChange={() => {}}
       onSubmit={() => {}}
-      onBack={() => {}}
     />
   );
   assert.equal(screen.queryByLabelText("北の素点"), null);
   assert.ok(screen.getByLabelText("西の素点"));
+});
+
+test("対局編集で参加者の席を入れ替え、各席の素点を維持して保存できる", async () => {
+  const [
+    { render, screen, fireEvent },
+    { MatchForm },
+    { createEmptyMatchFormValues, validateMatchForm },
+    { getParticipantConstraint },
+  ] = await setup;
+  const initial: MatchFormValues = {
+    ...createEmptyMatchFormValues(),
+    userIdByWind: {
+      east: "member-1",
+      south: "member-2",
+      west: "member-3",
+      north: "member-4",
+    },
+    rawScoreByWind: { east: "400", south: "100", west: "250", north: "250" },
+  };
+  const constraint = getParticipantConstraint("yonma");
+  let current = initial;
+  const Harness = () => {
+    const [values, setValues] = React.useState(initial);
+    current = values;
+    return (
+      <MatchForm
+        mode="edit"
+        values={values}
+        constraint={constraint}
+        members={members}
+        chomboPenaltyPoints={0}
+        allowOffTableKyotaku={false}
+        error={null}
+        isSubmitting={false}
+        onChange={setValues}
+        onSubmit={() => {}}
+      />
+    );
+  };
+  render(<Harness />);
+  const east = screen.getByLabelText("東のプレイヤー") as HTMLSelectElement;
+  assert.equal(east.disabled, false);
+  fireEvent.change(east, { target: { value: "member-2" } });
+  assert.equal(current.userIdByWind.east, "member-2");
+  assert.equal(current.userIdByWind.south, "member-1");
+  assert.equal(current.rawScoreByWind.east, "400");
+  assert.equal(current.rawScoreByWind.south, "100");
+  const result = validateMatchForm({
+    values: current,
+    constraint,
+    allowedMembers: members,
+    startingPoints: 25000,
+    allowOffTableKyotaku: false,
+    mode: "edit",
+  });
+  assert.equal(result.message, null);
+  assert.deepEqual(result.results?.slice(0, 2), [
+    { userId: "member-2", wind: "east", rawScore: 40000 },
+    { userId: "member-1", wind: "south", rawScore: 10000 },
+  ]);
 });
 
 test("対局編集で保存済みの外卓記録を変更・削除できる", async () => {
@@ -172,7 +230,6 @@ test("対局編集で保存済みの外卓記録を変更・削除できる", as
         isSubmitting={false}
         onChange={setValues}
         onSubmit={() => {}}
-        onBack={() => {}}
       />
     );
   };

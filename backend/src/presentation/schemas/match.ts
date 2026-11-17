@@ -25,6 +25,7 @@ const createMatchBaseSchema = z.object({
 });
 
 const updateMatchBaseSchema = z.object({
+  matchIndex: z.number().int().positive().optional(),
   playedAt: z.string().datetime().optional(),
   results: z.array(resultSchema).min(3).max(4).optional(),
   chomboEvents: z.array(chomboEventSchema).optional(),

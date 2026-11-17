@@ -1,6 +1,10 @@
 import { type InferResponseType } from "hono/client";
 
-import { apiClient, executeApiRequest } from "@/lib/api/core";
+import {
+  apiClient,
+  executeApiRequest,
+  executeNoContentRequest,
+} from "@/lib/api/core";
 
 import type { CreateLeagueInput, UpdateLeagueInput } from "@/lib/api/contracts";
 
@@ -10,6 +14,7 @@ const fetchLeagueMembersRequest =
   apiClient.api.leagues[":leagueId"].members.$get;
 const createLeagueRequest = apiClient.api.leagues.$post;
 const updateLeagueRequest = apiClient.api.leagues[":leagueId"].$patch;
+const deleteLeagueRequest = apiClient.api.leagues[":leagueId"].$delete;
 
 type FetchLeaguesResponse = InferResponseType<
   typeof fetchLeaguesRequest
@@ -55,3 +60,6 @@ export const updateLeague = async (
   executeApiRequest<UpdateLeagueResponse>(() =>
     updateLeagueRequest({ param: { leagueId }, json: input })
   );
+
+export const deleteLeague = async (leagueId: string) =>
+  executeNoContentRequest(() => deleteLeagueRequest({ param: { leagueId } }));

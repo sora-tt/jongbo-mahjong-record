@@ -57,7 +57,7 @@ const SeasonPage = () => {
               leagueName={leagueName}
             />
             <SeasonProgress {...state} />
-            <SeasonTitles titles={state.titles} />
+            <SeasonTitles season={season} />
             <SeasonSessionHistory {...state} />
           </main>
           <footer className="pointer-events-none fixed inset-x-0 bottom-[calc(16px+env(safe-area-inset-bottom))] z-30 flex justify-center px-4">

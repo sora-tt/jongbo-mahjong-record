@@ -356,9 +356,11 @@ export const createUseStatistics = (
           localNavigationSearchRef.current = null;
           return;
         }
-        const requestedRoute = parseStatisticsRouteContext(
-          normalizedRouteSearch
-        );
+        const parsedRoute = parseStatisticsRouteContext(normalizedRouteSearch);
+        const requestedRoute =
+          routePrefix === "/v2" && parsedRoute.scope.scopeType === "overall"
+            ? { ...parsedRoute, activeView: "overview" as const }
+            : parsedRoute;
         setRouteContext(requestedRoute);
         setIsLoading(true);
         setInitialError(null);
@@ -637,7 +639,17 @@ export const createUseStatistics = (
         .fetch(summaryQueryKey, async () => {
           const response = await api.getPersonalStatisticsSummary({
             targetUserId: selection.targetUserId,
-            query: apiScope,
+            query: {
+              ...apiScope,
+              ...(routePrefix === "/v2"
+                ? {
+                    ...(selection.scope.scopeType !== "overall"
+                      ? { includePointBreakdown: "true" as const }
+                      : {}),
+                    includeYakumanCounts: "true" as const,
+                  }
+                : {}),
+            },
           });
           return toPersonalStatisticsSummaryView(
             response,
@@ -695,6 +707,7 @@ export const createUseStatistics = (
     }, [
       apiScope,
       router,
+      selection.scope.scopeType,
       selection.targetUserId,
       summaryQueryKey,
       summaryRetryCount,

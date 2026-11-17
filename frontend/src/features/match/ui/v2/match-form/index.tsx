@@ -34,12 +34,13 @@ export const MatchForm = ({
   members,
   chomboPenaltyPoints,
   allowOffTableKyotaku,
+  matchIndex,
+  onMatchIndexChange,
   error,
   yakumanErrors = [],
   isSubmitting,
   onChange,
   onSubmit,
-  onBack,
 }: {
   mode: MatchFormMode;
   values: MatchFormValues;
@@ -47,19 +48,14 @@ export const MatchForm = ({
   members: ReadonlyArray<SessionMember>;
   chomboPenaltyPoints: number;
   allowOffTableKyotaku: boolean;
+  matchIndex?: string;
+  onMatchIndexChange?: (value: string) => void;
   error: string | null;
   yakumanErrors?: ReadonlyArray<YakumanEntryError>;
   isSubmitting: boolean;
   onChange: (values: MatchFormValues) => void;
   onSubmit: () => void;
-  onBack: () => void;
 }) => {
-  const title =
-    mode === "edit"
-      ? "対局編集"
-      : mode === "additional"
-        ? "対局を追加"
-        : "対局記録";
   const updateWind = (wind: Wind, value: string) => {
     const selected = value || null;
     const duplicate = constraint.requiredWinds.find(
@@ -79,7 +75,6 @@ export const MatchForm = ({
   };
   return (
     <main className="mx-auto max-w-[480px] space-y-4 px-4 pb-10 pt-5">
-      <h1 className="text-center text-v2-display font-bold">{title}</h1>
       {mode === "additional" && (
         <div className="text-center">
           <Chip variant="selected" size="sm">
@@ -88,7 +83,19 @@ export const MatchForm = ({
         </div>
       )}
       {mode === "edit" && (
-        <Panel>
+        <Panel className="space-y-4">
+          {matchIndex !== undefined && onMatchIndexChange && (
+            <Input
+              label="対局番号"
+              type="number"
+              inputMode="numeric"
+              min={1}
+              step={1}
+              value={matchIndex}
+              onChange={(event) => onMatchIndexChange(event.target.value)}
+              disabled={isSubmitting}
+            />
+          )}
           <Input
             label="対局日時"
             type="datetime-local"
@@ -115,7 +122,6 @@ export const MatchForm = ({
             score={values.rawScoreByWind[wind]}
             members={members}
             disabled={isSubmitting}
-            playerDisabled={mode === "edit"}
             onPlayerChange={updateWind}
             onScoreChange={(w, value) =>
               onChange({
@@ -140,14 +146,6 @@ export const MatchForm = ({
       <div className="flex flex-col items-center gap-3 px-6 pt-1">
         <Button size="lg" fullWidth onClick={onSubmit} loading={isSubmitting}>
           {mode === "edit" ? "変更を保存" : "対局結果を保存"}
-        </Button>
-        <Button
-          variant="tertiary"
-          className="!border-0 !font-normal"
-          onClick={onBack}
-          disabled={isSubmitting}
-        >
-          ← 戻る
         </Button>
       </div>
     </main>

@@ -16,6 +16,8 @@ const DEFAULT_DELETE_ERROR_MESSAGE =
   "対局結果の削除に失敗しました。時間をおいて再度お試しください。";
 const DEFAULT_END_ERROR_MESSAGE =
   "Sessionの終了に失敗しました。時間をおいて再度お試しください。";
+const DEFAULT_RESUME_ERROR_MESSAGE =
+  "記録の再開に失敗しました。時間をおいて再度お試しください。";
 
 const formatDate = (value: string | null) =>
   value
@@ -44,6 +46,15 @@ export const useSessionResultsPage = (routePrefix = "") => {
   );
   const [isLoading, setIsLoading] = React.useState(true);
   const [isEnding, setIsEnding] = React.useState(false);
+  const [isResuming, setIsResuming] = React.useState(false);
+  const resumeInFlight = React.useRef(false);
+  const routeKey = JSON.stringify([
+    params.leagueId,
+    params.seasonId,
+    params.sessionId,
+  ]);
+  const currentRouteKey = React.useRef(routeKey);
+  currentRouteKey.current = routeKey;
   const [deletingMatchId, setDeletingMatchId] = React.useState<string | null>(
     null
   );
@@ -54,6 +65,7 @@ export const useSessionResultsPage = (routePrefix = "") => {
   const [notFound, setNotFound] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [endError, setEndError] = React.useState<string | null>(null);
+  const [resumeError, setResumeError] = React.useState<string | null>(null);
   const [retryCount, setRetryCount] = React.useState(0);
 
   const load = React.useCallback(
@@ -141,6 +153,43 @@ export const useSessionResultsPage = (routePrefix = "") => {
     }
   }, [dispatch, params, routePrefix, router, session]);
 
+  const handleResumeRecord = React.useCallback(async () => {
+    const { leagueId, seasonId, sessionId } = params;
+    if (
+      !leagueId ||
+      !seasonId ||
+      !sessionId ||
+      !session?.endedAt ||
+      resumeInFlight.current
+    ) {
+      return;
+    }
+
+    resumeInFlight.current = true;
+    setIsResuming(true);
+    setResumeError(null);
+    try {
+      const updated = await updateSession({
+        leagueId,
+        seasonId,
+        sessionId,
+        endedAt: null,
+      });
+      if (currentRouteKey.current === routeKey) setSession(toSession(updated));
+    } catch (resumeFailure) {
+      if (resumeFailure instanceof ApiError && resumeFailure.status === 401) {
+        router.replace(`${routePrefix}/login`);
+      } else if (currentRouteKey.current === routeKey) {
+        setResumeError(
+          getApiErrorMessage(resumeFailure, DEFAULT_RESUME_ERROR_MESSAGE)
+        );
+      }
+    } finally {
+      resumeInFlight.current = false;
+      setIsResuming(false);
+    }
+  }, [params, routeKey, routePrefix, router, session]);
+
   const handleConfirmDeleteMatch = React.useCallback(async () => {
     const { leagueId, seasonId, sessionId } = params;
     if (!leagueId || !seasonId || !sessionId || !deleteTargetMatchId) return;
@@ -189,12 +238,14 @@ export const useSessionResultsPage = (routePrefix = "") => {
     matches,
     isLoading,
     isEnding,
+    isResuming,
     deletingMatchId,
     deleteTargetMatchId,
     expandedMatchId,
     notFound,
     error,
     endError,
+    resumeError,
     retry: () => setRetryCount((count) => count + 1),
     isEnded: Boolean(session?.endedAt),
     formatDate,
@@ -217,6 +268,7 @@ export const useSessionResultsPage = (routePrefix = "") => {
       );
     },
     handleEndRecord,
+    handleResumeRecord,
     handleRequestDeleteMatch: (matchId: string) =>
       setDeleteTargetMatchId(matchId),
     handleCancelDeleteMatch: () => setDeleteTargetMatchId(null),

@@ -22,7 +22,6 @@ type Props = Pick<
   | "getPositionOptions"
   | "onPlayerChange"
   | "handleSubmit"
-  | "handleBack"
 >;
 
 export const PlayerSelection = ({
@@ -33,12 +32,8 @@ export const PlayerSelection = ({
   getPositionOptions,
   onPlayerChange,
   handleSubmit,
-  handleBack,
 }: Props) => (
   <main className="mx-auto flex min-h-[calc(100dvh-60px-env(safe-area-inset-top))] max-w-[390px] flex-col justify-center px-8 py-8">
-    <h1 className="mb-6 text-center text-v2-display font-bold">
-      プレイヤー選択
-    </h1>
     <div className="space-y-4">
       {requiredWinds.map((wind) => (
         <div key={wind} className="flex items-center gap-3">
@@ -74,14 +69,6 @@ export const PlayerSelection = ({
         loading={isSubmitting}
       >
         決定
-      </Button>
-      <Button
-        variant="tertiary"
-        className="!border-0 !font-normal"
-        onClick={handleBack}
-        disabled={isSubmitting}
-      >
-        ← 戻る
       </Button>
     </div>
   </main>

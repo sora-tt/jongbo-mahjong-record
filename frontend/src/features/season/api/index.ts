@@ -1,6 +1,10 @@
 import { type InferResponseType } from "hono/client";
 
-import { apiClient, executeApiRequest } from "@/lib/api/core";
+import {
+  apiClient,
+  executeApiRequest,
+  executeNoContentRequest,
+} from "@/lib/api/core";
 
 import type { CreateSeasonInput, UpdateSeasonInput } from "@/lib/api/contracts";
 
@@ -13,6 +17,8 @@ const fetchSeasonMembersRequest =
   apiClient.api.leagues[":leagueId"].seasons[":seasonId"].members.$get;
 const updateSeasonRequest =
   apiClient.api.leagues[":leagueId"].seasons[":seasonId"].$patch;
+const deleteSeasonRequest =
+  apiClient.api.leagues[":leagueId"].seasons[":seasonId"].$delete;
 
 type FetchLeagueSeasonsResponse = InferResponseType<
   typeof fetchLeagueSeasonsRequest
@@ -66,4 +72,9 @@ export const updateSeason = async (
       param: { leagueId, seasonId },
       json: input,
     })
+  );
+
+export const deleteSeason = async (leagueId: string, seasonId: string) =>
+  executeNoContentRequest(() =>
+    deleteSeasonRequest({ param: { leagueId, seasonId } })
   );

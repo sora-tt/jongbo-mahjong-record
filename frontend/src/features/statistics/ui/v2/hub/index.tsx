@@ -1,6 +1,6 @@
 import * as React from "react";
 
-import { ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight } from "lucide-react";
 
 import Link from "next/link";
 
@@ -70,17 +70,6 @@ export const StatisticsHub = ({
   status: "loading" | "ready" | "error";
   onRetry: () => void;
 }) => {
-  const active = new Set(
-    leagues
-      .filter((league) => league.activeSeason)
-      .map((league) => `${league.id}:${league.activeSeason?.id}`)
-  );
-  const activeSeasons = seasons.filter((season) =>
-    active.has(`${season.leagueId}:${season.seasonId}`)
-  );
-  const pastSeasons = seasons.filter(
-    (season) => !active.has(`${season.leagueId}:${season.seasonId}`)
-  );
   if (status === "loading")
     return <LoadingState label="成績を読み込んでいます" className="min-h-40" />;
   if (status === "error")
@@ -103,62 +92,95 @@ export const StatisticsHub = ({
       scopeLabel: `${season.leagueName} / ${season.seasonName}`,
       returnTo: "/v2/stats",
     });
+  // シーズンのデータだけが残っている場合も、成績への入口を維持する。
+  const leagueGroups = [
+    ...leagues,
+    ...Array.from(
+      new Map(
+        seasons
+          .filter(
+            (season) => !leagues.some((league) => league.id === season.leagueId)
+          )
+          .map((season) => [
+            season.leagueId,
+            {
+              id: season.leagueId,
+              name: season.leagueName,
+              activeSeason: null,
+            },
+          ])
+      ).values()
+    ),
+  ];
   return (
     <section className="space-y-4">
       <header className="pb-1 text-center">
         <h1 className="text-v2-display font-bold">成績</h1>
-        <p className="mt-2 text-v2-caption text-v2-text-secondary">
-          リーグやシーズンごとの成績を確認できます
-        </p>
       </header>
-      {activeSeasons.length > 0 && (
-        <Group title="進行中のシーズン">
-          {activeSeasons.map((season) => (
-            <Entry
-              key={season.id}
-              href={seasonHref(season)}
-              title={season.seasonName}
-              subtitle={season.leagueName}
-            />
-          ))}
-        </Group>
-      )}
-      <Group title="リーグ通算">
-        {leagues.length ? (
-          leagues.map((league) => (
-            <Entry
-              key={league.id}
-              href={buildStatisticsHref({
-                routePrefix: "/v2",
-                scope: {
-                  scopeType: "league",
-                  leagueId: league.id,
-                  gameType: "all",
-                },
-                targetUserId: viewerUserId,
-                scopeLabel: league.name,
-                returnTo: "/v2/stats",
-              })}
-              title={league.name}
-              subtitle="このリーグの全シーズン"
-            />
-          ))
-        ) : (
+      {leagueGroups.length ? (
+        leagueGroups.map((league) => {
+          const leagueSeasons = seasons.filter(
+            (season) => season.leagueId === league.id
+          );
+          const currentSeasons = leagueSeasons.filter(
+            (season) => season.seasonId === league.activeSeason?.id
+          );
+          const pastSeasons = leagueSeasons.filter(
+            (season) => season.seasonId !== league.activeSeason?.id
+          );
+          return (
+            <Group key={league.id} title={league.name}>
+              <Entry
+                href={buildStatisticsHref({
+                  routePrefix: "/v2",
+                  scope: {
+                    scopeType: "league",
+                    leagueId: league.id,
+                    gameType: "all",
+                  },
+                  targetUserId: viewerUserId,
+                  scopeLabel: league.name,
+                  returnTo: "/v2/stats",
+                })}
+                title="リーグ通算"
+                subtitle="このリーグの全シーズン"
+              />
+              {currentSeasons.map((season) => (
+                <Entry
+                  key={season.id}
+                  href={seasonHref(season)}
+                  title={season.seasonName}
+                  subtitle="進行中のシーズン"
+                />
+              ))}
+              {pastSeasons.length > 0 && (
+                <details className="group">
+                  <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 text-v2-caption font-bold text-v2-text-secondary [&::-webkit-details-marker]:hidden">
+                    過去のシーズン（{pastSeasons.length}）
+                    <ChevronDown
+                      size={20}
+                      className="shrink-0 transition-transform group-open:rotate-180"
+                      aria-hidden="true"
+                    />
+                  </summary>
+                  {pastSeasons.map((season) => (
+                    <Entry
+                      key={season.id}
+                      href={seasonHref(season)}
+                      title={season.seasonName}
+                      subtitle="シーズン成績"
+                    />
+                  ))}
+                </details>
+              )}
+            </Group>
+          );
+        })
+      ) : (
+        <Group title="リーグ">
           <p className="mt-3 text-v2-caption text-v2-text-secondary">
             参加中のリーグはありません。
           </p>
-        )}
-      </Group>
-      {pastSeasons.length > 0 && (
-        <Group title="参加したシーズン">
-          {pastSeasons.map((season) => (
-            <Entry
-              key={season.id}
-              href={seasonHref(season)}
-              title={season.seasonName}
-              subtitle={season.leagueName}
-            />
-          ))}
         </Group>
       )}
       <Group title="全リーグ・全期間">

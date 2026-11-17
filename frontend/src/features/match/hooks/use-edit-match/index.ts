@@ -39,6 +39,10 @@ export const useEditMatchPage = (routePrefix = "") => {
   const [chomboPenaltyPoints, setChomboPenaltyPoints] = React.useState(0);
   const [allowOffTableKyotaku, setAllowOffTableKyotaku] = React.useState(false);
   const [values, setValues] = React.useState<MatchFormValues | null>(null);
+  const [matchIndex, setMatchIndex] = React.useState("");
+  const [initialMatchIndex, setInitialMatchIndex] = React.useState<
+    number | null
+  >(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [notFound, setNotFound] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -79,6 +83,8 @@ export const useEditMatchPage = (routePrefix = "") => {
         setChomboPenaltyPoints(league.rule.chomboPenaltyPoints ?? 0);
         setAllowOffTableKyotaku(league.rule.allowOffTableKyotaku ?? false);
         setValues(toMatchFormValues(match));
+        setMatchIndex(String(match.matchIndex));
+        setInitialMatchIndex(match.matchIndex);
       } catch (loadError) {
         if (!isActive) return;
         if (loadError instanceof ApiError && loadError.status === 401) {
@@ -122,6 +128,14 @@ export const useEditMatchPage = (routePrefix = "") => {
       setError(DEFAULT_ERROR_MESSAGE);
       return;
     }
+    const nextMatchIndex = Number(matchIndex);
+    if (
+      !/^[1-9]\d*$/.test(matchIndex) ||
+      !Number.isSafeInteger(nextMatchIndex)
+    ) {
+      setError("対局番号は1以上の整数で入力してください。");
+      return;
+    }
     const validation = validateMatchForm({
       values,
       constraint,
@@ -144,6 +158,9 @@ export const useEditMatchPage = (routePrefix = "") => {
         seasonId,
         sessionId,
         matchId,
+        ...(nextMatchIndex !== initialMatchIndex
+          ? { matchIndex: nextMatchIndex }
+          : {}),
         playedAt: values.playedAt,
         results: validation.results,
         chomboEvents: validation.chomboEvents,
@@ -156,6 +173,16 @@ export const useEditMatchPage = (routePrefix = "") => {
     } catch (submitError) {
       if (submitError instanceof ApiError && submitError.status === 401) {
         router.replace(`${routePrefix}/login`);
+        return;
+      }
+      if (
+        submitError instanceof ApiError &&
+        submitError.status === 409 &&
+        submitError.details.matchIndex !== undefined
+      ) {
+        setError(
+          "この対局番号は既に使われています。別の番号を入力してください。"
+        );
         return;
       }
       setError(getApiErrorMessage(submitError, DEFAULT_SUBMIT_ERROR_MESSAGE));
@@ -171,6 +198,8 @@ export const useEditMatchPage = (routePrefix = "") => {
     router,
     startingPoints,
     values,
+    matchIndex,
+    initialMatchIndex,
   ]);
 
   const handleBack = React.useCallback(() => {
@@ -186,6 +215,8 @@ export const useEditMatchPage = (routePrefix = "") => {
 
   return {
     values,
+    matchIndex,
+    setMatchIndex,
     setValues,
     constraint,
     members,

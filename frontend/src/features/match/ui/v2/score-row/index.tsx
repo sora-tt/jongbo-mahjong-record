@@ -30,7 +30,6 @@ export const ScoreRow = ({
   score,
   members,
   disabled,
-  playerDisabled,
   onPlayerChange,
   onScoreChange,
 }: {
@@ -39,7 +38,6 @@ export const ScoreRow = ({
   score: string;
   members: ReadonlyArray<SessionMember>;
   disabled: boolean;
-  playerDisabled: boolean;
   onPlayerChange: (wind: Wind, value: string) => void;
   onScoreChange: (wind: Wind, value: string) => void;
 }) => {
@@ -66,7 +64,7 @@ export const ScoreRow = ({
           containerClassName="min-w-0 flex-1"
           value={playerId ?? ""}
           onChange={(event) => onPlayerChange(wind, event.target.value)}
-          disabled={disabled || playerDisabled}
+          disabled={disabled}
         >
           <option value="">プレイヤーを選択</option>
           {members.map((member) => (

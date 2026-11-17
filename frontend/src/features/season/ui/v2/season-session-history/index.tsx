@@ -1,7 +1,5 @@
 import * as React from "react";
 
-import { CalendarDays } from "lucide-react";
-
 import { SessionHistory } from "@/features/session/ui/v2/session-history";
 
 import { EmptyState } from "@/components/v2/ui/empty-state";
@@ -28,14 +26,7 @@ export const SeasonSessionHistory = ({
   sessionsError,
   retrySessions,
 }: Props) => (
-  <SectionCard
-    title={
-      <span className="flex items-center gap-2">
-        <CalendarDays size={24} strokeWidth={1.75} aria-hidden="true" />
-        対局履歴
-      </span>
-    }
-  >
+  <SectionCard title="対局履歴">
     {sessionsLoading ? (
       <LoadingState label="対局履歴を読み込んでいます…" />
     ) : sessionsError ? (
