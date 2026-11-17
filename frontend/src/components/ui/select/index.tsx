@@ -1,71 +1,65 @@
 import * as React from "react";
 
 import clsx from "clsx";
+import { ChevronDown } from "lucide-react";
+
+import { fieldStyles } from "@/components/ui/field/styles";
 
 type SelectProps = React.SelectHTMLAttributes<HTMLSelectElement> & {
-  label?: string;
-  description?: string;
+  label: string;
   error?: string;
+  labelClassName?: string;
   containerClassName?: string;
 };
-
-export const Select: React.FC<SelectProps> = ({
-  id,
+export const Select = ({
   label,
-  description,
   error,
-  required,
-  className,
+  labelClassName,
   containerClassName,
-  children,
+  id,
+  className,
   ...props
-}) => {
+}: SelectProps) => {
   const generatedId = React.useId();
-  const selectId = id ?? generatedId;
-  const descriptionId = description ? `${selectId}-description` : undefined;
-  const errorId = error ? `${selectId}-error` : undefined;
-
+  const inputId = id ?? generatedId;
   return (
-    <div className={clsx("space-y-1.5", containerClassName)}>
-      {label ? (
-        <label
-          htmlFor={selectId}
-          className="block text-sm font-medium text-foreground"
-        >
-          {label}
-          {required ? (
-            <span className="ml-1 text-danger" aria-hidden="true">
-              *
-            </span>
-          ) : null}
-        </label>
-      ) : null}
-      {description ? (
-        <p id={descriptionId} className="text-xs text-text-muted">
-          {description}
-        </p>
-      ) : null}
-      <select
-        id={selectId}
-        required={required}
-        aria-describedby={errorId ?? descriptionId}
-        aria-invalid={error ? true : undefined}
-        className={clsx(
-          "w-full rounded-control border border-border bg-white px-3 py-2 text-sm text-foreground shadow-sm",
-          "hover:border-brand-400 focus:border-brand-strong focus:outline-none",
-          "disabled:cursor-not-allowed disabled:bg-surface-muted disabled:opacity-60",
-          error && "border-danger focus:border-danger",
-          className
-        )}
-        {...props}
+    <div className={clsx(fieldStyles.wrapper, containerClassName)}>
+      <label
+        className={clsx(fieldStyles.label, labelClassName)}
+        htmlFor={inputId}
       >
-        {children}
-      </select>
-      {error ? (
-        <p id={errorId} className="text-sm text-danger" role="alert">
+        {label}
+      </label>
+      <div className="relative">
+        <select
+          {...props}
+          id={inputId}
+          className={clsx(
+            fieldStyles.control,
+            "h-11 appearance-none pr-10",
+            className
+          )}
+          aria-invalid={error ? true : props["aria-invalid"]}
+          aria-describedby={
+            [props["aria-describedby"], error ? `${inputId}-error` : undefined]
+              .filter(Boolean)
+              .join(" ") || undefined
+          }
+        />
+        <ChevronDown
+          aria-hidden="true"
+          size={18}
+          className={clsx(
+            "pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-app-text-secondary",
+            props.disabled && "opacity-[0.48]"
+          )}
+        />
+      </div>
+      {error && (
+        <p id={`${inputId}-error`} className={fieldStyles.error} role="alert">
           {error}
         </p>
-      ) : null}
+      )}
     </div>
   );
 };

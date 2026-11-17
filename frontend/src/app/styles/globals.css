@@ -1,19 +1,7 @@
 @import "tailwindcss";
-@import "./v2.css";
+@import "./theme.css";
 
 :root {
-  --background: #ffffff;
-  --foreground: #2d2d2d;
-  --color-brand: #e8736b;
-  --color-brand-strong: #d95f59;
-  --color-brand-soft: #fff5f5;
-  --color-surface-muted: #fffbfa;
-  --color-border: #f4d4d4;
-  --color-text-muted: #6b6b6b;
-  --color-focus: #b84c83;
-  --color-success: #247a55;
-  --color-warning: #9a6700;
-  --color-danger: #c9424a;
   --chart-series-1: #d95f59;
   --chart-series-2: #2563eb;
   --chart-series-3: #16a34a;
@@ -25,23 +13,6 @@
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-text-dark: var(--foreground);
-  --color-brand-50: var(--color-brand-soft);
-  --color-brand-200: #f4b8b8;
-  --color-brand-300: var(--color-border);
-  --color-brand-400: #e8a0a0;
-  --color-brand-500: #f08080;
-  --color-brand-600: var(--color-brand);
-  --color-brand-strong: var(--color-brand-strong);
-  --color-surface-muted: var(--color-surface-muted);
-  --color-border: var(--color-border);
-  --color-text-muted: var(--color-text-muted);
-  --color-focus: var(--color-focus);
-  --color-success: var(--color-success);
-  --color-warning: var(--color-warning);
-  --color-danger: var(--color-danger);
   --color-chart-series-1: var(--chart-series-1);
   --color-chart-series-2: var(--chart-series-2);
   --color-chart-series-3: var(--chart-series-3);
@@ -50,71 +21,14 @@
   --color-chart-series-6: var(--chart-series-6);
   --color-chart-series-7: var(--chart-series-7);
   --color-chart-series-8: var(--chart-series-8);
-  --color-error-bg: #ffe5e5;
-  --color-error-border: var(--color-danger);
-  --color-error-text: var(--color-danger);
-  --color-rank-first: #c69214;
-  --color-rank-second: #718096;
-  --color-rank-third: #a66a43;
-  --color-rank-fourth: var(--color-text-muted);
-  --font-jp: "Noto Sans JP", system-ui, sans-serif;
-  --font-body: "Inter", system-ui, sans-serif;
-  --radius-control: 0.625rem;
-  --radius-surface: 0.75rem;
 }
 
-* {
-  border-color: var(--color-border);
-}
-
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-jp);
-}
-
-html,
-body {
+html, body {
   min-height: 100%;
 }
 
-.safe-area-app-shell {
-  box-sizing: border-box;
-  min-height: 100vh;
-  min-height: 100dvh;
-  padding-inline: env(safe-area-inset-left) env(safe-area-inset-right);
-  padding-bottom: env(safe-area-inset-bottom);
-}
-
-.safe-area-auth-shell {
-  box-sizing: border-box;
-  min-height: 100vh;
-  min-height: 100dvh;
-  padding-top: calc(2.5rem + env(safe-area-inset-top));
-  padding-right: calc(1rem + env(safe-area-inset-right));
-  padding-bottom: calc(2.5rem + env(safe-area-inset-bottom));
-  padding-left: calc(1rem + env(safe-area-inset-left));
-}
-
-.safe-area-header-content {
-  padding-top: env(safe-area-inset-top);
-}
-
-.safe-area-mobile-drawer {
-  box-sizing: border-box;
-  min-height: 100vh;
-  min-height: 100dvh;
-  padding-top: env(safe-area-inset-top);
-  padding-bottom: env(safe-area-inset-bottom);
-}
-
-button,
-a,
-input,
-select,
-textarea {
-  &:focus-visible {
-    outline: 3px solid var(--color-focus);
-    outline-offset: 2px;
-  }
+body {
+  background: var(--app-canvas);
+  color: var(--app-text);
+  font-family: var(--app-font-family);
 }

@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 
 import { ApiError, getApiErrorMessage } from "@/lib/api/core";
 import { fetchMe, updateMe } from "@/lib/api/users";
-import { useProfileName } from "@/providers/v2-profile-name-provider";
+import { useProfileName } from "@/providers/profile-name-provider";
 
 import type { ApiUser, UpdateMeInput } from "@/lib/api/contracts";
 
@@ -43,7 +43,7 @@ export const useProfile = () => {
       .catch((cause: unknown) => {
         if (!active) return;
         if (cause instanceof ApiError && cause.status === 401) {
-          router.replace("/v2/login");
+          router.replace("/login");
           return;
         }
         setError(
@@ -72,7 +72,7 @@ export const useProfile = () => {
     } catch (cause) {
       if (mounted.current) {
         if (cause instanceof ApiError && cause.status === 401) {
-          router.replace("/v2/login");
+          router.replace("/login");
         } else {
           setSaveError(
             getApiErrorMessage(cause, "プロフィールを保存できませんでした。")

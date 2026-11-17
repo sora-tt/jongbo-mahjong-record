@@ -59,18 +59,18 @@ export const PointProgressionChart: React.FC<Props> = ({
       >
         <CartesianGrid
           strokeDasharray="3 3"
-          stroke="var(--v2-border-subtle, var(--color-border))"
+          stroke="var(--app-border-subtle)"
           vertical={false}
         />
         <XAxis
           dataKey="matchIndex"
           tickLine={false}
-          axisLine={{ stroke: "var(--v2-border, var(--color-brand-300))" }}
+          axisLine={{ stroke: "var(--app-border)" }}
           tick={
             hideXAxisLabels
               ? false
               : {
-                  fill: "var(--v2-text-secondary, var(--color-text-muted))",
+                  fill: "var(--app-text-secondary)",
                   fontSize: 12,
                 }
           }
@@ -80,20 +80,20 @@ export const PointProgressionChart: React.FC<Props> = ({
           axisLine={false}
           width={52}
           tick={{
-            fill: "var(--v2-text-secondary, var(--color-text-muted))",
+            fill: "var(--app-text-secondary)",
             fontSize: 12,
           }}
           tickFormatter={(value: number) => formatPoint(value)}
         />
         <ReferenceLine
           y={0}
-          stroke="var(--v2-text-secondary, var(--color-text-muted))"
+          stroke="var(--app-text-secondary)"
           strokeDasharray="4 4"
         />
         <Tooltip
           contentStyle={{
-            borderColor: "var(--v2-border, var(--color-brand-300))",
-            borderRadius: "var(--v2-radius-control, var(--radius-control))",
+            borderColor: "var(--app-border)",
+            borderRadius: "var(--app-radius-control)",
             fontSize: "12px",
           }}
           formatter={formatTooltipValue}

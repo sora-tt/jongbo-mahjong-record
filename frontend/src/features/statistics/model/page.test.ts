@@ -10,13 +10,8 @@ import {
   parseStatisticsRouteContext,
 } from "./page";
 
-test("statistics return paths allow v2 pages but reject external or unsafe routes", () => {
-  for (const path of [
-    "/v2",
-    "/v2/stats",
-    "/v2/league/123",
-    "/v2/league/123/season/456",
-  ]) {
+test("statistics return paths allow app pages but reject external or unsafe routes", () => {
+  for (const path of ["/", "/stats", "/league/123", "/league/123/season/456"]) {
     strictEqual(
       parseStatisticsRouteContext(`?returnTo=${encodeURIComponent(path)}`)
         .returnTo,
@@ -25,8 +20,11 @@ test("statistics return paths allow v2 pages but reject external or unsafe route
   }
   for (const path of [
     "//evil.example",
-    "/v2/league/123?next=evil",
-    "/v2/league/%2f%2fevil",
+    "/v2",
+    "/v2/stats",
+    "/v2/league/123/season/456",
+    "/league/123?next=evil",
+    "/league/%2f%2fevil",
   ]) {
     strictEqual(
       parseStatisticsRouteContext(`?returnTo=${encodeURIComponent(path)}`)

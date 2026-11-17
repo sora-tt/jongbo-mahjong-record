@@ -1,25 +1,27 @@
 "use client";
 
-import * as React from "react";
-
-import { Pencil } from "lucide-react";
-
 import Link from "next/link";
+import { useParams } from "next/navigation";
 
+import { useLeaguePage } from "@/features/league/hooks/use-league-page";
+import {
+  formatScore,
+  formatStreak,
+} from "@/features/league/model/format-record";
+import { LeagueMembers } from "@/features/league/ui/league-members";
+import { LeagueRecord } from "@/features/league/ui/league-record";
 import { LeagueRuleSummary } from "@/features/league/ui/league-rule-summary";
-import { buildStatisticsHref } from "@/features/statistics/model/page";
+import { formatDetailTitle } from "@/lib/name-suffix";
 
 import { AppShell } from "@/components/layout/app-shell";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { EmptyState } from "@/components/ui/empty-state";
-import { ErrorState } from "@/components/ui/error-state";
-import { LoadingState } from "@/components/ui/loading-state";
+import { ButtonLink } from "@/components/ui/button-link";
+import { Chip } from "@/components/ui/chip";
+import { PageLoading } from "@/components/ui/page-loading";
+import { Panel } from "@/components/ui/panel";
+import { Status } from "@/components/ui/status";
 
-import { formatScore, formatStreak } from "../utils";
-import { useLeaguePage } from "./hooks";
-
-const LeaguePage: React.FC = () => {
+const LeaguePage = () => {
+  const { leagueId } = useParams<{ leagueId: string }>();
   const {
     league,
     longestWinStreak,
@@ -38,254 +40,149 @@ const LeaguePage: React.FC = () => {
     error,
     retry,
   } = useLeaguePage();
-
+  const shellProps = {
+    title: loading ? "" : formatDetailTitle(league?.name, "リーグ"),
+    backHref: "/",
+    settingsHref: `/league/${leagueId}/edit`,
+    bottomNav: true,
+  };
   if (loading) {
     return (
-      <AppShell mainClassName="min-h-screen bg-background font-jp">
-        <LoadingState
-          label="リーグ情報を読み込んでいます…"
-          className="min-h-[calc(100vh-4rem)]"
-        />
+      <AppShell {...shellProps}>
+        <PageLoading label="リーグ情報を読み込んでいます…" bottomNav />
       </AppShell>
     );
   }
-
-  if (notFound) {
+  if (error || notFound || !league)
     return (
-      <AppShell mainClassName="min-h-screen bg-background font-jp">
-        <div className="mx-auto max-w-2xl px-4 py-8 sm:px-6 lg:px-8">
-          <EmptyState
-            title="リーグが見つかりません"
-            description="リーグ一覧に戻って選び直してください。"
-            action={
-              <Link href="/">
-                <Button variant="secondary">リーグ一覧へ戻る</Button>
-              </Link>
-            }
+      <AppShell {...shellProps}>
+        <main className="mx-auto max-w-[480px] p-4">
+          <Status
+            message={error ?? "リーグが見つかりません"}
+            onRetry={error ? retry : undefined}
           />
-        </div>
+        </main>
       </AppShell>
     );
-  }
-
-  if (error) {
-    return (
-      <AppShell mainClassName="min-h-screen bg-background font-jp">
-        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-          <ErrorState message={error} onRetry={retry} />
-        </div>
-      </AppShell>
-    );
-  }
-
-  if (!league) {
-    return null;
-  }
-
   const records = [
     {
       label: "連勝記録",
       record: longestWinStreak,
       value: longestWinStreak
         ? formatStreak({ count: longestWinStreak.value, unit: "連勝" })
-        : "データなし",
+        : "— 連勝",
     },
     {
       label: "連敗記録",
       record: longestLoseStreak,
       value: longestLoseStreak
         ? formatStreak({ count: longestLoseStreak.value, unit: "連敗" })
-        : "データなし",
+        : "— 連敗",
     },
     {
       label: "最高スコア",
       record: currentHighestScore,
       value: currentHighestScore
         ? formatScore({ score: currentHighestScore.value })
-        : "データなし",
+        : "— pt",
     },
     {
       label: "最低スコア",
       record: currentLowestScore,
       value: currentLowestScore
         ? formatScore({ score: currentLowestScore.value })
-        : "データなし",
+        : "— pt",
     },
   ];
-  const isFloatingCountUma = league.rule.uma.mode === "floatingCount";
-
   return (
-    <AppShell mainClassName="min-h-screen bg-background font-jp">
-      <div className="mx-auto flex max-w-7xl flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8">
-        <header className="flex flex-wrap items-center justify-between gap-4">
-          <h1 className="text-2xl font-bold text-foreground">{league.name}</h1>
-          <Link href={`/league/${league.id}/edit`}>
-            <Button variant="secondary" size="sm">
-              <Pencil className="h-4 w-4" />
-              リーグを編集
-            </Button>
-          </Link>
-        </header>
-
-        <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <Card title="現在のシーズン">
-            {league.activeSeason ? (
-              <Link
-                href={`/league/${league.id}/season/${league.activeSeason.id}`}
-                className="font-medium text-brand-strong underline-offset-4 hover:underline"
-              >
-                {league.activeSeason.name}
-              </Link>
-            ) : (
-              <p className="text-sm text-text-muted">
-                現在進行中のシーズンはありません。
-              </p>
-            )}
-          </Card>
-          <Card title="ルール">
-            <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-              <dt className="text-text-muted">ゲーム種別</dt>
-              <dd className="text-right text-foreground">
-                {league.rule.gameType === "sanma" ? "三麻" : "四麻"}
-              </dd>
-              <dt className="text-text-muted">持ち点 / 返し点</dt>
-              <dd className="text-right text-foreground">
-                {league.rule.oka.startingPoints.toLocaleString("ja-JP")} /{" "}
-                {league.rule.oka.returnPoints.toLocaleString("ja-JP")}
-              </dd>
-              {!isFloatingCountUma ? (
-                <>
-                  <dt className="text-text-muted">ウマ</dt>
-                  <dd className="text-right text-foreground">
-                    <LeagueRuleSummary rule={league.rule} />
-                  </dd>
-                </>
-              ) : null}
-            </dl>
-            {isFloatingCountUma ? (
-              <div className="mt-4">
-                <LeagueRuleSummary rule={league.rule} />
-              </div>
-            ) : null}
-          </Card>
-        </section>
-
-        <section className="grid grid-cols-2 gap-4">
-          {records.map(({ label, record, value }) => (
-            <Card key={label} bodyClassName="space-y-2">
-              <h2 className="text-sm font-semibold text-text-muted">{label}</h2>
-              <p className="text-xs text-text-muted">
-                {record?.userName ?? "データなし"}
-              </p>
-              <p className="text-2xl font-bold text-brand-strong">{value}</p>
-            </Card>
+    <AppShell {...shellProps}>
+      <main className="mx-auto flex max-w-[480px] flex-col gap-4 px-4 pb-28 pt-4">
+        <div className="grid grid-cols-2 gap-4">
+          {records.map((item) => (
+            <LeagueRecord
+              key={item.label}
+              label={item.label}
+              name={item.record?.userName}
+              value={item.value}
+            />
           ))}
-        </section>
-
-        <section className="space-y-4" aria-labelledby="league-members-heading">
-          <div>
-            <h2
-              id="league-members-heading"
-              className="text-xl font-bold text-foreground"
-            >
-              参加者別の成績
-            </h2>
-            <p className="mt-1 text-sm text-text-muted">
-              名前を選ぶと、このリーグの通算成績を確認できます。
-            </p>
+        </div>
+        <Panel className="space-y-3">
+          <h2 className="text-app-heading-2 font-bold">ルール</h2>
+          <p className="text-app-label font-normal">
+            <Chip variant="selected" size="sm" className="mr-2">
+              {league.rule.gameType === "sanma" ? "三麻" : "四麻"}
+            </Chip>
+            持ち点 {league.rule.oka.startingPoints.toLocaleString("ja-JP")} ·
+            返し点 {league.rule.oka.returnPoints.toLocaleString("ja-JP")}
+          </p>
+          <LeagueRuleSummary rule={league.rule} />
+        </Panel>
+        <Panel>
+          <div className="mb-2 flex justify-between">
+            <h2 className="text-app-heading-2 font-bold">参加メンバー</h2>
+            <span className="text-app-caption text-app-text-secondary">
+              {members.length} 人
+            </span>
           </div>
           {membersLoading ? (
-            <LoadingState label="リーグ参加者を読み込んでいます…" />
+            <Status loading message="リーグ参加者を読み込んでいます…" />
           ) : membersError ? (
-            <ErrorState message={membersError} />
-          ) : members.length > 0 ? (
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              {members.map((member) => (
-                <Link
-                  key={String(member.userId)}
-                  href={buildStatisticsHref({
-                    scope: {
-                      scopeType: "league",
-                      leagueId: String(league.id),
-                      gameType: league.rule.gameType,
-                    },
-                    targetUserId: String(member.userId),
-                    scopeLabel: league.name,
-                    returnTo: `/league/${league.id}`,
-                  })}
-                  className="flex min-h-12 items-center justify-between rounded-control border border-border bg-white px-4 py-3 text-sm transition-colors hover:border-brand-300 hover:bg-brand-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
-                >
-                  <span className="font-medium text-foreground">
-                    {member.userName}
-                  </span>
-                  <span className="text-brand-strong">成績を見る</span>
-                </Link>
-              ))}
-            </div>
+            <Status message={membersError} />
+          ) : members.length ? (
+            <LeagueMembers members={members} league={league} />
           ) : (
-            <p className="text-sm text-text-muted">参加者がいません。</p>
+            <p className="text-app-caption text-app-text-secondary">
+              参加者がいません。
+            </p>
           )}
-        </section>
-
-        <section className="space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 className="text-xl font-bold text-foreground">
-                シーズン一覧
-              </h2>
-            </div>
-            <Link href={`/league/${league.id}/season/new`}>
-              <Button size="sm">シーズンを作成</Button>
-            </Link>
+        </Panel>
+        <Panel>
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <h2 className="text-app-heading-2 font-bold">シーズン</h2>
+            <ButtonLink href={`/league/${league.id}/season/new`} size="sm">
+              新規作成
+            </ButtonLink>
           </div>
-
           {seasonsLoading ? (
-            <LoadingState label="シーズン一覧を読み込んでいます…" />
+            <Status loading message="シーズン一覧を読み込んでいます…" />
           ) : seasonsError ? (
-            <ErrorState message={seasonsError} onRetry={retrySeasons} />
-          ) : leagueSeasons.length === 0 ? (
-            <EmptyState
-              className="!bg-transparent"
-              title="まだシーズンが作成されていません"
-              description="シーズンを作成して対局記録を始めましょう。"
-              action={
-                <Link href={`/league/${league.id}/season/new`}>
-                  <Button>シーズンを作成</Button>
-                </Link>
-              }
-            />
-          ) : (
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              {leagueSeasons.map((season) => (
-                <Link
-                  key={season.id}
-                  href={`/league/${league.id}/season/${season.id}`}
-                  className={`rounded-surface border bg-white p-5 shadow-sm transition-shadow hover:shadow-md ${season.status === "active" ? "border-brand-500" : "border-border"}`}
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <h3 className="font-semibold text-foreground">
-                        {season.name}
-                      </h3>
-                      <div className="mt-2 space-y-1 text-sm text-text-muted">
-                        <p>参加者：{season.memberCount}人</p>
-                        <p>対局数：{season.totalMatchCount}局</p>
-                      </div>
-                    </div>
-                    <span
-                      className={`rounded-full px-3 py-1 text-xs font-medium ${season.status === "active" ? "bg-brand-50 text-brand-strong" : "bg-surface-muted text-text-muted"}`}
+            <Status message={seasonsError} onRetry={retrySeasons} />
+          ) : leagueSeasons.length ? (
+            leagueSeasons.map((season) => (
+              <Link
+                key={season.id}
+                href={`/league/${league.id}/season/${season.id}`}
+                className="flex min-h-[72px] items-center justify-between gap-3 border-b border-app-border-subtle py-3 last:border-0"
+              >
+                <div>
+                  <p className="font-semibold">{season.name}</p>
+                  <p className="mt-1 text-app-caption text-app-text-secondary">
+                    <Chip
+                      variant={
+                        season.status === "active" ? "selected" : "neutral"
+                      }
+                      size="sm"
+                      className="mr-2"
                     >
                       {season.status === "active" ? "進行中" : "終了"}
-                    </span>
-                  </div>
-                </Link>
-              ))}
-            </div>
+                    </Chip>
+                    {season.totalMatchCount}局
+                  </p>
+                </div>
+                <span className="text-app-caption text-app-brand-strong">
+                  詳細 →
+                </span>
+              </Link>
+            ))
+          ) : (
+            <p className="py-3 text-app-caption text-app-text-secondary">
+              まだシーズンが作成されていません。
+            </p>
           )}
-        </section>
-      </div>
+        </Panel>
+      </main>
     </AppShell>
   );
 };
-
 export default LeaguePage;

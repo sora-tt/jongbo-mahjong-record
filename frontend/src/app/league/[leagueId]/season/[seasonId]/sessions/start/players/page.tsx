@@ -1,115 +1,48 @@
 "use client";
 
-import * as React from "react";
+import { useParams } from "next/navigation";
+
+import { usePlayerSelect } from "@/features/session/hooks/use-player-select";
+import { PlayerSelection } from "@/features/session/ui/player-selection";
 
 import { AppShell } from "@/components/layout/app-shell";
-import { Button } from "@/components/ui/button";
-import { Dropdown } from "@/components/ui/dropdown";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
-import { LoadingState } from "@/components/ui/loading-state";
+import { PageLoading } from "@/components/ui/page-loading";
 
-import { usePlayerSelect } from "./hooks";
-
-const WIND_LABELS = {
-  east: "東",
-  south: "南",
-  west: "西",
-  north: "北",
-} as const;
-
-const PlayerSelectPage: React.FC = () => {
-  const {
-    requiredWinds,
-    players,
-    isLoading,
-    notFound,
-    isSubmitting,
-    error,
-    canSubmit,
-    retry,
-    getPositionOptions,
-    onPlayerChange,
-    handleSubmit,
-    handleBack,
-    hasCandidates,
-  } = usePlayerSelect();
-
+const PlayerSelectPage = () => {
+  const state = usePlayerSelect();
+  const { leagueId, seasonId } = useParams<{
+    leagueId: string;
+    seasonId: string;
+  }>();
+  const backHref =
+    leagueId && seasonId ? `/league/${leagueId}/season/${seasonId}` : "/";
   return (
-    <AppShell mainClassName="min-h-screen bg-background font-jp">
-      <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-xl flex-col justify-center px-4 py-8">
-        {isLoading ? (
-          <LoadingState label="プレイヤー候補を読み込んでいます…" />
-        ) : null}
-        {!isLoading && notFound ? (
+    <AppShell title="プレイヤー選択" backHref={backHref}>
+      {state.isLoading ? (
+        <PageLoading label="プレイヤー候補を読み込んでいます…" />
+      ) : state.notFound ? (
+        <main className="mx-auto max-w-[480px] p-4">
           <EmptyState
             title="シーズンが見つかりません"
             description="リーグ詳細からシーズンを選び直してください。"
-            action={
-              <Button variant="secondary" onClick={handleBack}>
-                戻る
-              </Button>
-            }
           />
-        ) : null}
-        {!isLoading && error ? (
-          <ErrorState message={error} onRetry={retry} />
-        ) : null}
-        {!isLoading && !error && !hasCandidates ? (
+        </main>
+      ) : state.error ? (
+        <main className="mx-auto max-w-[480px] p-4">
+          <ErrorState message={state.error} onRetry={state.retry} />
+        </main>
+      ) : !state.hasCandidates ? (
+        <main className="mx-auto max-w-[480px] p-4">
           <EmptyState
             title="選択できる参加者が不足しています"
             description="Sessionには三麻で3人、四麻で4人の参加者が必要です。"
-            action={
-              <Button variant="secondary" onClick={handleBack}>
-                戻る
-              </Button>
-            }
           />
-        ) : null}
-        {!isLoading && !error && hasCandidates ? (
-          <div className="rounded-surface border border-border bg-white p-6 shadow-sm">
-            <h1 className="mt-1 text-center text-2xl font-bold text-foreground">
-              プレイヤー選択
-            </h1>
-            <div className="mx-auto mt-6 flex max-w-sm flex-col items-center gap-4">
-              {requiredWinds.map((wind) => (
-                <label
-                  key={wind}
-                  className="flex w-full items-center justify-center gap-4 text-foreground"
-                >
-                  <span className="w-8 shrink-0 text-lg font-bold">
-                    {WIND_LABELS[wind]}
-                  </span>
-                  <Dropdown
-                    defaultOption="プレイヤーを選択"
-                    options={getPositionOptions(wind)}
-                    value={players[wind]}
-                    onChange={onPlayerChange(wind)}
-                    disabled={isSubmitting}
-                    className="w-full max-w-[220px]"
-                  />
-                </label>
-              ))}
-            </div>
-            <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
-              <Button
-                onClick={handleSubmit}
-                disabled={!canSubmit || isSubmitting}
-                loading={isSubmitting}
-              >
-                {isSubmitting ? "準備中…" : "決定"}
-              </Button>
-              <Button
-                variant="secondary"
-                onClick={handleBack}
-                disabled={isSubmitting}
-              >
-                戻る
-              </Button>
-            </div>
-          </div>
-        ) : null}
-      </div>
+        </main>
+      ) : (
+        <PlayerSelection {...state} />
+      )}
     </AppShell>
   );
 };

@@ -1,0 +1,225 @@
+import * as React from "react";
+
+import { ChevronDown, ChevronRight, UserRound, UsersRound } from "lucide-react";
+
+import Link from "next/link";
+
+import { buildStatisticsHref } from "@/features/statistics/model/page";
+
+import { ErrorState } from "@/components/ui/error-state";
+import { LoadingState } from "@/components/ui/loading-state";
+import { Panel } from "@/components/ui/panel";
+
+type Season = {
+  id: string;
+  leagueId: string;
+  leagueName: string;
+  seasonId: string;
+  seasonName: string;
+};
+type League = {
+  id: string;
+  name: string;
+  activeSeason: { id: string; name: string } | null;
+};
+const Entry = ({
+  href,
+  title,
+  subtitle,
+}: {
+  href: string;
+  title: string;
+  subtitle: string;
+}) => (
+  <Link
+    href={href}
+    className="flex min-h-[76px] items-center justify-between gap-3 border-b border-app-border-subtle py-3 last:border-0"
+  >
+    <span className="min-w-0">
+      <span className="block font-bold text-app-text">{title}</span>
+      <span className="mt-1 block text-app-caption text-app-text-secondary">
+        {subtitle}
+      </span>
+    </span>
+    <ChevronRight
+      size={20}
+      className="shrink-0 text-app-text-secondary"
+      aria-hidden="true"
+    />
+  </Link>
+);
+const Group = ({
+  title,
+  children,
+}: React.PropsWithChildren<{ title: string }>) => (
+  <Panel>
+    <h2 className="text-app-heading-2 font-bold">{title}</h2>
+    {children}
+  </Panel>
+);
+export const StatisticsHub = ({
+  viewerUserId,
+  seasons,
+  leagues,
+  status,
+  onRetry,
+}: {
+  viewerUserId: string;
+  seasons: readonly Season[];
+  leagues: readonly League[];
+  status: "loading" | "ready" | "error";
+  onRetry: () => void;
+}) => {
+  if (status === "loading")
+    return <LoadingState label="成績を読み込んでいます" className="min-h-40" />;
+  if (status === "error")
+    return (
+      <ErrorState
+        message="参加中のリーグを表示できません。"
+        onRetry={onRetry}
+      />
+    );
+  const seasonHref = (season: Season) =>
+    buildStatisticsHref({
+      scope: {
+        scopeType: "season",
+        leagueId: season.leagueId,
+        seasonId: season.seasonId,
+        gameType: "all",
+      },
+      targetUserId: viewerUserId,
+      scopeLabel: `${season.leagueName} / ${season.seasonName}`,
+      returnTo: "/stats",
+    });
+  // シーズンのデータだけが残っている場合も、成績への入口を維持する。
+  const leagueGroups = [
+    ...leagues,
+    ...Array.from(
+      new Map(
+        seasons
+          .filter(
+            (season) => !leagues.some((league) => league.id === season.leagueId)
+          )
+          .map((season) => [
+            season.leagueId,
+            {
+              id: season.leagueId,
+              name: season.leagueName,
+              activeSeason: null,
+            },
+          ])
+      ).values()
+    ),
+  ];
+  return (
+    <section className="space-y-4">
+      <header className="pb-1 text-center">
+        <h1 className="text-app-display font-bold">成績</h1>
+      </header>
+      <div className="grid grid-cols-2 gap-4">
+        {(
+          [
+            ["yonma", "四麻", UsersRound],
+            ["sanma", "三麻", UserRound],
+          ] as const
+        ).map(([gameType, label, Icon]) => (
+          <Link
+            key={gameType}
+            href={buildStatisticsHref({
+              scope: { scopeType: "overall", gameType },
+              targetUserId: viewerUserId,
+              scopeLabel: `全リーグ・全期間（${label}）`,
+              returnTo: "/stats",
+            })}
+            aria-label={`${label}の成績`}
+            className="flex min-h-24 items-center justify-between gap-2 rounded-app-panel bg-app-surface p-4 shadow-app-card"
+          >
+            <span className="min-w-0">
+              <span className="flex items-center gap-3 text-app-heading-2 font-bold text-app-text">
+                <Icon
+                  size={24}
+                  className="shrink-0 text-app-text-secondary"
+                  aria-hidden="true"
+                />
+                {label}
+              </span>
+              <span className="mt-2 block text-app-caption text-app-text-secondary">
+                成績を見る
+              </span>
+            </span>
+            <ChevronRight
+              size={20}
+              className="shrink-0 text-app-text-secondary"
+              aria-hidden="true"
+            />
+          </Link>
+        ))}
+      </div>
+      {leagueGroups.length ? (
+        leagueGroups.map((league) => {
+          const leagueSeasons = seasons.filter(
+            (season) => season.leagueId === league.id
+          );
+          const currentSeasons = leagueSeasons.filter(
+            (season) => season.seasonId === league.activeSeason?.id
+          );
+          const pastSeasons = leagueSeasons.filter(
+            (season) => season.seasonId !== league.activeSeason?.id
+          );
+          return (
+            <Group key={league.id} title={league.name}>
+              <Entry
+                href={buildStatisticsHref({
+                  scope: {
+                    scopeType: "league",
+                    leagueId: league.id,
+                    gameType: "all",
+                  },
+                  targetUserId: viewerUserId,
+                  scopeLabel: league.name,
+                  returnTo: "/stats",
+                })}
+                title="リーグ通算"
+                subtitle="このリーグの全シーズン"
+              />
+              {currentSeasons.map((season) => (
+                <Entry
+                  key={season.id}
+                  href={seasonHref(season)}
+                  title={season.seasonName}
+                  subtitle="進行中のシーズン"
+                />
+              ))}
+              {pastSeasons.length > 0 && (
+                <details className="group">
+                  <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 text-app-caption font-bold text-app-text-secondary [&::-webkit-details-marker]:hidden">
+                    過去のシーズン（{pastSeasons.length}）
+                    <ChevronDown
+                      size={20}
+                      className="shrink-0 transition-transform group-open:rotate-180"
+                      aria-hidden="true"
+                    />
+                  </summary>
+                  {pastSeasons.map((season) => (
+                    <Entry
+                      key={season.id}
+                      href={seasonHref(season)}
+                      title={season.seasonName}
+                      subtitle="シーズン成績"
+                    />
+                  ))}
+                </details>
+              )}
+            </Group>
+          );
+        })
+      ) : (
+        <Group title="リーグ">
+          <p className="mt-3 text-app-caption text-app-text-secondary">
+            参加中のリーグはありません。
+          </p>
+        </Group>
+      )}
+    </section>
+  );
+};

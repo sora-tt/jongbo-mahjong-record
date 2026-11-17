@@ -1,76 +1,57 @@
 "use client";
 
-import * as React from "react";
+import { useParams } from "next/navigation";
 
-import { MatchForm } from "@/features/match/ui/MatchForm";
+import { useRecordMatchPage } from "@/features/match/hooks/use-additional-match";
+import { MatchForm } from "@/features/match/ui/match-form";
 
 import { AppShell } from "@/components/layout/app-shell";
-import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
-import { LoadingState } from "@/components/ui/loading-state";
+import { PageLoading } from "@/components/ui/page-loading";
 
-import { useRecordMatchPage } from "./hooks";
-
-const NewMatchPage: React.FC = () => {
-  const {
-    values,
-    onValuesChange,
-    constraint,
-    members,
-    chomboPenaltyPoints,
-    allowOffTableKyotaku,
-    isLoading,
-    notFound,
-    isSubmitting,
-    error,
-    yakumanErrors,
-    ready,
-    handleSubmit,
-    handleBack,
-  } = useRecordMatchPage();
-
+const NewMatchPage = () => {
+  const state = useRecordMatchPage();
+  const { leagueId, seasonId, sessionId } = useParams<{
+    leagueId: string;
+    seasonId: string;
+    sessionId: string;
+  }>();
+  const backHref =
+    leagueId && seasonId && sessionId
+      ? `/league/${leagueId}/season/${seasonId}/sessions/${sessionId}/results`
+      : "/";
   return (
-    <AppShell mainClassName="min-h-screen bg-background font-jp">
-      {isLoading ? (
-        <LoadingState
-          label="対局記録画面を読み込んでいます…"
-          className="min-h-[calc(100vh-4rem)]"
-        />
-      ) : notFound ? (
-        <div className="mx-auto max-w-2xl px-4 py-8">
+    <AppShell title="対局を追加" backHref={backHref}>
+      {state.isLoading ? (
+        <PageLoading label="対局記録画面を読み込んでいます…" />
+      ) : state.notFound ? (
+        <main className="mx-auto max-w-[480px] p-4">
           <EmptyState
             title="Sessionが見つかりません"
             description="シーズン詳細に戻ってSessionを選び直してください。"
-            action={
-              <Button variant="secondary" onClick={handleBack}>
-                シーズン詳細へ戻る
-              </Button>
-            }
           />
-        </div>
-      ) : error && !ready ? (
-        <div className="mx-auto max-w-2xl px-4 py-8">
-          <ErrorState message={error} />
-        </div>
-      ) : ready ? (
+        </main>
+      ) : state.error && !state.ready ? (
+        <main className="mx-auto max-w-[480px] p-4">
+          <ErrorState message={state.error} onRetry={state.retry} />
+        </main>
+      ) : state.ready ? (
         <MatchForm
           mode="additional"
-          values={values}
-          constraint={constraint}
-          members={members}
-          chomboPenaltyPoints={chomboPenaltyPoints}
-          allowOffTableKyotaku={allowOffTableKyotaku}
-          error={error}
-          yakumanErrors={yakumanErrors}
-          isSubmitting={isSubmitting}
-          onChange={onValuesChange}
-          onSubmit={() => void handleSubmit()}
-          onBack={handleBack}
+          values={state.values}
+          constraint={state.constraint}
+          members={state.members}
+          chomboPenaltyPoints={state.chomboPenaltyPoints}
+          allowOffTableKyotaku={state.allowOffTableKyotaku}
+          error={state.error}
+          yakumanErrors={state.yakumanErrors}
+          isSubmitting={state.isSubmitting}
+          onChange={state.onValuesChange}
+          onSubmit={() => void state.handleSubmit()}
         />
       ) : null}
     </AppShell>
   );
 };
-
 export default NewMatchPage;

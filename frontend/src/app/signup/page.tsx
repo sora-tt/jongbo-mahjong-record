@@ -1,13 +1,11 @@
 "use client";
 
-import * as React from "react";
+import { useSignupPage } from "@/features/auth/hooks/use-signup";
 
-import { AuthFormShell } from "@/components/pages/auth/auth-form-shell";
-import { InputArea } from "@/components/pages/entry-pages/input-area";
+import { AuthForm } from "@/components/layout/auth-form";
+import { Input } from "@/components/ui/input";
 
-import { useSignupPage } from "./hooks";
-
-const SignUpPage: React.FC = () => {
+const SignUpPage = () => {
   const {
     email,
     name,
@@ -21,45 +19,47 @@ const SignUpPage: React.FC = () => {
     setPassword,
     handleSubmit,
   } = useSignupPage();
-
   return (
-    <AuthFormShell
+    <AuthForm
       title="新規登録"
       error={error}
       submitLabel="アカウントを作成"
       isSubmitting={isSubmitting}
       onSubmit={handleSubmit}
-      footerLinks={[{ href: "/login", label: "ログインはこちら" }]}
+      links={[{ href: "/login", label: "ログインはこちら" }]}
     >
-      <InputArea
+      <Input
         label="メールアドレス"
         type="email"
         placeholder="メールアドレスを入力"
         value={email}
         onChange={(event) => setEmail(event.target.value)}
       />
-      <InputArea
+      <Input
         label="表示名"
         type="text"
         placeholder="表示名を入力"
         value={name}
         onChange={(event) => setName(event.target.value)}
       />
-      <InputArea
+      <Input
         label="ユーザーネーム"
         type="text"
         placeholder="ユーザーネームを入力"
         value={username}
         onChange={(event) => setUsername(event.target.value)}
       />
-      <InputArea
+      <Input
         label="パスワード"
         type="password"
-        placeholder="パスワードを入力"
+        placeholder="8文字以上のパスワード"
         value={password}
         onChange={(event) => setPassword(event.target.value)}
       />
-    </AuthFormShell>
+      <p className="text-app-caption text-app-text-secondary">
+        英字・数字を含むパスワード
+      </p>
+    </AuthForm>
   );
 };
 

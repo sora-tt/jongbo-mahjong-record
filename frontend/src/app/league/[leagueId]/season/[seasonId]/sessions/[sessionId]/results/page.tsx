@@ -4,148 +4,182 @@ import * as React from "react";
 
 import { CalendarDays } from "lucide-react";
 
-import { MatchList } from "@/features/match/ui/MatchList";
+import { useParams, useRouter } from "next/navigation";
+
+import { DeleteMatchDialog } from "@/features/match/ui/delete-match-dialog";
+import { MatchList } from "@/features/match/ui/match-list";
+import { deleteSession, getSession } from "@/features/session/api";
+import { useSessionResultsPage } from "@/features/session/hooks/use-session-results";
 
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
+import { DeleteResourceControl } from "@/components/ui/delete-resource-control";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
-import { HeaderCard } from "@/components/ui/header-card";
-import { LoadingState } from "@/components/ui/loading-state";
-import { SectionCard } from "@/components/ui/section-card";
+import { PageLoading } from "@/components/ui/page-loading";
 
-import { useSessionResultsPage } from "./hooks";
+const formatSessionDate = (value: string) => {
+  const parts = new Intl.DateTimeFormat("ja-JP", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    weekday: "short",
+  }).formatToParts(new Date(value));
+  const get = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((part) => part.type === type)?.value ?? "";
+  return `${get("year")}年${get("month")}月${get("day")}日（${get("weekday")}）`;
+};
 
-const SessionResultsPage: React.FC = () => {
-  const {
-    session,
-    matches,
-    isLoading,
-    isEnding,
-    deletingMatchId,
-    deleteTargetMatchId,
-    notFound,
-    error,
-    endError,
-    retry,
-    isEnded,
-    handleAddRecord,
-    handleEditMatch,
-    handleEndRecord,
-    handleRequestDeleteMatch,
-    handleCancelDeleteMatch,
-    handleConfirmDeleteMatch,
-    goToSeason,
-  } = useSessionResultsPage();
-
-  const formatSessionDate = (value: string) =>
-    new Intl.DateTimeFormat("ja-JP", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    }).format(new Date(value));
-
+const SessionResultsPage = () => {
+  const state = useSessionResultsPage();
+  const router = useRouter();
+  const { leagueId, seasonId, sessionId } = useParams<{
+    leagueId: string;
+    seasonId: string;
+    sessionId: string;
+  }>();
+  const backHref =
+    leagueId && seasonId ? `/league/${leagueId}/season/${seasonId}` : "/";
   return (
-    <AppShell mainClassName="min-h-screen bg-background font-jp">
-      <div className="mx-auto max-w-[390px] px-3 py-5">
-        {isLoading ? (
-          <LoadingState
-            label="Sessionの結果を読み込んでいます…"
-            className="min-h-[calc(100vh-4rem)]"
-          />
-        ) : notFound ? (
-          <EmptyState
-            title="Sessionが見つかりません"
-            description="シーズン詳細に戻ってSessionを選び直してください。"
-            action={
-              <Button variant="secondary" onClick={goToSeason}>
-                シーズン詳細へ戻る
-              </Button>
-            }
-          />
-        ) : error && !session ? (
-          <ErrorState message={error} onRetry={retry} />
-        ) : session ? (
-          <div className="space-y-6">
-            <HeaderCard title="本日の成績">
-              <span className="inline-flex items-center gap-1">
-                <CalendarDays size={14} aria-hidden="true" />
-                {formatSessionDate(session.startedAt)}
-              </span>
-            </HeaderCard>
-
-            {error ? <ErrorState message={error} onRetry={retry} /> : null}
-            {endError ? (
-              <ErrorState message={endError} onRetry={handleEndRecord} />
-            ) : null}
-
-            <SectionCard title="成績表" bodyClassName="overflow-hidden">
+    <AppShell title="対局記録" backHref={backHref}>
+      {state.isLoading ? (
+        <PageLoading label="Sessionの結果を読み込んでいます" />
+      ) : (
+        <div className="mx-auto max-w-[414px] px-3 pb-8 pt-4">
+          {state.notFound ? (
+            <EmptyState
+              title="Sessionが見つかりません"
+              description="シーズン詳細に戻ってSessionを選び直してください。"
+              action={
+                <Button variant="secondary" onClick={state.goToSeason}>
+                  シーズン詳細へ戻る
+                </Button>
+              }
+            />
+          ) : state.error && !state.session ? (
+            <ErrorState message={state.error} onRetry={state.retry} />
+          ) : state.session ? (
+            <div className="space-y-4">
+              <p className="flex items-center gap-2 text-app-caption text-app-text-secondary">
+                <CalendarDays size={18} aria-hidden="true" />
+                {formatSessionDate(state.session.startedAt)}
+              </p>
+              {state.error && !state.deleteTargetMatchId && (
+                <ErrorState message={state.error} onRetry={state.retry} />
+              )}
+              {state.endError && (
+                <ErrorState
+                  message={state.endError}
+                  onRetry={state.handleEndRecord}
+                />
+              )}
+              {state.resumeError && (
+                <ErrorState
+                  message={state.resumeError}
+                  onRetry={state.handleResumeRecord}
+                />
+              )}
               <MatchList
-                players={session.members}
-                matches={matches}
-                deletingMatchId={deletingMatchId}
-                onEdit={handleEditMatch}
-                onDelete={handleRequestDeleteMatch}
+                players={state.session.members}
+                matches={state.matches}
+                editable={!state.isEnded}
+                deletingMatchId={state.deletingMatchId}
+                onEdit={state.handleEditMatch}
+                onDelete={state.handleRequestDeleteMatch}
               />
-            </SectionCard>
-
-            <div className="flex flex-col items-center gap-3 pt-4">
-              <Button
-                variant="brand-secondary"
-                onClick={handleAddRecord}
-                disabled={isEnded || isLoading}
-                className="w-40"
-              >
-                記録を追加
-              </Button>
-              <Button
-                variant="brand-primary"
-                onClick={handleEndRecord}
-                disabled={isEnded || isLoading || isEnding}
-                loading={isEnding}
-                className="w-40"
-              >
-                {isEnded ? "記録終了済み" : isEnding ? "終了中…" : "記録を終了"}
-              </Button>
+              <div className="mx-auto flex max-w-[310px] flex-col gap-4 pt-2">
+                {state.isEnded ? (
+                  <Button
+                    size="lg"
+                    fullWidth
+                    onClick={state.handleResumeRecord}
+                    loading={state.isResuming}
+                  >
+                    記録を再開
+                  </Button>
+                ) : (
+                  <>
+                    <Button
+                      variant="secondary"
+                      size="lg"
+                      fullWidth
+                      onClick={state.handleAddRecord}
+                    >
+                      記録を追加
+                    </Button>
+                    <Button
+                      size="lg"
+                      fullWidth
+                      onClick={state.handleEndRecord}
+                      loading={state.isEnding}
+                    >
+                      記録を終了
+                    </Button>
+                    <div className="mt-4">
+                      <DeleteResourceControl
+                        resourceName="この記録"
+                        buttonLabel="この記録を削除"
+                        description="この記録に含まれる対局はすべて削除され、元に戻せません。参加者全員の成績に反映されます。"
+                        uncertainMessage="削除状況を確認できませんでした。シーズン画面で対局履歴を確認してください。"
+                        disabled={
+                          !leagueId || !seasonId || !sessionId || state.isEnding
+                        }
+                        details={
+                          <dl className="mt-4 space-y-2 rounded-app-control bg-app-surface-subtle p-3 text-app-caption">
+                            <div className="flex gap-3">
+                              <dt className="shrink-0 text-app-text-secondary">
+                                日時
+                              </dt>
+                              <dd>
+                                {state.formatDate(state.session.startedAt)}
+                              </dd>
+                            </div>
+                            <div className="flex gap-3">
+                              <dt className="shrink-0 text-app-text-secondary">
+                                参加者
+                              </dt>
+                              <dd>
+                                {state.session.members
+                                  .map((member) => member.userName)
+                                  .join("、") || "—"}
+                              </dd>
+                            </div>
+                            <div className="flex gap-3">
+                              <dt className="shrink-0 text-app-text-secondary">
+                                対局数
+                              </dt>
+                              <dd>{state.session.totalMatchCount} 局</dd>
+                            </div>
+                          </dl>
+                        }
+                        onDelete={() =>
+                          deleteSession({ leagueId, seasonId, sessionId })
+                        }
+                        onVerify={() =>
+                          getSession(
+                            { leagueId, seasonId, sessionId },
+                            { fresh: true }
+                          )
+                        }
+                        onDeleted={state.handleSessionDeleted}
+                        onAuthenticationError={() => router.replace("/login")}
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
-          </div>
-        ) : null}
-      </div>
-
-      {deleteTargetMatchId ? (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
-          role="dialog"
-          aria-modal="true"
-        >
-          <div className="w-full max-w-sm rounded-surface bg-white p-6 shadow-xl">
-            <h2 className="text-lg font-bold text-foreground">
-              対局結果を削除しますか？
-            </h2>
-            <p className="mt-3 text-sm text-text-muted">
-              削除後も既存対局のmatchIndexは変更されません。
-            </p>
-            <div className="mt-6 flex justify-end gap-3">
-              <Button
-                variant="secondary"
-                onClick={handleCancelDeleteMatch}
-                disabled={Boolean(deletingMatchId)}
-              >
-                キャンセル
-              </Button>
-              <Button
-                onClick={() => void handleConfirmDeleteMatch()}
-                disabled={Boolean(deletingMatchId)}
-                loading={Boolean(deletingMatchId)}
-              >
-                削除する
-              </Button>
-            </div>
-          </div>
+          ) : null}
         </div>
-      ) : null}
+      )}
+      <DeleteMatchDialog
+        open={Boolean(state.deleteTargetMatchId)}
+        loading={Boolean(state.deletingMatchId)}
+        error={state.error}
+        onCancel={state.handleCancelDeleteMatch}
+        onConfirm={() => void state.handleConfirmDeleteMatch()}
+      />
     </AppShell>
   );
 };
-
 export default SessionResultsPage;

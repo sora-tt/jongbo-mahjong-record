@@ -73,16 +73,17 @@ test("認証済みで戻った場合は再送せず完了を表示する", async
   assert.deepEqual(tokens, ["fresh-token"]);
 });
 
-test("認証コードの確認と v2 宛ての再送を行う", async () => {
+test("認証コードの確認と認証メールの再送を行う", async () => {
   const [{ renderHook, waitFor, act }, { createUseEmailVerification }] =
     await setup;
   const user = { emailVerified: false, reload: async () => {} };
   const codes: string[] = [];
-  const paths: string[] = [];
+  let sent = 0;
   const useVerification = createUseEmailVerification({
     getCurrentUser: async () => user as never,
-    send: async (_user, path) => {
-      paths.push(path ?? "");
+    send: async (target) => {
+      assert.equal(target, user);
+      sent++;
       return user as never;
     },
     confirm: async (code) => {
@@ -99,7 +100,7 @@ test("認証コードの確認と v2 宛ての再送を行う", async () => {
   await act(async () => {
     await result.current.resend();
   });
-  assert.deepEqual(paths, ["/v2/verify-email"]);
+  assert.equal(sent, 1);
   assert.equal(result.current.status, "pending");
 });
 

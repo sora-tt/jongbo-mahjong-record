@@ -14,8 +14,6 @@ import { fetchSeasonDetail } from "@/lib/api/seasons";
 import { useAppDispatch } from "@/store/hooks";
 import { setRecordingFlow } from "@/store/slices/recording-flow-slice";
 
-import { type Props as DropdownProps } from "@/components/ui/dropdown";
-
 import type {
   PlayerSelectOption,
   SelectedPlayers,
@@ -144,8 +142,8 @@ export const usePlayerSelect = (routePrefix = "") => {
   );
 
   const handlePlayerChange = React.useCallback(
-    (wind: Wind): DropdownProps["onChange"] =>
-      (_, value) => {
+    (wind: Wind) =>
+      (_: React.ChangeEvent<HTMLSelectElement>, value: string) => {
         setPlayers((current) => ({ ...current, [wind]: value }));
         setError(null);
       },

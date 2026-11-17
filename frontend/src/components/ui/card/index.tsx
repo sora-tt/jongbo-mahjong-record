@@ -2,37 +2,31 @@ import * as React from "react";
 
 import clsx from "clsx";
 
-type CardProps = React.HTMLAttributes<HTMLElement> & {
-  title?: React.ReactNode;
-  meta?: React.ReactNode;
-  bodyClassName?: string;
+const sizeStyles = {
+  auto: "p-4",
+  none: "",
+  sm: "min-h-[88px] p-4",
+  md: "min-h-[120px] p-5",
+  lg: "min-h-[152px] p-6",
 };
-
-export const Card: React.FC<CardProps> = ({
-  title,
-  meta,
-  bodyClassName,
+export const Card = ({
+  as: Component = "div",
+  size = "md",
+  soft,
   className,
-  children,
   ...props
+}: React.HTMLAttributes<HTMLElement> & {
+  as?: "div" | "article" | "section" | "details";
+  size?: "auto" | "none" | "sm" | "md" | "lg";
+  soft?: boolean;
 }) => (
-  <section
+  <Component
+    {...props}
     className={clsx(
-      "overflow-hidden rounded-surface border border-border bg-white shadow-sm",
+      "rounded-app-panel shadow-app-card",
+      soft ? "bg-app-brand-soft" : "bg-app-surface",
+      sizeStyles[size],
       className
     )}
-    {...props}
-  >
-    {title || meta ? (
-      <header className="flex items-start justify-between gap-4 border-b border-border bg-surface-muted px-4 py-3">
-        {title ? (
-          <h2 className="font-semibold text-foreground">{title}</h2>
-        ) : (
-          <span />
-        )}
-        {meta ? <div className="text-xs text-text-muted">{meta}</div> : null}
-      </header>
-    ) : null}
-    <div className={clsx("p-4", bodyClassName)}>{children}</div>
-  </section>
+  />
 );

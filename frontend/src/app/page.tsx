@@ -1,64 +1,62 @@
 "use client";
-
 import * as React from "react";
 
+import { Plus } from "lucide-react";
+
+import Link from "next/link";
+
+import { useHome } from "@/features/home/hooks/use-home";
+import { LeagueCard } from "@/features/league/ui/league-card";
+import { useProfileName } from "@/providers/profile-name-provider";
+
 import { AppShell } from "@/components/layout/app-shell";
-import CreateLeagueCard from "@/components/pages/home/create-league-card/index";
-import EmptyLeagueState from "@/components/pages/home/empty-league-state";
-import LeagueCard from "@/components/pages/home/league-card/index";
-import { ErrorState } from "@/components/ui/error-state";
-import { LoadingState } from "@/components/ui/loading-state";
+import { Card } from "@/components/ui/card";
+import { PageLoading } from "@/components/ui/page-loading";
+import { Status } from "@/components/ui/status";
 
-import { useHome } from "./hooks";
-
-const Home: React.FC = () => {
-  const { userId, userName, leagues, hasLeagues, isLoading, error, retry } =
-    useHome();
-
+const Home = () => {
+  const { userId, userName, leagues, isLoading, error, retry } = useHome();
+  const { setProfileName } = useProfileName();
+  React.useEffect(() => {
+    if (userName) setProfileName(userName);
+  }, [userName, setProfileName]);
+  if (isLoading) {
+    return (
+      <AppShell bottomNav>
+        <PageLoading label="リーグ情報を読み込んでいます…" bottomNav />
+      </AppShell>
+    );
+  }
   return (
-    <AppShell mainClassName="min-h-screen bg-background font-jp">
-      {isLoading ? (
-        <LoadingState
-          label="リーグ情報を読み込んでいます…"
-          className="min-h-[calc(100vh-4rem)]"
-        />
-      ) : (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {/* Header */}
-          <div className="mb-8">
-            <h1 className="text-2xl font-bold text-text-dark mb-2">
-              {userName ? `${userName}さんのリーグ一覧` : "リーグ一覧"}
-            </h1>
-            <p className="text-text-muted">
-              記録を振り返ったり、新しいリーグを作成できます
-            </p>
-          </div>
-
-          {hasLeagues ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {leagues.map((league) => (
-                <LeagueCard
-                  key={league.id}
-                  leagueId={league.id}
-                  userId={userId}
-                  leagueName={league.name}
-                  memberCount={league.memberCount}
-                  totalMatchCount={league.totalMatchCount}
-                  activeSeason={league.activeSeason}
-                  myRank={league.myStanding?.rank ?? null}
-                />
-              ))}
-              <CreateLeagueCard />
-            </div>
-          ) : (
-            <EmptyLeagueState />
-          )}
-
-          {error ? <ErrorState message={error} onRetry={retry} /> : null}
+    <AppShell bottomNav>
+      <main className="mx-auto max-w-[480px] px-4 pb-28 pt-5">
+        <h1 className="mb-8 text-center text-app-display font-bold">ホーム</h1>
+        <div className="mb-2 flex items-center justify-between text-app-caption font-semibold text-app-brand-strong">
+          <h2>参加中のリーグ</h2>
+          <span>{String(leagues.length).padStart(2, "0")}</span>
         </div>
-      )}
+        <div className="space-y-3">
+          {error && <Status message={error} onRetry={retry} />}{" "}
+          {leagues.map((league) => (
+            <LeagueCard key={league.id} league={league} userId={userId} />
+          ))}
+          {!error && leagues.length === 0 && (
+            <p className="rounded-app-panel bg-app-surface p-4 text-app-label text-app-text-secondary">
+              参加中のリーグはありません。
+            </p>
+          )}
+          <Card soft size="none">
+            <Link
+              href="/league/new"
+              className="flex min-h-[60px] items-center gap-3 px-5 text-app-label font-semibold text-app-brand-strong"
+            >
+              <Plus size={20} />
+              新しいリーグを作成
+            </Link>
+          </Card>
+        </div>
+      </main>
     </AppShell>
   );
 };
-
 export default Home;

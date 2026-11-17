@@ -9,7 +9,6 @@ import {
   getPersonalStatisticsAnalysis,
   getPersonalStatisticsSummary,
   getStatisticsMatchHistory,
-  getUserStats,
   listJoiningSeasons,
   listStatisticsLeagueMembers,
   listStatisticsSeasonMembers,
@@ -19,7 +18,6 @@ import {
   toPersonalStatisticsAnalysisView,
   toPersonalStatisticsSummaryView,
   toStatisticsMatchHistoryView,
-  toUserStats,
 } from "@/features/statistics/model/adapter";
 import { mergeStatisticsAnalysisPages } from "@/features/statistics/model/page";
 import {
@@ -48,8 +46,6 @@ import { ApiError, getApiErrorMessage } from "@/lib/api/core";
 
 const DEFAULT_INITIAL_ERROR_MESSAGE =
   "個人成績画面の取得に失敗しました。時間をおいて再度お試しください。";
-const DEFAULT_STATS_ERROR_MESSAGE =
-  "個人成績の取得に失敗しました。時間をおいて再度お試しください。";
 const DEFAULT_QUERY_ERROR_MESSAGE =
   "成績の取得に失敗しました。時間をおいて再度お試しください。";
 const DEFAULT_MEMBERS_ERROR_MESSAGE =
@@ -63,7 +59,6 @@ type StatisticsHookApi = {
   getPersonalStatisticsAnalysis: typeof getPersonalStatisticsAnalysis;
   getPersonalStatisticsSummary: typeof getPersonalStatisticsSummary;
   getStatisticsMatchHistory: typeof getStatisticsMatchHistory;
-  getUserStats: typeof getUserStats;
   listJoiningSeasons: typeof listJoiningSeasons;
   listStatisticsLeagueMembers: typeof listStatisticsLeagueMembers;
   listStatisticsSeasonMembers: typeof listStatisticsSeasonMembers;
@@ -76,20 +71,12 @@ const defaultStatisticsHookApi: StatisticsHookApi = {
   getPersonalStatisticsAnalysis,
   getPersonalStatisticsSummary,
   getStatisticsMatchHistory,
-  getUserStats,
   listJoiningSeasons,
   listStatisticsLeagueMembers,
   listStatisticsSeasonMembers,
   getLeagueDetail: fetchLeagueDetail,
   listLeagues: fetchLeagues,
 };
-
-export type StatsStatus =
-  | "idle"
-  | "loading"
-  | "success"
-  | "uncomputed"
-  | "error";
 
 type QueryStatus =
   | "idle"
@@ -171,11 +158,7 @@ export const createUseStatistics = (
   useRouterHook: typeof useRouter = useRouter,
   useSearchParamsHook: typeof useSearchParams = useSearchParams
 ) => {
-  const useStatistics = (
-    routePrefix = "",
-    presentation: "legacy" | "v2" = "legacy"
-  ) => {
-    const isV2 = presentation === "v2";
+  const useStatistics = (routePrefix = "") => {
     const router = useRouterHook();
     const searchParams = useSearchParamsHook();
     const routeSearch =
@@ -186,7 +169,6 @@ export const createUseStatistics = (
       : routeSearch;
     const queryCache = React.useRef(createStatisticsQueryCache());
     const [viewerUserId, setViewerUserId] = React.useState("");
-    const [userId, setUserId] = React.useState("");
     const [userName, setUserName] = React.useState("");
     const [joiningLeagueSeasons, setJoiningLeagueSeasons] = React.useState<
       JoiningSeasonOption[]
@@ -206,15 +188,8 @@ export const createUseStatistics = (
         scopeLabel: "",
         returnTo: null,
       });
-    const [selectedLeagueSeasonId, setSelectedLeagueSeasonId] =
-      React.useState("");
-    const [selectedStats, setSelectedStats] = React.useState<ReturnType<
-      typeof toUserStats
-    > | null>(null);
     const [isLoading, setIsLoading] = React.useState(true);
     const [initialError, setInitialError] = React.useState<string | null>(null);
-    const [statsError, setStatsError] = React.useState<string | null>(null);
-    const [statsStatus, setStatsStatus] = React.useState<StatsStatus>("idle");
     const [retryCount, setRetryCount] = React.useState(0);
     const [selection, setSelection] = React.useState<StatisticsSelection>({
       viewerUserId: "",
@@ -280,7 +255,6 @@ export const createUseStatistics = (
     const historyLoadingLifecycle = React.useRef(
       createHistoryLoadingLifecycle()
     );
-    const statsRequestId = React.useRef(0);
     const selectionRef = React.useRef(selection);
     const localNavigationSearchRef = React.useRef<string | null>(null);
     selectionRef.current = selection;
@@ -366,22 +340,16 @@ export const createUseStatistics = (
         }
         const parsedRoute = parseStatisticsRouteContext(normalizedRouteSearch);
         const requestedRoute =
-          isV2 && parsedRoute.scope.scopeType === "overall"
+          parsedRoute.scope.scopeType === "overall"
             ? { ...parsedRoute, activeView: "overview" as const }
             : parsedRoute;
         setRouteContext(requestedRoute);
         setIsLoading(true);
         setInitialError(null);
-        setUserId("");
         setUserName("");
         setJoiningLeagueSeasons([]);
         setJoiningLeagues([]);
         setHubDataStatus("loading");
-        setSelectedLeagueSeasonId("");
-        setSelectedStats(null);
-        setStatsError(null);
-        setStatsStatus("idle");
-        statsRequestId.current += 1;
 
         try {
           const me = await api.getCurrentUser();
@@ -397,7 +365,6 @@ export const createUseStatistics = (
             targetUserId: requestedTargetUserId,
           };
           setViewerUserId(id);
-          setUserId(id);
           setUserName(me.name);
           setRouteContext(normalizedRoute);
           setSelection((current) => ({
@@ -492,7 +459,7 @@ export const createUseStatistics = (
       return () => {
         isActive = false;
       };
-    }, [retryCount, normalizedRouteSearch, routePrefix, router, isV2]);
+    }, [retryCount, normalizedRouteSearch, routePrefix, router]);
 
     React.useEffect(() => {
       if (
@@ -649,14 +616,10 @@ export const createUseStatistics = (
             targetUserId: selection.targetUserId,
             query: {
               ...apiScope,
-              ...(isV2
-                ? {
-                    ...(selection.scope.scopeType !== "overall"
-                      ? { includePointBreakdown: "true" as const }
-                      : {}),
-                    includeYakumanCounts: "true" as const,
-                  }
+              ...(selection.scope.scopeType !== "overall"
+                ? { includePointBreakdown: "true" as const }
                 : {}),
+              includeYakumanCounts: "true" as const,
             },
           });
           return toPersonalStatisticsSummaryView(
@@ -723,7 +686,6 @@ export const createUseStatistics = (
       routeContext.isContextMode,
       viewerUserId,
       routePrefix,
-      isV2,
     ]);
 
     React.useEffect(() => {
@@ -1176,11 +1138,11 @@ export const createUseStatistics = (
         };
         selectionRef.current = next;
         setSelection(next);
-        if (isV2 && current.scope.scopeType === "overall") {
+        if (current.scope.scopeType === "overall") {
           syncRoute(next);
         }
       },
-      [isV2, syncRoute]
+      [syncRoute]
     );
 
     const onChangeActiveView = React.useCallback(
@@ -1354,97 +1316,6 @@ export const createUseStatistics = (
     const retryMembers = React.useCallback(
       () => setMembersRetryCount((count) => count + 1),
       []
-    );
-
-    const onChangeLeagueSeason = React.useCallback(
-      (event: React.ChangeEvent<HTMLSelectElement>) => {
-        statsRequestId.current += 1;
-        setSelectedLeagueSeasonId(event.target.value);
-        setSelectedStats(null);
-        setStatsError(null);
-        setStatsStatus("idle");
-      },
-      []
-    );
-
-    const loadStats = React.useCallback(async () => {
-      if (!selectedLeagueSeasonId || !userId) {
-        setSelectedStats(null);
-        setStatsStatus("idle");
-        return;
-      }
-
-      const selectedSeason = joiningLeagueSeasons.find(
-        (season) => season.id === selectedLeagueSeasonId
-      );
-      if (!selectedSeason) {
-        setSelectedStats(null);
-        setStatsStatus("idle");
-        return;
-      }
-
-      const requestId = statsRequestId.current + 1;
-      statsRequestId.current = requestId;
-      setStatsStatus("loading");
-      setStatsError(null);
-
-      try {
-        const stats = await api.getUserStats({
-          userId,
-          scopeType: "season",
-          leagueId: String(selectedSeason.leagueId),
-          seasonId: String(selectedSeason.seasonId),
-        });
-
-        if (statsRequestId.current !== requestId) return;
-
-        setSelectedStats(toUserStats(stats));
-        setStatsStatus("success");
-      } catch (loadError) {
-        if (statsRequestId.current !== requestId) return;
-
-        if (loadError instanceof ApiError && loadError.status === 401) {
-          router.replace(`${routePrefix}/login`);
-          return;
-        }
-
-        if (loadError instanceof ApiError && loadError.status === 404) {
-          setSelectedStats(null);
-          setStatsStatus("uncomputed");
-          return;
-        }
-
-        setSelectedStats(null);
-        setStatsError(
-          getApiErrorMessage(loadError, DEFAULT_STATS_ERROR_MESSAGE)
-        );
-        setStatsStatus("error");
-      }
-    }, [
-      joiningLeagueSeasons,
-      routePrefix,
-      router,
-      selectedLeagueSeasonId,
-      userId,
-    ]);
-
-    const onChangeLegacySeasonAndScope = React.useCallback(
-      (event: React.ChangeEvent<HTMLSelectElement>) => {
-        onChangeLeagueSeason(event);
-        const id = event.target.value;
-        const selectedSeason = joiningLeagueSeasons.find(
-          (season) => season.id === id
-        );
-        if (selectedSeason) {
-          onChangeScope({
-            scopeType: "season",
-            leagueId: String(selectedSeason.leagueId),
-            seasonId: String(selectedSeason.seasonId),
-            gameType: "all",
-          });
-        }
-      },
-      [joiningLeagueSeasons, onChangeLeagueSeason, onChangeScope]
     );
 
     const visibleSummaryState =
@@ -1739,24 +1610,15 @@ export const createUseStatistics = (
     );
 
     return {
-      // Existing fields remain available until the page integration task adopts the new model.
       userName,
       joiningLeagueSeasons,
       joiningLeagues,
       hubDataStatus,
       isContextMode: routeContext.isContextMode,
       routeContext,
-      selectedLeagueSeasonId,
-      selectedStats,
       isLoading,
       initialError,
-      statsError,
-      statsStatus,
-      isStatsLoading: statsStatus === "loading",
-      onChangeLeagueSeason: onChangeLegacySeasonAndScope,
-      onDisplayButtonClick: () => void loadStats(),
       retry: () => setRetryCount((count) => count + 1),
-      retryStats: () => void loadStats(),
       viewerUserId,
       targetUserId: selection.targetUserId,
       scope: selection.scope,

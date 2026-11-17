@@ -388,7 +388,7 @@ test("edit Match update sends restored yakuman and retains values after save fai
 test("対局番号は正の整数を送信し、無効な値は保存しない", async () => {
   await setup;
   mockMatchSaveFailure();
-  const { result } = renderHook(() => useEditMatchPage("/v2"), {
+  const { result } = renderHook(() => useEditMatchPage(), {
     wrapper: createWrapper({
       leagueId: "league-1",
       seasonId: "season-1",
@@ -418,7 +418,7 @@ test("対局番号は正の整数を送信し、無効な値は保存しない",
 test("重複した対局番号のエラーを表示し、入力を保持する", async () => {
   await setup;
   mockMatchSaveFailure(true);
-  const { result } = renderHook(() => useEditMatchPage("/v2"), {
+  const { result } = renderHook(() => useEditMatchPage(), {
     wrapper: createWrapper({
       leagueId: "league-1",
       seasonId: "season-1",
@@ -436,7 +436,7 @@ test("重複した対局番号のエラーを表示し、入力を保持する",
 test("editing off-table records sends the changed values and keeps them on failure", async () => {
   await setup;
   mockMatchSaveFailure();
-  const { result } = renderHook(() => useEditMatchPage("/v2"), {
+  const { result } = renderHook(() => useEditMatchPage(), {
     wrapper: createWrapper({
       leagueId: "league-1",
       seasonId: "season-1",
@@ -496,7 +496,7 @@ test("v2 initial match retries a failed load without discarding player selection
     if (pathname === basePath) return response(season);
     throw new Error(`Unexpected API request: ${pathname}`);
   }) as typeof fetch;
-  const { result } = renderHook(() => useInitialMatchPage("/v2"), {
+  const { result } = renderHook(() => useInitialMatchPage(), {
     wrapper: createWrapper({ leagueId: "league-1", seasonId: "season-1" }),
   });
   await waitFor(() =>
@@ -521,7 +521,7 @@ test("v2 additional match retries a failed load", async () => {
     }
     throw new Error(`Unexpected API request: ${pathname}`);
   }) as typeof fetch;
-  const { result } = renderHook(() => useAdditionalMatchPage("/v2"), {
+  const { result } = renderHook(() => useAdditionalMatchPage(), {
     wrapper: createWrapper({
       leagueId: "league-1",
       seasonId: "season-1",
@@ -555,14 +555,14 @@ test("authentication failure keeps v2 recording in the v2 login flow", async () 
       { status: 401, headers: { "content-type": "application/json" } }
     )) as typeof fetch;
   try {
-    renderHook(() => useAdditionalMatchPage("/v2"), {
+    renderHook(() => useAdditionalMatchPage(), {
       wrapper: createWrapper({
         leagueId: "league-1",
         seasonId: "season-1",
         sessionId: "session-1",
       }),
     });
-    await waitFor(() => assert.ok(redirects.includes("/v2/login")));
+    await waitFor(() => assert.ok(redirects.includes("/login")));
   } finally {
     router.replace = originalReplace;
   }
@@ -580,7 +580,7 @@ test("season edit loads its league name alongside the existing season", async ()
     if (pathname === basePath) return response(season);
     throw new Error(`Unexpected API request: ${pathname}`);
   }) as typeof fetch;
-  const { result } = renderHook(() => useSeasonEdit("/v2", true), {
+  const { result } = renderHook(() => useSeasonEdit("", true), {
     wrapper: createWrapper({ leagueId: "league-1", seasonId: "season-1" }),
   });
   await waitFor(() => assert.equal(result.current.isLoaded, true));
