@@ -38,9 +38,15 @@ export type { CreateLeagueInput, UpdateLeagueInput };
 export const fetchLeagues = async () =>
   executeApiRequest<FetchLeaguesResponse>(() => fetchLeaguesRequest());
 
-export const fetchLeagueDetail = async (leagueId: string) =>
+export const fetchLeagueDetail = async (
+  leagueId: string,
+  options?: { fresh?: boolean }
+) =>
   executeApiRequest<FetchLeagueDetailResponse>(() =>
-    fetchLeagueDetailRequest({ param: { leagueId } })
+    fetchLeagueDetailRequest(
+      { param: { leagueId } },
+      options?.fresh ? { init: { cache: "no-store" } } : undefined
+    )
   );
 
 export const fetchLeagueMembers = async (leagueId: string) =>

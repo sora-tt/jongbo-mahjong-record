@@ -10,17 +10,17 @@ const manifest = (): MetadataRoute.Manifest => ({
   theme_color: "#e8736b",
   icons: [
     {
-      src: "/icons/jongbo-192.png",
+      src: "/icons/jongbo-j-192.png",
       sizes: "192x192",
       type: "image/png",
     },
     {
-      src: "/icons/jongbo-512.png",
+      src: "/icons/jongbo-j-512.png",
       sizes: "512x512",
       type: "image/png",
     },
     {
-      src: "/icons/jongbo-512-maskable.png",
+      src: "/icons/jongbo-j-512-maskable.png",
       sizes: "512x512",
       type: "image/png",
       purpose: "maskable",

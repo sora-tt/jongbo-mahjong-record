@@ -76,7 +76,11 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({
   }, []);
 
   React.useEffect(() => {
-    if (!user || pathname === "/verify-email") {
+    if (
+      !user ||
+      pathname === "/verify-email" ||
+      pathname === "/v2/verify-email"
+    ) {
       return;
     }
 
@@ -125,7 +129,9 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({
           },
           "warn"
         );
-        router.replace("/verify-email");
+        router.replace(
+          pathname.startsWith("/v2") ? "/v2/verify-email" : "/verify-email"
+        );
       } catch (error) {
         if (!isActive) {
           return;
@@ -146,7 +152,9 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({
           "error"
         );
 
-        router.replace("/verify-email");
+        router.replace(
+          pathname.startsWith("/v2") ? "/v2/verify-email" : "/verify-email"
+        );
       }
     })();
 

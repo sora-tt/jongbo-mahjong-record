@@ -1,7 +1,7 @@
 "use client";
 import { useParams, useRouter } from "next/navigation";
 
-import { deleteLeague } from "@/features/league/api";
+import { deleteLeague, fetchLeagueDetail } from "@/features/league/api";
 import { useLeagueEdit } from "@/features/league/hooks/use-league-edit";
 import { LeagueDeleteControl } from "@/features/league/ui/v2/league-delete-control";
 import { LeagueForm } from "@/features/league/ui/v2/league-form";
@@ -37,6 +37,7 @@ const EditLeaguePage = () => {
             <LeagueDeleteControl
               disabled={state.isSubmitting}
               onDelete={() => deleteLeague(leagueId)}
+              onVerify={() => fetchLeagueDetail(leagueId, { fresh: true })}
               onDeleted={() => router.replace("/v2")}
               onAuthenticationError={() => router.replace("/v2/login")}
             />

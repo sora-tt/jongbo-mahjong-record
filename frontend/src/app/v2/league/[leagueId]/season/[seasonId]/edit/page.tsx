@@ -1,7 +1,7 @@
 "use client";
 import { useRouter } from "next/navigation";
 
-import { deleteSeason } from "@/features/season/api";
+import { deleteSeason, fetchSeasonDetail } from "@/features/season/api";
 import { useSeasonEdit } from "@/features/season/hooks/use-season-edit";
 import { SeasonFormActions } from "@/features/season/ui/v2/season-form-actions";
 import { SeasonIdentity } from "@/features/season/ui/v2/season-identity";
@@ -128,6 +128,9 @@ const SeasonEditPage = () => {
                   uncertainMessage="削除状況を確認できませんでした。リーグ画面からシーズンの状態を確認してください。"
                   disabled={isSubmitting || !leagueId || !seasonId}
                   onDelete={() => deleteSeason(leagueId, seasonId)}
+                  onVerify={() =>
+                    fetchSeasonDetail(leagueId, seasonId, { fresh: true })
+                  }
                   onDeleted={() => router.replace(`/v2/league/${leagueId}`)}
                   onAuthenticationError={() => router.replace("/v2/login")}
                 />

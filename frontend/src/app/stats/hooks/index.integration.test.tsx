@@ -282,6 +282,21 @@ afterEach(async () => {
   cleanup();
 });
 
+test("v2 の成績仕様は URL 接頭辞を外しても維持される", async () => {
+  await setup;
+  const { api, calls, useRouter } = createMockApi();
+  const useStatistics = createHook(
+    api,
+    useRouter,
+    `?scopeType=overall&gameType=yonma&targetUserId=${viewer.id}&view=trend`
+  );
+  const { result } = renderHook(() => useStatistics("", "v2"));
+  await waitFor(() => assert.equal(result.current.summaryStatus, "empty"));
+  assert.equal(result.current.activeView, "overview");
+  assert.equal(calls.summaries[0].query.includeYakumanCounts, "true");
+  assert.equal(calls.analyses.length, 0);
+});
+
 test("hook loads summary first and fetches analysis/history only when selected", async () => {
   await setup;
   const { api, calls, useRouter } = createMockApi();

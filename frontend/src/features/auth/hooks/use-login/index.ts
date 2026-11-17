@@ -11,6 +11,7 @@ import { useLoginLoading } from "@/providers/login-loading-provider";
 export const useLoginPage = ({
   showLoadingAnimation = false,
   homePath = "/",
+  verificationPath = "/verify-email",
 } = {}) => {
   const router = useRouter();
   const { start, finish } = useLoginLoading();
@@ -28,7 +29,7 @@ export const useLoginPage = ({
 
     try {
       const resultPath = await loginToApp({ email, password });
-      const nextPath = resultPath === "/" ? homePath : resultPath;
+      const nextPath = resultPath === "/" ? homePath : verificationPath;
       logAuthDebug("loginPage:nextPath", { nextPath });
       router.replace(nextPath);
     } catch (submitError) {

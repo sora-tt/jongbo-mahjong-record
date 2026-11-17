@@ -18,7 +18,7 @@ const SignUpPage = () => {
     setUsername,
     setPassword,
     handleSubmit,
-  } = useSignupPage();
+  } = useSignupPage("/v2/verify-email");
   return (
     <AuthForm
       title="新規登録"

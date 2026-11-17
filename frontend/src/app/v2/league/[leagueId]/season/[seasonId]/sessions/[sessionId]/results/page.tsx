@@ -8,7 +8,7 @@ import { useParams, useRouter } from "next/navigation";
 
 import { DeleteMatchDialog } from "@/features/match/ui/v2/delete-match-dialog";
 import { MatchList } from "@/features/match/ui/v2/match-list";
-import { deleteSession } from "@/features/session/api";
+import { deleteSession, getSession } from "@/features/session/api";
 import { useSessionResultsPage } from "@/features/session/hooks/use-session-results";
 
 import { AppShell } from "@/components/v2/layout/app-shell";
@@ -154,6 +154,12 @@ const SessionResultsPage = () => {
                         }
                         onDelete={() =>
                           deleteSession({ leagueId, seasonId, sessionId })
+                        }
+                        onVerify={() =>
+                          getSession(
+                            { leagueId, seasonId, sessionId },
+                            { fresh: true }
+                          )
                         }
                         onDeleted={state.handleSessionDeleted}
                         onAuthenticationError={() =>

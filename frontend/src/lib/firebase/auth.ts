@@ -76,27 +76,32 @@ export const getCurrentIdToken = async (forceRefresh = false) => {
   return currentUser.getIdToken(forceRefresh);
 };
 
-export const getVerificationEmailRedirectUrl = () => {
+export const getVerificationEmailRedirectUrl = (
+  path: "/verify-email" | "/v2/verify-email" = "/verify-email"
+) => {
   if (typeof window !== "undefined" && window.location?.origin) {
-    return `${window.location.origin}/verify-email`;
+    return `${window.location.origin}${path}`;
   }
 
   const configuredUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
   if (configuredUrl) {
-    return new URL("/verify-email", configuredUrl).toString();
+    return new URL(path, configuredUrl).toString();
   }
 
-  return "http://localhost:3000/verify-email";
+  return `http://localhost:3000${path}`;
 };
 
-export const sendVerificationEmail = async (user?: User | null) => {
+export const sendVerificationEmail = async (
+  user?: User | null,
+  path: "/verify-email" | "/v2/verify-email" = "/verify-email"
+) => {
   const targetUser = user ?? (await getCurrentUser());
   if (!targetUser) {
     throw new Error("認証メールを送信するユーザーが見つかりません。");
   }
 
   await sendEmailVerification(targetUser, {
-    url: getVerificationEmailRedirectUrl(),
+    url: getVerificationEmailRedirectUrl(path),
     handleCodeInApp: false,
   });
 

@@ -9,7 +9,9 @@ import { signupToApp } from "@/lib/auth/flows";
 const REQUIRED_FIELDS_ERROR =
   "メールアドレス、表示名、ユーザーネーム、パスワードを入力してください";
 
-export const useSignupPage = () => {
+export const useSignupPage = (
+  verificationPath: "/verify-email" | "/v2/verify-email" = "/verify-email"
+) => {
   const router = useRouter();
   const [email, setEmail] = React.useState("");
   const [name, setName] = React.useState("");
@@ -28,12 +30,15 @@ export const useSignupPage = () => {
     setIsSubmitting(true);
 
     try {
-      const nextPath = await signupToApp({
-        email,
-        password,
-        name,
-        username,
-      });
+      const nextPath = await signupToApp(
+        {
+          email,
+          password,
+          name,
+          username,
+        },
+        verificationPath
+      );
       router.replace(nextPath);
     } catch (submitError) {
       setError(
