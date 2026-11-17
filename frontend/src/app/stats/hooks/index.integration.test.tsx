@@ -627,12 +627,38 @@ test("v2 全リーグは順位中心の画面を表示し、古い推移 URL で
   await setup;
   const { StatisticsPageContent: V2PageContent } =
     await import("@/features/statistics/ui/v2/page-content");
-  const { api, calls, useRouter } = createMockApi({
+  const { api, calls } = createMockApi({
     getPersonalStatisticsSummary: async (input) => {
       calls.summaries.push(input);
+      const source = readySummary as unknown as {
+        byGameType: Array<Record<string, unknown>>;
+        totals: Record<string, unknown>;
+      };
+      if (input.query.gameType === "sanma") {
+        return {
+          ...(readySummary as object),
+          totals: { ...source.totals, totalMatchCount: 7 },
+          byGameType: [
+            {
+              ...source.byGameType[0],
+              gameType: "sanma",
+              matchCount: 7,
+              ranks: [
+                { rank: 1, count: 3, rate: 3 / 7 },
+                { rank: 2, count: 2, rate: 2 / 7 },
+                { rank: 3, count: 2, rate: 2 / 7 },
+              ],
+            },
+          ],
+          yakumanCounts: [],
+        } as never;
+      }
       return { ...(readySummary as object), yakumanCounts: [] } as never;
     },
   });
+  const routes: string[] = [];
+  const router = { replace: (href: string) => routes.push(href) };
+  const useRouter = () => router as never;
   const useStatistics = createHook(
     api,
     useRouter,
@@ -642,18 +668,41 @@ test("v2 全リーグは順位中心の画面を表示し、古い推移 URL で
     <V2PageContent useStatisticsHook={useStatistics} includeAppShell={false} />
   );
   await waitFor(() => assert.ok(screen.getByText("12 対局")));
-  assert.ok(screen.getByRole("heading", { name: "全リーグの成績" }));
-  assert.ok(screen.getByRole("heading", { name: "四麻・全期間" }));
-  assert.equal(
-    screen.getByRole("link", { name: "成績に戻る" }).getAttribute("href"),
-    "/v2/stats"
-  );
+  assert.ok(screen.getByRole("heading", { name: "成績", level: 1 }));
+  assert.ok(screen.getByText("四麻・全期間"));
+  assert.equal(screen.queryByRole("link", { name: "成績に戻る" }), null);
   assert.equal(screen.queryByRole("tablist"), null);
   assert.equal(screen.queryByText("総合ポイント"), null);
   assert.equal(calls.analyses.length, 0);
   assert.equal(calls.summaries[0].query.gameType, "yonma");
   assert.equal(calls.summaries[0].query.includePointBreakdown, undefined);
   assert.equal(calls.summaries[0].query.includeYakumanCounts, "true");
+  assert.equal(
+    screen.getByRole("button", { name: "四麻" }).getAttribute("aria-pressed"),
+    "true"
+  );
+  const indicator = screen
+    .getByRole("group", { name: "対局形式" })
+    .querySelector<HTMLElement>('[aria-hidden="true"]');
+  assert.ok(indicator);
+  assert.match(indicator.style.transform, /0%/);
+  assert.match(indicator.className, /motion-reduce:transition-none/);
+  fireEvent.click(screen.getByRole("button", { name: "三麻" }));
+  await waitFor(() => assert.ok(screen.getByText("7 対局")));
+  assert.ok(screen.getByText("三麻・全期間"));
+  assert.equal(
+    screen.getByRole("button", { name: "三麻" }).getAttribute("aria-pressed"),
+    "true"
+  );
+  assert.match(indicator.style.transform, /100%/);
+  assert.equal(screen.queryByText("4位"), null);
+  assert.equal(calls.summaries[1].query.gameType, "sanma");
+  const params = new URLSearchParams(routes.at(-1)?.split("?")[1]);
+  assert.equal(params.get("gameType"), "sanma");
+  assert.equal(params.get("scopeLabel"), "全リーグ・全期間（三麻）");
+  fireEvent.click(screen.getByRole("button", { name: "四麻" }));
+  await waitFor(() => assert.ok(screen.getByText("12 対局")));
+  assert.equal(calls.summaries.length, 2);
 });
 
 test("v2 全リーグの対局種別未指定 URL は三麻と四麻の選択を表示する", async () => {

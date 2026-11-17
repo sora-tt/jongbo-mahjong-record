@@ -288,7 +288,11 @@ export const createUseStatistics = (
           scope: nextSelection.scope,
           targetUserId: nextSelection.targetUserId,
           activeView: nextSelection.activeView,
-          scopeLabel: routeContext.scopeLabel,
+          scopeLabel:
+            nextSelection.scope.scopeType === "overall" &&
+            nextSelection.scope.gameType !== "all"
+              ? `全リーグ・全期間（${nextSelection.scope.gameType === "sanma" ? "三麻" : "四麻"}）`
+              : routeContext.scopeLabel,
           returnTo: routeContext.returnTo,
           routePrefix,
         });
@@ -1160,12 +1164,18 @@ export const createUseStatistics = (
 
     const onChangeGameType = React.useCallback(
       (gameType: StatisticsScopeFilters["gameType"]) => {
-        setSelection((current) => ({
+        const current = selectionRef.current;
+        const next = {
           ...current,
           scope: { ...current.scope, gameType },
-        }));
+        };
+        selectionRef.current = next;
+        setSelection(next);
+        if (routePrefix === "/v2" && current.scope.scopeType === "overall") {
+          syncRoute(next);
+        }
       },
-      []
+      [routePrefix, syncRoute]
     );
 
     const onChangeActiveView = React.useCallback(

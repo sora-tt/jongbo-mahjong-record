@@ -8,7 +8,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 
 import { StatisticsHub } from "./index";
 
-test("リーグ別に通算と参加シーズンを表示し、全リーグは最後に置く", () => {
+test("全リーグを四麻・三麻の順に表示し、リーグごとに参加シーズンをまとめる", () => {
   const html = renderToStaticMarkup(
     <StatisticsHub
       viewerUserId="user-1"
@@ -48,11 +48,26 @@ test("リーグ別に通算と参加シーズンを表示し、全リーグは�
     />
   );
   const doc = new JSDOM(html).window.document;
+  const domNode = doc.defaultView!.Node;
   const cards = [...doc.querySelectorAll("section > section")];
   assert.deepEqual(
     cards.map((card) => card.querySelector("h2")?.textContent),
-    ["青リーグ", "赤リーグ", "全リーグ・全期間"]
+    ["青リーグ", "赤リーグ"]
   );
+  const yonma = doc.querySelector('a[aria-label="四麻の成績"]');
+  const sanma = doc.querySelector('a[aria-label="三麻の成績"]');
+  assert.ok(yonma && sanma);
+  assert.match(yonma.getAttribute("href") ?? "", /gameType=yonma/);
+  assert.match(sanma.getAttribute("href") ?? "", /gameType=sanma/);
+  assert.ok(
+    yonma.compareDocumentPosition(sanma) & domNode.DOCUMENT_POSITION_FOLLOWING
+  );
+  assert.ok(
+    sanma.compareDocumentPosition(cards[0]) &
+      domNode.DOCUMENT_POSITION_FOLLOWING
+  );
+  assert.ok(yonma.querySelector(".lucide-users-round"));
+  assert.ok(sanma.querySelector(".lucide-user-round"));
   assert.match(cards[0].textContent ?? "", /リーグ通算/);
   assert.match(cards[0].textContent ?? "", /春/);
   assert.match(cards[0].querySelector("details")?.textContent ?? "", /冬/);

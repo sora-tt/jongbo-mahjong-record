@@ -233,6 +233,15 @@ export const useSessionResultsPage = (routePrefix = "") => {
     }
   }, [params.leagueId, params.seasonId, routePrefix, router]);
 
+  const handleSessionDeleted = React.useCallback(() => {
+    dispatch(clearRecordingFlow());
+    if (params.leagueId && params.seasonId) {
+      router.replace(
+        `${routePrefix}/league/${params.leagueId}/season/${params.seasonId}`
+      );
+    }
+  }, [dispatch, params.leagueId, params.seasonId, routePrefix, router]);
+
   return {
     session,
     matches,
@@ -273,6 +282,7 @@ export const useSessionResultsPage = (routePrefix = "") => {
       setDeleteTargetMatchId(matchId),
     handleCancelDeleteMatch: () => setDeleteTargetMatchId(null),
     handleConfirmDeleteMatch,
+    handleSessionDeleted,
     goToResults,
     goToSeason,
   };

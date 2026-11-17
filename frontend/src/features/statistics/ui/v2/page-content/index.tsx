@@ -2,7 +2,7 @@
 
 import * as React from "react";
 
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 
 import Link from "next/link";
 
@@ -29,6 +29,10 @@ import { ErrorState } from "@/components/v2/ui/error-state";
 import { LoadingState } from "@/components/v2/ui/loading-state";
 import { PageLoading } from "@/components/v2/ui/page-loading";
 import { Panel } from "@/components/v2/ui/panel";
+import {
+  SlidingSegmentedControl,
+  SlidingSegmentedControlButton,
+} from "@/components/v2/ui/sliding-segmented-control";
 
 const getScopeLabel = (
   scope: ReturnType<typeof useStatistics>["scope"],
@@ -365,20 +369,46 @@ export const StatisticsPageContent: React.FC<StatisticsPageContentProps> = ({
               <>
                 <header className="space-y-4">
                   <h1 className="text-center text-v2-display font-bold">
-                    全リーグの成績
+                    成績
                   </h1>
-                  <Link
-                    href="/v2/stats"
-                    className="inline-flex min-h-11 items-center gap-1 text-v2-caption text-v2-text-secondary"
-                  >
-                    <ChevronLeft size={20} aria-hidden="true" />
-                    成績に戻る
-                  </Link>
                   {statistics.scope.gameType !== "all" && (
-                    <h2 className="text-v2-heading-2 font-bold">
-                      {statistics.scope.gameType === "sanma" ? "三麻" : "四麻"}
-                      ・全期間
-                    </h2>
+                    <div className="flex min-h-11 items-center justify-between gap-3">
+                      <p
+                        className="text-v2-caption text-v2-text-secondary"
+                        aria-live="polite"
+                      >
+                        {statistics.scope.gameType === "sanma"
+                          ? "三麻"
+                          : "四麻"}
+                        ・全期間
+                      </p>
+                      <SlidingSegmentedControl
+                        role="group"
+                        label="対局形式"
+                        selectedIndex={
+                          statistics.scope.gameType === "sanma" ? 1 : 0
+                        }
+                        count={2}
+                      >
+                        {(
+                          [
+                            ["yonma", "四麻"],
+                            ["sanma", "三麻"],
+                          ] as const
+                        ).map(([gameType, label]) => (
+                          <SlidingSegmentedControlButton
+                            key={gameType}
+                            size="sm"
+                            selected={statistics.scope.gameType === gameType}
+                            onClick={() =>
+                              statistics.onChangeGameType(gameType)
+                            }
+                          >
+                            {label}
+                          </SlidingSegmentedControlButton>
+                        ))}
+                      </SlidingSegmentedControl>
+                    </div>
                   )}
                 </header>
                 {statistics.scope.gameType === "all" ? (
@@ -388,8 +418,8 @@ export const StatisticsPageContent: React.FC<StatisticsPageContentProps> = ({
                     </h2>
                     {(
                       [
-                        ["sanma", "三麻"],
                         ["yonma", "四麻"],
+                        ["sanma", "三麻"],
                       ] as const
                     ).map(([gameType, label]) => (
                       <Link

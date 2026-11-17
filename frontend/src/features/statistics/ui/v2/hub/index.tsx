@@ -1,6 +1,6 @@
 import * as React from "react";
 
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight, UserRound, UsersRound } from "lucide-react";
 
 import Link from "next/link";
 
@@ -117,6 +117,46 @@ export const StatisticsHub = ({
       <header className="pb-1 text-center">
         <h1 className="text-v2-display font-bold">成績</h1>
       </header>
+      <div className="grid grid-cols-2 gap-4">
+        {(
+          [
+            ["yonma", "四麻", UsersRound],
+            ["sanma", "三麻", UserRound],
+          ] as const
+        ).map(([gameType, label, Icon]) => (
+          <Link
+            key={gameType}
+            href={buildStatisticsHref({
+              routePrefix: "/v2",
+              scope: { scopeType: "overall", gameType },
+              targetUserId: viewerUserId,
+              scopeLabel: `全リーグ・全期間（${label}）`,
+              returnTo: "/v2/stats",
+            })}
+            aria-label={`${label}の成績`}
+            className="flex min-h-24 items-center justify-between gap-2 rounded-v2-panel bg-v2-surface p-4 shadow-v2-card"
+          >
+            <span className="min-w-0">
+              <span className="flex items-center gap-3 text-v2-heading-2 font-bold text-v2-text">
+                <Icon
+                  size={24}
+                  className="shrink-0 text-v2-text-secondary"
+                  aria-hidden="true"
+                />
+                {label}
+              </span>
+              <span className="mt-2 block text-v2-caption text-v2-text-secondary">
+                成績を見る
+              </span>
+            </span>
+            <ChevronRight
+              size={20}
+              className="shrink-0 text-v2-text-secondary"
+              aria-hidden="true"
+            />
+          </Link>
+        ))}
+      </div>
       {leagueGroups.length ? (
         leagueGroups.map((league) => {
           const leagueSeasons = seasons.filter(
@@ -183,27 +223,6 @@ export const StatisticsHub = ({
           </p>
         </Group>
       )}
-      <Group title="全リーグ・全期間">
-        {(
-          [
-            ["sanma", "三麻"],
-            ["yonma", "四麻"],
-          ] as const
-        ).map(([gameType, label]) => (
-          <Entry
-            key={gameType}
-            href={buildStatisticsHref({
-              routePrefix: "/v2",
-              scope: { scopeType: "overall", gameType },
-              targetUserId: viewerUserId,
-              scopeLabel: `全リーグ・全期間（${label}）`,
-              returnTo: "/v2/stats",
-            })}
-            title={`${label}の成績`}
-            subtitle="全リーグを対象にした成績"
-          />
-        ))}
-      </Group>
     </section>
   );
 };

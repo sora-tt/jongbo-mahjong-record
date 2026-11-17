@@ -10,7 +10,9 @@ import { Dialog } from "@/components/v2/ui/dialog";
 export const DeleteResourceControl = ({
   disabled = false,
   resourceName,
+  buttonLabel,
   description,
+  details,
   uncertainMessage,
   onDelete,
   onDeleted,
@@ -18,7 +20,9 @@ export const DeleteResourceControl = ({
 }: {
   disabled?: boolean;
   resourceName: string;
+  buttonLabel?: string;
   description: string;
+  details?: React.ReactNode;
   uncertainMessage: string;
   onDelete: () => Promise<void>;
   onDeleted: () => void;
@@ -76,7 +80,7 @@ export const DeleteResourceControl = ({
         disabled={disabled}
         onClick={() => setOpen(true)}
       >
-        {resourceName}を削除
+        {buttonLabel ?? `${resourceName}を削除`}
       </Button>
       <Dialog
         ref={ref}
@@ -100,6 +104,7 @@ export const DeleteResourceControl = ({
         >
           {description}
         </p>
+        {details}
         {error && (
           <p role="alert" className="mt-3 text-v2-caption text-v2-danger">
             {error}
