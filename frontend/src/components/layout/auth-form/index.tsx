@@ -6,13 +6,17 @@ import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 
+type AuthFormLink =
+  | { href: string; label: string; secondary?: boolean }
+  | { disabled: true; label: string; secondary?: boolean };
+
 type AuthFormProps = React.PropsWithChildren<{
   title: string;
   error: string | null;
   submitLabel: string;
   isSubmitting: boolean;
   onSubmit: () => void;
-  links: { href: string; label: string; secondary?: boolean }[];
+  links: AuthFormLink[];
 }>;
 
 export const AuthForm = ({
@@ -57,20 +61,26 @@ export const AuthForm = ({
         className="mt-6 flex flex-col items-center gap-6 text-center text-app-brand-strong"
         aria-label="認証関連リンク"
       >
-        {links.map((link) => (
-          <Link
-            key={link.href}
-            href={link.href}
-            className={clsx(
-              "hover:underline",
-              link.secondary
-                ? "text-app-caption font-normal"
-                : "text-app-label font-semibold"
-            )}
-          >
-            {link.label}
-          </Link>
-        ))}
+        {links.map((link) => {
+          const className = clsx(
+            link.secondary
+              ? "text-app-caption font-normal"
+              : "text-app-label font-semibold",
+            "disabled" in link
+              ? "cursor-default text-app-text-secondary"
+              : "hover:underline"
+          );
+
+          return "disabled" in link ? (
+            <span key={link.label} aria-disabled="true" className={className}>
+              {link.label}
+            </span>
+          ) : (
+            <Link key={link.href} href={link.href} className={className}>
+              {link.label}
+            </Link>
+          );
+        })}
       </nav>
     </section>
   </main>

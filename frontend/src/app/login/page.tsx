@@ -27,7 +27,11 @@ const LoginPage = () => {
       isSubmitting={isSubmitting}
       onSubmit={handleSubmit}
       links={[
-        { href: "/", label: "パスワードを忘れた方はこちら", secondary: true },
+        {
+          disabled: true,
+          label: "パスワードを忘れた方はこちら（未実装）",
+          secondary: true,
+        },
         { href: "/signup", label: "新規登録はこちら" },
       ]}
     >
