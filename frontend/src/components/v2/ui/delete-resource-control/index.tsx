@@ -15,6 +15,7 @@ export const DeleteResourceControl = ({
   details,
   uncertainMessage,
   onDelete,
+  onVerify,
   onDeleted,
   onAuthenticationError,
 }: {
@@ -25,12 +26,16 @@ export const DeleteResourceControl = ({
   details?: React.ReactNode;
   uncertainMessage: string;
   onDelete: () => Promise<void>;
+  onVerify: () => Promise<unknown>;
   onDeleted: () => void;
   onAuthenticationError: () => void;
 }) => {
   const [open, setOpen] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [verificationNeeded, setVerificationNeeded] = React.useState(false);
+  const [verifying, setVerifying] = React.useState(false);
+  const inFlight = React.useRef(false);
   const ref = React.useRef<HTMLDialogElement>(null);
   const titleId = React.useId();
   const descriptionId = React.useId();
@@ -42,8 +47,44 @@ export const DeleteResourceControl = ({
     if (!open && dialog.open) dialog.close();
   }, [open]);
 
+  const verifyDeletion = async () => {
+    setVerifying(true);
+    try {
+      await onVerify();
+      setVerificationNeeded(false);
+      setError(
+        "削除は完了していません。内容を確認してから再度お試しください。"
+      );
+    } catch (verifyError) {
+      if (verifyError instanceof ApiError && verifyError.status === 404) {
+        setVerificationNeeded(false);
+        onDeleted();
+      } else if (
+        verifyError instanceof ApiError &&
+        verifyError.status === 401
+      ) {
+        onAuthenticationError();
+      } else {
+        setError(uncertainMessage);
+      }
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  const retryVerification = async () => {
+    if (inFlight.current) return;
+    inFlight.current = true;
+    try {
+      await verifyDeletion();
+    } finally {
+      inFlight.current = false;
+    }
+  };
+
   const confirmDelete = async () => {
-    if (loading) return;
+    if (inFlight.current || verificationNeeded) return;
+    inFlight.current = true;
     setLoading(true);
     setError(null);
     try {
@@ -55,18 +96,16 @@ export const DeleteResourceControl = ({
         return;
       }
       setError(
-        deleteError instanceof ApiError &&
-          deleteError.status !== null &&
-          deleteError.status >= 400 &&
-          deleteError.status < 500
-          ? getApiErrorMessage(
-              deleteError,
-              `${resourceName}を削除できませんでした。`
-            )
-          : uncertainMessage
+        getApiErrorMessage(
+          deleteError,
+          `${resourceName}を削除できませんでした。`
+        )
       );
+      setVerificationNeeded(true);
+      await verifyDeletion();
     } finally {
       setLoading(false);
+      inFlight.current = false;
     }
   };
 
@@ -89,10 +128,10 @@ export const DeleteResourceControl = ({
         aria-describedby={descriptionId}
         onClose={() => {
           setOpen(false);
-          setError(null);
+          if (!verificationNeeded) setError(null);
         }}
         onCancel={(event) => {
-          if (loading) event.preventDefault();
+          if (loading || verifying) event.preventDefault();
         }}
       >
         <h2 id={titleId} className="text-center text-v2-heading-2 font-bold">
@@ -110,12 +149,25 @@ export const DeleteResourceControl = ({
             {error}
           </p>
         )}
+        {verificationNeeded && (
+          <Button
+            type="button"
+            variant="secondary"
+            fullWidth
+            className="mt-4"
+            loading={verifying}
+            disabled={loading}
+            onClick={() => void retryVerification()}
+          >
+            状態を再確認
+          </Button>
+        )}
         <div className="mt-6 flex gap-3">
           <Button
             type="button"
             variant="secondary"
             fullWidth
-            disabled={loading}
+            disabled={loading || verifying}
             onClick={() => ref.current?.close()}
           >
             キャンセル
@@ -125,6 +177,7 @@ export const DeleteResourceControl = ({
             variant="danger"
             fullWidth
             loading={loading}
+            disabled={verificationNeeded || verifying}
             onClick={() => void confirmDelete()}
           >
             削除する

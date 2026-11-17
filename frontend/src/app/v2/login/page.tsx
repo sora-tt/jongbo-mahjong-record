@@ -14,7 +14,11 @@ const LoginPage = () => {
     setEmail,
     setPassword,
     handleSubmit,
-  } = useLoginPage({ showLoadingAnimation: true, homePath: "/v2" });
+  } = useLoginPage({
+    showLoadingAnimation: true,
+    homePath: "/v2",
+    verificationPath: "/v2/verify-email",
+  });
   return (
     <AuthForm
       title="ログイン"

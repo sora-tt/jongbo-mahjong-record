@@ -63,7 +63,7 @@ export const StatisticsPageContent: React.FC<StatisticsPageContentProps> = ({
   useStatisticsHook = useStatistics,
   includeAppShell = true,
 }) => {
-  const statistics = useStatisticsHook("/v2");
+  const statistics = useStatisticsHook("/v2", "v2");
   const isOverall = statistics.scope.scopeType === "overall";
   const startingPointsByLeagueId = statistics.startingPointsByLeagueId;
   const currentLeagueStartingPoints =

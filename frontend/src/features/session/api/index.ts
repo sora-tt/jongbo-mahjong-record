@@ -56,12 +56,20 @@ export const createSession = async (
     })
   );
 
-export const getSession = async (input: {
-  leagueId: string;
-  seasonId: string;
-  sessionId: string;
-}) =>
-  executeApiRequest<SessionResponse>(() => getSessionRequest({ param: input }));
+export const getSession = async (
+  input: {
+    leagueId: string;
+    seasonId: string;
+    sessionId: string;
+  },
+  options?: { fresh?: boolean }
+) =>
+  executeApiRequest<SessionResponse>(() =>
+    getSessionRequest(
+      { param: input },
+      options?.fresh ? { init: { cache: "no-store" } } : undefined
+    )
+  );
 
 export const updateSession = async (input: {
   leagueId: string;

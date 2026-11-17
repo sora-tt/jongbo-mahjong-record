@@ -171,7 +171,11 @@ export const createUseStatistics = (
   useRouterHook: typeof useRouter = useRouter,
   useSearchParamsHook: typeof useSearchParams = useSearchParams
 ) => {
-  const useStatistics = (routePrefix = "") => {
+  const useStatistics = (
+    routePrefix = "",
+    presentation: "legacy" | "v2" = "legacy"
+  ) => {
+    const isV2 = presentation === "v2";
     const router = useRouterHook();
     const searchParams = useSearchParamsHook();
     const routeSearch =
@@ -362,7 +366,7 @@ export const createUseStatistics = (
         }
         const parsedRoute = parseStatisticsRouteContext(normalizedRouteSearch);
         const requestedRoute =
-          routePrefix === "/v2" && parsedRoute.scope.scopeType === "overall"
+          isV2 && parsedRoute.scope.scopeType === "overall"
             ? { ...parsedRoute, activeView: "overview" as const }
             : parsedRoute;
         setRouteContext(requestedRoute);
@@ -488,7 +492,7 @@ export const createUseStatistics = (
       return () => {
         isActive = false;
       };
-    }, [retryCount, normalizedRouteSearch, routePrefix, router]);
+    }, [retryCount, normalizedRouteSearch, routePrefix, router, isV2]);
 
     React.useEffect(() => {
       if (
@@ -645,7 +649,7 @@ export const createUseStatistics = (
             targetUserId: selection.targetUserId,
             query: {
               ...apiScope,
-              ...(routePrefix === "/v2"
+              ...(isV2
                 ? {
                     ...(selection.scope.scopeType !== "overall"
                       ? { includePointBreakdown: "true" as const }
@@ -719,6 +723,7 @@ export const createUseStatistics = (
       routeContext.isContextMode,
       viewerUserId,
       routePrefix,
+      isV2,
     ]);
 
     React.useEffect(() => {
@@ -1171,11 +1176,11 @@ export const createUseStatistics = (
         };
         selectionRef.current = next;
         setSelection(next);
-        if (routePrefix === "/v2" && current.scope.scopeType === "overall") {
+        if (isV2 && current.scope.scopeType === "overall") {
           syncRoute(next);
         }
       },
-      [routePrefix, syncRoute]
+      [isV2, syncRoute]
     );
 
     const onChangeActiveView = React.useCallback(

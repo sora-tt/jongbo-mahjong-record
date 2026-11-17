@@ -30,17 +30,17 @@ test("manifest declares the standalone Jongbo launch contract", async () => {
   assert.equal(manifest.orientation, undefined);
   assert.deepEqual(manifest.icons, [
     {
-      src: "/icons/jongbo-192.png",
+      src: "/icons/jongbo-j-192.png",
       sizes: "192x192",
       type: "image/png",
     },
     {
-      src: "/icons/jongbo-512.png",
+      src: "/icons/jongbo-j-512.png",
       sizes: "512x512",
       type: "image/png",
     },
     {
-      src: "/icons/jongbo-512-maskable.png",
+      src: "/icons/jongbo-j-512-maskable.png",
       sizes: "512x512",
       type: "image/png",
       purpose: "maskable",
@@ -50,10 +50,10 @@ test("manifest declares the standalone Jongbo launch contract", async () => {
 
 test("manifest and Apple touch icons are valid PNGs at their declared sizes", () => {
   const expectedIcons = [
-    ["jongbo-192.png", 192],
-    ["jongbo-512.png", 512],
-    ["jongbo-512-maskable.png", 512],
-    ["jongbo-apple-touch.png", 180],
+    ["jongbo-j-192.png", 192],
+    ["jongbo-j-512.png", 512],
+    ["jongbo-j-512-maskable.png", 512],
+    ["jongbo-j-apple-touch.png", 180],
   ] as const;
 
   for (const [fileName, size] of expectedIcons) {
@@ -74,7 +74,7 @@ test("root layout publishes Apple app metadata and a safe standalone viewport", 
   assert.match(layoutSource, /appleWebApp:\s*\{[\s\S]*?title:\s*"jongbo"/);
   assert.match(
     layoutSource,
-    /apple:\s*\{[\s\S]*?url:\s*"\/icons\/jongbo-apple-touch\.png"/
+    /apple:\s*\{[\s\S]*?url:\s*"\/icons\/jongbo-j-apple-touch\.png"/
   );
   assert.match(layoutSource, /title:\s*"jongbo \| 麻雀記録"/);
   assert.match(

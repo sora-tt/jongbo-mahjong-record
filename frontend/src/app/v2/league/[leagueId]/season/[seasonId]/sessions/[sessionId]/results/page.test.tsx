@@ -141,3 +141,68 @@ test("記録再開後のみ削除を表示し、確認したセッションを�
     "/api/leagues/league-1/seasons/season-1/sessions/session-1",
   ]);
 });
+
+test("削除の応答が不明ならキャッシュを使わず状態を確認し、削除済みなら戻る", async () => {
+  const [{ render, screen, fireEvent, within, waitFor }, { default: Page }] =
+    await setup;
+  const navigations: string[] = [];
+  const checks: string[] = [];
+  let deleteAttempted = false;
+  const router = {
+    back() {},
+    forward() {},
+    push() {},
+    refresh() {},
+    prefetch: async () => {},
+    replace(path: string) {
+      navigations.push(path);
+    },
+  };
+  globalThis.fetch = (async (input, init) => {
+    const req =
+      input instanceof Request ? input.clone() : new Request(input, init);
+    if (req.method === "DELETE") {
+      deleteAttempted = true;
+      throw new Error("connection lost");
+    }
+    const path = new URL(req.url).pathname;
+    if (deleteAttempted && !path.endsWith("/matches")) {
+      checks.push(req.cache);
+      return Response.json(
+        { error: { code: "not_found", message: "not found", details: {} } },
+        { status: 404 }
+      );
+    }
+    return Response.json({ data: path.endsWith("/matches") ? [] : session });
+  }) as typeof fetch;
+  render(
+    <AppRouterContext.Provider value={router as never}>
+      <PathParamsContext.Provider
+        value={{
+          leagueId: "league-1",
+          seasonId: "season-1",
+          sessionId: "session-1",
+        }}
+      >
+        <Provider store={store}>
+          <V2ProfileNameProvider userId={null} fallbackName={null}>
+            <Page />
+          </V2ProfileNameProvider>
+        </Provider>
+      </PathParamsContext.Provider>
+    </AppRouterContext.Provider>
+  );
+  await waitFor(() =>
+    assert.ok(screen.getByRole("button", { name: "この記録を削除" }))
+  );
+  fireEvent.click(screen.getByRole("button", { name: "この記録を削除" }));
+  fireEvent.click(
+    within(screen.getByRole("dialog")).getByRole("button", {
+      name: "削除する",
+    })
+  );
+  await waitFor(() =>
+    assert.deepEqual(navigations, ["/v2/league/league-1/season/season-1"])
+  );
+  assert.deepEqual(checks, ["no-store"]);
+});

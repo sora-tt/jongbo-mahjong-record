@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   },
   icons: {
     apple: {
-      url: "/icons/jongbo-apple-touch.png",
+      url: "/icons/jongbo-j-apple-touch.png",
       sizes: "180x180",
       type: "image/png",
     },

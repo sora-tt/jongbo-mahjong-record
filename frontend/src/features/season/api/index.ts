@@ -44,9 +44,16 @@ export const fetchLeagueSeasons = async (leagueId: string) =>
     fetchLeagueSeasonsRequest({ param: { leagueId } })
   );
 
-export const fetchSeasonDetail = async (leagueId: string, seasonId: string) =>
+export const fetchSeasonDetail = async (
+  leagueId: string,
+  seasonId: string,
+  options?: { fresh?: boolean }
+) =>
   executeApiRequest<FetchSeasonDetailResponse>(() =>
-    fetchSeasonDetailRequest({ param: { leagueId, seasonId } })
+    fetchSeasonDetailRequest(
+      { param: { leagueId, seasonId } },
+      options?.fresh ? { init: { cache: "no-store" } } : undefined
+    )
   );
 
 export const fetchSeasonMembers = async (leagueId: string, seasonId: string) =>

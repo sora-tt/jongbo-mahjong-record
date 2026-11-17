@@ -35,6 +35,10 @@ test("verification email redirects to the current app origin when available", ()
       getVerificationEmailRedirectUrl(),
       "https://frontend.example.com/verify-email"
     );
+    assert.equal(
+      getVerificationEmailRedirectUrl("/v2/verify-email"),
+      "https://frontend.example.com/v2/verify-email"
+    );
   } finally {
     if (previousEnvDescriptor) {
       Object.defineProperty(process, "env", previousEnvDescriptor);
