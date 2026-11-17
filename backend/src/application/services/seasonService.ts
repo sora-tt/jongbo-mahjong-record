@@ -6,6 +6,7 @@ import type {
   SeasonRepository,
   UpdateSeasonInput,
 } from "@/domain/season/repository.js";
+import { buildSeasonTitleRankings } from "@/domain/season/title-rankings.js";
 import {
   AppError,
   ConflictError,
@@ -30,9 +31,10 @@ export class SeasonService {
 
   async getSeason(userId: string, leagueId: string, seasonId: string) {
     await this.assertSeasonMembership(userId, leagueId, seasonId);
-    const [season, matches] = await Promise.all([
+    const [season, matches, rule] = await Promise.all([
       this.seasonRepository.get(leagueId, seasonId),
       this.matchRepository.listBySeason(leagueId, seasonId),
+      this.leagueRepository.getRule(leagueId),
     ]);
 
     const latestPlayedAt =
@@ -47,6 +49,11 @@ export class SeasonService {
     return {
       ...season,
       latestPlayedAt,
+      titleRankings: buildSeasonTitleRankings(
+        season.members,
+        matches,
+        rule.gameType,
+      ),
     };
   }
 

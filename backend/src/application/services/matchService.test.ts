@@ -251,6 +251,20 @@ test("yakuman-only updates preserve score results and rebuild statistics", async
   assert.equal(fixture.getRebuildCallCount(), 1);
 });
 
+test("match number updates rebuild season statistics", async () => {
+  const fixture = makeServiceFixture();
+  await fixture.service.updateMatch(
+    "u1",
+    "league-1",
+    "season-1",
+    "session-1",
+    "match-1",
+    { matchIndex: 1 },
+  );
+  assert.equal(fixture.getUpdateInput()?.matchIndex, 1);
+  assert.equal(fixture.getRebuildCallCount(), 1);
+});
+
 test("off-table updates recalculate points and rebuild season statistics", async () => {
   const fixture = makeServiceFixture({ ...rule, allowOffTableKyotaku: true });
   const results = createResults.map((entry, index) =>

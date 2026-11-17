@@ -20,14 +20,11 @@ const ProfilePage = () => {
   };
 
   return (
-    <AppShell>
+    <AppShell backHref="/v2/settings" title="プロフィール編集">
       {loading ? (
         <PageLoading label="プロフィールを読み込んでいます" />
       ) : (
         <main className="mx-auto w-full max-w-xl px-4 pb-10 pt-6">
-          <h1 className="mb-6 text-center text-v2-heading-2 font-bold">
-            プロフィール編集
-          </h1>
           {error ? (
             <Status message={error} onRetry={retry} />
           ) : (

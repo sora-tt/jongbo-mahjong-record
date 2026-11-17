@@ -22,10 +22,6 @@ export const SeasonProgress = ({
   visibleUserIds,
   handleToggleChartSeries,
 }: Props) => {
-  const progressionData = React.useMemo(
-    () => toSeasonProgressionData(pointProgressionChart),
-    [pointProgressionChart]
-  );
   const series = chartSeries.map((item, index) => ({
     ...item,
     strokeColor: `var(--v2-chart-${(index % 8) + 1})`,
@@ -33,6 +29,10 @@ export const SeasonProgress = ({
   const visibleSeries = series.filter((item) =>
     visibleUserIds.includes(item.userId)
   );
+  const progressionData = toSeasonProgressionData({
+    ...pointProgressionChart,
+    series: visibleSeries,
+  });
   return (
     <SectionCard title="総合pt推移" bodyClassName="space-y-3">
       {pointProgressionChart.isUncomputed ? (
@@ -43,13 +43,21 @@ export const SeasonProgress = ({
         <p className="flex h-[clamp(200px,38vw,280px)] items-center justify-center rounded-v2-control bg-v2-surface-subtle px-4 text-center text-v2-label text-v2-text-secondary">
           まだ対局データがないため、グラフを表示できません
         </p>
+      ) : visibleSeries.length && progressionData.length ? (
+        <>
+          <PointProgressionChart
+            data={progressionData}
+            series={visibleSeries}
+            lineType="linear"
+          />
+          <p className="text-right text-v2-caption text-v2-text-secondary">
+            対局数
+          </p>
+        </>
       ) : visibleSeries.length ? (
-        <PointProgressionChart
-          data={progressionData}
-          series={visibleSeries}
-          hideXAxisLabels
-          lineType="linear"
-        />
+        <p className="flex h-[clamp(200px,38vw,280px)] items-center justify-center rounded-v2-control bg-v2-surface-subtle px-4 text-center text-v2-label text-v2-text-secondary">
+          選択したプレイヤーの対局データがありません
+        </p>
       ) : (
         <p className="flex h-[clamp(200px,38vw,280px)] items-center justify-center rounded-v2-control bg-v2-surface-subtle px-4 text-center text-v2-label text-v2-text-secondary">
           凡例からプレイヤーを選択するとデータを表示できます

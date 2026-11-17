@@ -2,6 +2,7 @@ import type { LeagueRepository } from "@/domain/league/repository.js";
 import type { SeasonRepository } from "@/domain/season/repository.js";
 import type {
   PersonalStatisticsResult,
+  PersonalStatisticsSummary,
   PersonalStatisticsSnapshot,
   PersonalStatisticsSnapshotValues,
   StatisticsScope,
@@ -14,6 +15,7 @@ import { StatisticsTargetAccessService } from "@/application/services/statistics
 import type { UserStatsRepository } from "@/domain/user/repository.js";
 import type { UserStatsUpsertData } from "@/domain/user/types.js";
 import { NotFoundError } from "@/domain/shared/errors.js";
+import { YAKUMAN_KINDS } from "@/domain/match/yakuman.js";
 
 const TIME_ZONE = "Asia/Tokyo" as const;
 
@@ -143,7 +145,8 @@ export class PersonalStatisticsSummaryReader {
       UserMatchStatisticsRepository,
       "listForScope"
     >,
-    private readonly leagueRepository: Pick<LeagueRepository, "exists">,
+    private readonly leagueRepository: Pick<LeagueRepository, "exists"> &
+      Partial<Pick<LeagueRepository, "getRule">>,
     private readonly seasonRepository: Pick<SeasonRepository, "exists">,
   ) {}
 
@@ -170,17 +173,60 @@ export class PersonalStatisticsSummaryReader {
       };
     }
 
-    const snapshot = hasDateFilter(query)
+    const matches = hasDateFilter(query)
+      ? await this.projectionRepository.listForScope({
+          ...toScope(query),
+          userId: query.targetUserId,
+        })
+      : null;
+    const snapshot = matches
       ? toFilteredSnapshot(
           query,
-          await this.projectionRepository.listForScope({
-            ...toScope(query),
-            userId: query.targetUserId,
-          }),
+          matches,
           statsRecord.personalStatisticsSnapshot,
         )
       : statsRecord.personalStatisticsSnapshot;
     const values = selectSnapshotValues(snapshot, query.gameType);
+    const detailMatches =
+      query.includePointBreakdown || query.includeYakumanCounts
+        ? (matches ??
+          (await this.projectionRepository
+            .listForScope({ ...toScope(query), userId: query.targetUserId })
+            .catch(() => null)))
+        : null;
+    const selectedMatches = detailMatches?.filter(
+      (match) =>
+        !query.gameType ||
+        query.gameType === "all" ||
+        match.gameType === query.gameType,
+    );
+    const consistentMatches =
+      selectedMatches &&
+      selectedMatches.length === values.totals.totalMatchCount &&
+      Number(
+        selectedMatches
+          .reduce((sum, match) => sum + match.finalPoint, 0)
+          .toFixed(1),
+      ) === values.totals.totalPoints
+        ? selectedMatches
+        : null;
+    const pointBreakdown = query.includePointBreakdown
+      ? await this.getPointBreakdown(consistentMatches).catch(() => null)
+      : undefined;
+    const yakumanCounts = query.includeYakumanCounts
+      ? consistentMatches === null
+        ? null
+        : YAKUMAN_KINDS.map((kind) => ({
+            kind,
+            count: consistentMatches.reduce(
+              (count, match) =>
+                count +
+                (match.yakumanKinds ?? []).filter((item) => item === kind)
+                  .length,
+              0,
+            ),
+          }))
+      : undefined;
     const scoreByGameType = snapshot.byGameType
       .filter(
         ({ gameType }) =>
@@ -201,6 +247,41 @@ export class PersonalStatisticsSummaryReader {
       timeZone: TIME_ZONE,
       ...values,
       scoreByGameType,
+      pointBreakdown,
+      yakumanCounts,
+    };
+  }
+
+  private async getPointBreakdown(
+    selected: readonly UserMatchStatistics[] | null,
+  ): Promise<PersonalStatisticsSummary["pointBreakdown"]> {
+    if (!this.leagueRepository.getRule || selected === null) return null;
+    const leagueIds = [...new Set(selected.map((match) => match.leagueId))];
+    const rules = new Map(
+      await Promise.all(
+        leagueIds.map(
+          async (id) => [id, await this.leagueRepository.getRule!(id)] as const,
+        ),
+      ),
+    );
+    let rawPoint = 0;
+    let rankPoint = 0;
+    let chomboPenalty = 0;
+    for (const match of selected) {
+      const rule = rules.get(match.leagueId);
+      if (!rule) return null;
+      const raw = (match.rawScore - rule.oka.returnPoints) / 1000;
+      const penalty = -match.chomboCount * rule.chomboPenaltyPoints;
+      rawPoint += raw;
+      chomboPenalty += penalty;
+      // The recorded final point includes the per-match rounding and tie handling.
+      rankPoint += match.finalPoint - raw - penalty;
+    }
+    const round = (value: number) => Number(value.toFixed(1));
+    return {
+      rawPoint: round(rawPoint),
+      rankPoint: round(rankPoint),
+      chomboPenalty: round(chomboPenalty),
     };
   }
 

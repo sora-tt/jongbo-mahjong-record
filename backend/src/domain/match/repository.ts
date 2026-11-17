@@ -18,6 +18,7 @@ export type CreateMatchInput = {
 };
 
 export type UpdateMatchInput = {
+  matchIndex?: number;
   playedAt?: string;
   results?: Array<{
     userId: string;
@@ -55,6 +56,7 @@ export interface MatchRepository {
     seasonId: string;
     sessionId: string;
     matchId: string;
+    matchIndex?: number;
     playedAt?: string;
     results?: MatchResult[];
     chomboEvents?: Array<{ offenderUserId: string }>;

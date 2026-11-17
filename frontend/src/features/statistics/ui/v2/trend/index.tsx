@@ -5,6 +5,7 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  LabelList,
   Line,
   LineChart,
   ReferenceLine,
@@ -22,6 +23,7 @@ import { Panel } from "@/components/v2/ui/panel";
 import { Table } from "@/components/v2/ui/table";
 
 import type { PersonalStatisticsAnalysisResponse } from "@/features/statistics/api";
+import type { LabelProps } from "recharts";
 
 export const StatisticsTrend = ({
   analysis,
@@ -63,6 +65,56 @@ export const StatisticsTrend = ({
       />
     );
   const axis = { fill: "var(--v2-text-secondary)", fontSize: 10 };
+  const chartMinWidth = Math.max(280, months.length * 54 + 50);
+  const monthlyPointLabel = ({ value, viewBox }: LabelProps) => {
+    if (
+      typeof value !== "number" ||
+      !viewBox ||
+      !("x" in viewBox) ||
+      !("y" in viewBox) ||
+      !("width" in viewBox) ||
+      typeof viewBox.x !== "number" ||
+      typeof viewBox.y !== "number" ||
+      typeof viewBox.width !== "number"
+    )
+      return null;
+    return (
+      <text
+        x={viewBox.x + viewBox.width / 2}
+        y={viewBox.y - 6}
+        textAnchor="middle"
+        fontSize={10}
+        fontWeight={600}
+        fill="var(--v2-text)"
+      >
+        {formatStatisticsTrendPoints(value)}
+      </text>
+    );
+  };
+  const latestPointLabel = ({ index, value, viewBox }: LabelProps) => {
+    if (
+      index !== months.length - 1 ||
+      typeof value !== "number" ||
+      !viewBox ||
+      !("x" in viewBox) ||
+      !("y" in viewBox) ||
+      typeof viewBox.x !== "number" ||
+      typeof viewBox.y !== "number"
+    )
+      return null;
+    return (
+      <text
+        x={viewBox.x - 4}
+        y={viewBox.y - 8}
+        textAnchor="end"
+        fontSize={10}
+        fontWeight={600}
+        fill="var(--v2-action-primary)"
+      >
+        {formatStatisticsTrendPoints(value)}
+      </text>
+    );
+  };
   return (
     <section className="space-y-4" aria-label="成績推移">
       <Panel>
@@ -71,49 +123,54 @@ export const StatisticsTrend = ({
           月間ポイント
         </p>
         <div
-          className="mt-3 h-48"
+          className="mt-3 overflow-x-auto"
           role="img"
           aria-label="月別の総合ポイントを示す棒グラフ"
         >
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={months}
-              margin={{ top: 5, right: 5, left: 0, bottom: 0 }}
-            >
-              <CartesianGrid
-                stroke="var(--v2-border-subtle)"
-                vertical={false}
-              />
-              <XAxis
-                dataKey="label"
-                tick={axis}
-                tickLine={false}
-                axisLine={false}
-              />
-              <YAxis
-                tick={axis}
-                width={35}
-                tickLine={false}
-                axisLine={false}
-                domain={getChartDomainIncludingZero(
-                  months.map((month) => month.points)
-                )}
-              />
-              <ReferenceLine y={0} stroke="var(--v2-border)" />
-              <Tooltip
-                formatter={(value) =>
-                  `${formatStatisticsTrendPoints(Number(value))} pt`
-                }
-              />
-              <Bar
-                dataKey="points"
-                name="月間ポイント"
-                fill="var(--v2-action-primary)"
-                radius={[5, 5, 0, 0]}
-                maxBarSize={40}
-              />
-            </BarChart>
-          </ResponsiveContainer>
+          <div className="h-48" style={{ minWidth: chartMinWidth }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={months}
+                margin={{ top: 20, right: 5, left: 0, bottom: 0 }}
+              >
+                <CartesianGrid
+                  stroke="var(--v2-border-subtle)"
+                  vertical={false}
+                />
+                <XAxis
+                  dataKey="label"
+                  tick={axis}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <YAxis
+                  tick={axis}
+                  width={35}
+                  tickLine={false}
+                  axisLine={false}
+                  domain={getChartDomainIncludingZero(
+                    months.map((month) => month.points)
+                  )}
+                />
+                <ReferenceLine y={0} stroke="var(--v2-border)" />
+                <Tooltip
+                  formatter={(value) =>
+                    `${formatStatisticsTrendPoints(Number(value))} pt`
+                  }
+                />
+                <Bar
+                  dataKey="points"
+                  isAnimationActive={false}
+                  name="月間ポイント"
+                  fill="var(--v2-action-primary)"
+                  radius={[5, 5, 0, 0]}
+                  maxBarSize={40}
+                >
+                  <LabelList dataKey="points" content={monthlyPointLabel} />
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       </Panel>
       <Panel>
@@ -122,49 +179,54 @@ export const StatisticsTrend = ({
           月別の累計ポイント
         </p>
         <div
-          className="mt-3 h-48"
+          className="mt-3 overflow-x-auto"
           role="img"
           aria-label="累計ポイントの折れ線グラフ"
         >
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart
-              data={months}
-              margin={{ top: 5, right: 5, left: 0, bottom: 0 }}
-            >
-              <CartesianGrid
-                stroke="var(--v2-border-subtle)"
-                vertical={false}
-              />
-              <XAxis
-                dataKey="label"
-                tick={axis}
-                tickLine={false}
-                axisLine={false}
-              />
-              <YAxis
-                tick={axis}
-                width={35}
-                tickLine={false}
-                axisLine={false}
-                domain={getChartDomainIncludingZero(
-                  months.map((month) => month.cumulative)
-                )}
-              />
-              <ReferenceLine y={0} stroke="var(--v2-border)" />
-              <Tooltip
-                formatter={(value) =>
-                  `${formatStatisticsTrendPoints(Number(value))} pt`
-                }
-              />
-              <Line
-                dataKey="cumulative"
-                name="累計ポイント"
-                stroke="var(--v2-action-primary)"
-                strokeWidth={2}
-                dot={{ r: 3 }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
+          <div className="h-48" style={{ minWidth: chartMinWidth }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart
+                data={months}
+                margin={{ top: 20, right: 5, left: 0, bottom: 0 }}
+              >
+                <CartesianGrid
+                  stroke="var(--v2-border-subtle)"
+                  vertical={false}
+                />
+                <XAxis
+                  dataKey="label"
+                  tick={axis}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <YAxis
+                  tick={axis}
+                  width={35}
+                  tickLine={false}
+                  axisLine={false}
+                  domain={getChartDomainIncludingZero(
+                    months.map((month) => month.cumulative)
+                  )}
+                />
+                <ReferenceLine y={0} stroke="var(--v2-border)" />
+                <Tooltip
+                  formatter={(value) =>
+                    `${formatStatisticsTrendPoints(Number(value))} pt`
+                  }
+                />
+                <Line
+                  dataKey="cumulative"
+                  isAnimationActive={false}
+                  name="累計ポイント"
+                  stroke="var(--v2-action-primary)"
+                  strokeWidth={2}
+                  dot={{ r: 3 }}
+                >
+                  <LabelList dataKey="cumulative" content={latestPointLabel} />
+                </Line>
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       </Panel>
       <Panel>

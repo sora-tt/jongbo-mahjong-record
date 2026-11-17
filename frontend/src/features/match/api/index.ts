@@ -93,6 +93,7 @@ export const updateMatch = async (input: {
   seasonId: string;
   sessionId: string;
   matchId: string;
+  matchIndex?: number;
   playedAt?: string;
   results?: MatchResultInput;
   chomboEvents?: MatchChomboEventInput;
@@ -108,6 +109,9 @@ export const updateMatch = async (input: {
         matchId: input.matchId,
       },
       json: {
+        ...(input.matchIndex !== undefined
+          ? { matchIndex: input.matchIndex }
+          : {}),
         playedAt: input.playedAt,
         results: input.results,
         ...(input.chomboEvents !== undefined

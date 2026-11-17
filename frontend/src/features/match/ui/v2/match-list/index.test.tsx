@@ -72,22 +72,26 @@ test("APIの成績と追加記録を表示し、編集・削除の対象を渡�
   ] as unknown as ReturnType<typeof toMatchList>;
   let edited = "";
   let deleted = "";
-  render(
-    <MatchList
-      players={[
-        { userId: "a", userName: "一郎" },
-        { userId: "b", userName: "二郎" },
-      ]}
-      matches={matches}
-      deletingMatchId={null}
-      onEdit={(id) => {
-        edited = id;
-      }}
-      onDelete={(id) => {
-        deleted = id;
-      }}
-    />
-  );
+  const props = {
+    players: [
+      { userId: "a", userName: "一郎" },
+      { userId: "b", userName: "二郎" },
+    ],
+    matches,
+    deletingMatchId: null,
+    onEdit: (id: string) => {
+      edited = id;
+    },
+    onDelete: (id: string) => {
+      deleted = id;
+    },
+  };
+  const { rerender } = render(<MatchList {...props} editable={false} />);
+  assert.equal(screen.queryByRole("button", { name: "対局 1 を編集" }), null);
+  assert.equal(screen.queryByRole("button", { name: "対局 1 を削除" }), null);
+  assert.equal(screen.queryByRole("columnheader", { name: "操作" }), null);
+  assert.ok(screen.getByRole("button", { name: "対局 1 の詳細" }));
+  rerender(<MatchList {...props} editable />);
   assert.equal(screen.getAllByText("+23.0").length, 2);
   fireEvent.click(screen.getAllByText("+23.0")[0]);
   const dialog = screen.getByRole("dialog", { name: "対局詳細 #1" });

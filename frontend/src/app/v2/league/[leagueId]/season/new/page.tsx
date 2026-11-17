@@ -27,17 +27,14 @@ const SeasonNewPage = () => {
   const backHref = leagueId ? `/v2/league/${leagueId}` : "/v2";
   if (loading) {
     return (
-      <AppShell>
+      <AppShell title="シーズン作成" backHref={backHref}>
         <PageLoading label="シーズン作成画面を読み込んでいます…" />
       </AppShell>
     );
   }
   return (
-    <AppShell>
+    <AppShell title="シーズン作成" backHref={backHref}>
       <main className="mx-auto flex max-w-[480px] flex-col gap-4 px-4 pb-10 pt-5">
-        <h1 className="mb-1 text-center text-v2-display font-bold">
-          シーズン作成
-        </h1>
         {notFound ? (
           <Status message="リーグが見つかりません" />
         ) : (
@@ -69,6 +66,7 @@ const SeasonNewPage = () => {
               loading={isSubmitting}
               disabled={isSubmitting || leagueMembers.length === 0}
               backHref={backHref}
+              showBackLink={false}
             />
           </>
         )}

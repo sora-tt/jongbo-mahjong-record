@@ -418,6 +418,28 @@ const statisticsSchemas = {
       scope: statisticsComponentRef("StatisticsScope"),
       generatedAt: { type: "string", format: "date-time" },
       timeZone: { type: "string", enum: ["Asia/Tokyo"] },
+      pointBreakdown: {
+        type: "object",
+        nullable: true,
+        properties: {
+          rawPoint: { type: "number" },
+          rankPoint: { type: "number" },
+          chomboPenalty: { type: "number" },
+        },
+        required: ["rawPoint", "rankPoint", "chomboPenalty"],
+      },
+      yakumanCounts: {
+        type: "array",
+        nullable: true,
+        items: {
+          type: "object",
+          properties: {
+            kind: { $ref: "#/components/schemas/YakumanKind" },
+            count: { type: "integer", minimum: 0 },
+          },
+          required: ["kind", "count"],
+        },
+      },
       totals: statisticsComponentRef("StatisticsSummaryTotals"),
       byGameType: {
         type: "array",
@@ -1168,6 +1190,21 @@ export const openApiDocument = {
         parameters: [
           statisticsPathParameter,
           ...statisticsScopeQueryParameters,
+          {
+            name: "includePointBreakdown",
+            in: "query",
+            required: false,
+            description:
+              "Include point components, reading matching per-user match projections and league rules.",
+            schema: { type: "string", enum: ["true"] },
+          },
+          {
+            name: "includeYakumanCounts",
+            in: "query",
+            required: false,
+            description: "Include counts of recorded yakuman by kind.",
+            schema: { type: "string", enum: ["true"] },
+          },
         ],
         responses: {
           "200": {
@@ -1906,6 +1943,7 @@ export const openApiDocument = {
             content: jsonContent({
               type: "object",
               properties: {
+                matchIndex: { type: "integer", minimum: 1 },
                 playedAt: { type: "string", format: "date-time" },
                 results: {
                   type: "array",
@@ -2117,6 +2155,27 @@ export const openApiDocument = {
           standings: { type: "array", items: { type: "object" } },
           pointProgressions: { type: "array", items: { type: "object" } },
           seasonRecords: { type: "object", nullable: true },
+          titleRankings: {
+            type: "object",
+            properties: Object.fromEntries(
+              ["highestScore", "avoidLastRate", "top2Rate", "yakuman"].map(
+                (key) => [
+                  key,
+                  {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        userId: { type: "string" },
+                        userName: { type: "string" },
+                        value: { type: "number" },
+                      },
+                    },
+                  },
+                ],
+              ),
+            ),
+          },
           latestPlayedAt: {
             type: "string",
             format: "date-time",

@@ -7,6 +7,7 @@ import type { StatsRebuilder } from "@/application/services/statsRebuilder.js";
 import { SeasonService } from "@/application/services/seasonService.js";
 import { asOpaqueId } from "@/domain/shared/types.js";
 import { AppError } from "@/domain/shared/errors.js";
+import type { Match } from "@/domain/match/types.js";
 
 test("invalidates season and parent scopes before deletion and keeps them uncomputed on cleanup failure", async () => {
   const events: string[] = [];
@@ -111,4 +112,39 @@ test("season member listing rejects a league member outside the season", async (
     service.listSeasonMembers("user-1", "league-1", "season-1"),
     AppError,
   );
+});
+
+test("season detail returns rankings from its existing match read", async () => {
+  let matchReads = 0;
+  const member = { userId: asOpaqueId("user-1"), userName: "一郎" };
+  const service = new SeasonService(
+    {
+      areMembers: async () => true,
+      getRule: async () => ({ gameType: "yonma" }),
+    } as unknown as LeagueRepository,
+    {
+      areMembers: async () => true,
+      get: async () => ({ members: [member] }),
+    } as unknown as SeasonRepository,
+    {
+      listBySeason: async () => {
+        matchReads += 1;
+        return [
+          {
+            id: "match-1",
+            sessionId: "session-1",
+            matchIndex: 1,
+            playedAt: "2026-01-01T00:00:00.000Z",
+            results: [{ ...member, rank: 1, rawScore: 42000, point: 0 }],
+            yakumanEvents: [{ winnerUserId: member.userId, kind: "daisangen" }],
+          } as unknown as Match,
+        ];
+      },
+    } as unknown as MatchRepository,
+    {} as StatsRebuilder,
+  );
+  const result = await service.getSeason("user-1", "league-1", "season-1");
+  assert.equal(matchReads, 1);
+  assert.equal(result.titleRankings.highestScore[0]?.value, 42000);
+  assert.equal(result.titleRankings.yakuman[0]?.value, 1);
 });

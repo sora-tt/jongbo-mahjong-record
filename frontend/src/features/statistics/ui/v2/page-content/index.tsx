@@ -2,8 +2,13 @@
 
 import * as React from "react";
 
+import { ChevronRight } from "lucide-react";
+
+import Link from "next/link";
+
 import { useStatistics } from "@/features/statistics/hooks/use-statistics";
 import {
+  buildStatisticsHref,
   getStatisticsPagePanelState,
   getStatisticsPageScopeOptions,
   getStatisticsPageSubjectLabel,
@@ -13,6 +18,7 @@ import { StatisticsComparisons } from "@/features/statistics/ui/v2/comparisons";
 import { StatisticsHub } from "@/features/statistics/ui/v2/hub";
 import { MatchHistory } from "@/features/statistics/ui/v2/match-history";
 import { StatisticsOverview } from "@/features/statistics/ui/v2/overview";
+import { ScoreBreakdown } from "@/features/statistics/ui/v2/score-breakdown";
 import { StatisticsSubjectSelector } from "@/features/statistics/ui/v2/subject-selector";
 import { StatisticsTrend } from "@/features/statistics/ui/v2/trend";
 import { StatisticsViewTabs } from "@/features/statistics/ui/v2/view-tabs";
@@ -22,6 +28,11 @@ import { EmptyState } from "@/components/v2/ui/empty-state";
 import { ErrorState } from "@/components/v2/ui/error-state";
 import { LoadingState } from "@/components/v2/ui/loading-state";
 import { PageLoading } from "@/components/v2/ui/page-loading";
+import { Panel } from "@/components/v2/ui/panel";
+import {
+  SlidingSegmentedControl,
+  SlidingSegmentedControlButton,
+} from "@/components/v2/ui/sliding-segmented-control";
 
 const getScopeLabel = (
   scope: ReturnType<typeof useStatistics>["scope"],
@@ -53,6 +64,7 @@ export const StatisticsPageContent: React.FC<StatisticsPageContentProps> = ({
   includeAppShell = true,
 }) => {
   const statistics = useStatisticsHook("/v2");
+  const isOverall = statistics.scope.scopeType === "overall";
   const startingPointsByLeagueId = statistics.startingPointsByLeagueId;
   const currentLeagueStartingPoints =
     statistics.scope.scopeType === "overall" || !statistics.scope.leagueId
@@ -149,6 +161,7 @@ export const StatisticsPageContent: React.FC<StatisticsPageContentProps> = ({
             summary={summaryState.data}
             startingPoints={currentLeagueStartingPoints}
             startingPointsByLeagueId={startingPointsByLeagueId}
+            overall={isOverall}
           />
         </>
       )}
@@ -219,8 +232,19 @@ export const StatisticsPageContent: React.FC<StatisticsPageContentProps> = ({
       className="space-y-4"
     >
       <h2 id="statistics-comparisons-panel-heading" className="sr-only">
-        相手・席別成績
+        成績分析
       </h2>
+      {!statistics.initialError && summaryState.kind === "error" ? (
+        <ErrorState
+          message={summaryState.message}
+          onRetry={statistics.retrySummary}
+        />
+      ) : !statistics.initialError && summaryState.kind === "loading" ? (
+        <LoadingState label="スコア分析を読み込んでいます…" />
+      ) : summaryState.kind === "ready" &&
+        summaryState.data.status !== "uncomputed" ? (
+        <ScoreBreakdown summary={summaryState.data} />
+      ) : null}
       {statistics.initialError ? (
         <ErrorState
           message={statistics.initialError}
@@ -341,55 +365,136 @@ export const StatisticsPageContent: React.FC<StatisticsPageContentProps> = ({
           )
         ) : (
           <>
-            <header className="space-y-3">
-              <h1 className="text-center text-v2-display font-bold">
-                {statistics.targetUserId === statistics.viewerUserId ||
-                !subjectLabel
-                  ? "個人成績"
-                  : `${subjectLabel}さんの成績`}
-              </h1>
-              <div className="flex min-h-11 items-center justify-between gap-3">
-                <p
-                  className="min-w-0 text-v2-caption text-v2-text-secondary"
-                  aria-live="polite"
-                >
-                  {titleScopeLabel}
-                </p>
-                <StatisticsSubjectSelector
-                  scopeType={statistics.scope.scopeType}
-                  viewerUserId={statistics.viewerUserId}
-                  targetUserId={statistics.targetUserId}
-                  userName={statistics.userName}
-                  members={statistics.members}
-                  membersStatus={statistics.membersStatus}
-                  membersError={statistics.membersError}
-                  onChangeTarget={statistics.onChangeTarget}
-                  retryMembers={statistics.retryMembers}
-                />
-              </div>
-            </header>
-
-            {statistics.initialError ? (
-              <ErrorState
-                message={statistics.initialError}
-                onRetry={statistics.retry}
-              />
-            ) : statistics.isLoading ? (
-              <LoadingState
-                label="表示条件を読み込んでいます…"
-                className="min-h-32"
-              />
+            {isOverall ? (
+              <>
+                <header className="space-y-4">
+                  <h1 className="text-center text-v2-display font-bold">
+                    成績
+                  </h1>
+                  {statistics.scope.gameType !== "all" && (
+                    <div className="flex min-h-11 items-center justify-between gap-3">
+                      <p
+                        className="text-v2-caption text-v2-text-secondary"
+                        aria-live="polite"
+                      >
+                        {statistics.scope.gameType === "sanma"
+                          ? "三麻"
+                          : "四麻"}
+                        ・全期間
+                      </p>
+                      <SlidingSegmentedControl
+                        role="group"
+                        label="対局形式"
+                        selectedIndex={
+                          statistics.scope.gameType === "sanma" ? 1 : 0
+                        }
+                        count={2}
+                      >
+                        {(
+                          [
+                            ["yonma", "四麻"],
+                            ["sanma", "三麻"],
+                          ] as const
+                        ).map(([gameType, label]) => (
+                          <SlidingSegmentedControlButton
+                            key={gameType}
+                            size="sm"
+                            selected={statistics.scope.gameType === gameType}
+                            onClick={() =>
+                              statistics.onChangeGameType(gameType)
+                            }
+                          >
+                            {label}
+                          </SlidingSegmentedControlButton>
+                        ))}
+                      </SlidingSegmentedControl>
+                    </div>
+                  )}
+                </header>
+                {statistics.scope.gameType === "all" ? (
+                  <Panel>
+                    <h2 className="text-v2-heading-2 font-bold">
+                      集計する対局を選択
+                    </h2>
+                    {(
+                      [
+                        ["yonma", "四麻"],
+                        ["sanma", "三麻"],
+                      ] as const
+                    ).map(([gameType, label]) => (
+                      <Link
+                        key={gameType}
+                        href={buildStatisticsHref({
+                          routePrefix: "/v2",
+                          scope: { scopeType: "overall", gameType },
+                          targetUserId: statistics.viewerUserId,
+                          scopeLabel: `全リーグ・全期間（${label}）`,
+                          returnTo: "/v2/stats",
+                        })}
+                        className="flex min-h-14 items-center justify-between border-b border-v2-border-subtle font-bold last:border-0"
+                      >
+                        {label}の成績
+                        <ChevronRight size={20} aria-hidden="true" />
+                      </Link>
+                    ))}
+                  </Panel>
+                ) : (
+                  summaryPanel
+                )}
+              </>
             ) : (
-              <StatisticsViewTabs
-                activeView={statistics.activeView}
-                onActiveViewChange={statistics.onChangeActiveView}
-                panels={{
-                  overview: summaryPanel,
-                  trend: analysisPanel,
-                  comparisons: comparisonsPanel,
-                  history: historyPanel,
-                }}
-              />
+              <>
+                <header className="space-y-3">
+                  <h1 className="text-center text-v2-display font-bold">
+                    {statistics.targetUserId === statistics.viewerUserId ||
+                    !subjectLabel
+                      ? "個人成績"
+                      : `${subjectLabel}さんの成績`}
+                  </h1>
+                  <div className="flex min-h-11 items-center justify-between gap-3">
+                    <p
+                      className="min-w-0 text-v2-caption text-v2-text-secondary"
+                      aria-live="polite"
+                    >
+                      {titleScopeLabel}
+                    </p>
+                    <StatisticsSubjectSelector
+                      scopeType={statistics.scope.scopeType}
+                      viewerUserId={statistics.viewerUserId}
+                      targetUserId={statistics.targetUserId}
+                      userName={statistics.userName}
+                      members={statistics.members}
+                      membersStatus={statistics.membersStatus}
+                      membersError={statistics.membersError}
+                      onChangeTarget={statistics.onChangeTarget}
+                      retryMembers={statistics.retryMembers}
+                    />
+                  </div>
+                </header>
+
+                {statistics.initialError ? (
+                  <ErrorState
+                    message={statistics.initialError}
+                    onRetry={statistics.retry}
+                  />
+                ) : statistics.isLoading ? (
+                  <LoadingState
+                    label="表示条件を読み込んでいます…"
+                    className="min-h-32"
+                  />
+                ) : (
+                  <StatisticsViewTabs
+                    activeView={statistics.activeView}
+                    onActiveViewChange={statistics.onChangeActiveView}
+                    panels={{
+                      overview: summaryPanel,
+                      trend: analysisPanel,
+                      comparisons: comparisonsPanel,
+                      history: historyPanel,
+                    }}
+                  />
+                )}
+              </>
             )}
           </>
         )}

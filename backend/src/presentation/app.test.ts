@@ -32,6 +32,13 @@ const yakumanKinds = [
   "chiihou",
 ] as const;
 
+test("Match update accepts only positive integer match numbers", () => {
+  assert.equal(updateMatchSchema.parse({ matchIndex: 1 }).matchIndex, 1);
+  for (const matchIndex of [0, -1, 1.5]) {
+    assert.equal(updateMatchSchema.safeParse({ matchIndex }).success, false);
+  }
+});
+
 test("Match yakuman contract accepts multiple supported events and rejects unknown kinds", () => {
   const events = [
     { winnerUserId: "user-1", kind: "suuankouTanki" },
@@ -1334,6 +1341,7 @@ test("OpenAPI publishes the canonical auth and match request contracts", async (
     ].patch?.requestBody?.content?.["application/json"]?.schema;
   assert.deepEqual(Object.keys(matchPatchSchema?.properties ?? {}).sort(), [
     "chomboEvents",
+    "matchIndex",
     "offTableKyotakuCount",
     "playedAt",
     "results",

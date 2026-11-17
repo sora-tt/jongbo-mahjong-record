@@ -49,7 +49,11 @@ export type StatisticsReadIdentity = {
   targetUserId: UserId;
 };
 
-export type StatisticsSummaryQuery = StatisticsScope & StatisticsReadIdentity;
+export type StatisticsSummaryQuery = StatisticsScope &
+  StatisticsReadIdentity & {
+    includePointBreakdown?: "true";
+    includeYakumanCounts?: "true";
+  };
 
 export type BreakdownDimension =
   | "period"
@@ -145,6 +149,12 @@ export type PersonalStatisticsSummary = {
   scope: StatisticsScope;
   generatedAt: IsoDateString;
   timeZone: "Asia/Tokyo";
+  pointBreakdown?: {
+    rawPoint: number;
+    rankPoint: number;
+    chomboPenalty: number;
+  } | null;
+  yakumanCounts?: Array<{ kind: YakumanKind; count: number }> | null;
   totals: {
     totalMatchCount: number;
     sessionCount: number;
@@ -279,7 +289,13 @@ export type PersonalStatisticsResult =
 
 export type PersonalStatisticsSnapshotValues = Omit<
   PersonalStatisticsSummary,
-  "status" | "scope" | "generatedAt" | "timeZone" | "scoreByGameType"
+  | "status"
+  | "scope"
+  | "generatedAt"
+  | "timeZone"
+  | "scoreByGameType"
+  | "pointBreakdown"
+  | "yakumanCounts"
 >;
 
 export type PersonalStatisticsSnapshot = {

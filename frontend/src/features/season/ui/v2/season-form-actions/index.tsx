@@ -9,12 +9,16 @@ export const SeasonFormActions = ({
   loading,
   disabled,
   backHref,
+  showBackLink = true,
+  footerAction,
 }: {
   label: string;
   onSubmit: () => void;
   loading: boolean;
   disabled?: boolean;
   backHref: string;
+  showBackLink?: boolean;
+  footerAction?: React.ReactNode;
 }) => (
   <div className="flex flex-col items-center gap-4 px-6 pt-2">
     <Button
@@ -26,12 +30,15 @@ export const SeasonFormActions = ({
     >
       {label}
     </Button>
-    <ButtonLink
-      href={backHref}
-      variant="tertiary"
-      className="!font-normal !text-v2-text-secondary"
-    >
-      ← 戻る
-    </ButtonLink>
+    {showBackLink && (
+      <ButtonLink
+        href={backHref}
+        variant="tertiary"
+        className="!font-normal !text-v2-text-secondary"
+      >
+        ← 戻る
+      </ButtonLink>
+    )}
+    {footerAction && <div className="mt-4 w-full">{footerAction}</div>}
   </div>
 );

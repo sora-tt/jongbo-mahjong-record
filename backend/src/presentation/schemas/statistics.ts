@@ -139,6 +139,11 @@ export const statisticsScopeQuerySchema = createStatisticsScopeQuerySchema(
   {},
 ) satisfies z.ZodType<StatisticsScope>;
 
+export const statisticsSummaryQuerySchema = createStatisticsScopeQuerySchema({
+  includePointBreakdown: z.literal("true").optional(),
+  includeYakumanCounts: z.literal("true").optional(),
+});
+
 const urlIntegerSchema = z
   .string()
   .regex(/^\d+$/, "must be a positive integer")

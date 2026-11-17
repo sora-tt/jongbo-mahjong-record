@@ -12,10 +12,12 @@ import {
   formatStatisticsScoreValue,
   getStatisticsStreak,
 } from "@/features/statistics/model/score-records";
-import { PersonalRecords } from "@/features/statistics/ui/v2/personal-records";
-import { ScoreBreakdown } from "@/features/statistics/ui/v2/score-breakdown";
+import {
+  RecordDialog,
+  type SelectedRecord,
+} from "@/features/statistics/ui/v2/record-dialog";
+import { YakumanDialog } from "@/features/statistics/ui/v2/yakuman-dialog";
 
-import { Card } from "@/components/v2/ui/card";
 import { Panel } from "@/components/v2/ui/panel";
 
 import type { PersonalStatisticsSummaryResponse } from "@/features/statistics/api";
@@ -24,162 +26,290 @@ type Summary = Exclude<
   PersonalStatisticsSummaryResponse,
   { status: "uncomputed" }
 >;
-const Metric = ({
-  label,
-  value,
-  tone,
-}: {
-  label: string;
-  value: string;
-  tone?: string;
-}) => (
-  <Card size="auto" className="min-h-[84px]">
-    <p className="text-v2-caption text-v2-text-secondary">{label}</p>
-    <p className={`mt-2 text-v2-data font-bold ${tone ?? "text-v2-text"}`}>
-      {value}
-    </p>
-  </Card>
-);
+type RecordValue = NonNullable<Summary["records"]["highestRawScore"]>;
+
 const signedColor = (value: number) =>
   value > 0 ? "text-blue-600" : value < 0 ? "text-v2-danger" : "text-v2-text";
+
+const RecordRow = ({
+  label,
+  record,
+  unit,
+  onSelect,
+}: {
+  label: string;
+  record: RecordValue | null;
+  unit: "点" | "pt";
+  onSelect: (record: SelectedRecord) => void;
+}) => {
+  if (!record) {
+    return (
+      <div className="flex justify-between gap-3 py-3">
+        <span className="text-v2-text-secondary">{label}</span>
+        <span>—</span>
+      </div>
+    );
+  }
+  const value =
+    unit === "pt"
+      ? formatStatisticsFinalPointValue(record.value)
+      : formatStatisticsScoreValue(record.value);
+  return (
+    <button
+      type="button"
+      className="flex min-h-11 w-full cursor-pointer justify-between gap-3 py-3 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-v2-focus"
+      onClick={() => onSelect({ label, unit, record })}
+    >
+      <span className="text-v2-text-secondary">{label}</span>
+      <span className="font-semibold">
+        {value} {unit} <span aria-hidden="true">›</span>
+      </span>
+    </button>
+  );
+};
+
 export const StatisticsOverview = ({
   summary,
-  startingPoints,
-  startingPointsByLeagueId,
+  overall = false,
 }: {
   summary: Summary;
   startingPoints: number | null;
   startingPointsByLeagueId: Readonly<Record<string, number>>;
+  overall?: boolean;
 }) => {
   const overview = getStatisticsOverviewModel(summary);
-  const showFormats =
-    summary.scope.gameType === "all" && overview.formatDetails.length > 1;
+  const breakdown = summary.pointBreakdown;
   const records = summary.records;
+  const [selectedRecord, setSelectedRecord] =
+    React.useState<SelectedRecord | null>(null);
+  const [yakumanOpen, setYakumanOpen] = React.useState(false);
+  React.useEffect(() => {
+    setSelectedRecord(null);
+    setYakumanOpen(false);
+  }, [summary]);
+  const yakumanCounts = summary.yakumanCounts;
+  const yakumanTotal = yakumanCounts?.reduce(
+    (sum, item) => sum + item.count,
+    0
+  );
+  const streaks = [
+    ["top", "連続トップ"],
+    ["last", "連続ラス"],
+    ["topTwo", "連続連対"],
+    ["positive", "連続プラス"],
+    ["negative", "連続マイナス"],
+  ] as const;
   return (
     <section aria-label="成績の概要" className="space-y-4">
-      {overview.formatDetails.map((format) => {
-        const ranks = getVisibleStatisticsRanks(format.gameType, format.ranks);
-        return (
-          <div key={format.gameType} className="space-y-4">
-            {showFormats && (
-              <h2 className="text-v2-label font-bold">
-                {format.gameType === "sanma" ? "三麻" : "四麻"}
-              </h2>
+      {!overall && (
+        <Panel>
+          <h2 className="text-v2-label font-bold">総合ポイント</h2>
+          <div className="mt-2 flex items-baseline justify-between gap-3">
+            <p
+              className={`text-3xl font-bold ${signedColor(summary.totals.totalPoints)}`}
+            >
+              {formatStatisticsFinalPointValue(summary.totals.totalPoints)}{" "}
+              <span className="text-v2-label">pt</span>
+            </p>
+            <p className="text-v2-caption text-v2-text-secondary">
+              {summary.totals.totalMatchCount}対局
+            </p>
+          </div>
+          <dl className="mt-4 space-y-2 border-t border-v2-border-subtle pt-3 text-v2-caption">
+            {(
+              [
+                ["素点由来", breakdown?.rawPoint],
+                ["順位点・オカ", breakdown?.rankPoint],
+                ["チョンボ罰点", breakdown?.chomboPenalty],
+              ] as const
+            ).map(([label, value]) => (
+              <div key={label} className="flex justify-between gap-3">
+                <dt className="text-v2-text-secondary">{label}</dt>
+                <dd className="font-semibold">
+                  {value == null
+                    ? "—"
+                    : `${formatStatisticsFinalPointValue(value)} pt`}
+                </dd>
+              </div>
+            ))}
+          </dl>
+          {!breakdown && (
+            <p className="mt-2 text-v2-caption text-v2-text-secondary">
+              内訳を取得できませんでした。
+            </p>
+          )}
+        </Panel>
+      )}
+      {overview.formatDetails.map((format) => (
+        <Panel key={format.gameType}>
+          <div className="flex items-baseline justify-between gap-3">
+            <h2 className="text-v2-heading-2 font-bold">
+              順位成績
+              {overview.formatDetails.length > 1
+                ? `（${format.gameType === "sanma" ? "三麻" : "四麻"}）`
+                : ""}
+            </h2>
+            {overall && (
+              <span className="text-v2-caption text-v2-text-secondary">
+                {format.matchCount} 対局
+              </span>
             )}
-            <div className="grid grid-cols-2 gap-3">
-              <Metric
-                label="総合ポイント"
-                value={`${formatStatisticsFinalPointValue(format.totalPoints)} pt`}
-                tone={signedColor(format.totalPoints)}
-              />
-              <Metric
-                label="平均順位"
-                value={`${formatStatisticsOverviewNumber(format.averageRank)} 位`}
-              />
-              <Metric
-                label="トップ率"
-                value={formatStatisticsOverviewRate(format.topRate)}
-                tone="text-v2-danger"
-              />
-              <Metric
-                label="連対率"
-                value={formatStatisticsOverviewRate(format.topTwoRate)}
-                tone="text-v2-danger"
-              />
-            </div>
-            <Panel>
-              <h2 className="text-v2-label font-bold">順位成績</h2>
-              <p className="mt-1 text-v2-caption text-v2-text-secondary">
-                {format.matchCount}対局・順位別の割合
-              </p>
-              <ul className="mt-4 space-y-3">
-                {ranks.map((rank) => (
-                  <li
-                    key={rank.rank}
-                    className="grid grid-cols-[32px_1fr_48px] items-center gap-3 text-v2-caption"
-                  >
-                    <span>{rank.rank}位</span>
-                    <span className="h-2 overflow-hidden rounded-full bg-v2-brand-soft">
-                      <span
-                        className="block h-full rounded-full bg-v2-action-primary"
-                        style={{
-                          width:
-                            getStatisticsOverviewRateBarWidth(rank.rate) ??
-                            "0%",
-                          opacity: rank.rank === 1 ? 1 : 0.55,
-                        }}
-                      />
-                    </span>
-                    <span className="text-right font-semibold">
-                      {formatStatisticsOverviewRate(rank.rate)}
-                    </span>
-                    <span className="sr-only">{rank.count}回</span>
-                  </li>
-                ))}
-              </ul>
-            </Panel>
           </div>
-        );
-      })}
-      <Panel>
-        <h2 className="text-v2-heading-2 font-bold">スコア詳細</h2>
-        <dl className="mt-2 divide-y divide-v2-border-subtle text-v2-label">
-          <div className="flex justify-between gap-3 py-3">
-            <dt className="text-v2-text-secondary">素点合計</dt>
-            <dd className="font-semibold">—</dd>
+          <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-4">
+            {(
+              [
+                [
+                  "平均順位",
+                  format.averageRank === null
+                    ? "—"
+                    : `${formatStatisticsOverviewNumber(format.averageRank)} 位`,
+                ],
+                ["トップ率", formatStatisticsOverviewRate(format.topRate)],
+                ["連対率", formatStatisticsOverviewRate(format.topTwoRate)],
+                [
+                  "ラス回避率",
+                  formatStatisticsOverviewRate(format.lastAvoidanceRate),
+                ],
+              ] as const
+            ).map(([label, value]) => (
+              <div key={label}>
+                <p className="text-v2-caption text-v2-text-secondary">
+                  {label}
+                </p>
+                <p className="mt-1 text-v2-data font-bold">{value}</p>
+              </div>
+            ))}
           </div>
-          <div className="flex justify-between gap-3 py-3">
-            <dt className="text-v2-text-secondary">順位点・オカ</dt>
-            <dd className="font-semibold">—</dd>
-          </div>
-        </dl>
-        <p className="text-v2-caption text-v2-text-secondary">
-          内訳の集計には未対応です。
-        </p>
-      </Panel>
+          <ul
+            className="mt-4 space-y-3 border-t border-v2-border-subtle pt-4"
+            aria-label="順位別の回数と割合"
+          >
+            {getVisibleStatisticsRanks(format.gameType, format.ranks).map(
+              (rank) => (
+                <li
+                  key={rank.rank}
+                  className="grid grid-cols-[28px_1fr_auto_48px] items-center gap-2 text-v2-caption"
+                >
+                  <span>{rank.rank}位</span>
+                  <span className="h-2 overflow-hidden rounded-full bg-v2-brand-soft">
+                    <span
+                      className="block h-full rounded-full bg-v2-action-primary"
+                      style={{
+                        width:
+                          getStatisticsOverviewRateBarWidth(rank.rate) ?? "0%",
+                      }}
+                    />
+                  </span>
+                  <span className="text-v2-text-secondary">{rank.count}回</span>
+                  <span className="text-right font-semibold">
+                    {formatStatisticsOverviewRate(rank.rate)}
+                  </span>
+                </li>
+              )
+            )}
+          </ul>
+        </Panel>
+      ))}
       <Panel>
         <h2 className="text-v2-heading-2 font-bold">個人記録</h2>
-        <dl className="mt-2 divide-y divide-v2-border-subtle text-v2-label">
+        <div className="mt-2 divide-y divide-v2-border-subtle text-v2-label">
+          {!overall && (
+            <>
+              <RecordRow
+                label="最高素点"
+                record={records.highestRawScore}
+                unit="点"
+                onSelect={setSelectedRecord}
+              />
+              <RecordRow
+                label="最低素点"
+                record={records.lowestRawScore}
+                unit="点"
+                onSelect={setSelectedRecord}
+              />
+              <RecordRow
+                label="最高最終ポイント"
+                record={records.highestFinalPoint}
+                unit="pt"
+                onSelect={setSelectedRecord}
+              />
+              <RecordRow
+                label="最低最終ポイント"
+                record={records.lowestFinalPoint}
+                unit="pt"
+                onSelect={setSelectedRecord}
+              />
+            </>
+          )}
+          {yakumanTotal === undefined ? (
+            <div className="flex justify-between gap-3 py-3">
+              <span className="text-v2-text-secondary">役満</span>
+              <span>—</span>
+            </div>
+          ) : (
+            <button
+              type="button"
+              className="flex min-h-11 w-full cursor-pointer justify-between gap-3 py-3 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-v2-focus"
+              onClick={() => setYakumanOpen(true)}
+            >
+              <span className="text-v2-text-secondary">役満</span>
+              <span className="font-semibold">
+                {yakumanTotal} 回 <span aria-hidden="true">›</span>
+              </span>
+            </button>
+          )}
           <div className="flex justify-between gap-3 py-3">
-            <dt className="text-v2-text-secondary">最高得点</dt>
-            <dd className="font-semibold">
-              {records.highestRawScore
-                ? `${formatStatisticsScoreValue(records.highestRawScore.value)} 点`
-                : "—"}
-            </dd>
+            <span className="text-v2-text-secondary">チョンボ</span>
+            <span className="font-semibold">
+              {summary.totals.chomboCount} 回
+            </span>
           </div>
-          <div className="flex justify-between gap-3 py-3">
-            <dt className="text-v2-text-secondary">連続トップ（最長）</dt>
-            <dd className="font-semibold">
-              {getStatisticsStreak(summary.streaks, "top")?.longestCount ?? "—"}{" "}
-              対局
-            </dd>
-          </div>
-          <div className="flex justify-between gap-3 py-3">
-            <dt className="text-v2-text-secondary">最多役満</dt>
-            <dd className="font-semibold">—</dd>
-          </div>
-          <div className="flex justify-between gap-3 py-3">
-            <dt className="text-v2-text-secondary">チョンボ</dt>
-            <dd className="font-semibold">{summary.totals.chomboCount} 回</dd>
-          </div>
-        </dl>
-        <p className="text-v2-caption text-v2-text-secondary">
-          役満の集計には未対応です。
-        </p>
-      </Panel>
-      <Card as="details" size="auto">
-        <summary className="cursor-pointer text-v2-label font-semibold">
-          さらに詳しい成績
-        </summary>
-        <div className="mt-4 space-y-4">
-          <ScoreBreakdown summary={summary} startingPoints={startingPoints} />
-          <PersonalRecords
-            summary={summary}
-            startingPointsByLeagueId={startingPointsByLeagueId}
-          />
         </div>
-      </Card>
+      </Panel>
+      <RecordDialog
+        selected={selectedRecord}
+        onClose={() => setSelectedRecord(null)}
+      />
+      <YakumanDialog
+        counts={yakumanCounts ?? []}
+        open={yakumanOpen && yakumanCounts != null}
+        onClose={() => setYakumanOpen(false)}
+      />
+      <Panel>
+        <h2 className="text-v2-heading-2 font-bold">連続記録</h2>
+        <table className="mt-3 w-full text-left text-v2-caption">
+          <thead className="text-v2-text-secondary">
+            <tr>
+              <th className="py-2">記録</th>
+              <th className="py-2 text-right">現在</th>
+              <th className="py-2 text-right">最長</th>
+            </tr>
+          </thead>
+          <tbody>
+            {streaks
+              .filter(
+                ([type]) =>
+                  !overall || (type !== "positive" && type !== "negative")
+              )
+              .map(([type, label]) => {
+                const streak = getStatisticsStreak(summary.streaks, type);
+                return (
+                  <tr key={type} className="border-t border-v2-border-subtle">
+                    <th scope="row" className="py-3 font-normal">
+                      {label}
+                    </th>
+                    <td className="text-right">
+                      {streak ? `${streak.currentCount}対局` : "—"}
+                    </td>
+                    <td className="text-right">
+                      {streak ? `${streak.longestCount}対局` : "—"}
+                    </td>
+                  </tr>
+                );
+              })}
+          </tbody>
+        </table>
+      </Panel>
     </section>
   );
 };

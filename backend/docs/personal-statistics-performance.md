@@ -26,6 +26,10 @@
 
 すべて50 sampleで、固定scope summaryは保存済みsnapshotの1 documentから返る。任意期間summaryとanalysisはUserStats 1 documentに加え、期間に一致したprojection 120 documentsを読む。履歴はUserStats 1 documentと、50件ページおよび次ページ判定用のprojection 51 documentsを読む。
 
+上記の測定はポイント内訳を含まない通常のsummaryである。v2のsummaryは `includePointBreakdown=true` を指定し、対象者の該当projectionとリーグごとのルールを追加で読み込む。内訳の集計時間とread数は対象対局数・リーグ数に応じて増える。この追加処理は対局登録時には実行しない。
+
+v2では `includeYakumanCounts=true` も指定し、同じprojectionの読み取り結果から役満の種類ごとの記録件数を集計する。両方を指定してもprojectionは重複して読み込まない。対象のprojectionと保存済みsummaryの対局数・ポイントが一致しない場合、件数は `null` とする。
+
 リーグtarget summaryの4 readsは、viewer/targetのmembership query結果2 documents、league存在確認1 document、targetのUserStats 1 documentで構成する。リーグrosterはviewer membership 1 document、league document 1件、member document 4件。シーズンrosterはviewerのleague membership 1 documentと、member情報を内包するseason document 1件。
 
 ## 性能上の判断

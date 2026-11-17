@@ -2,10 +2,7 @@
 
 import * as React from "react";
 
-import { ArrowLeft } from "lucide-react";
-
 import { Button } from "@/components/v2/ui/button";
-import { ButtonLink } from "@/components/v2/ui/button-link";
 import { Input } from "@/components/v2/ui/input";
 import { Panel } from "@/components/v2/ui/panel";
 import { Status } from "@/components/v2/ui/status";
@@ -76,16 +73,6 @@ export const ProfileForm = ({
       <Button type="submit" size="lg" fullWidth loading={saving}>
         変更を保存
       </Button>
-      {!saving && (
-        <ButtonLink
-          href="/v2/settings"
-          variant="tertiary"
-          fullWidth
-          leadingIcon={<ArrowLeft size={18} />}
-        >
-          設定に戻る
-        </ButtonLink>
-      )}
     </form>
   );
 };

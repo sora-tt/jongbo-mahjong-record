@@ -111,6 +111,7 @@ const season = {
 };
 const match = {
   id: "match-1",
+  matchIndex: 1,
   leagueId: "league-1",
   seasonId: "season-1",
   sessionId: "session-1",
@@ -146,7 +147,7 @@ const failureResponse = () =>
     { status: 500, headers: { "content-type": "application/json" } }
   );
 
-const mockMatchSaveFailure = () => {
+const mockMatchSaveFailure = (conflict = false) => {
   globalThis.fetch = (async (input, init) => {
     const request =
       input instanceof Request ? input.clone() : new Request(input, init);
@@ -180,6 +181,18 @@ const mockMatchSaveFailure = () => {
       (method === "POST" && pathname.endsWith("/matches")) ||
       (method === "PATCH" && pathname.endsWith("/matches/match-1"))
     ) {
+      if (conflict && method === "PATCH") {
+        return new Response(
+          JSON.stringify({
+            error: {
+              code: "conflict",
+              message: "重複",
+              details: { matchIndex: 2 },
+            },
+          }),
+          { status: 409, headers: { "content-type": "application/json" } }
+        );
+      }
       return failureResponse();
     }
     if (
@@ -370,6 +383,54 @@ test("edit Match update sends restored yakuman and retains values after save fai
   );
   assert.deepEqual(result.current.values, submittedValues);
   assert.ok(result.current.error);
+});
+
+test("対局番号は正の整数を送信し、無効な値は保存しない", async () => {
+  await setup;
+  mockMatchSaveFailure();
+  const { result } = renderHook(() => useEditMatchPage("/v2"), {
+    wrapper: createWrapper({
+      leagueId: "league-1",
+      seasonId: "season-1",
+      sessionId: "session-1",
+      matchId: "match-1",
+    }),
+  });
+  await waitFor(() => assert.equal(result.current.isLoading, false));
+  assert.equal(result.current.matchIndex, "1");
+  act(() => result.current.setMatchIndex("0"));
+  await act(async () => result.current.handleSubmit());
+  assert.match(result.current.error ?? "", /1以上の整数/);
+  assert.equal(
+    findRequest("PATCH", "/sessions/session-1/matches/match-1"),
+    undefined
+  );
+  act(() => result.current.setMatchIndex("2"));
+  await act(async () => result.current.handleSubmit());
+  assert.equal(
+    findRequest("PATCH", "/sessions/session-1/matches/match-1")?.body
+      ?.matchIndex,
+    2
+  );
+  assert.equal(result.current.matchIndex, "2");
+});
+
+test("重複した対局番号のエラーを表示し、入力を保持する", async () => {
+  await setup;
+  mockMatchSaveFailure(true);
+  const { result } = renderHook(() => useEditMatchPage("/v2"), {
+    wrapper: createWrapper({
+      leagueId: "league-1",
+      seasonId: "season-1",
+      sessionId: "session-1",
+      matchId: "match-1",
+    }),
+  });
+  await waitFor(() => assert.equal(result.current.isLoading, false));
+  act(() => result.current.setMatchIndex("2"));
+  await act(async () => result.current.handleSubmit());
+  assert.match(result.current.error ?? "", /対局番号は既に使われています/);
+  assert.equal(result.current.matchIndex, "2");
 });
 
 test("editing off-table records sends the changed values and keeps them on failure", async () => {

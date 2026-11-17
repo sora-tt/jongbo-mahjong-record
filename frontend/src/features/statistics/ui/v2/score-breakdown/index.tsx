@@ -7,250 +7,119 @@ import {
   getVisibleStatisticsScoreFormats,
   getVisibleStatisticsScoreRanks,
 } from "@/features/statistics/model/score-records";
-import {
-  getStatisticsRawScoreTextClass,
-  getStatisticsSignedValueTextClass,
-} from "@/features/statistics/model/signed-value";
-import { StatisticsMetricCard } from "@/features/statistics/ui/v2/metric-card";
-import { StatisticsCard as Card } from "@/features/statistics/ui/v2/statistics-card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeadCell,
-  TableRow,
-} from "@/features/statistics/ui/v2/statistics-table";
 
-import { EmptyState } from "@/components/v2/ui/empty-state";
+import { Panel } from "@/components/v2/ui/panel";
 
 import type { PersonalStatisticsSummaryResponse } from "@/features/statistics/api";
 
-type ComputedSummary = Exclude<
+type Summary = Exclude<
   PersonalStatisticsSummaryResponse,
   { status: "uncomputed" }
 >;
-type Props = {
-  summary: ComputedSummary;
-  startingPoints?: number | null;
-};
 
-type ScoreMetric = "average" | "maximum" | "minimum" | "median";
-
-const scoreMetricLabels: Record<ScoreMetric, string> = {
-  average: "平均",
-  maximum: "最高",
-  minimum: "最低",
-  median: "中央値",
-};
-
-const ScoreSummaryCard: React.FC<{
-  title: string;
-  unit: string;
-  matchCount: number;
-  values: Record<ScoreMetric, number | null> & {
-    populationStandardDeviation: number | null;
-  };
-  formatValue: (value: number | null) => string;
-  getValueClassName: (value: number | null) => string;
-}> = ({ title, unit, matchCount, values, formatValue, getValueClassName }) => (
-  <Card title={title} meta={`対象: ${matchCount}対局`}>
-    <div className="grid grid-cols-2 gap-4">
-      {(Object.keys(scoreMetricLabels) as ScoreMetric[]).map((metric) => (
-        <StatisticsMetricCard
-          key={metric}
-          label={scoreMetricLabels[metric]}
-          value={formatValue(values[metric])}
-          unit={unit}
-          valueClassName={getValueClassName(values[metric])}
-        />
-      ))}
-    </div>
-  </Card>
-);
-
-const SignDistributionCard: React.FC<{
-  formats: ComputedSummary["scoreByGameType"];
-  showGameType: boolean;
-}> = ({ formats, showGameType }) => {
-  const values = getVisibleStatisticsScoreFormats(formats).flatMap(
-    ({ gameType, finalPoint }) =>
-      [
-        { label: "プラス", ...formatStatisticsRateCount(finalPoint.positive) },
-        {
-          label: "マイナス",
-          ...formatStatisticsRateCount(finalPoint.negative),
-        },
-        { label: "同点", ...formatStatisticsRateCount(finalPoint.even) },
-      ].map((value) => ({ ...value, gameType }))
-  );
-
-  return (
-    <Card title="最終ポイントの符号別成績">
-      <Table caption="最終ポイントの符号別の回数と割合">
-        <TableHead>
-          <TableRow>
-            {showGameType ? <TableHeadCell>形式</TableHeadCell> : null}
-            <TableHeadCell>結果</TableHeadCell>
-            <TableHeadCell>回数</TableHeadCell>
-            <TableHeadCell>割合</TableHeadCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {values.map(({ gameType, label, count, rate }) => (
-            <TableRow key={`${gameType}-${label}`}>
-              {showGameType ? (
-                <TableCell>{getGameTypeLabel(gameType)}</TableCell>
-              ) : null}
-              <TableCell>{label}</TableCell>
-              <TableCell>{count}</TableCell>
-              <TableCell>{rate}</TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </Card>
-  );
-};
-
-const getGameTypeLabel = (gameType: "sanma" | "yonma") =>
-  gameType === "sanma" ? "三麻" : "四麻";
-
-const ScoreByRankCard: React.FC<{
-  summary: ComputedSummary;
-  showGameType: boolean;
-  startingPoints: number | null;
-}> = ({ summary, showGameType, startingPoints }) => {
-  const rows = summary.scoreByRank.flatMap((row) =>
-    getVisibleStatisticsScoreRanks(row.gameType, [row])
-  );
-
-  return (
-    <Card title="順位別の平均スコア">
-      {rows.length > 0 ? (
-        <Table caption="順位別の平均素点と平均最終ポイント">
-          <TableHead>
-            <TableRow>
-              {showGameType ? <TableHeadCell>形式</TableHeadCell> : null}
-              <TableHeadCell>順位</TableHeadCell>
-              <TableHeadCell>対局数</TableHeadCell>
-              <TableHeadCell>平均素点（点）</TableHeadCell>
-              <TableHeadCell>平均最終pt（pt）</TableHeadCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {rows.map((row) => (
-              <TableRow key={`${row.gameType}-${row.rank}`}>
-                {showGameType ? (
-                  <TableCell>{getGameTypeLabel(row.gameType)}</TableCell>
-                ) : null}
-                <TableCell>{row.rank}位</TableCell>
-                <TableCell>{row.matchCount}対局</TableCell>
-                <TableCell
-                  className={getStatisticsRawScoreTextClass(
-                    row.averageRawScore,
-                    startingPoints
-                  )}
-                >
-                  {formatStatisticsScoreValue(row.averageRawScore)}
-                </TableCell>
-                <TableCell
-                  className={getStatisticsSignedValueTextClass(
-                    row.averageFinalPoint
-                  )}
-                >
-                  {formatStatisticsFinalPointValue(row.averageFinalPoint)}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      ) : (
-        <p className="text-sm text-v2-text-secondary">
-          順位別スコアを表示できる対局データはありません。
-        </p>
-      )}
-    </Card>
-  );
-};
-
-export const ScoreBreakdown: React.FC<Props> = ({
+export const ScoreBreakdown = ({
   summary,
-  startingPoints = null,
+}: {
+  summary: Summary;
+  startingPoints?: number | null;
 }) => {
-  const showGameType =
-    summary.scope.scopeType === "overall" && summary.scope.gameType === "all";
-  const scoreFormats = getVisibleStatisticsScoreFormats(
-    summary.scoreByGameType
-  );
-
+  const formats = getVisibleStatisticsScoreFormats(summary.scoreByGameType);
+  const showGameType = formats.length > 1;
   return (
-    <section aria-labelledby="statistics-score-heading" className="space-y-4">
-      <h2
-        id="statistics-score-heading"
-        className="text-xl font-bold text-v2-text"
-      >
-        スコア内訳
-      </h2>
-
-      {summary.status === "empty" ? (
-        <EmptyState
-          title="スコア成績はありません"
-          description="対象条件に該当する対局結果が登録されていません。"
-        />
-      ) : (
-        <>
-          <p className="text-sm text-v2-text-secondary">
-            素点と順位点などを含む最終ポイントを別々に集計しています。
-          </p>
-          <div className="space-y-4">
-            {scoreFormats.map((format) => (
-              <section key={format.gameType} className="space-y-3">
-                {showGameType ? (
-                  <h3 className="font-semibold text-v2-text">
-                    {getGameTypeLabel(format.gameType)}
-                  </h3>
-                ) : null}
-                <ScoreSummaryCard
-                  title={
-                    showGameType
-                      ? `${getGameTypeLabel(format.gameType)}の素点`
-                      : "素点"
-                  }
-                  unit="点"
-                  matchCount={format.rawScore.matchCount}
-                  values={format.rawScore}
-                  formatValue={formatStatisticsScoreValue}
-                  getValueClassName={(value) =>
-                    getStatisticsRawScoreTextClass(value, startingPoints)
-                  }
-                />
-                <ScoreSummaryCard
-                  title={
-                    showGameType
-                      ? `${getGameTypeLabel(format.gameType)}の最終ポイント`
-                      : "最終ポイント"
-                  }
-                  unit="pt"
-                  matchCount={format.finalPoint.matchCount}
-                  values={format.finalPoint}
-                  formatValue={formatStatisticsFinalPointValue}
-                  getValueClassName={getStatisticsSignedValueTextClass}
-                />
-              </section>
-            ))}
-          </div>
-          <SignDistributionCard
-            formats={summary.scoreByGameType}
-            showGameType={showGameType}
-          />
-          <ScoreByRankCard
-            summary={summary}
-            showGameType={showGameType}
-            startingPoints={startingPoints}
-          />
-        </>
-      )}
-    </section>
+    <Panel>
+      <h2 className="text-v2-heading-2 font-bold">スコア分析</h2>
+      {formats.map(({ gameType, finalPoint }) => {
+        const rows = getVisibleStatisticsScoreRanks(
+          gameType,
+          summary.scoreByRank
+        );
+        return (
+          <section key={gameType} className="mt-4 space-y-4">
+            {showGameType && (
+              <h3 className="text-v2-label font-bold">
+                {gameType === "sanma" ? "三麻" : "四麻"}
+              </h3>
+            )}
+            <div>
+              <h3 className="text-v2-label font-semibold">プラス・マイナス</h3>
+              <table className="mt-2 w-full text-left text-v2-caption">
+                <thead className="text-v2-text-secondary">
+                  <tr>
+                    <th className="py-2">結果</th>
+                    <th className="text-right">回数</th>
+                    <th className="text-right">割合</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(
+                    [
+                      ["プラス", finalPoint.positive],
+                      ["マイナス", finalPoint.negative],
+                      ["同点", finalPoint.even],
+                    ] as const
+                  ).map(([label, data]) => {
+                    const value = formatStatisticsRateCount(data);
+                    return (
+                      <tr
+                        key={label}
+                        className="border-t border-v2-border-subtle"
+                      >
+                        <th scope="row" className="py-2 font-normal">
+                          {label}
+                        </th>
+                        <td className="text-right">{value.count}</td>
+                        <td className="text-right">
+                          {data.rate === null ? "—" : value.rate}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <div>
+              <h3 className="text-v2-label font-semibold">順位別スコア</h3>
+              <div className="overflow-x-auto">
+                <table className="mt-2 w-full min-w-[300px] text-left text-v2-caption">
+                  <thead className="text-v2-text-secondary">
+                    <tr>
+                      <th className="py-2">順位</th>
+                      <th className="text-right">対局</th>
+                      <th className="text-right">平均素点</th>
+                      <th className="text-right">平均pt</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map((row) => (
+                      <tr
+                        key={row.rank}
+                        className="border-t border-v2-border-subtle"
+                      >
+                        <th scope="row" className="py-3 font-normal">
+                          {row.rank}位
+                        </th>
+                        <td className="text-right">{row.matchCount}回</td>
+                        <td className="text-right">
+                          {row.averageRawScore === null
+                            ? "—"
+                            : `${formatStatisticsScoreValue(row.averageRawScore)} 点`}
+                        </td>
+                        <td className="text-right">
+                          {row.averageFinalPoint === null
+                            ? "—"
+                            : formatStatisticsFinalPointValue(
+                                row.averageFinalPoint
+                              )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+        );
+      })}
+    </Panel>
   );
 };

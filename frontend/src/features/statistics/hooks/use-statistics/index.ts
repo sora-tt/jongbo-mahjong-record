@@ -288,7 +288,11 @@ export const createUseStatistics = (
           scope: nextSelection.scope,
           targetUserId: nextSelection.targetUserId,
           activeView: nextSelection.activeView,
-          scopeLabel: routeContext.scopeLabel,
+          scopeLabel:
+            nextSelection.scope.scopeType === "overall" &&
+            nextSelection.scope.gameType !== "all"
+              ? `全リーグ・全期間（${nextSelection.scope.gameType === "sanma" ? "三麻" : "四麻"}）`
+              : routeContext.scopeLabel,
           returnTo: routeContext.returnTo,
           routePrefix,
         });
@@ -356,9 +360,11 @@ export const createUseStatistics = (
           localNavigationSearchRef.current = null;
           return;
         }
-        const requestedRoute = parseStatisticsRouteContext(
-          normalizedRouteSearch
-        );
+        const parsedRoute = parseStatisticsRouteContext(normalizedRouteSearch);
+        const requestedRoute =
+          routePrefix === "/v2" && parsedRoute.scope.scopeType === "overall"
+            ? { ...parsedRoute, activeView: "overview" as const }
+            : parsedRoute;
         setRouteContext(requestedRoute);
         setIsLoading(true);
         setInitialError(null);
@@ -637,7 +643,17 @@ export const createUseStatistics = (
         .fetch(summaryQueryKey, async () => {
           const response = await api.getPersonalStatisticsSummary({
             targetUserId: selection.targetUserId,
-            query: apiScope,
+            query: {
+              ...apiScope,
+              ...(routePrefix === "/v2"
+                ? {
+                    ...(selection.scope.scopeType !== "overall"
+                      ? { includePointBreakdown: "true" as const }
+                      : {}),
+                    includeYakumanCounts: "true" as const,
+                  }
+                : {}),
+            },
           });
           return toPersonalStatisticsSummaryView(
             response,
@@ -695,6 +711,7 @@ export const createUseStatistics = (
     }, [
       apiScope,
       router,
+      selection.scope.scopeType,
       selection.targetUserId,
       summaryQueryKey,
       summaryRetryCount,
@@ -1147,12 +1164,18 @@ export const createUseStatistics = (
 
     const onChangeGameType = React.useCallback(
       (gameType: StatisticsScopeFilters["gameType"]) => {
-        setSelection((current) => ({
+        const current = selectionRef.current;
+        const next = {
           ...current,
           scope: { ...current.scope, gameType },
-        }));
+        };
+        selectionRef.current = next;
+        setSelection(next);
+        if (routePrefix === "/v2" && current.scope.scopeType === "overall") {
+          syncRoute(next);
+        }
       },
-      []
+      [routePrefix, syncRoute]
     );
 
     const onChangeActiveView = React.useCallback(

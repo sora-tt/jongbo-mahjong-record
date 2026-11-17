@@ -123,24 +123,22 @@ export const MatchHistory = ({
                 </summary>
                 <div className="mt-4 space-y-3 border-t border-v2-border-subtle pt-3 text-v2-caption">
                   <p>対局日時：{item.playedAtLabel}</p>
-                  <p>形式：{item.gameType === "sanma" ? "三麻" : "四麻"}</p>
-                  <p>セッション：{item.match.sessionLabel ?? "名称なし"}</p>
-                  <p>
-                    表示対象：{subjectLabel}（{item.rank}位・{winds[item.wind]}
-                    家）
-                  </p>
                   <div>
                     <p className="font-bold">同卓者</p>
                     {item.opponents.length ? (
-                      <ul className="mt-1 space-y-1">
+                      <ul className="mt-2 grid grid-cols-3 gap-2">
                         {item.opponents.map((opponent) => (
-                          <li key={opponent.userId}>
-                            {opponent.userName || "名前未設定"}・{opponent.rank}
-                            位・
-                            {formatStatisticsFinalPointValue(
-                              opponent.finalPoint
-                            )}{" "}
-                            pt
+                          <li key={opponent.userId} className="min-w-0">
+                            <p className="break-words font-semibold">
+                              {opponent.userName || "名前未設定"}
+                            </p>
+                            <p className="text-v2-text-secondary">
+                              {opponent.rank}位・
+                              {formatStatisticsFinalPointValue(
+                                opponent.finalPoint
+                              )}{" "}
+                              pt
+                            </p>
                           </li>
                         ))}
                       </ul>

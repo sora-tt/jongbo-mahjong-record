@@ -2,7 +2,10 @@ import * as React from "react";
 
 import { getNextStatisticsView } from "@/features/statistics/model/view-tabs";
 
-import { Tab } from "@/components/v2/ui/tab";
+import {
+  SlidingSegmentedControl,
+  SlidingSegmentedControlButton,
+} from "@/components/v2/ui/sliding-segmented-control";
 
 import type { StatisticsView } from "@/features/statistics/model/query-cache";
 
@@ -15,7 +18,7 @@ type Props = {
 const viewOptions: readonly { value: StatisticsView; label: string }[] = [
   { value: "overview", label: "総合" },
   { value: "trend", label: "推移" },
-  { value: "comparisons", label: "相手・席" },
+  { value: "comparisons", label: "分析" },
   { value: "history", label: "履歴" },
 ];
 
@@ -55,26 +58,20 @@ export const StatisticsViewTabs: React.FC<Props> = ({
 
   return (
     <div className="space-y-4">
-      <div
+      <SlidingSegmentedControl
         role="tablist"
-        aria-label="成績表示"
-        aria-orientation="horizontal"
-        className="relative grid grid-cols-4 gap-1 rounded-v2-control bg-[var(--v2-neutral-200)] p-1"
+        label="成績表示"
+        selectedIndex={activeIndex}
+        count={viewOptions.length}
       >
-        <span
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-y-1 left-1 w-[calc(25%-0.3125rem)] rounded-v2-control bg-v2-surface shadow-v2-card transition-transform duration-200 motion-reduce:transition-none"
-          style={{
-            transform: `translateX(calc(${activeIndex * 100}% + ${activeIndex * 0.25}rem))`,
-          }}
-        />
         {viewOptions.map(({ value, label }) => {
           const selected = activeView === value;
 
           return (
-            <Tab
+            <SlidingSegmentedControlButton
               key={value}
               selected={selected}
+              role="tab"
               ref={(element) => {
                 tabRefs.current[value] = element;
               }}
@@ -84,13 +81,12 @@ export const StatisticsViewTabs: React.FC<Props> = ({
               tabIndex={selected ? 0 : -1}
               onClick={() => onActiveViewChange(value)}
               onKeyDown={(event) => handleKeyDown(event, value)}
-              className={`relative !border-0 !bg-transparent !px-1 !text-v2-caption transition-colors ${selected ? "!text-v2-brand-strong" : "!text-v2-text-secondary"}`}
             >
               {label}
-            </Tab>
+            </SlidingSegmentedControlButton>
           );
         })}
-      </div>
+      </SlidingSegmentedControl>
 
       {viewOptions.map(({ value }) => {
         const selected = activeView === value;

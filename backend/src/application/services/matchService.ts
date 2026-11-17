@@ -160,6 +160,7 @@ export class MatchService {
       seasonId,
       sessionId,
       matchId,
+      matchIndex: input.matchIndex,
       playedAt: input.playedAt ?? existing.playedAt,
       results: nextResults,
       chomboEvents: input.chomboEvents === undefined ? undefined : chomboEvents,

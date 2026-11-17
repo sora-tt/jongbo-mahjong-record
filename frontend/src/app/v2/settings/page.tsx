@@ -44,7 +44,7 @@ const SettingsPage = () => {
         <PageLoading label="設定を読み込んでいます" bottomNav />
       ) : (
         <main className="mx-auto w-full max-w-xl px-4 pb-28 pt-6">
-          <h1 className="mb-6 text-center text-v2-heading-2 font-bold">設定</h1>
+          <h1 className="mb-6 text-center text-v2-display font-bold">設定</h1>
           {error ? (
             <Status message={error} onRetry={retry} />
           ) : (

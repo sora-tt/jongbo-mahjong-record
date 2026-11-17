@@ -15,7 +15,7 @@ import {
   toIsoString,
   toTimestamp,
 } from "@/infrastructure/firestore/utils.js";
-import { NotFoundError } from "@/domain/shared/errors.js";
+import { ConflictError, NotFoundError } from "@/domain/shared/errors.js";
 import { asOpaqueId } from "@/domain/shared/types.js";
 
 export class FirestoreMatchRepository implements MatchRepository {
@@ -190,6 +190,7 @@ export class FirestoreMatchRepository implements MatchRepository {
     seasonId: string;
     sessionId: string;
     matchId: string;
+    matchIndex?: number;
     playedAt?: string;
     results?: MatchResult[];
     chomboEvents?: Array<{ offenderUserId: string }>;
@@ -207,6 +208,9 @@ export class FirestoreMatchRepository implements MatchRepository {
     }
 
     const patch: Record<string, unknown> = { updated_at: Timestamp.now() };
+    if (params.matchIndex !== undefined) {
+      patch.match_index = params.matchIndex;
+    }
     if (params.playedAt !== undefined) {
       patch.played_at = toTimestamp(params.playedAt);
     }
@@ -223,7 +227,31 @@ export class FirestoreMatchRepository implements MatchRepository {
       patch.off_table_kyotaku_count = params.offTableKyotakuCount;
     }
 
-    await ref.update(patch);
+    if (params.matchIndex !== undefined) {
+      const sessionRef = ref.parent.parent!;
+      await this.db.runTransaction(async (transaction) => {
+        const sessionSnapshot = await transaction.get(sessionRef);
+        const matchSnapshot = await transaction.get(ref);
+        const sameNumber = await transaction.get(
+          ref.parent.where("match_index", "==", params.matchIndex),
+        );
+        if (!sessionSnapshot.exists) {
+          throw new NotFoundError("session not found", params);
+        }
+        if (!matchSnapshot.exists) {
+          throw new NotFoundError("match not found", params);
+        }
+        if (sameNumber.docs.some((doc) => doc.id !== ref.id)) {
+          throw new ConflictError("この対局番号は既に使われています。", {
+            matchIndex: params.matchIndex,
+          });
+        }
+        transaction.update(ref, patch);
+        transaction.update(sessionRef, { updated_at: Timestamp.now() });
+      });
+    } else {
+      await ref.update(patch);
+    }
     return this.get(
       params.leagueId,
       params.seasonId,

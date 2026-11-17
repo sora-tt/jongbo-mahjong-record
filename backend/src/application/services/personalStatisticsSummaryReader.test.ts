@@ -152,6 +152,7 @@ const makeReaderFixture = (
     accessError?: Error;
     missingLeague?: boolean;
     missingSeason?: boolean;
+    getRule?: LeagueRepository["getRule"];
   } = {},
 ) => {
   const events: string[] = [];
@@ -188,6 +189,7 @@ const makeReaderFixture = (
       events.push("league");
       return !options.missingLeague;
     },
+    ...(options.getRule ? { getRule: options.getRule } : {}),
   } as unknown as LeagueRepository;
   const seasonRepository = {
     exists: async () => {
@@ -219,6 +221,124 @@ const makeReaderFixture = (
     },
   };
 };
+
+test("yakuman counts respect the selected game type and reuse the point breakdown read", async () => {
+  const rows: UserMatchStatistics[] = [
+    { ...matches[0]!, yakumanKinds: ["daisangen", "tsuuiisou"] },
+    { ...matches[1]!, yakumanKinds: ["daisangen", "daisangen"] },
+  ];
+  const fixture = makeReaderFixture({
+    statsRecord: makeStatsRecord(makeSnapshot(rows)),
+    projectionMatches: rows,
+    getRule: async () =>
+      ({
+        oka: { startingPoints: 25000, returnPoints: 30000 },
+        chomboPenaltyPoints: 10,
+      }) as Awaited<ReturnType<LeagueRepository["getRule"]>>,
+  });
+  const all = await fixture.reader.getSummary({
+    ...overallQuery(),
+    includePointBreakdown: "true",
+    includeYakumanCounts: "true",
+  });
+  assert.equal(all.status, "ready");
+  assert.equal(fixture.projectionReadCount, 1);
+  assert.equal(
+    all.yakumanCounts?.find((row) => row.kind === "daisangen")?.count,
+    3,
+  );
+  assert.equal(
+    all.yakumanCounts?.find((row) => row.kind === "tsuuiisou")?.count,
+    1,
+  );
+  assert.equal(
+    all.yakumanCounts?.find((row) => row.kind === "tenhou")?.count,
+    0,
+  );
+  assert.equal(all.yakumanCounts?.length, 15);
+
+  const yonma = await fixture.reader.getSummary({
+    ...overallQuery({ gameType: "yonma" }),
+    includeYakumanCounts: "true",
+  });
+  assert.equal(yonma.status, "ready");
+  assert.equal(
+    yonma.yakumanCounts?.find((row) => row.kind === "daisangen")?.count,
+    1,
+  );
+  assert.equal(
+    yonma.yakumanCounts?.find((row) => row.kind === "tsuuiisou")?.count,
+    1,
+  );
+});
+
+test("yakuman counts are unavailable when projections and summary do not match", async () => {
+  const fixture = makeReaderFixture({ projectionMatches: [matches[0]!] });
+  const result = await fixture.reader.getSummary({
+    ...overallQuery(),
+    includeYakumanCounts: "true",
+  });
+  assert.equal(result.status, "ready");
+  assert.equal(result.yakumanCounts, null);
+});
+
+test("point breakdown uses each league's return points and chombo penalty, including filtered formats", async () => {
+  const rows: UserMatchStatistics[] = [
+    { ...matches[0]!, chomboCount: 1 },
+    { ...matches[1]!, leagueId: asOpaqueId("league-2") },
+  ];
+  const ruleCalls: string[] = [];
+  const fixture = makeReaderFixture({
+    statsRecord: makeStatsRecord(makeSnapshot(rows)),
+    projectionMatches: rows,
+    getRule: async (id) => {
+      ruleCalls.push(id);
+      return {
+        oka: {
+          startingPoints: 25000,
+          returnPoints: id === "league-2" ? 35000 : 30000,
+        },
+        chomboPenaltyPoints: 10,
+      } as Awaited<ReturnType<LeagueRepository["getRule"]>>;
+    },
+  });
+  const all = await fixture.reader.getSummary({
+    ...overallQuery(),
+    includePointBreakdown: "true",
+  });
+  assert.equal(all.status, "ready");
+  assert.deepEqual(all.pointBreakdown, {
+    rawPoint: -1,
+    rankPoint: 31,
+    chomboPenalty: -10,
+  });
+  assert.deepEqual(ruleCalls.sort(), ["league-1", "league-2"]);
+  const sanma = await fixture.reader.getSummary({
+    ...overallQuery({ gameType: "sanma" }),
+    includePointBreakdown: "true",
+  });
+  assert.equal(sanma.status, "ready");
+  assert.deepEqual(sanma.pointBreakdown, {
+    rawPoint: -23,
+    rankPoint: 1,
+    chomboPenalty: 0,
+  });
+});
+
+test("point breakdown is omitted when the saved snapshot and projections disagree", async () => {
+  const fixture = makeReaderFixture({
+    projectionMatches: [matches[0]!],
+    getRule: async () => {
+      throw new Error("should not read a rule");
+    },
+  });
+  const result = await fixture.reader.getSummary({
+    ...overallQuery(),
+    includePointBreakdown: "true",
+  });
+  assert.equal(result.status, "ready");
+  assert.equal(result.pointBreakdown, null);
+});
 
 test("fixed-scope summary reads one snapshot document and selects the saved game-type slice", async () => {
   const fixture = makeReaderFixture();

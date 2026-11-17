@@ -81,6 +81,95 @@ test(
 );
 
 test(
+  "allows filling a deleted match number and rejects duplicate numbers",
+  { skip: !emulatorAvailable },
+  async () => {
+    const db = getDb();
+    const repository = new FirestoreMatchRepository(db);
+    const leagueId = `match-index-edit-test-${process.pid}-${Date.now()}`;
+    const seasonId = "season";
+    const sessionId = "session";
+    const leagueRef = db.collection("leagues").doc(leagueId);
+    const sessionRef = leagueRef
+      .collection("seasons")
+      .doc(seasonId)
+      .collection("sessions")
+      .doc(sessionId);
+    await leagueRef.set({ rule_locked: false });
+    await sessionRef.set({ total_match_count: 0 });
+    const results = [
+      {
+        userId: asOpaqueId("u1"),
+        userName: "一郎",
+        wind: "east" as const,
+        rank: 1,
+        rawScore: 35000,
+        point: 45,
+      },
+    ];
+    const create = () =>
+      repository.create({
+        leagueId,
+        seasonId,
+        sessionId,
+        playedAt: "2026-01-01T00:00:00.000Z",
+        results,
+      });
+    try {
+      const first = await create();
+      const second = await create();
+      await assert.rejects(
+        repository.update({
+          leagueId,
+          seasonId,
+          sessionId,
+          matchId: second.id,
+          matchIndex: 1,
+        }),
+        /既に使われています/,
+      );
+      await repository.delete(leagueId, seasonId, sessionId, first.id);
+      const updated = await repository.update({
+        leagueId,
+        seasonId,
+        sessionId,
+        matchId: second.id,
+        matchIndex: 1,
+      });
+      assert.equal(updated.matchIndex, 1);
+      const third = await create();
+      assert.equal(third.matchIndex, 2);
+      const competingUpdates = await Promise.allSettled([
+        repository.update({
+          leagueId,
+          seasonId,
+          sessionId,
+          matchId: second.id,
+          matchIndex: 3,
+        }),
+        repository.update({
+          leagueId,
+          seasonId,
+          sessionId,
+          matchId: third.id,
+          matchIndex: 3,
+        }),
+      ]);
+      assert.equal(
+        competingUpdates.filter((item) => item.status === "fulfilled").length,
+        1,
+      );
+      assert.equal(
+        competingUpdates.filter((item) => item.status === "rejected").length,
+        1,
+      );
+    } finally {
+      await db.recursiveDelete(leagueRef);
+    }
+  },
+);
+
+test(
   "persists Match yakuman events and distinguishes omitted, empty, and legacy values",
   { skip: !emulatorAvailable },
   async () => {

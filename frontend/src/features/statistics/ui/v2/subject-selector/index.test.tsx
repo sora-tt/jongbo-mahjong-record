@@ -31,4 +31,11 @@ test("選択中の参加者はラジオで示し、表示中文字を出さな�
   assert.equal(radios[0].checked, true);
   assert.equal(radios[1].checked, false);
   assert.doesNotMatch(doc.body.textContent ?? "", /表示中/);
+  assert.doesNotMatch(doc.body.textContent ?? "", /現在:|（本人）/);
+  assert.equal(doc.querySelectorAll('svg[aria-label="本人"]').length, 1);
+  assert.match(radios[0].closest("label")?.textContent ?? "", /太郎さん/);
+  assert.equal(
+    radios[1].closest("label")?.querySelector('svg[aria-label="本人"]'),
+    null
+  );
 });

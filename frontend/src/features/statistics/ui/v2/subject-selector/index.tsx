@@ -1,7 +1,7 @@
 "use client";
 import * as React from "react";
 
-import { X } from "lucide-react";
+import { UserRound, X } from "lucide-react";
 
 import {
   getStatisticsSubjectSelectorModel,
@@ -59,13 +59,13 @@ export const StatisticsSubjectSelector = ({
     if (!open && dialog.open) dialog.close();
   }, [open]);
   if (!model.visible) return null;
-  const viewerLabel = userName ? `${userName}さん（本人）` : "本人";
+  const viewerName = userName.trim() || "名前未設定";
   const options = model.candidateOptions.some(
     (member) => member.userId === viewerUserId
   )
     ? model.candidateOptions
     : [
-        { userId: viewerUserId, userName: viewerLabel },
+        { userId: viewerUserId, userName: viewerName },
         ...model.candidateOptions,
       ];
   return (
@@ -88,15 +88,9 @@ export const StatisticsSubjectSelector = ({
         onClose={() => setOpen(false)}
       >
         <div className="flex items-start justify-between gap-2">
-          <div>
-            <h2 id={titleId} className="text-v2-heading-2 font-bold">
-              成績を見る参加者
-            </h2>
-            <p className="mt-1 text-v2-caption text-v2-text-secondary">
-              現在: {model.selectedUserName}
-              {model.isViewingSelf ? "（本人）" : "さん"}
-            </p>
-          </div>
+          <h2 id={titleId} className="text-v2-heading-2 font-bold">
+            他の参加者
+          </h2>
           <IconButton
             type="button"
             size="sm"
@@ -124,10 +118,8 @@ export const StatisticsSubjectSelector = ({
           <fieldset aria-label="成績を表示する参加者" className="space-y-1">
             {options.map((member) => {
               const selected = member.userId === model.selectedUserId;
-              const label =
-                member.userId === viewerUserId
-                  ? viewerLabel
-                  : `${member.userName}さん`;
+              const isViewer = member.userId === viewerUserId;
+              const name = member.userName.trim() || "名前未設定";
               return (
                 <div
                   key={member.userId}
@@ -137,7 +129,19 @@ export const StatisticsSubjectSelector = ({
                     type="radio"
                     name={radioName}
                     checked={selected}
-                    label={label}
+                    label={
+                      <span className="inline-flex items-center gap-1.5">
+                        {name}さん
+                        {isViewer && (
+                          <UserRound
+                            size={16}
+                            role="img"
+                            aria-label="本人"
+                            className="text-v2-text-secondary"
+                          />
+                        )}
+                      </span>
+                    }
                     className="flex w-full"
                     onChange={() => {
                       if (!selected) onChangeTarget(member.userId);
