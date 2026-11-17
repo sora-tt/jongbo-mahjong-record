@@ -47,10 +47,10 @@ const App = ({ pathname }: { pathname: string }) => (
 
 test("loading continues across the home navigation until the home is ready", async () => {
   const { render, fireEvent, screen } = await setup;
-  const view = render(<App pathname="/v2/login" />);
+  const view = render(<App pathname="/login" />);
   fireEvent.click(screen.getByText("start"));
   assert.ok(screen.getByRole("status"));
-  view.rerender(<App pathname="/v2" />);
+  view.rerender(<App pathname="/" />);
   assert.ok(screen.getByRole("status"));
   fireEvent.click(screen.getByText("finish"));
   assert.equal(screen.queryByRole("status"), null);
@@ -58,7 +58,7 @@ test("loading continues across the home navigation until the home is ready", asy
 
 test("loading ends on an authentication error or a verification redirect", async () => {
   const { render, fireEvent, screen } = await setup;
-  const view = render(<App pathname="/v2/login" />);
+  const view = render(<App pathname="/login" />);
   fireEvent.click(screen.getByText("start"));
   fireEvent.click(screen.getByText("finish"));
   assert.equal(screen.queryByRole("status"), null);

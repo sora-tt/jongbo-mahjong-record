@@ -1,13 +1,11 @@
 "use client";
 
-import * as React from "react";
+import { useLoginPage } from "@/features/auth/hooks/use-login";
 
-import { AuthFormShell } from "@/components/pages/auth/auth-form-shell";
-import { InputArea } from "@/components/pages/entry-pages/input-area";
+import { AuthForm } from "@/components/layout/auth-form";
+import { Input } from "@/components/ui/input";
 
-import { useLoginPage } from "./hooks";
-
-const LoginPage: React.FC = () => {
+const LoginPage = () => {
   const {
     email,
     password,
@@ -16,36 +14,42 @@ const LoginPage: React.FC = () => {
     setEmail,
     setPassword,
     handleSubmit,
-  } = useLoginPage();
-
+  } = useLoginPage({
+    showLoadingAnimation: true,
+    homePath: "/",
+    verificationPath: "/verify-email",
+  });
   return (
-    <AuthFormShell
+    <AuthForm
       title="ログイン"
       error={error}
       submitLabel="ログイン"
       isSubmitting={isSubmitting}
       onSubmit={handleSubmit}
-      footerLinks={[
-        { href: "/", label: "パスワードを忘れた方はこちら" },
-        { href: "/install", label: "ホーム画面に追加する" },
+      links={[
+        {
+          disabled: true,
+          label: "パスワードを忘れた方はこちら（未実装）",
+          secondary: true,
+        },
         { href: "/signup", label: "新規登録はこちら" },
       ]}
     >
-      <InputArea
+      <Input
         label="メールアドレス"
         type="email"
-        placeholder="メールアドレスを入力"
+        placeholder="入力してください"
         value={email}
         onChange={(event) => setEmail(event.target.value)}
       />
-      <InputArea
+      <Input
         label="パスワード"
         type="password"
-        placeholder="パスワードを入力"
+        placeholder="入力してください"
         value={password}
         onChange={(event) => setPassword(event.target.value)}
       />
-    </AuthFormShell>
+    </AuthForm>
   );
 };
 

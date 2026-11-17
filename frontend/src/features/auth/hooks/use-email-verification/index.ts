@@ -10,7 +10,6 @@ import {
 } from "@/lib/auth/verification";
 import { getCurrentUser, sendVerificationEmail } from "@/lib/firebase/auth";
 
-const VERIFICATION_PATH = "/v2/verify-email";
 const COOLDOWN_SECONDS = 60;
 
 const defaultApi = {
@@ -44,7 +43,7 @@ export const createUseEmailVerification =
           setError("ログイン状態が無効です。ログインし直してください。");
           return;
         }
-        await api.send(user, VERIFICATION_PATH);
+        await api.send(user);
         setRetryAfterSeconds(COOLDOWN_SECONDS);
         setStatus("pending");
       } catch (sendError) {

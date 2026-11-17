@@ -41,10 +41,8 @@ const getSafeReturnPath = (value: string | null) => {
     const parsedUrl = new URL(value, baseUrl);
     const isKnownRoute =
       value === "/" ||
-      value === "/v2" ||
       value === "/stats" ||
-      value === "/v2/stats" ||
-      /^\/(?:v2\/)?league\/[^/?#%]+(?:\/season\/[^/?#%]+)?$/.test(value);
+      /^\/league\/[^/?#%]+(?:\/season\/[^/?#%]+)?$/.test(value);
 
     return parsedUrl.origin === baseUrl &&
       parsedUrl.pathname === value &&

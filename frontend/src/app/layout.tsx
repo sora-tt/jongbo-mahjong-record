@@ -2,9 +2,8 @@ import * as React from "react";
 
 import "./styles/globals.css";
 
-import { NavigationModelProvider } from "@/app/navigation-model-provider";
-
 import { AppProviders } from "@/components/app/providers";
+import { ProfileProvider } from "@/components/layout/profile-provider";
 
 import type { Metadata, Viewport } from "next";
 
@@ -32,9 +31,15 @@ export const viewport: Viewport = {
 const RootLayout: React.FC<RootLayoutProps> = ({ children }) => {
   return (
     <html lang="ja">
+      <head>
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=M+PLUS+2:wght@400;500;600;700&display=swap"
+        />
+      </head>
       <body>
         <AppProviders>
-          <NavigationModelProvider>{children}</NavigationModelProvider>
+          <ProfileProvider>{children}</ProfileProvider>
         </AppProviders>
       </body>
     </html>

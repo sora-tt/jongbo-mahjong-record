@@ -2,67 +2,65 @@ import * as React from "react";
 
 import clsx from "clsx";
 
-type InputProps = React.InputHTMLAttributes<HTMLInputElement> & {
+import { fieldStyles } from "@/components/ui/field/styles";
+
+type InputProps = Omit<React.InputHTMLAttributes<HTMLInputElement>, "size"> & {
   label?: string;
   description?: string;
   error?: string;
   containerClassName?: string;
+  size?: "sm" | "md" | "lg";
 };
+const sizeStyles = { sm: "h-9", md: "h-11", lg: "h-[52px]" };
 
-export const Input: React.FC<InputProps> = ({
-  id,
+export const Input = ({
   label,
   description,
   error,
-  required,
+  size = "md",
+  id,
   className,
   containerClassName,
   ...props
-}) => {
+}: InputProps) => {
   const generatedId = React.useId();
   const inputId = id ?? generatedId;
-  const descriptionId = description ? `${inputId}-description` : undefined;
+  const hintId = description ? `${inputId}-description` : undefined;
   const errorId = error ? `${inputId}-error` : undefined;
-
   return (
-    <div className={clsx("space-y-1.5", containerClassName)}>
-      {label ? (
-        <label
-          htmlFor={inputId}
-          className="block text-sm font-medium text-foreground"
-        >
+    <div className={clsx(fieldStyles.wrapper, containerClassName)}>
+      {label && (
+        <label className={fieldStyles.label} htmlFor={inputId}>
           {label}
-          {required ? (
-            <span className="ml-1 text-danger" aria-hidden="true">
-              *
-            </span>
-          ) : null}
         </label>
-      ) : null}
-      {description ? (
-        <p id={descriptionId} className="text-xs text-text-muted">
+      )}
+      <input
+        {...props}
+        id={inputId}
+        className={clsx(fieldStyles.control, sizeStyles[size], className)}
+        aria-invalid={error ? true : props["aria-invalid"]}
+        aria-describedby={
+          Array.from(
+            new Set(
+              [
+                ...(props["aria-describedby"]?.split(/\s+/) ?? []),
+                hintId,
+                errorId,
+              ].filter(Boolean)
+            )
+          ).join(" ") || undefined
+        }
+      />
+      {description && (
+        <p className={fieldStyles.label} id={hintId}>
           {description}
         </p>
-      ) : null}
-      <input
-        id={inputId}
-        required={required}
-        aria-describedby={errorId ?? descriptionId}
-        aria-invalid={error ? true : undefined}
-        className={clsx(
-          "w-full rounded-control border bg-white px-3 py-2 text-sm text-foreground shadow-sm transition-colors placeholder:text-text-muted",
-          "border-border hover:border-brand-400 focus:border-brand-strong focus:outline-none",
-          "disabled:cursor-not-allowed disabled:bg-surface-muted disabled:opacity-60",
-          error && "border-danger focus:border-danger",
-          className
-        )}
-        {...props}
-      />
-      {error ? (
-        <p id={errorId} className="text-sm text-danger" role="alert">
+      )}
+      {error && (
+        <p className={fieldStyles.error} id={errorId} role="alert">
           {error}
         </p>
-      ) : null}
+      )}
     </div>
   );
 };

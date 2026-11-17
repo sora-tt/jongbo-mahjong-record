@@ -97,7 +97,7 @@ test("終了済みセッションを再開し、失敗した場合は終了状�
     });
   }) as typeof fetch;
 
-  const { result } = renderHook(() => useSessionResultsPage("/v2"), {
+  const { result } = renderHook(() => useSessionResultsPage(), {
     wrapper: Wrapper,
   });
   await waitFor(() => assert.equal(result.current.isLoading, false));

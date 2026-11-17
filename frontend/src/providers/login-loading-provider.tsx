@@ -4,7 +4,7 @@ import * as React from "react";
 
 import { usePathname } from "next/navigation";
 
-import { LoginLoading } from "@/components/v2/ui/login-loading";
+import { LoginLoading } from "@/components/ui/login-loading";
 
 const LoginLoadingContext = React.createContext<{
   start: () => void;
@@ -18,7 +18,7 @@ export const LoginLoadingProvider = ({ children }: React.PropsWithChildren) => {
   const finish = React.useCallback(() => setLoading(false), []);
 
   React.useEffect(() => {
-    if (loading && !["/v2/login", "/", "/v2"].includes(pathname)) {
+    if (loading && !["/login", "/"].includes(pathname)) {
       finish();
     }
   }, [finish, loading, pathname]);

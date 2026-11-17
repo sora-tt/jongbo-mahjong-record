@@ -6,9 +6,9 @@ import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import { toMatchList } from "@/features/match/model/adapter";
-import { MatchList } from "@/features/match/ui/MatchList";
+import { MatchList } from "@/features/match/ui/match-list";
 import { toStandingRows } from "@/features/statistics/model/adapter";
-import { StandingsTable } from "@/features/statistics/ui/StandingsTable";
+import { StandingsTable } from "@/features/statistics/ui/standings-table";
 
 import type { ApiMatch, ApiSeason } from "@/lib/api/contracts";
 
@@ -51,14 +51,15 @@ test("Match and season standings display points supplied by Backend", () => {
         { userId: "user-2", userName: "二郎" },
       ],
       matches: toMatchList([match]),
+      editable: true,
       deletingMatchId: null,
       onEdit: () => {},
       onDelete: () => {},
     })
   );
 
-  strictEqual(matchMarkup.includes("+23.0pt"), true);
-  strictEqual(matchMarkup.includes("+9.0pt"), true);
+  strictEqual(matchMarkup.includes("+23.0"), true);
+  strictEqual(matchMarkup.includes("+9.0"), true);
 
   const standings = [
     {
@@ -76,6 +77,10 @@ test("Match and season standings display points supplied by Backend", () => {
   const standingsMarkup = renderToStaticMarkup(
     React.createElement(StandingsTable, {
       rows: toStandingRows(standings),
+      leagueId: "league-1",
+      seasonId: "season-1",
+      leagueName: "リーグ",
+      seasonName: "シーズン",
     })
   );
 

@@ -2,29 +2,25 @@ import * as React from "react";
 
 import clsx from "clsx";
 
-type EmptyStateProps = {
-  title: string;
-  description?: string;
-  action?: React.ReactNode;
-  className?: string;
-};
-
-export const EmptyState: React.FC<EmptyStateProps> = ({
+export const EmptyState = ({
   title,
   description,
   action,
   className,
+}: {
+  title: React.ReactNode;
+  description?: React.ReactNode;
+  action?: React.ReactNode;
+  className?: string;
 }) => (
   <div
     className={clsx(
-      "space-y-2 rounded-surface border border-dashed border-border bg-surface-muted p-8 text-center",
+      "rounded-app-panel bg-app-surface p-4 text-center text-app-text-secondary",
       className
     )}
   >
-    <h2 className="font-semibold text-foreground">{title}</h2>
-    {description ? (
-      <p className="text-sm text-text-muted">{description}</p>
-    ) : null}
-    {action ? <div className="pt-2">{action}</div> : null}
+    <p className="text-app-label font-semibold">{title}</p>
+    {description && <p className="mt-2 text-app-caption">{description}</p>}
+    {action && <div className="mt-3">{action}</div>}
   </div>
 );

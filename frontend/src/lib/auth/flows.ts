@@ -93,15 +93,12 @@ export const loginToApp = async (input: {
   return "/" as const;
 };
 
-export const signupToApp = async (
-  input: {
-    email: string;
-    password: string;
-    name: string;
-    username: string;
-  },
-  verificationPath: "/verify-email" | "/v2/verify-email" = "/verify-email"
-) => {
+export const signupToApp = async (input: {
+  email: string;
+  password: string;
+  name: string;
+  username: string;
+}) => {
   const credential = await signupWithEmail({
     email: input.email,
     password: input.password,
@@ -110,9 +107,9 @@ export const signupToApp = async (
   const idToken = await credential.user.getIdToken();
 
   await createSession(idToken);
-  await sendFirebaseVerificationEmail(credential.user, verificationPath);
+  await sendFirebaseVerificationEmail(credential.user);
 
-  return `${verificationPath}?sent=1`;
+  return "/verify-email?sent=1";
 };
 
 export const logoutFromApp = async () => {

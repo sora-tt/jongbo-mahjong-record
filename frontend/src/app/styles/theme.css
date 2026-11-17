@@ -1,0 +1,193 @@
+/* Penpot: 00 · Foundations. */
+:root {
+  --app-coral-50: #fff8f9;
+  --app-coral-100: #fff5f6;
+  --app-coral-200: #ffebed;
+  --app-coral-300: #ffe1e4;
+  --app-coral-400: #ffd7db;
+  --app-coral-500: #ffb9c1;
+  --app-coral-600: #da9ea5;
+  --app-coral-700: #ff7988;
+  --app-coral-800: #6d4f52;
+  --app-coral-900: #241a1b;
+  --app-neutral-0: #fff;
+  --app-neutral-50: #fffbfa;
+  --app-neutral-100: #f8f3f2;
+  --app-neutral-200: #efe7e6;
+  --app-neutral-300: #e5d9d7;
+  --app-neutral-500: #77716f;
+  --app-neutral-700: #3f3a39;
+  --app-neutral-900: #241818;
+  --app-blue-600: #2563eb;
+  --app-green-600: #247a55;
+  --app-yellow-700: #9a6700;
+  --app-red-600: #c9424a;
+  --app-purple-600: #9333ea;
+  --app-cyan-600: #0891b2;
+  --app-orange-600: #ea580c;
+  --app-pink-600: #db2777;
+  --app-canvas: var(--app-coral-50);
+  --app-surface: var(--app-neutral-0);
+  --app-surface-subtle: var(--app-neutral-50);
+  --app-surface-muted: var(--app-coral-50);
+  --app-text: var(--app-neutral-900);
+  --app-text-heading: #262120;
+  --app-text-secondary: var(--app-neutral-500);
+  --app-text-inverse: var(--app-neutral-0);
+  --app-brand-soft: var(--app-coral-100);
+  --app-brand-border: var(--app-coral-300);
+  --app-brand: var(--app-coral-500);
+  --app-brand-strong: var(--app-coral-800);
+  --app-action-primary: var(--app-coral-700);
+  --app-action-secondary: var(--app-coral-200);
+  --app-border: var(--app-coral-300);
+  --app-border-subtle: var(--app-neutral-100);
+  --app-focus: var(--app-coral-800);
+  --app-success: var(--app-green-600);
+  --app-warning: var(--app-yellow-700);
+  --app-danger: var(--app-red-600);
+  --app-rank-first: #c69214;
+  --app-rank-second: #718096;
+  --app-rank-third: #a66a43;
+  --app-rank-fourth: var(--app-neutral-500);
+  --app-data-positive: var(--app-blue-600);
+  --app-data-negative: var(--app-red-600);
+  --app-data-neutral: var(--app-neutral-500);
+  --app-chart-1: var(--app-coral-700);
+  --app-chart-2: var(--app-blue-600);
+  --app-chart-3: var(--app-green-600);
+  --app-chart-4: var(--app-yellow-700);
+  --app-chart-5: var(--app-purple-600);
+  --app-chart-6: var(--app-pink-600);
+  --app-chart-7: var(--app-orange-600);
+  --app-chart-8: var(--app-cyan-600);
+  --app-space-0: 0px;
+  --app-space-1: 4px;
+  --app-space-2: 8px;
+  --app-space-3: 12px;
+  --app-space-4: 16px;
+  --app-space-5: 20px;
+  --app-space-6: 24px;
+  --app-space-8: 32px;
+  --app-space-10: 40px;
+  --app-space-12: 48px;
+  --app-radius-none: 0px;
+  --app-radius-sm: 6px;
+  --app-radius-control: 10px;
+  --app-radius-card: 12px;
+  --app-radius-panel: 16px;
+  --app-radius-feature: 26px;
+  --app-radius-pill: 999px;
+  --app-size-touch-min: 44px;
+  --app-size-touch-comfortable: 48px;
+  --app-size-control-sm: 36px;
+  --app-size-control-md: 44px;
+  --app-size-control-lg: 52px;
+  --app-size-icon-sm: 16px;
+  --app-size-icon-md: 20px;
+  --app-size-icon-lg: 24px;
+  --app-size-icon-xl: 32px;
+  --app-border-width: 1px;
+  --app-border-focus: 2px;
+  --app-opacity-disabled: 0.48;
+  --app-opacity-scrim: 0.4;
+  --app-font-family: "M PLUS 2", sans-serif;
+  --app-shadow-input: 0 4px 12px rgba(109, 79, 82, 0.08);
+  --app-shadow-input-focus: 0 4px 12px rgba(217, 95, 89, 0.12);
+  --app-shadow-input-error: 0 4px 12px rgba(201, 66, 74, 0.14);
+  --app-shadow-card: 0 3px 12px rgba(109, 79, 82, 0.09);
+  --app-shadow-feature: 0 6px 18px rgba(109, 79, 82, 0.1);
+  color: var(--app-text);
+  font-family: var(--app-font-family);
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+/* Expose application tokens as Tailwind utilities. */
+@theme inline {
+  --color-app-canvas: var(--app-canvas);
+  --color-app-surface: var(--app-surface);
+  --color-app-surface-subtle: var(--app-surface-subtle);
+  --color-app-text: var(--app-text);
+  --color-app-text-secondary: var(--app-text-secondary);
+  --color-app-on-primary: var(--app-text-inverse);
+  --color-app-brand-soft: var(--app-brand-soft);
+  --color-app-brand-strong: var(--app-brand-strong);
+  --color-app-action-primary: var(--app-action-primary);
+  --color-app-border: var(--app-border);
+  --color-app-border-subtle: var(--app-border-subtle);
+  --color-app-focus: var(--app-focus);
+  --color-app-success: var(--app-success);
+  --color-app-danger: var(--app-danger);
+  --color-app-neutral-300: var(--app-neutral-300);
+  --radius-app-control: var(--app-radius-control);
+  --radius-app-panel: var(--app-radius-panel);
+  --shadow-app-input: var(--app-shadow-input);
+  --shadow-app-input-focus: var(--app-shadow-input-focus);
+  --shadow-app-input-error: var(--app-shadow-input-error);
+  --shadow-app-card: var(--app-shadow-card);
+  --shadow-app-feature: var(--app-shadow-feature);
+  --font-app: var(--app-font-family);
+  --text-app-display: 24px;
+  --text-app-display--line-height: 1.25;
+  --text-app-heading-1: 22px;
+  --text-app-heading-1--line-height: 1.3;
+  --text-app-heading-2: 18px;
+  --text-app-heading-2--line-height: 1.35;
+  --text-app-body: 16px;
+  --text-app-body--line-height: 1.5;
+  --text-app-label: 14px;
+  --text-app-label--line-height: 1.4;
+  --text-app-caption: 12px;
+  --text-app-caption--line-height: 1.4;
+  --text-app-data: 22px;
+  --text-app-data--line-height: 1.1;
+}
+
+:is(button, a, input, select, textarea):focus-visible {
+  outline: 2px solid var(--app-focus);
+  outline-offset: 2px;
+}
+
+.login-loading {
+  position: fixed;
+  z-index: 100;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  padding: 32px 20px;
+  background: var(--app-canvas);
+  color: #746568;
+  font: 400 13px/1.5 system-ui, sans-serif;
+}
+
+.login-loading__logo {
+  display: block;
+  width: min(100%, 360px);
+  height: auto;
+  overflow: visible;
+}
+
+.login-loading__letter {
+  animation: login-letter-bounce 1800ms ease-in-out infinite;
+}
+
+.login-loading__logo > g > g:nth-child(2) .login-loading__letter { animation-delay: 140ms; }
+.login-loading__logo > g > g:nth-child(3) .login-loading__letter { animation-delay: 280ms; }
+.login-loading__logo > g > g:nth-child(4) .login-loading__letter { animation-delay: 420ms; }
+.login-loading__logo > g > g:nth-child(5) .login-loading__letter { animation-delay: 560ms; }
+.login-loading__logo > g > g:nth-child(6) .login-loading__letter { animation-delay: 700ms; }
+
+@keyframes login-letter-bounce {
+  0% { transform: translateY(0); }
+  12% { transform: translateY(-5px); }
+  23% { transform: translateY(0.5px); }
+  30%, 100% { transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-loading__letter { animation: none; }
+}

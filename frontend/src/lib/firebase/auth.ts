@@ -76,9 +76,8 @@ export const getCurrentIdToken = async (forceRefresh = false) => {
   return currentUser.getIdToken(forceRefresh);
 };
 
-export const getVerificationEmailRedirectUrl = (
-  path: "/verify-email" | "/v2/verify-email" = "/verify-email"
-) => {
+export const getVerificationEmailRedirectUrl = () => {
+  const path = "/verify-email";
   if (typeof window !== "undefined" && window.location?.origin) {
     return `${window.location.origin}${path}`;
   }
@@ -91,17 +90,14 @@ export const getVerificationEmailRedirectUrl = (
   return `http://localhost:3000${path}`;
 };
 
-export const sendVerificationEmail = async (
-  user?: User | null,
-  path: "/verify-email" | "/v2/verify-email" = "/verify-email"
-) => {
+export const sendVerificationEmail = async (user?: User | null) => {
   const targetUser = user ?? (await getCurrentUser());
   if (!targetUser) {
     throw new Error("認証メールを送信するユーザーが見つかりません。");
   }
 
   await sendEmailVerification(targetUser, {
-    url: getVerificationEmailRedirectUrl(path),
+    url: getVerificationEmailRedirectUrl(),
     handleCodeInApp: false,
   });
 
