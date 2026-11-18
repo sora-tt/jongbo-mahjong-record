@@ -187,13 +187,17 @@ export class PersonalStatisticsSummaryReader {
         )
       : statsRecord.personalStatisticsSnapshot;
     const values = selectSnapshotValues(snapshot, query.gameType);
-    const detailMatches =
-      query.includePointBreakdown || query.includeYakumanCounts
-        ? (matches ??
-          (await this.projectionRepository
-            .listForScope({ ...toScope(query), userId: query.targetUserId })
-            .catch(() => null)))
-        : null;
+    const { details, ...summaryValues } = values;
+    const needsDetailMatches =
+      (query.includeYakumanCounts && !details) ||
+      (query.includePointBreakdown &&
+        (!details || query.scopeType === "overall"));
+    const detailMatches = needsDetailMatches
+      ? (matches ??
+        (await this.projectionRepository
+          .listForScope({ ...toScope(query), userId: query.targetUserId })
+          .catch(() => null)))
+      : null;
     const selectedMatches = detailMatches?.filter(
       (match) =>
         !query.gameType ||
@@ -211,21 +215,27 @@ export class PersonalStatisticsSummaryReader {
         ? selectedMatches
         : null;
     const pointBreakdown = query.includePointBreakdown
-      ? await this.getPointBreakdown(consistentMatches).catch(() => null)
+      ? await (
+          details && query.scopeType !== "overall"
+            ? this.getSnapshotPointBreakdown(query.leagueId, values)
+            : this.getPointBreakdown(consistentMatches)
+        ).catch(() => null)
       : undefined;
     const yakumanCounts = query.includeYakumanCounts
-      ? consistentMatches === null
-        ? null
-        : YAKUMAN_KINDS.map((kind) => ({
-            kind,
-            count: consistentMatches.reduce(
-              (count, match) =>
-                count +
-                (match.yakumanKinds ?? []).filter((item) => item === kind)
-                  .length,
-              0,
-            ),
-          }))
+      ? details
+        ? details.yakumanCounts
+        : consistentMatches === null
+          ? null
+          : YAKUMAN_KINDS.map((kind) => ({
+              kind,
+              count: consistentMatches.reduce(
+                (count, match) =>
+                  count +
+                  (match.yakumanKinds ?? []).filter((item) => item === kind)
+                    .length,
+                0,
+              ),
+            }))
       : undefined;
     const scoreByGameType = snapshot.byGameType
       .filter(
@@ -245,10 +255,33 @@ export class PersonalStatisticsSummaryReader {
       scope: toScope(query),
       generatedAt: statsRecord.stats.updatedAt,
       timeZone: TIME_ZONE,
-      ...values,
+      ...summaryValues,
       scoreByGameType,
       pointBreakdown,
       yakumanCounts,
+    };
+  }
+
+  private async getSnapshotPointBreakdown(
+    leagueId: string,
+    values: PersonalStatisticsSnapshotValues,
+  ): Promise<PersonalStatisticsSummary["pointBreakdown"]> {
+    if (!this.leagueRepository.getRule || !values.details) return null;
+    if (values.totals.totalMatchCount === 0) {
+      return { rawPoint: 0, rankPoint: 0, chomboPenalty: 0 };
+    }
+    const rule = await this.leagueRepository.getRule(leagueId);
+    if (!rule) return null;
+    const rawPoint =
+      (values.details.rawScoreTotal -
+        rule.oka.returnPoints * values.totals.totalMatchCount) /
+      1000;
+    const chomboPenalty = -values.totals.chomboCount * rule.chomboPenaltyPoints;
+    const round = (value: number) => Number(value.toFixed(1));
+    return {
+      rawPoint: round(rawPoint),
+      rankPoint: round(values.totals.totalPoints - rawPoint - chomboPenalty),
+      chomboPenalty: round(chomboPenalty),
     };
   }
 

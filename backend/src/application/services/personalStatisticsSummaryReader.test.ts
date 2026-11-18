@@ -79,6 +79,7 @@ const matches = [
 
 const makeSnapshot = (
   sourceMatches: readonly UserMatchStatistics[] = matches,
+  includeDetailedAggregates = false,
 ): PersonalStatisticsSnapshot =>
   buildPersonalStatisticsSnapshot({
     targetUserId,
@@ -104,7 +105,63 @@ const makeSnapshot = (
         : null,
     },
     currentStanding: null,
+    includeDetailedAggregates,
   });
+
+test("saved details provide yakuman counts and point breakdown without reading projections", async () => {
+  const rows = [
+    { ...matches[0]!, chomboCount: 1, yakumanKinds: ["daisangen" as const] },
+    { ...matches[1]!, yakumanKinds: ["daisangen" as const, "tenhou" as const] },
+  ];
+  const fixture = makeReaderFixture({
+    statsRecord: makeStatsRecord(makeSnapshot(rows, true)),
+    getRule: async () =>
+      ({
+        oka: { startingPoints: 25000, returnPoints: 30000 },
+        chomboPenaltyPoints: 10,
+      }) as Awaited<ReturnType<LeagueRepository["getRule"]>>,
+  });
+  const result = await fixture.reader.getSummary({
+    ...seasonQuery(),
+    includePointBreakdown: "true",
+    includeYakumanCounts: "true",
+  });
+  assert.equal(result.status, "ready");
+  if (result.status !== "ready") return;
+  assert.equal(fixture.projectionReadCount, 0);
+  assert.equal(
+    result.yakumanCounts?.find((item) => item.kind === "daisangen")?.count,
+    2,
+  );
+  assert.deepEqual(result.pointBreakdown, {
+    rawPoint: 4,
+    rankPoint: 26,
+    chomboPenalty: -10,
+  });
+  assert.equal("details" in result, false);
+
+  const yonma = await fixture.reader.getSummary({
+    ...seasonQuery({ gameType: "yonma" }),
+    includePointBreakdown: "true",
+    includeYakumanCounts: "true",
+  });
+  assert.equal(yonma.status, "ready");
+  if (yonma.status !== "ready") return;
+  assert.equal(
+    yonma.yakumanCounts?.find((item) => item.kind === "daisangen")?.count,
+    1,
+  );
+  assert.equal(
+    yonma.yakumanCounts?.find((item) => item.kind === "tenhou")?.count,
+    0,
+  );
+  assert.deepEqual(yonma.pointBreakdown, {
+    rawPoint: 22,
+    rankPoint: 30,
+    chomboPenalty: -10,
+  });
+  assert.equal(fixture.projectionReadCount, 0);
+});
 
 const makeStatsRecord = (
   snapshot: PersonalStatisticsSnapshot | null,

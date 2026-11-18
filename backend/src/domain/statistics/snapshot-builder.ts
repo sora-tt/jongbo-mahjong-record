@@ -5,6 +5,7 @@ import type {
   UserMatchStatistics,
 } from "@/domain/statistics/types.js";
 import type { UserStatsUpsertData } from "@/domain/user/types.js";
+import { YAKUMAN_KINDS } from "@/domain/match/yakuman.js";
 import { aggregateRankAndScoreStatistics } from "@/domain/statistics/aggregation.js";
 import {
   aggregatePersonalRecords,
@@ -45,6 +46,8 @@ export type PersonalStatisticsSnapshotBuildInput = {
   currentStanding: CurrentStandingInput | null;
   /** Scope-level standing reused when only a date-filtered summary is rebuilt. */
   persistedCurrentStanding?: PersonalStatisticsSnapshot["all"]["currentStanding"];
+  /** Store optional aggregates for fast summary reads. */
+  includeDetailedAggregates?: boolean;
 };
 
 const toFullProjection = (match: SnapshotMatchInput): UserMatchStatistics =>
@@ -221,10 +224,31 @@ const buildSummaryValues = (
   matches: readonly UserMatchStatistics[],
   currentStanding: PersonalStatisticsSnapshot["all"]["currentStanding"],
   totalPointsOverride?: number,
+  includeDetailedAggregates = false,
 ): PersonalStatisticsSnapshot["byGameType"][number]["summary"] => {
   const aggregation = aggregateRankAndScoreStatistics(matches);
   const recordsAndStreaks = aggregatePersonalRecords(matches);
   return {
+    ...(includeDetailedAggregates
+      ? {
+          details: {
+            rawScoreTotal: matches.reduce(
+              (sum, match) => sum + match.rawScore,
+              0,
+            ),
+            yakumanCounts: YAKUMAN_KINDS.map((kind) => ({
+              kind,
+              count: matches.reduce(
+                (count, match) =>
+                  count +
+                  (match.yakumanKinds ?? []).filter((item) => item === kind)
+                    .length,
+                0,
+              ),
+            })),
+          },
+        }
+      : {}),
     totals: {
       totalMatchCount: aggregation.totalMatchCount,
       sessionCount: new Set(matches.map((match) => match.sessionId)).size,
@@ -276,6 +300,7 @@ export const buildPersonalStatisticsSnapshot = (
     matches,
     currentStanding,
     input.basicStats.totalPoints,
+    input.includeDetailedAggregates,
   );
   const summariesByGameType = GAME_TYPES.map((gameType) => {
     const formatMatches = matches.filter(
@@ -283,7 +308,12 @@ export const buildPersonalStatisticsSnapshot = (
     );
     return {
       gameType,
-      summary: buildSummaryValues(formatMatches, currentStanding),
+      summary: buildSummaryValues(
+        formatMatches,
+        currentStanding,
+        undefined,
+        input.includeDetailedAggregates,
+      ),
     };
   });
   const observedFormats = aggregateRankAndScoreStatistics(matches).byGameType;

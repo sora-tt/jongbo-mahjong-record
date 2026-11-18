@@ -108,6 +108,10 @@ export class FirestoreLeagueRepository implements LeagueRepository {
     return {
       id: asOpaqueId(snapshot.id),
       name: requiredString(data.name, "leagues.name"),
+      editVersion: requiredNumber(
+        data.edit_version ?? 0,
+        "leagues.edit_version",
+      ),
       rule: this.mapLeagueRule(data.rule),
       memberCount: requiredNumber(data.member_count, "leagues.member_count"),
       totalMatchCount: requiredNumber(
@@ -161,6 +165,7 @@ export class FirestoreLeagueRepository implements LeagueRepository {
       active_season_id: null,
       active_season_name: null,
       rule_locked: false,
+      edit_version: 0,
       league_records: null,
       created_at: now,
       updated_at: now,
@@ -195,6 +200,20 @@ export class FirestoreLeagueRepository implements LeagueRepository {
         throw new NotFoundError("league not found", { leagueId });
       }
 
+      const editVersion = requiredNumber(
+        snapshot.data()?.edit_version ?? 0,
+        "leagues.edit_version",
+      );
+      if (
+        input.expectedEditVersion !== undefined &&
+        input.expectedEditVersion !== editVersion
+      ) {
+        throw new ConflictError("league was updated while editing", {
+          leagueId,
+          reason: "league_updated",
+        });
+      }
+
       const membersSnapshot =
         input.memberUserIds === undefined
           ? null
@@ -207,6 +226,7 @@ export class FirestoreLeagueRepository implements LeagueRepository {
 
       const patch: Record<string, unknown> = {
         updated_at: Timestamp.now(),
+        edit_version: editVersion + 1,
       };
       if (input.name !== undefined) {
         patch.name = input.name;

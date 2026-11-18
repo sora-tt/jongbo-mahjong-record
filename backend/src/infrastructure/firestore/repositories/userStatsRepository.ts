@@ -6,6 +6,7 @@ import type {
   UserStatsWithPersonalStatistics,
 } from "@/domain/user/types.js";
 import type { UserStatsRepository } from "@/domain/user/repository.js";
+import { YAKUMAN_KINDS } from "@/domain/match/yakuman.js";
 import {
   asIsoDateString,
   asOpaqueId,
@@ -138,6 +139,14 @@ const recordHolderSchema = z
   .nullable();
 
 const snapshotValuesSchema = z.object({
+  details: z
+    .object({
+      rawScoreTotal: finiteNumberSchema,
+      yakumanCounts: z.array(
+        z.object({ kind: z.enum(YAKUMAN_KINDS), count: finiteNumberSchema }),
+      ),
+    })
+    .optional(),
   totals: z.object({
     totalMatchCount: finiteNumberSchema,
     sessionCount: finiteNumberSchema,

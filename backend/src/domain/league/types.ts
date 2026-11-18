@@ -77,6 +77,7 @@ export type LeagueSummary = {
 export type LeagueDetail = {
   id: LeagueId;
   name: string;
+  editVersion?: number;
   rule: LeagueRule;
   memberCount: number;
   totalMatchCount: number;

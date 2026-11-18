@@ -18,6 +18,7 @@ export type UpdateLeagueInput = {
   name?: string;
   rule?: LeagueRule;
   memberUserIds?: string[];
+  expectedEditVersion?: number;
 };
 
 export interface LeagueRepository {

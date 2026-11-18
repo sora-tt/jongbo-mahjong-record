@@ -123,12 +123,24 @@ export const useSeasonPage = (routePrefix = "") => {
       setSessionsLoading(true);
       setSessionsError(null);
 
-      const [seasonResult, sessionsResult, leagueResult] =
-        await Promise.allSettled([
-          fetchSeasonDetail(leagueId, seasonId),
-          listSessions(leagueId, seasonId),
-          fetchLeagueDetail(leagueId),
-        ]);
+      void fetchLeagueDetail(leagueId)
+        .then((league) => {
+          if (isActive) setLeagueName(toLeagueDetail(league).name);
+        })
+        .catch((leagueError: unknown) => {
+          if (
+            isActive &&
+            leagueError instanceof ApiError &&
+            leagueError.status === 401
+          ) {
+            router.replace(`${routePrefix}/login`);
+          }
+        });
+
+      const [seasonResult, sessionsResult] = await Promise.allSettled([
+        fetchSeasonDetail(leagueId, seasonId),
+        listSessions(leagueId, seasonId),
+      ]);
 
       if (!isActive) return;
 
@@ -184,15 +196,6 @@ export const useSeasonPage = (routePrefix = "") => {
         );
       }
       setSessionsLoading(false);
-
-      if (leagueResult.status === "fulfilled") {
-        setLeagueName(toLeagueDetail(leagueResult.value).name);
-      } else if (
-        leagueResult.reason instanceof ApiError &&
-        leagueResult.reason.status === 401
-      ) {
-        router.replace(`${routePrefix}/login`);
-      }
 
       const refreshTarget = sessionDeleteRefreshTargetRef.current;
       if (refreshTarget?.routeKey === routeKey) {

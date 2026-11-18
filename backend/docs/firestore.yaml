@@ -264,6 +264,9 @@ leagues:
     # 最初の正本Match登録後にルール変更を防ぐ内部ライフサイクルフラグ
     rule_locked: boolean
 
+    # リーグ編集の競合検知用。旧データでは未設定を0として扱う
+    edit_version: number
+
     # league.members の件数キャッシュ
     member_count: number
 
@@ -444,6 +447,18 @@ user_stats:
         all:
           type: object
           fields:
+            # 新しく再集計したsnapshotに保存。旧データには存在しない
+            details:
+              type: object
+              fields:
+                rawScoreTotal: number
+                yakumanCounts:
+                  type: array
+                  items:
+                    type: object
+                    fields:
+                      kind: string
+                      count: number
             totals:
               type: object
               fields:
@@ -775,6 +790,18 @@ user_stats:
               summary:
                 type: object
                 fields:
+                  # 新しく再集計したsnapshotに保存。旧データには存在しない
+                  details:
+                    type: object
+                    fields:
+                      rawScoreTotal: number
+                      yakumanCounts:
+                        type: array
+                        items:
+                          type: object
+                          fields:
+                            kind: string
+                            count: number
                   totals:
                     type: object
                     fields:

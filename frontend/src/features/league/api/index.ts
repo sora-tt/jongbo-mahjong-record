@@ -5,6 +5,7 @@ import {
   executeApiRequest,
   executeNoContentRequest,
 } from "@/lib/api/core";
+import { cachedRequest } from "@/lib/api/request-cache";
 
 import type { CreateLeagueInput, UpdateLeagueInput } from "@/lib/api/contracts";
 
@@ -36,22 +37,29 @@ type UpdateLeagueResponse = InferResponseType<
 export type { CreateLeagueInput, UpdateLeagueInput };
 
 export const fetchLeagues = async () =>
-  executeApiRequest<FetchLeaguesResponse>(() => fetchLeaguesRequest());
+  cachedRequest("leagues", () =>
+    executeApiRequest<FetchLeaguesResponse>(() => fetchLeaguesRequest())
+  );
 
 export const fetchLeagueDetail = async (
   leagueId: string,
   options?: { fresh?: boolean }
-) =>
-  executeApiRequest<FetchLeagueDetailResponse>(() =>
-    fetchLeagueDetailRequest(
-      { param: { leagueId } },
-      options?.fresh ? { init: { cache: "no-store" } } : undefined
-    )
-  );
+) => {
+  const load = () =>
+    executeApiRequest<FetchLeagueDetailResponse>(() =>
+      fetchLeagueDetailRequest(
+        { param: { leagueId } },
+        options?.fresh ? { init: { cache: "no-store" } } : undefined
+      )
+    );
+  return options?.fresh ? load() : cachedRequest(`league/${leagueId}`, load);
+};
 
 export const fetchLeagueMembers = async (leagueId: string) =>
-  executeApiRequest<FetchLeagueMembersResponse>(() =>
-    fetchLeagueMembersRequest({ param: { leagueId } })
+  cachedRequest(`league/${leagueId}/members`, () =>
+    executeApiRequest<FetchLeagueMembersResponse>(() =>
+      fetchLeagueMembersRequest({ param: { leagueId } })
+    )
   );
 
 export const createLeague = async (input: CreateLeagueInput) =>

@@ -53,6 +53,39 @@ export const useLeaguePage = (routePrefix = "") => {
       setMembersLoading(true);
       setMembersError(null);
 
+      void fetchLeagueMembers(leagueId)
+        .then((leagueMembers) => {
+          if (!isActive) return;
+          setMembers(leagueMembers);
+        })
+        .catch((membersLoadError: unknown) => {
+          if (!isActive) return;
+          if (
+            membersLoadError instanceof ApiError &&
+            membersLoadError.status === 401
+          ) {
+            router.replace(`${routePrefix}/login`);
+            return;
+          }
+          if (
+            membersLoadError instanceof ApiError &&
+            membersLoadError.status === 404
+          ) {
+            setMembers([]);
+            setMembersError(null);
+            return;
+          }
+          setMembersError(
+            getApiErrorMessage(
+              membersLoadError,
+              "リーグ参加者を取得できませんでした。"
+            )
+          );
+        })
+        .finally(() => {
+          if (isActive) setMembersLoading(false);
+        });
+
       try {
         const leagueDetail = await fetchLeagueDetail(leagueId);
 
@@ -61,38 +94,6 @@ export const useLeaguePage = (routePrefix = "") => {
         }
 
         setLeague(toLeagueDetail(leagueDetail));
-        void fetchLeagueMembers(leagueId)
-          .then((leagueMembers) => {
-            if (!isActive) return;
-            setMembers(leagueMembers);
-          })
-          .catch((membersLoadError: unknown) => {
-            if (!isActive) return;
-            if (
-              membersLoadError instanceof ApiError &&
-              membersLoadError.status === 401
-            ) {
-              router.replace(`${routePrefix}/login`);
-              return;
-            }
-            if (
-              membersLoadError instanceof ApiError &&
-              membersLoadError.status === 404
-            ) {
-              setMembers([]);
-              setMembersError(null);
-              return;
-            }
-            setMembersError(
-              getApiErrorMessage(
-                membersLoadError,
-                "リーグ参加者を取得できませんでした。"
-              )
-            );
-          })
-          .finally(() => {
-            if (isActive) setMembersLoading(false);
-          });
       } catch (loadError) {
         if (!isActive) {
           return;

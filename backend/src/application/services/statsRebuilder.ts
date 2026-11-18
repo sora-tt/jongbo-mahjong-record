@@ -164,15 +164,6 @@ export class StatsRebuilder {
       rule.gameType,
     );
 
-    await this.seasonRepository.updateStatistics({
-      leagueId: league.id,
-      seasonId: season.id,
-      totalMatchCount: orderedMatches.length,
-      standings,
-      pointProgressions,
-      seasonRecords,
-    });
-
     const matchCountBySessionId = new Map<string, number>();
     orderedMatches.forEach((match) => {
       matchCountBySessionId.set(
@@ -180,8 +171,16 @@ export class StatsRebuilder {
         (matchCountBySessionId.get(match.sessionId) ?? 0) + 1,
       );
     });
-    await Promise.all(
-      sessions.map((session) =>
+    const updates = await Promise.allSettled([
+      this.seasonRepository.updateStatistics({
+        leagueId: league.id,
+        seasonId: season.id,
+        totalMatchCount: orderedMatches.length,
+        standings,
+        pointProgressions,
+        seasonRecords,
+      }),
+      ...sessions.map((session) =>
         this.sessionRepository.setTotalMatchCount(
           league.id,
           season.id,
@@ -189,7 +188,9 @@ export class StatsRebuilder {
           matchCountBySessionId.get(session.id) ?? 0,
         ),
       ),
-    );
+    ]);
+    const failedUpdate = updates.find((result) => result.status === "rejected");
+    if (failedUpdate?.status === "rejected") throw failedUpdate.reason;
 
     const resultsByUser = collectUserResults(orderedMatches);
     const chomboCountByUserId = collectUserChomboCounts(orderedMatches);
@@ -512,6 +513,7 @@ export class StatsRebuilder {
             matches: projections,
             basicStats: stats,
             currentStanding: params.currentStanding,
+            includeDetailedAggregates: true,
           });
           return { member, stats, personalStatisticsSnapshot };
         }),

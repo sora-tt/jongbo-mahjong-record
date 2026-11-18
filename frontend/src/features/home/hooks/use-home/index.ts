@@ -56,8 +56,10 @@ export const useHome = (routePrefix = "") => {
       setError(null);
 
       try {
-        const me = await fetchMe();
-        const joinedLeagues = await fetchHomeLeagues();
+        const [me, joinedLeagues] = await Promise.all([
+          fetchMe(),
+          fetchHomeLeagues(),
+        ]);
 
         logAuthDebug("home:load-success", {
           userId: me.id,

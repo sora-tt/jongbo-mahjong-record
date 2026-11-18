@@ -1302,7 +1302,7 @@ test("OpenAPI publishes the canonical auth and match request contracts", async (
       leaguePath.patch?.requestBody?.content?.["application/json"]?.schema
         ?.properties ?? {},
     ).sort(),
-    ["memberUserIds", "name", "rule"],
+    ["expectedEditVersion", "memberUserIds", "name", "rule"],
   );
   assert.deepEqual(
     Object.keys(

@@ -512,6 +512,7 @@ League ruleには`chomboPenaltyPoints`（チョンボ1回あたりに本人のpo
 概要:
 
 - リーグ名、ルール、メンバーを更新する。指定した項目のみ更新する。
+- `expectedEditVersion` を指定すると、直前に取得したリーグ詳細の `editVersion` と一致する場合にのみ更新する。不一致の場合は 409 を返す。
 
 リクエスト:
 
@@ -523,7 +524,8 @@ League ruleには`chomboPenaltyPoints`（チョンボ1回あたりに本人のpo
     "uma": { "first": 20, "second": 10, "third": -10, "fourth": -20 },
     "oka": { "startingPoints": 25000, "returnPoints": 30000 }
   },
-  "memberUserIds": ["0001", "0002", "0003", "0004"]
+  "memberUserIds": ["0001", "0002", "0003", "0004"],
+  "expectedEditVersion": 2
 }
 ```
 
@@ -534,6 +536,7 @@ League ruleには`chomboPenaltyPoints`（チョンボ1回あたりに本人のpo
   "data": {
     "id": "000000",
     "name": "雀望リーグ改",
+    "editVersion": 3,
     "rule": {
       "gameType": "yonma",
       "uma": { "first": 20, "second": 10, "third": -10, "fourth": -20 },

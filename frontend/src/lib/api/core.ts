@@ -1,5 +1,7 @@
 import { hc, type ClientResponse } from "hono/client";
 
+import { clearRequestCache } from "@/lib/api/request-cache";
+
 import type { ApiErrorCode } from "@/lib/api/contracts";
 
 export type ApiErrorKind = "api" | "network" | "timeout" | "decode";
@@ -90,6 +92,11 @@ class ApiTransportError extends Error {
 }
 
 const fetchWithPolicy: typeof fetch = async (input, init) => {
+  const method = (
+    init?.method ?? (input instanceof Request ? input.method : "GET")
+  ).toUpperCase();
+  const isMutation = method !== "GET" && method !== "HEAD";
+  if (isMutation) clearRequestCache();
   const controller = new AbortController();
   let timedOut = false;
   const timeout = setTimeout(() => {
@@ -125,6 +132,7 @@ const fetchWithPolicy: typeof fetch = async (input, init) => {
       error instanceof Error ? error.message : "Network request failed"
     );
   } finally {
+    if (isMutation) clearRequestCache();
     clearTimeout(timeout);
     parentSignal?.removeEventListener("abort", abortFromParent);
   }

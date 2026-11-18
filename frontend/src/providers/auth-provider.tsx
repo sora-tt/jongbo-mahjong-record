@@ -4,6 +4,7 @@ import * as React from "react";
 
 import { usePathname, useRouter } from "next/navigation";
 
+import { clearRequestCache } from "@/lib/api/request-cache";
 import { logoutFromApp } from "@/lib/auth/flows";
 import { logAuthDebug } from "@/lib/debug/auth-debug";
 import { subscribeAuthState, type FirebaseUser } from "@/lib/firebase/auth";
@@ -28,6 +29,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({
   const pathname = usePathname();
   const [user, setUser] = React.useState<FirebaseUser | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
+  const authUserId = React.useRef<string | null | undefined>(undefined);
 
   const handleLogout = React.useCallback(async () => {
     await logoutFromApp();
@@ -35,6 +37,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({
   }, []);
 
   const markUnauthenticated = React.useCallback(() => {
+    clearRequestCache();
     setUser(null);
   }, []);
 
@@ -50,6 +53,12 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({
     void subscribeAuthState((nextUser) => {
       if (!isActive) {
         return;
+      }
+
+      const nextUserId = nextUser?.uid ?? null;
+      if (authUserId.current !== nextUserId) {
+        clearRequestCache();
+        authUserId.current = nextUserId;
       }
 
       logAuthDebug("authProvider:state-changed", {

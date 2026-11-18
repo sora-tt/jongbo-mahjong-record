@@ -5,6 +5,8 @@ import * as React from "react";
 
 import { JSDOM } from "jsdom";
 
+import { clearRequestCache } from "@/lib/api/request-cache";
+
 const dom = new JSDOM("<!doctype html><html><body></body></html>", {
   pretendToBeVisual: true,
   url: "http://localhost",
@@ -33,6 +35,7 @@ const setup = Promise.all([
 afterEach(async () => {
   const [testing] = await setup;
   testing.cleanup();
+  clearRequestCache();
   globalThis.fetch = originalFetch;
 });
 
