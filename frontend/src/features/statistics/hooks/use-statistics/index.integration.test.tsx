@@ -522,6 +522,36 @@ test("v2 statistics uses v2 routes and switches views without changing API behav
   assert.equal(calls.analyses.length, 1);
 });
 
+test("遷移時にリーグ名が未取得でも成績画面で補完する", async () => {
+  await setup;
+  const { StatisticsPageContent } =
+    await import("@/features/statistics/ui/page-content");
+  const league =
+    deferred<Awaited<ReturnType<NonNullable<HookApi["getLeagueDetail"]>>>>();
+  const { api, useRouter } = createMockApi({
+    getLeagueDetail: async () => league.promise,
+    getPersonalStatisticsSummary: async () => readySummary,
+  });
+  const useStatistics = createHook(
+    api,
+    useRouter,
+    "?scopeType=season&leagueId=league-1&seasonId=season-1&scopeLabel=%20%2F%20%E7%A7%8B%E5%86%AC"
+  );
+  render(
+    <StatisticsPageContent
+      useStatisticsHook={useStatistics}
+      includeAppShell={false}
+    />
+  );
+  await act(async () => {
+    league.resolve({
+      name: "テストリーグ",
+      rule: { oka: { startingPoints: 25000 } },
+    } as never);
+  });
+  await waitFor(() => assert.ok(screen.getByText("テストリーグ / 秋冬")));
+});
+
 test("v2 全リーグは順位中心の画面を表示し、古い推移 URL でも分析を取得しない", async () => {
   await setup;
   const { StatisticsPageContent: V2PageContent } =

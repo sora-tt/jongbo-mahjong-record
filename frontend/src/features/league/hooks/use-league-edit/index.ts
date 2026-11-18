@@ -55,6 +55,7 @@ export const useLeagueEdit = (routePrefix = "") => {
   const [errorSummaryFocusToken, setErrorSummaryFocusToken] = React.useState(0);
   const [retryCount, setRetryCount] = React.useState(0);
   const [isRuleLocked, setIsRuleLocked] = React.useState(false);
+  const [editVersion, setEditVersion] = React.useState<number | null>(null);
   const [ruleSettings, setRuleSettings] = React.useState(
     createDefaultLeagueRuleDraft
   );
@@ -76,17 +77,21 @@ export const useLeagueEdit = (routePrefix = "") => {
     const load = async () => {
       setLoading(true);
       setIsLoaded(false);
+      setEditVersion(null);
       setNotFound(false);
       setError(null);
 
       try {
-        const league = toLeagueDetail(await fetchLeagueDetail(leagueId));
+        const league = toLeagueDetail(
+          await fetchLeagueDetail(leagueId, { fresh: true })
+        );
 
         if (!isActive) {
           return;
         }
 
         setLeagueName(LEAGUE_NAME_SUFFIX_MODEL.toInputValue(league.name));
+        setEditVersion(league.editVersion ?? 0);
         setIsRuleLocked(league.totalMatchCount > 0);
         setAddedMembers(
           league.members.reduce(
@@ -285,7 +290,7 @@ export const useLeagueEdit = (routePrefix = "") => {
     setSubmitError(null);
     setShowUmaErrors(true);
 
-    if (!leagueId) {
+    if (!leagueId || editVersion === null) {
       failSubmit("leagueId が指定されていません");
       return;
     }
@@ -309,6 +314,7 @@ export const useLeagueEdit = (routePrefix = "") => {
       const updateInput = {
         name: LEAGUE_NAME_SUFFIX_MODEL.toCanonicalName(leagueName),
         memberUserIds: Object.keys(addedMembers),
+        expectedEditVersion: editVersion,
         ...(ruleResult?.ok ? { rule: ruleResult.rule } : {}),
       };
 
@@ -321,6 +327,17 @@ export const useLeagueEdit = (routePrefix = "") => {
         return;
       }
 
+      if (
+        submitError instanceof ApiError &&
+        submitError.status === 409 &&
+        submitError.details.reason === "league_updated"
+      ) {
+        failSubmit(
+          "リーグ情報が他の操作で更新されました。画面を再読み込みしてから編集してください。"
+        );
+        return;
+      }
+
       failSubmit(
         getApiErrorMessage(submitError, "リーグ情報の更新に失敗しました")
       );
@@ -328,6 +345,7 @@ export const useLeagueEdit = (routePrefix = "") => {
       setIsSubmitting(false);
     }
   }, [
+    editVersion,
     leagueId,
     leagueName,
     addedMembers,

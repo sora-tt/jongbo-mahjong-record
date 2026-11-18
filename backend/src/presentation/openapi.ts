@@ -1393,6 +1393,7 @@ export const openApiDocument = {
               name: { type: "string" },
               rule: { $ref: "#/components/schemas/LeagueRule" },
               memberUserIds: { type: "array", items: { type: "string" } },
+              expectedEditVersion: { type: "integer", minimum: 0 },
             },
           }),
         },
@@ -1402,6 +1403,10 @@ export const openApiDocument = {
             content: jsonContent(
               dataResponse({ $ref: "#/components/schemas/LeagueDetail" }),
             ),
+          },
+          "409": {
+            description: "league was updated or its rule is locked",
+            content: jsonContent(errorResponse),
           },
         },
       },
@@ -2106,6 +2111,7 @@ export const openApiDocument = {
         properties: {
           id: { type: "string" },
           name: { type: "string" },
+          editVersion: { type: "integer", minimum: 0 },
           rule: { $ref: "#/components/schemas/LeagueRule" },
           memberCount: { type: "number" },
           totalMatchCount: { type: "number" },

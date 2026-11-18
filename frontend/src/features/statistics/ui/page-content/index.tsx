@@ -81,8 +81,16 @@ export const StatisticsPageContent: React.FC<StatisticsPageContentProps> = ({
     members: statistics.members,
   });
   const scopeLabel = getScopeLabel(statistics.scope, scopeOptions);
+  const contextLabel = statistics.routeContext.scopeLabel;
+  const leagueName = statistics.scope.leagueId
+    ? statistics.leagueNamesById?.[statistics.scope.leagueId]
+    : undefined;
+  const resolvedContextLabel =
+    contextLabel.startsWith(" / ") && leagueName
+      ? `${leagueName}${contextLabel}`
+      : contextLabel;
   const titleScopeLabel =
-    statistics.routeContext.scopeLabel ||
+    resolvedContextLabel ||
     (statistics.scope.scopeType === "overall"
       ? statistics.scope.gameType === "sanma"
         ? "全リーグ・全期間（三麻）"

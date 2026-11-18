@@ -236,12 +236,18 @@ export const createUseStatistics = (
     });
     const [startingPointsByLeagueId, setStartingPointsByLeagueId] =
       React.useState<Record<string, number>>({});
+    const [leagueNamesById, setLeagueNamesById] = React.useState<
+      Record<string, string>
+    >({});
     const [summaryRetryCount, setSummaryRetryCount] = React.useState(0);
     const [analysisRetryCount, setAnalysisRetryCount] = React.useState(0);
     const [historyRetryCount, setHistoryRetryCount] = React.useState(0);
     const [membersRetryCount, setMembersRetryCount] = React.useState(0);
     const startingPointRequests = React.useRef(
-      new Map<string, Promise<number | null>>()
+      new Map<
+        string,
+        Promise<{ startingPoints: number; name: string } | null>
+      >()
     );
     const summaryRequestKeyRef = React.useRef("");
     const analysisRequestKeyRef = React.useRef("");
@@ -1447,7 +1453,10 @@ export const createUseStatistics = (
           let request = startingPointRequests.current.get(leagueId);
           if (!request) {
             request = api.getLeagueDetail!(leagueId)
-              .then((league) => league.rule.oka.startingPoints)
+              .then((league) => ({
+                startingPoints: league.rule.oka.startingPoints,
+                name: league.name,
+              }))
               .catch(() => null);
             startingPointRequests.current.set(leagueId, request);
             void request.then(() => {
@@ -1456,18 +1465,25 @@ export const createUseStatistics = (
               }
             });
           }
-          return { leagueId, startingPoints: await request };
+          return { leagueId, league: await request };
         })
       ).then((results) => {
         if (!isActive) return;
         setStartingPointsByLeagueId((current) => {
           const next = { ...current };
-          results.forEach(({ leagueId, startingPoints }) => {
-            if (startingPoints != null) next[leagueId] = startingPoints;
+          results.forEach(({ leagueId, league }) => {
+            if (league) next[leagueId] = league.startingPoints;
           });
           return Object.keys(next).length === Object.keys(current).length
             ? current
             : next;
+        });
+        setLeagueNamesById((current) => {
+          const next = { ...current };
+          results.forEach(({ leagueId, league }) => {
+            if (league) next[leagueId] = league.name;
+          });
+          return next;
         });
       });
 
@@ -1611,6 +1627,7 @@ export const createUseStatistics = (
 
     return {
       userName,
+      leagueNamesById,
       joiningLeagueSeasons,
       joiningLeagues,
       hubDataStatus,

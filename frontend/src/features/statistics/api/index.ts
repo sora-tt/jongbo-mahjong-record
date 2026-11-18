@@ -3,8 +3,8 @@ import { type InferRequestType, type InferResponseType } from "hono/client";
 import { fetchLeagueMembers } from "@/features/league/api";
 import { fetchSeasonMembers } from "@/features/season/api";
 import { apiClient, executeApiRequest } from "@/lib/api/core";
+import { fetchMe } from "@/lib/api/users";
 
-const currentUserRequest = apiClient.api.users.me.$get;
 const joiningSeasonsRequest =
   apiClient.api.users[":userId"]["joining-seasons"].$get;
 const userStatsRequest = apiClient.api.users[":userId"].stats.$get;
@@ -15,7 +15,6 @@ const personalStatisticsAnalysisRequest =
 const statisticsMatchHistoryRequest =
   apiClient.api.users[":userId"].statistics.matches.$get;
 
-type CurrentUserResponse = InferResponseType<typeof currentUserRequest>["data"];
 type JoiningSeasonsResponse = InferResponseType<
   typeof joiningSeasonsRequest
 >["data"];
@@ -40,8 +39,7 @@ export type StatisticsMatchHistoryQuery = InferRequestType<
   typeof statisticsMatchHistoryRequest
 >["query"];
 
-export const getCurrentUser = async () =>
-  executeApiRequest<CurrentUserResponse>(() => currentUserRequest());
+export const getCurrentUser = fetchMe;
 
 export const listJoiningSeasons = async (userId: string) =>
   executeApiRequest<JoiningSeasonsResponse>(() =>

@@ -1,6 +1,7 @@
 import { type InferResponseType } from "hono/client";
 
 import { apiClient, executeApiRequest } from "@/lib/api/core";
+import { cachedRequest } from "@/lib/api/request-cache";
 
 import type { CreateMeInput, UpdateMeInput } from "@/lib/api/contracts";
 
@@ -24,7 +25,9 @@ export const createMe = async (input: CreateMeInput) =>
   );
 
 export const fetchMe = async () =>
-  executeApiRequest<FetchMeResponse>(() => apiClient.api.users.me.$get());
+  cachedRequest("users/me", () =>
+    executeApiRequest<FetchMeResponse>(() => apiClient.api.users.me.$get())
+  );
 
 export const updateMe = async (input: UpdateMeInput) =>
   executeApiRequest<UpdateMeResponse>(() =>

@@ -296,7 +296,13 @@ export type PersonalStatisticsSnapshotValues = Omit<
   | "scoreByGameType"
   | "pointBreakdown"
   | "yakumanCounts"
->;
+> & {
+  /** Optional for snapshots created before summary details were persisted. */
+  details?: {
+    rawScoreTotal: number;
+    yakumanCounts: Array<{ kind: YakumanKind; count: number }>;
+  };
+};
 
 export type PersonalStatisticsSnapshot = {
   all: PersonalStatisticsSnapshotValues;
